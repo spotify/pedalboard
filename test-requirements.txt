@@ -2,7 +2,13 @@ coverage==5.0.2
 pytest==5.3.2
 pytest-cov==2.8.1
 pytest-mock==3.3.1
+pybind11>=2.6.0
+setuptools>=42
+wheel
+flake8
+black
+interrogate
+
 librosa
 sox
-soxbindings
 tensorflow

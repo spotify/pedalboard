@@ -1,7 +1,24 @@
+/*
+ * pedalboard
+ * Copyright 2021 Spotify AB
+ *
+ * Licensed under the GNU Public License, Version 3.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.gnu.org/licenses/gpl-3.0.html
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #pragma once
 
-#include <optional>
 #include <mutex>
+#include <optional>
 
 #include "JuceHeader.h"
 #if JUCE_LINUX
@@ -111,12 +128,15 @@ public:
         "Plugin not found or not in the appropriate format.";
     pluginFormatManager.addDefaultFormats();
 
-    auto pluginFileStripped = pathToPluginFile.trimCharactersAtEnd(juce::File::getSeparatorString());
-    auto fileExists = juce::File::createFileWithoutCheckingPath(pluginFileStripped).exists();
+    auto pluginFileStripped =
+        pathToPluginFile.trimCharactersAtEnd(juce::File::getSeparatorString());
+    auto fileExists =
+        juce::File::createFileWithoutCheckingPath(pluginFileStripped).exists();
 
     if (!fileExists) {
-      throw pybind11::import_error("Unable to load plugin " + pathToPluginFile.toStdString() +
-          ": plugin file not found.");
+      throw pybind11::import_error("Unable to load plugin " +
+                                   pathToPluginFile.toStdString() +
+                                   ": plugin file not found.");
     }
 
     pluginList.scanAndAddFile(pluginFileStripped, false, typesFound, format);
@@ -126,33 +146,33 @@ public:
       reinstantiatePlugin();
     } else {
 #if JUCE_LINUX
-      auto machineName = []() -> juce::String
-      {
-          struct utsname unameData;
-          auto res = uname (&unameData);
+      auto machineName = []() -> juce::String {
+        struct utsname unameData;
+        auto res = uname(&unameData);
 
-          if (res != 0)
-              return {};
+        if (res != 0)
+          return {};
 
-          return unameData.machine;
+        return unameData.machine;
       }();
 
       juce::File pluginBundle(pluginFileStripped);
 
-      auto pathToSharedObjectFile = pluginBundle.getChildFile("Contents")
-        .getChildFile(machineName + "-linux")
-        .getChildFile(pluginBundle.getFileNameWithoutExtension() + ".so");
+      auto pathToSharedObjectFile =
+          pluginBundle.getChildFile("Contents")
+              .getChildFile(machineName + "-linux")
+              .getChildFile(pluginBundle.getFileNameWithoutExtension() + ".so");
 
       throw pybind11::import_error(
-        "Unable to load plugin " + pathToPluginFile.toStdString() +
-        ": unsupported plugin format or load failure. Plugin files or " +
-        "shared library dependencies may be missing. (Try running `ldd \"" +
-        pathToSharedObjectFile.getFullPathName().toStdString() + "\"` to " +
-        "see which dependencies might be missing.).");
+          "Unable to load plugin " + pathToPluginFile.toStdString() +
+          ": unsupported plugin format or load failure. Plugin files or " +
+          "shared library dependencies may be missing. (Try running `ldd \"" +
+          pathToSharedObjectFile.getFullPathName().toStdString() + "\"` to " +
+          "see which dependencies might be missing.).");
 #else
       throw pybind11::import_error(
-        "Unable to load plugin " + pathToPluginFile.toStdString() +
-        ": unsupported plugin format or load failure.");
+          "Unable to load plugin " + pathToPluginFile.toStdString() +
+          ": unsupported plugin format or load failure.");
 #endif
     }
   }
@@ -188,13 +208,13 @@ public:
     {
       std::lock_guard<std::mutex> lock(EXTERNAL_PLUGIN_MUTEX);
       pluginInstance = pluginFormatManager.createPluginInstance(
-        foundPluginDescription, ExternalLoadSampleRate,
-        ExternalLoadMaximumBlockSize, loadError);
+          foundPluginDescription, ExternalLoadSampleRate,
+          ExternalLoadMaximumBlockSize, loadError);
 
       if (!pluginInstance) {
         throw pybind11::import_error("Unable to load plugin " +
-                                    pathToPluginFile.toStdString() + ": " +
-                                    loadError.toStdString());
+                                     pathToPluginFile.toStdString() + ": " +
+                                     loadError.toStdString());
       }
 
       NUM_ACTIVE_EXTERNAL_PLUGINS++;
@@ -300,7 +320,8 @@ public:
         size_t pluginBufferChannelCount = 0;
         // Iterate through all input busses and add their input channels to our
         // buffer:
-        for (size_t i = 0; i < static_cast<size_t>(pluginInstance->getBusCount(true)); i++) {
+        for (size_t i = 0;
+             i < static_cast<size_t>(pluginInstance->getBusCount(true)); i++) {
           if (pluginInstance->getBus(true, i)->isEnabled()) {
             pluginBufferChannelCount +=
                 pluginInstance->getBus(true, i)->getNumberOfChannels();
@@ -309,7 +330,7 @@ public:
 
         juce::dsp::AudioBlock<float> &outputBlock = context.getOutputBlock();
 
-        float *channelPointers[pluginBufferChannelCount];
+        std::vector<float *> channelPointers(pluginBufferChannelCount);
 
         for (size_t i = 0; i < outputBlock.getNumChannels(); i++) {
           channelPointers[i] = outputBlock.getChannelPointer(i);
@@ -350,7 +371,7 @@ public:
 
         // Create an audio buffer that doesn't actually allocate anything, but
         // just points to the data in the ProcessContext.
-        juce::AudioBuffer<float> audioBuffer(channelPointers,
+        juce::AudioBuffer<float> audioBuffer(channelPointers.data(),
                                              pluginBufferChannelCount,
                                              outputBlock.getNumSamples());
         pluginInstance->processBlock(audioBuffer, emptyMidiBuffer);
@@ -366,6 +387,15 @@ public:
     return parameters;
   }
 
+  juce::AudioProcessorParameter *getParameter(const std::string &name) const {
+    for (auto *parameter : pluginInstance->getParameters()) {
+      if (parameter->getName(512).toStdString() == name) {
+        return parameter;
+      }
+    }
+    return nullptr;
+  }
+
 private:
   constexpr static int ExternalLoadSampleRate = 44100,
                        ExternalLoadMaximumBlockSize = 8192;
@@ -377,10 +407,9 @@ private:
 
 inline void init_external_plugins(py::module &m) {
   py::class_<juce::AudioProcessorParameter>(
-      m, "AudioProcessorParameter",
+      m, "_AudioProcessorParameter",
       "An abstract base class for parameter objects that can be added to an "
-      "AudioProcessor.",
-      py::dynamic_attr())
+      "AudioProcessor.")
       .def("__repr__",
            [](juce::AudioProcessorParameter &parameter) {
              std::ostringstream ss;
@@ -514,7 +543,10 @@ inline void init_external_plugins(py::module &m) {
           "Pedalboard.")
       .def_property_readonly(
           "_parameters", &ExternalPlugin<juce::VST3PluginFormat>::getParameters,
-          py::return_value_policy::reference_internal);
+          py::return_value_policy::reference_internal)
+      .def("_get_parameter",
+           &ExternalPlugin<juce::VST3PluginFormat>::getParameter,
+           py::return_value_policy::reference_internal);
 #endif
 
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
@@ -548,7 +580,11 @@ inline void init_external_plugins(py::module &m) {
           "Pedalboard.")
       .def_property_readonly(
           "_parameters",
-          &ExternalPlugin<juce::AudioUnitPluginFormat>::getParameters);
+          &ExternalPlugin<juce::AudioUnitPluginFormat>::getParameters,
+          py::return_value_policy::reference_internal)
+      .def("_get_parameter",
+           &ExternalPlugin<juce::AudioUnitPluginFormat>::getParameter,
+           py::return_value_policy::reference_internal);
 #endif
 }
 

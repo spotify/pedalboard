@@ -1,9 +1,25 @@
+#! /usr/bin/env python
+#
+# Copyright 2021 Spotify AB
+#
+# Licensed under the GNU Public License, Version 3.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.gnu.org/licenses/gpl-3.0.html
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 import os
 import platform
 from subprocess import check_output
 from pybind11.setup_helpers import Pybind11Extension
 from pathlib import Path
-from distutils import sysconfig
 from distutils.core import setup
 from distutils.unixccompiler import UnixCCompiler
 
@@ -71,6 +87,8 @@ if DEBUG:
     if bool(int(os.environ.get('USE_ASAN', 0))):
         JUCE_CPPFLAGS += ['-fsanitize=address', '-fno-omit-frame-pointer']
         LINK_ARGS += ['-fsanitize=address']
+        if platform.system() == "Linux":
+            LINK_ARGS += ['-shared-libasan']
     elif bool(int(os.environ.get('USE_TSAN', 0))):
         JUCE_CPPFLAGS += ['-fsanitize=thread']
         LINK_ARGS += ['-fsanitize=thread']
@@ -78,13 +96,14 @@ if DEBUG:
         JUCE_CPPFLAGS += ['-fsanitize=memory', '-fsanitize-memory-track-origins']
         LINK_ARGS += ['-fsanitize=memory']
 else:
-    JUCE_CPPFLAGS += ['-O3']
+    JUCE_CPPFLAGS += ['/Ox' if platform.system() == "Windows" else '-O3']
 
 
 # Regardless of platform, allow our compiler to compile .mm files as Objective-C (required on MacOS)
 UnixCCompiler.src_extensions.append(".mm")
 UnixCCompiler.language_map[".mm"] = "objc++"
 
+LIBS = []
 if platform.system() == "Darwin":
     MACOS_FRAMEWORKS = [
         'Accelerate',
@@ -125,7 +144,7 @@ if platform.system() == "Darwin":
         if matching_cpp_source:
             sources[sources.index(matching_cpp_source)] = objc_source
     PEDALBOARD_SOURCES = [str(p.resolve()) for p in sources]
-else:
+elif platform.system() == "Linux":
     for package in ['freetype2']:
         flags = (
             check_output(['pkg-config', '--cflags-only-I', package])
@@ -138,6 +157,30 @@ else:
     LINK_ARGS += ['-lfreetype']
 
     PEDALBOARD_SOURCES = [str(p.resolve()) for p in (list(Path("pedalboard").glob("**/*.cpp")))]
+elif platform.system() == "Windows":
+    JUCE_CPPFLAGS += ['-DJUCE_DLL_BUILD=1']
+    # https://forum.juce.com/t/statically-linked-exe-in-win-10-not-working/25574/3
+    LIBS.extend(
+        [
+            "kernel32",
+            "user32",
+            "gdi32",
+            "winspool",
+            "comdlg32",
+            "advapi32",
+            "shell32",
+            "ole32",
+            "oleaut32",
+            "uuid",
+            "odbc32",
+            "odbccp32",
+        ]
+    )
+    PEDALBOARD_SOURCES = [str(p.resolve()) for p in (list(Path("pedalboard").glob("**/*.cpp")))]
+else:
+    raise NotImplementedError(
+        "Not sure how to build JUCE on platform: {}!".format(platform.system())
+    )
 
 pedalboard_cpp = Pybind11Extension(
     'pedalboard_native',
@@ -145,6 +188,7 @@ pedalboard_cpp = Pybind11Extension(
     include_dirs=JUCE_INCLUDES,
     extra_compile_args=JUCE_CPPFLAGS + JUCE_CPPFLAGS_CONSOLEAPP,
     extra_link_args=LINK_ARGS,
+    libraries=LIBS,
     language="c++",
     cxx_std=17,
 )
@@ -154,28 +198,26 @@ if DEBUG:
     # Why does Pybind11 always remove debugging symbols?
     pedalboard_cpp.extra_compile_args.remove('-g0')
 
-
-if platform.system() == "Darwin":
-    # On some macOS installations, CFLAGS includes a macOS SDK
-    # that inserts the wrong <math> header into the search path
-    # for C++ code. This is a somewhat hacky fix for those who
-    # try to build this package on machines configured this way.
-    # See:
-    #  - https://guihao-liang.github.io/2020/03/26/compiler-search-oder
-    #  - https://stackoverflow.com/q/58628377/679081
-    cflags = sysconfig.get_config_vars()['CFLAGS'].split()
-    for arg in list(cflags):
-        if 'MacOS' in arg and '.sdk' in arg:
-            cflags.remove(arg)
-    sysconfig.get_config_vars()['CFLAGS'] = " ".join(cflags)
-
-
 setup(
     name='pedalboard',
-    version='0.3.2',
+    version='0.3.3',
     author='Peter Sobot',
     author_email='psobot@spotify.com',
     description='A Python library for adding effects to audio.',
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        "Operating System :: MacOS",
+        "Operating System :: Microsoft :: Windows",
+        "Operating System :: POSIX :: Linux",
+        "Programming Language :: C++",
+        "Programming Language :: Python",
+        "Topic :: Multimedia :: Sound/Audio",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+    ],
     ext_modules=[pedalboard_cpp],
     install_requires=['numpy'],
     packages=['pedalboard'],

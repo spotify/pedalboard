@@ -1,12 +1,29 @@
+#! /usr/bin/env python
+#
+# Copyright 2021 Spotify AB
+#
+# Licensed under the GNU Public License, Version 3.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.gnu.org/licenses/gpl-3.0.html
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import collections
 import platform
 import weakref
 from functools import update_wrapper
+from contextlib import contextmanager
 from typing import List, Optional, Dict, Union, Tuple, Iterable
 
 import numpy as np
 
-from pedalboard_native import Plugin, process, AudioProcessorParameter
+from pedalboard_native import Plugin, process, _AudioProcessorParameter
 
 
 class Pedalboard(collections.MutableSequence):
@@ -138,9 +155,9 @@ def wrap_type(base_type):
                 return base_type.__new__(cls)
 
         def __init__(self, *args, **kwargs):
-            if 'wrapped' in kwargs:
-                self._wrapped = weakref.ref(kwargs['wrapped'])
-                del kwargs['wrapped']
+            if "wrapped" in kwargs:
+                self._wrapped = weakref.ref(kwargs["wrapped"])
+                del kwargs["wrapped"]
             else:
                 raise ValueError(
                     "WeakTypeWrapper({}) expected to be passed a 'wrapped' keyword argument."
@@ -201,11 +218,16 @@ FloatWithParameter = wrap_type(float)
 BooleanWithParameter = wrap_type(WrappedBool)
 
 
-TRUE_BOOLEANS = {'on', 'yes', 'true', 'enabled'}
+TRUE_BOOLEANS = {"on", "yes", "true", "enabled"}
 
 
-def supplement_parameter(self: AudioProcessorParameter, search_steps: int = 1000):
+class AudioProcessorParameter(object):
     """
+    The C++ version of this class (`_AudioProcessorParameter`) is owned
+    by the ExternalPlugin object and is not guaranteed to exist at the
+    same memory address every time we might need it. This Python wrapper
+    looks it up dynamically.
+
     VSTs and Audio Units don't always consistently give parameter values,
     types, or names - all we get is APIs that map float values on [0, 1]
     to strings, which may represent floats, strings, integers, enums, etc.
@@ -218,70 +240,138 @@ def supplement_parameter(self: AudioProcessorParameter, search_steps: int = 1000
     we could do this in C++, but doing this in Python uses much less code
     and is (roughly) as performant as it should only run once per parameter.
     """
-    if getattr(self, "__supplemented__", False):
-        # Very quick sanity check: has the C++ parameter instance
-        # changed identities from under us? This could happen if the C++
-        # instance uses the same object in memory but changes its parameters.
-        if self.__supplemented_name != self.name:
-            raise NotImplementedError(
-                "Parameter '{}' has been changed by the plugin instance. (It is now: {}) This may"
-                " cause plugin parameter changes to throw undefined exceptions. Pedalboard is"
-                " currently unable to accommodate plugins that change their parameters like this."
-                .format(self.__supplemented_name, self)
+
+    def __init__(self, plugin, parameter_name, search_steps: int = 1000):
+        self.__plugin = plugin
+        self.__parameter_name = parameter_name
+
+        self.ranges: Dict[Tuple[float, float], Union[str, float, bool]] = {}
+
+        with self.__get_cpp_parameter() as cpp_parameter:
+            start_of_range = 0
+            text_value = None
+            for x in range(0, search_steps + 1):
+                raw_value = x / search_steps
+                x_text_value = cpp_parameter.get_text_for_raw_value(raw_value)
+                if text_value is None:
+                    text_value = x_text_value
+                elif x_text_value != text_value:
+                    # End current range and start a new one
+                    self.ranges[(start_of_range, raw_value)] = text_value
+                    text_value = x_text_value
+                    start_of_range = raw_value
+            self.ranges[(start_of_range, 1)] = text_value
+
+            self.python_name = to_python_parameter_name(cpp_parameter)
+
+        self.min_value = None
+        self.max_value = None
+        self.step_size = None
+        self.approximate_step_size = None
+        self.valid_values = list(self.ranges.values())
+        self.type = str
+
+        if all(looks_like_float(v) for v in self.ranges.values()):
+            self.type = float
+            self.ranges = {
+                k: float(v.rstrip(FLOAT_SUFFIXES_TO_IGNORE)) for k, v in self.ranges.items()
+            }
+            self.min_value = min(self.ranges.values())
+            self.max_value = max(self.ranges.values())
+
+            sorted_values = sorted(self.ranges.values())
+            first_derivative_steps = set(
+                [round(abs(b - a), 8) for a, b in zip(sorted_values, sorted_values[1:])]
             )
-        else:
+            if len(first_derivative_steps) == 1:
+                self.step_size = next(iter(first_derivative_steps))
+            elif first_derivative_steps:
+                self.approximate_step_size = sum(first_derivative_steps) / len(
+                    first_derivative_steps
+                )
+        elif len(self.valid_values) == 2 and (
+            TRUE_BOOLEANS & {v.lower() for v in self.valid_values}
+        ):
+            self.type = bool
+            self.ranges = {k: v.lower() in TRUE_BOOLEANS for k, v in self.ranges.items()}
+            self.min_value = False
+            self.max_value = True
+            self.step_size = 1
+
+        self.range = self.min_value, self.max_value, self.step_size
+        self._value_to_raw_value_ranges = {value: _range for _range, value in self.ranges.items()}
+
+    @contextmanager
+    def __get_cpp_parameter(self):
+        # Re-fetch the parameter by name every time, as it may have changed.
+        _parameter = self.__plugin._get_parameter(self.__parameter_name)
+        if _parameter and _parameter.name == self.__parameter_name:
+            yield _parameter
             return
-
-    self.ranges: Dict[Tuple[float, float], Union[str, float, bool]] = {}
-
-    start_of_range = 0
-    text_value = None
-    for x in range(0, search_steps + 1):
-        raw_value = x / search_steps
-        x_text_value = self.get_text_for_raw_value(raw_value)
-        if text_value is None:
-            text_value = x_text_value
-        elif x_text_value != text_value:
-            # End current range and start a new one
-            self.ranges[(start_of_range, raw_value)] = text_value
-            text_value = x_text_value
-            start_of_range = raw_value
-    self.ranges[(start_of_range, 1)] = text_value
-
-    self.python_name = to_python_parameter_name(self)
-
-    self.min_value = None
-    self.max_value = None
-    self.step_size = None
-    self.approximate_step_size = None
-    self.valid_values = list(self.ranges.values())
-    self.type = str
-
-    if all(looks_like_float(v) for v in self.ranges.values()):
-        self.type = float
-        self.ranges = {k: float(v.rstrip(FLOAT_SUFFIXES_TO_IGNORE)) for k, v in self.ranges.items()}
-        self.min_value = min(self.ranges.values())
-        self.max_value = max(self.ranges.values())
-
-        sorted_values = sorted(self.ranges.values())
-        first_derivative_steps = set(
-            [round(abs(b - a), 8) for a, b in zip(sorted_values, sorted_values[1:])]
+        raise RuntimeError(
+            "Parameter {} on plugin {} is no longer available. This could indicate that the plugin"
+            " has changed parameters.".format(self.__parameter_name, self.__plugin)
         )
-        if len(first_derivative_steps) == 1:
-            self.step_size = next(iter(first_derivative_steps))
-        elif first_derivative_steps:
-            self.approximate_step_size = sum(first_derivative_steps) / len(first_derivative_steps)
-    elif len(self.valid_values) == 2 and (TRUE_BOOLEANS & {v.lower() for v in self.valid_values}):
-        self.type = bool
-        self.ranges = {k: v.lower() in TRUE_BOOLEANS for k, v in self.ranges.items()}
-        self.min_value = False
-        self.max_value = True
-        self.step_size = 1
 
-    self.range = self.min_value, self.max_value, self.step_size
-    self._value_to_raw_value_ranges = {value: _range for _range, value in self.ranges.items()}
+    def __repr__(self):
+        with self.__get_cpp_parameter() as parameter:
+            cpp_repr_value = repr(parameter)
+            cpp_repr_value = cpp_repr_value.rstrip(">")
+            if self.type is float:
+                if self.step_size:
+                    return "{} value={} range=({}, {}, {})>".format(
+                        cpp_repr_value,
+                        self.string_value,
+                        self.min_value,
+                        self.max_value,
+                        self.step_size,
+                    )
+                elif self.approximate_step_size:
+                    return "{} value={} range=({}, {}, ~{})>".format(
+                        cpp_repr_value,
+                        self.string_value,
+                        self.min_value,
+                        self.max_value,
+                        self.approximate_step_size,
+                    )
+            elif self.type is str:
+                return '{} value="{}" ({} valid string value{})>'.format(
+                    cpp_repr_value,
+                    self.string_value,
+                    len(self.valid_values),
+                    "" if len(self.valid_values) == 1 else "s",
+                )
+            elif self.type is bool:
+                return '{} value={} boolean ("{}" and "{}")>'.format(
+                    cpp_repr_value, self.string_value, self.valid_values[0], self.valid_values[1]
+                )
+            else:
+                raise ValueError(
+                    f"Parameter {self.python_name} has an unknown type. (Found '{self.type}')"
+                )
 
-    def _get_raw_value_for(new_value) -> float:
+    def __getattr__(self, name: str):
+        if not name.startswith("_"):
+            try:
+                with self.__get_cpp_parameter() as parameter:
+                    return getattr(parameter, name)
+            except RuntimeError:
+                pass
+        if hasattr(super(), "__getattr__"):
+            return super().__getattr__(name)
+        raise AttributeError("'{}' has no attribute '{}'".format(self.__class__.__name__, name))
+
+    def __setattr__(self, name: str, value):
+        if not name.startswith("_"):
+            try:
+                with self.__get_cpp_parameter() as parameter:
+                    if hasattr(parameter, name):
+                        return setattr(parameter, name, value)
+            except RuntimeError:
+                pass
+        return super().__setattr__(name, value)
+
+    def get_raw_value_for(self, new_value) -> float:
         if self.type is float:
             try:
                 new_value = float(new_value)
@@ -366,71 +456,20 @@ def supplement_parameter(self: AudioProcessorParameter, search_steps: int = 1000
                 "Parameter has invalid type: {}. This should not be possible!".format(self.type)
             )
 
-    self.get_raw_value_for = _get_raw_value_for
-    self.__supplemented_name = self.name
-    self.__supplemented__ = True
-    return self
 
-
-CPP_AUDIO_PROCESSOR_PARAMETER_REPR = AudioProcessorParameter.__repr__
-
-"""
-Monkey patch the C++ __repr__ of AudioProcessorParameter to add our Python functionality.
-"""
-
-
-def python_audio_processor_parameter_repr(self):
-    cpp_repr_value = CPP_AUDIO_PROCESSOR_PARAMETER_REPR(self)
-    if hasattr(self, '__supplemented__'):
-        cpp_repr_value = cpp_repr_value.rstrip(">")
-        if self.type is float:
-            if self.step_size:
-                return "{} value={} range=({}, {}, {})>".format(
-                    cpp_repr_value,
-                    self.string_value,
-                    self.min_value,
-                    self.max_value,
-                    self.step_size,
-                )
-            elif self.approximate_step_size:
-                return "{} value={} range=({}, {}, ~{})>".format(
-                    cpp_repr_value,
-                    self.string_value,
-                    self.min_value,
-                    self.max_value,
-                    self.approximate_step_size,
-                )
-        elif self.type is str:
-            return "{} value=\"{}\" ({} valid string value{})>".format(
-                cpp_repr_value,
-                self.string_value,
-                len(self.valid_values),
-                "" if len(self.valid_values) == 1 else "s",
-            )
-        elif self.type is bool:
-            return "{} value={} boolean (\"{}\" and \"{}\")>".format(
-                cpp_repr_value, self.string_value, self.valid_values[0], self.valid_values[1]
-            )
-    else:
-        return cpp_repr_value
-
-
-AudioProcessorParameter.__repr__ = python_audio_processor_parameter_repr
-
-
-def to_python_parameter_name(parameter: AudioProcessorParameter) -> Optional[str]:
+def to_python_parameter_name(parameter: _AudioProcessorParameter) -> Optional[str]:
     if not parameter.name and not parameter.label:
         return None
 
     name = parameter.name.lower().strip()
-    if parameter.label and not parameter.label.startswith(':'):
+    if parameter.label and not parameter.label.startswith(":"):
         name = "{} {}".format(name, parameter.label.lower())
     # Replace all non-alphanumeric characters with underscores
     name = [c if c.isalpha() or c.isnumeric() else "_" for c in name]
     # Remove any double-underscores:
     name = [a for a, b in zip(name, name[1:]) if a != b or b != "_"] + [name[-1]]
     # Remove any leading or trailing underscores:
-    name = ''.join(name).strip('_')
+    name = "".join(name).strip("_")
     return name
 
 
@@ -438,16 +477,11 @@ class ExternalPlugin(object):
     def __set_initial_parameter_values__(
         self, parameter_values: Dict[str, Union[str, int, float, bool]] = {}
     ):
-        # Manually clear the "__supplemented__" flag on any parameter
-        # objects, as pybind11 may have reused the same memory:
-        for parameter in self._parameters:
-            parameter.__supplemented__ = False
-
         parameters = self.parameters
         for key, value in parameter_values.items():
             if key not in parameters:
                 raise AttributeError(
-                    "Parameter named \"{}\" not found. Valid options: {}".format(
+                    'Parameter named "{}" not found. Valid options: {}'.format(
                         key, ", ".join(self._parameter_weakrefs.keys())
                     )
                 )
@@ -455,12 +489,45 @@ class ExternalPlugin(object):
 
     @property
     def parameters(self) -> Dict[str, AudioProcessorParameter]:
+        return self._get_parameters()
+
+    def _get_parameters(self):
+        if not hasattr(self, "__python_parameter_cache__"):
+            self.__python_parameter_cache__ = {}
+        if not hasattr(self, "__python_to_cpp_names__"):
+            self.__python_to_cpp_names__ = {}
+
         parameters = {}
-        for parameter in self._parameters:
-            supplement_parameter(parameter)
+        for cpp_parameter in self._parameters:
+            if cpp_parameter.name not in self.__python_parameter_cache__:
+                self.__python_parameter_cache__[cpp_parameter.name] = AudioProcessorParameter(
+                    self, cpp_parameter.name
+                )
+            parameter = self.__python_parameter_cache__[cpp_parameter.name]
             if parameter.python_name:
                 parameters[parameter.python_name] = parameter
+                self.__python_to_cpp_names__[parameter.python_name] = cpp_parameter.name
         return parameters
+
+    def _get_parameter_by_python_name(self, python_name: str) -> AudioProcessorParameter:
+        if not hasattr(self, "__python_parameter_cache__"):
+            self.__python_parameter_cache__ = {}
+        if not hasattr(self, "__python_to_cpp_names__"):
+            self.__python_to_cpp_names__ = {}
+
+        cpp_name = self.__python_to_cpp_names__.get(python_name)
+        if not cpp_name:
+            return self._get_parameters().get(python_name)
+
+        cpp_parameter = self._get_parameter(cpp_name)
+        if not cpp_parameter:
+            return None
+
+        if cpp_parameter.name not in self.__python_parameter_cache__:
+            self.__python_parameter_cache__[cpp_parameter.name] = AudioProcessorParameter(
+                self, cpp_parameter.name
+            )
+        return self.__python_parameter_cache__[cpp_parameter.name]
 
     def __dir__(self):
         parameter_names = []
@@ -471,30 +538,32 @@ class ExternalPlugin(object):
         return super().__dir__() + parameter_names
 
     def __getattr__(self, name: str):
-        parameter = self.parameters.get(name)
-        if parameter:
-            string_value = parameter.string_value
-            if parameter.type is float:
-                return FloatWithParameter(
-                    float(string_value.rstrip(FLOAT_SUFFIXES_TO_IGNORE)), wrapped=parameter
-                )
-            elif parameter.type is bool:
-                return BooleanWithParameter(parameter.raw_value >= 0.5, wrapped=parameter)
-            elif parameter.type is str:
-                return StringWithParameter(str(string_value), wrapped=parameter)
-            else:
-                raise ValueError(
-                    f"Parameter {parameter.python_name} has an unknown type. (Found"
-                    f" '{parameter.type}')"
-                )
-        raise AttributeError(name)
+        if not name.startswith("_"):
+            parameter = self._get_parameter_by_python_name(name)
+            if parameter:
+                string_value = parameter.string_value
+                if parameter.type is float:
+                    return FloatWithParameter(
+                        float(string_value.rstrip(FLOAT_SUFFIXES_TO_IGNORE)), wrapped=parameter
+                    )
+                elif parameter.type is bool:
+                    return BooleanWithParameter(parameter.raw_value >= 0.5, wrapped=parameter)
+                elif parameter.type is str:
+                    return StringWithParameter(str(string_value), wrapped=parameter)
+                else:
+                    raise ValueError(
+                        f"Parameter {parameter.python_name} has an unknown type. (Found"
+                        f" '{parameter.type}')"
+                    )
+        return getattr(super(), name)
 
     def __setattr__(self, name: str, value):
-        parameter = self.parameters.get(name)
-        if parameter:
-            parameter.raw_value = parameter.get_raw_value_for(value)
-        else:
-            super().__setattr__(name, value)
+        if not name.startswith("__"):
+            parameter = self._get_parameter_by_python_name(name)
+            if parameter:
+                parameter.raw_value = parameter.get_raw_value_for(value)
+                return
+        super().__setattr__(name, value)
 
 
 try:

@@ -1,9 +1,26 @@
+#! /usr/bin/env python
+#
+# Copyright 2021 Spotify AB
+#
+# Licensed under the GNU Public License, Version 3.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.gnu.org/licenses/gpl-3.0.html
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 import pytest
 import numpy as np
-from pedalboard import Pedalboard, Gain, Compressor, Convolution
+from pedalboard import Pedalboard, Gain
 
 
-@pytest.mark.parametrize('shape', [(44100,), (44100, 1), (44100, 2), (1, 4), (2, 4)])
+@pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 4), (2, 4)])
 def test_no_transforms(shape, sr=44100):
     _input = np.random.rand(*shape).astype(np.float32)
 
@@ -15,19 +32,19 @@ def test_no_transforms(shape, sr=44100):
 
 def test_fail_on_invalid_plugin():
     with pytest.raises(TypeError):
-        Pedalboard(['I want a reverb please'], 44100)
+        Pedalboard(["I want a reverb please"], 44100)
 
 
 def test_fail_on_invalid_sample_rate():
     with pytest.raises(TypeError):
-        Pedalboard([], 'fourty four one hundred')
+        Pedalboard([], "fourty four one hundred")
     with pytest.raises(TypeError):
-        Pedalboard([]).process([], 'fourty four one hundred')
+        Pedalboard([]).process([], "fourty four one hundred")
 
 
 def test_fail_on_invalid_buffer_size():
     with pytest.raises(TypeError):
-        Pedalboard([]).process([], 44100, 'very big buffer please')
+        Pedalboard([]).process([], 44100, "very big buffer please")
 
 
 def test_repr():
@@ -88,57 +105,3 @@ def test_process_validates_sample_rate():
     pb = Pedalboard([Gain(-6)])
     with pytest.raises(ValueError):
         pb.process(full_scale_noise)
-
-
-@pytest.mark.parametrize(
-    'shape,buffer_size',
-    sum(
-        [
-            [
-                ((44100,), buffer_size),
-                ((44100, 1), buffer_size),
-                ((44100, 2), buffer_size),
-                ((1, 4), buffer_size),
-                ((2, 4), buffer_size),
-            ]
-            for buffer_size in (None, 128, 4096, 2 ** 16)
-        ],
-        [],
-    ),
-)
-def test_noise_gain(shape, buffer_size, sr=44100):
-    full_scale_noise = np.random.rand(*shape).astype(np.float32)
-
-    # Use the Gain transform to scale down the noise by 6dB (0.5x)
-    half_noise = Pedalboard([Gain(-6)], sr).process(full_scale_noise, buffer_size=buffer_size)
-    assert full_scale_noise.shape == half_noise.shape
-    assert np.allclose(full_scale_noise / 2.0, half_noise, rtol=0.01)
-
-
-def test_throw_on_invalid_compressor_ratio(sr=44100):
-    full_scale_noise = np.random.rand(sr, 1).astype(np.float32)
-
-    # Should work:
-    Pedalboard([Compressor(ratio=1.1)], sr).process(full_scale_noise)
-
-    # Should fail:
-    with pytest.raises(ValueError):
-        Compressor(ratio=0.1)
-
-
-def test_convolution_works(sr=44100, duration=10):
-    full_scale_noise = np.random.rand(sr * duration).astype(np.float32)
-
-    result = Pedalboard([Convolution('./tests/impulse_response.wav', 0.5)], sr).process(
-        full_scale_noise
-    )
-    assert not np.allclose(full_scale_noise, result, rtol=0.1)
-
-
-def test_throw_on_inaccessible_convolution_file():
-    # Should work:
-    Convolution('./tests/impulse_response.wav')
-
-    # Should fail:
-    with pytest.raises(RuntimeError):
-        Convolution('./tests/missing_impulse_response.wav')
