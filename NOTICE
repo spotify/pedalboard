@@ -1,0 +1,16 @@
+Pedalboard
+Copyright 2021 Spotify AB
+
+This product includes software developed at
+Spotify AB (http://www.spotify.com/).
+
+This product includes software from JUCE (GPLv3).
+* Copyright (C) 2021 Raw Material Software Limited.
+
+JUCE includes software from the VST3 SDK, licensed under the GPLv3.
+* Copyright (C) 2019 Steinberg Media Technologies GmbH.
+
+The tests for `pedalboard` include binaries from Jatin Chowdhury's
+`AnalogTapeModel` project, licensed under the GPLv3. The source code
+for these binaries can be found at:
+https://github.com/jatinchowdhury18/AnalogTapeModel

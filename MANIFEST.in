@@ -1,0 +1,10 @@
+include *.txt tox.ini  *.md
+recursive-include tests *.py
+
+# Include the C++ code required to build the native extension:
+# TODO: This can go away once we build binary wheels!
+graft pedalboard
+graft JUCE
+graft tests
+
+exclude build-info.yaml service-info.yaml mkdocs.yml
