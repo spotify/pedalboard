@@ -1,4 +1,4 @@
-![Pedalboard](https://ghe.spotify.net/storage/user/2565/files/a9702c80-9b97-11eb-85a8-c18146679473)
+![Pedalboard](https://user-images.githubusercontent.com/213293/124613247-0733ae00-de41-11eb-8b14-e990c08e597d.png)
 
 <!-- TODO: Add badges here -->
 
