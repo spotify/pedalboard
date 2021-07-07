@@ -1,3 +1,20 @@
+/*
+ * pedalboard
+ * Copyright 2021 Spotify AB
+ *
+ * Licensed under the GNU Public License, Version 3.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.gnu.org/licenses/gpl-3.0.html
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #pragma once
 #include "JuceHeader.h"
 
@@ -141,23 +158,25 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
       plugin->reset();
     }
 
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = static_cast<juce::uint32>(bufferSize);
+    spec.numChannels = static_cast<juce::uint32>(numChannels);
+
     for (auto *plugin : plugins) {
       if (plugin == nullptr)
         continue;
-      plugin->prepare(
-          {.sampleRate = sampleRate,
-           .maximumBlockSize = static_cast<juce::uint32>(bufferSize),
-           .numChannels = static_cast<juce::uint32>(numChannels)});
+      plugin->prepare(spec);
     }
 
     // Manually construct channel pointers to pass to AudioBuffer.
-    float *ioBufferChannelPointers[numChannels];
+    std::vector<float *> ioBufferChannelPointers(numChannels);
     for (unsigned int i = 0; i < numChannels; i++) {
       ioBufferChannelPointers[i] = ((float *)outputInfo.ptr) + (i * numSamples);
     }
 
-    juce::AudioBuffer<float> ioBuffer(ioBufferChannelPointers, numChannels,
-                                      numSamples);
+    juce::AudioBuffer<float> ioBuffer(ioBufferChannelPointers.data(),
+                                      numChannels, numSamples);
 
     for (unsigned int blockStart = 0; blockStart < numSamples;
          blockStart += bufferSize) {
@@ -192,7 +211,7 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
       }
 
       auto ioBlock = juce::dsp::AudioBlock<float>(
-          ioBufferChannelPointers, numChannels, blockStart, blockSize);
+          ioBufferChannelPointers.data(), numChannels, blockStart, blockSize);
       juce::dsp::ProcessContextReplacing<float> context(ioBlock);
 
       // Now all of the pointers in context are pointing to valid input data,

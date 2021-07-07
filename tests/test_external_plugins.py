@@ -1,3 +1,20 @@
+#! /usr/bin/env python
+#
+# Copyright 2021 Spotify AB
+#
+# Licensed under the GNU Public License, Version 3.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.gnu.org/licenses/gpl-3.0.html
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 import os
 import math
 import platform
@@ -9,12 +26,19 @@ import pedalboard
 import numpy as np
 
 
-TEST_PLUGIN_BASE_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'plugins')
+TEST_PLUGIN_BASE_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), "plugins")
 
 AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT = [
     os.path.basename(filename)
-    for filename in glob(os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), '*'))
+    for filename in glob(os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), "*"))
 ]
+
+# Disable Audio Unit tests on GitHub Actions, as the
+# action container fails to load Audio Units:
+if os.getenv("CIBW_TEST_REQUIRES") or os.getenv("CI"):
+    AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT = [
+        f for f in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT if "component" not in f
+    ]
 
 
 def get_parameters(plugin_filename: str):
@@ -38,11 +62,9 @@ def load_test_plugin(plugin_filename: str, *args, **kwargs):
 
     key = repr((plugin_filename, args, tuple(kwargs.items())))
     if key not in TEST_PLUGIN_CACHE:
-        os.environ['LD_DEBUG'] = 'libs'
         TEST_PLUGIN_CACHE[key] = pedalboard.load_plugin(
             os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_filename), *args, **kwargs
         )
-        os.environ['LD_DEBUG'] = ''
     return TEST_PLUGIN_CACHE[key]
 
 
@@ -50,7 +72,7 @@ def test_at_least_one_plugin_is_available_for_testing():
     assert AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
 
 
-@pytest.mark.parametrize('plugin_filename', AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_at_least_one_parameter(plugin_filename: str):
     """
     Many tests below are parametrized on the parameters of the plugin;
@@ -61,7 +83,7 @@ def test_at_least_one_parameter(plugin_filename: str):
     assert get_parameters(plugin_filename)
 
 
-@pytest.mark.parametrize('plugin_filename', AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_initial_parameters(plugin_filename: str):
     parameters = {
         k: v.min_value for k, v in get_parameters(plugin_filename).items() if v.type == float
@@ -75,7 +97,7 @@ def test_initial_parameters(plugin_filename: str):
 
 
 @pytest.mark.parametrize(
-    'plugin_filename,parameter_name',
+    "plugin_filename,parameter_name",
     [
         (path, parameter)
         for path in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
@@ -90,7 +112,7 @@ def test_initial_parameter_validation(plugin_filename: str, parameter_name: str)
         )
 
 
-@pytest.mark.parametrize('plugin_filename', AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_initial_parameter_validation_missing(plugin_filename: str):
     with pytest.raises(AttributeError):
         load_test_plugin(plugin_filename, {"missing_parameter": 123})
@@ -102,7 +124,7 @@ def test_import_error_on_missing_path(loader):
         loader("./")
 
 
-@pytest.mark.parametrize('plugin_filename', AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 @pytest.mark.parametrize(
     "num_channels,sample_rate",
     [(1, 48000), (2, 48000), (1, 44100), (2, 44100), (1, 22050), (2, 22050)],
@@ -116,7 +138,7 @@ def test_plugin_accepts_variable_channel_count(
     assert effected.shape == noise.shape
 
 
-@pytest.mark.parametrize('plugin_filename', AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_all_parameters_are_accessible_as_properties(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename)
     assert plugin.parameters
@@ -124,21 +146,21 @@ def test_all_parameters_are_accessible_as_properties(plugin_filename: str):
         assert hasattr(plugin, parameter_name)
 
 
-@pytest.mark.parametrize('plugin_filename', AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_all_parameters_have_accessors(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename)
     assert plugin.parameters
     for parameter_name, parameter in plugin.parameters.items():
         assert parameter_name in dir(plugin)
         parameter_value = getattr(plugin, parameter_name)
-        assert hasattr(parameter_value, 'raw_value')
+        assert hasattr(parameter_value, "raw_value")
         assert repr(parameter)
         assert isinstance(parameter_value, (float, WrappedBool, str))
         assert parameter_value.raw_value == parameter.raw_value
         assert parameter_value.range is not None
 
 
-@pytest.mark.parametrize('plugin_filename', AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_attributes_proxy(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename)
 
@@ -151,7 +173,7 @@ def test_attributes_proxy(plugin_filename: str):
 
 
 @pytest.mark.parametrize(
-    'plugin_filename,parameter_name',
+    "plugin_filename,parameter_name",
     [
         (path, parameter)
         for path in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
@@ -170,13 +192,13 @@ def test_bool_parameters(plugin_filename: str, parameter_name: str):
 
     # Ensure that if we access an attribute that we're not adding to the value,
     # we fall back to the underlying type (bool) or we raise an exception if not:
-    assert hasattr(parameter_value, 'bit_length')
+    assert hasattr(parameter_value, "bit_length")
     with pytest.raises(AttributeError):
         parameter_value.something_that_doesnt_exist
 
 
 @pytest.mark.parametrize(
-    'plugin_filename,parameter_name',
+    "plugin_filename,parameter_name",
     [
         (path, parameter)
         for path in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
@@ -190,7 +212,7 @@ def test_bool_parameter_valdation(plugin_filename: str, parameter_name: str):
 
 
 @pytest.mark.parametrize(
-    'plugin_filename,parameter_name',
+    "plugin_filename,parameter_name",
     [
         (path, parameter)
         for path in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
@@ -217,7 +239,7 @@ def test_float_parameters(plugin_filename: str, parameter_name: str):
 
 
 @pytest.mark.parametrize(
-    'plugin_filename,parameter_name',
+    "plugin_filename,parameter_name",
     [
         (path, parameter)
         for path in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
@@ -242,7 +264,7 @@ def test_float_parameter_valdation(plugin_filename: str, parameter_name: str):
 
 
 @pytest.mark.parametrize(
-    'plugin_filename,parameter_name',
+    "plugin_filename,parameter_name",
     [
         (path, parameter)
         for path in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
@@ -267,7 +289,7 @@ def test_str_parameters(plugin_filename: str, parameter_name: str):
 
 
 @pytest.mark.parametrize(
-    'plugin_filename,parameter_name',
+    "plugin_filename,parameter_name",
     [
         (path, parameter)
         for path in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
@@ -285,7 +307,7 @@ def test_string_parameter_valdation(plugin_filename: str, parameter_name: str):
         setattr(plugin, parameter_name, "some value not present")
 
 
-@pytest.mark.parametrize('plugin_filename', AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_plugin_state_cleared_between_invocations(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename)
     sr = 44100

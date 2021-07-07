@@ -1,6 +1,14 @@
 ![Pedalboard](https://user-images.githubusercontent.com/213293/124613247-0733ae00-de41-11eb-8b14-e990c08e597d.png)
 
-<!-- TODO: Add badges here -->
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pedalboard)
+![PyPI - Wheel](https://img.shields.io/pypi/wheel/pedalboard)
+[![Test Badge](https://github.com/spotify/pedalboard/actions/workflows/wheels.yml/badge.svg)](https://github.com/spotify/pedalboard/actions/workflows/wheels.yml)
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/spotify/pedalboard/wheels)
+![Coverage Badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/psobot/8736467e9952991ef44a67915ee7c762/raw/coverage.json)
+![GitHub Repo stars](https://img.shields.io/github/stars/spotify/pedalboard?style=social)
+![Supported Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-green)
+![Apple Silicon supported](https://img.shields.io/badge/Apple%20Silicon-supported-brightgreen)
 
 `pedalboard` is a Python library for adding effects to audio. It supports a number of common audio effects out of the box, and also allows the use of [VST3](https://www.steinberg.net/en/company/technologies/vst3.html) and [Audio Unit](https://en.wikipedia.org/wiki/Audio_Units) plugin formats for third-party effects. It was built by [Spotify's Audio Intelligence Lab](https://research.atspotify.com/audio-intelligence/) to enable using studio-quality audio effects from within Python and TensorFlow.
 

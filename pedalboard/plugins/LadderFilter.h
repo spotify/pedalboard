@@ -1,3 +1,20 @@
+/*
+ * pedalboard
+ * Copyright 2021 Spotify AB
+ *
+ * Licensed under the GNU Public License, Version 3.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.gnu.org/licenses/gpl-3.0.html
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -81,19 +98,26 @@ inline void init_ladderfilter(py::module &m) {
              ss << " mode=";
              switch (plugin.getMode()) {
              case juce::dsp::LadderFilterMode::LPF12:
-               ss << "pedalboard.LadderFilter.LPF12"; break;
+               ss << "pedalboard.LadderFilter.LPF12";
+               break;
              case juce::dsp::LadderFilterMode::HPF12:
-               ss << "pedalboard.LadderFilter.HPF12"; break;
+               ss << "pedalboard.LadderFilter.HPF12";
+               break;
              case juce::dsp::LadderFilterMode::BPF12:
-               ss << "pedalboard.LadderFilter.BPF12"; break;
+               ss << "pedalboard.LadderFilter.BPF12";
+               break;
              case juce::dsp::LadderFilterMode::LPF24:
-               ss << "pedalboard.LadderFilter.LPF24"; break;
+               ss << "pedalboard.LadderFilter.LPF24";
+               break;
              case juce::dsp::LadderFilterMode::HPF24:
-               ss << "pedalboard.LadderFilter.HPF24"; break;
+               ss << "pedalboard.LadderFilter.HPF24";
+               break;
              case juce::dsp::LadderFilterMode::BPF24:
-               ss << "pedalboard.LadderFilter.BPF24"; break;
+               ss << "pedalboard.LadderFilter.BPF24";
+               break;
              default:
-               ss << "unknown"; break;
+               ss << "unknown";
+               break;
              }
              ss << " cutoff_hz=" << plugin.getCutoffFrequencyHz();
              ss << " resonance=" << plugin.getResonance();
