@@ -6,7 +6,7 @@ on:
     branches:
       - master
   release:
-    types: [created]
+    types: [published]
 
 jobs:
   lint-python:
