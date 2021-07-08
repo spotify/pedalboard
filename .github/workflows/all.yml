@@ -206,16 +206,15 @@ jobs:
     needs: [lint-python, lint-cpp, build-wheels, run-tests, run-tests-with-address-sanitizer]
     runs-on: ubuntu-latest
     name: "Upload wheels to PyPI"
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
     # alternatively, to publish when a GitHub Release is created, use the following rule:
-    if: github.event_name == 'release' && github.event.action == 'published'
+    # if: github.event_name == 'release' && github.event.action == 'published'
     steps:
       - uses: actions/download-artifact@v2
         with:
           name: artifact
           path: dist
-
       - uses: pypa/gh-action-pypi-publish@v1.4.2
         with:
           user: __token__
           password: ${{ secrets.PYPI_DEPLOY_TOKEN }}
-          repository_url: https://test.pypi.org/legacy/
