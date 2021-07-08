@@ -6,8 +6,7 @@
 ![Supported Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-green)
 ![Apple Silicon supported](https://img.shields.io/badge/Apple%20Silicon-supported-brightgreen)
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/pedalboard)
-[![Test Badge](https://github.com/spotify/pedalboard/actions/workflows/wheels.yml/badge.svg)](https://github.com/spotify/pedalboard/actions/workflows/wheels.yml)
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/spotify/pedalboard/wheels)
+[![Test Badge](https://github.com/spotify/pedalboard/actions/workflows/all.yml/badge.svg)](https://github.com/spotify/pedalboard/actions/workflows/all.yml)
 ![Coverage Badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/psobot/8736467e9952991ef44a67915ee7c762/raw/coverage.json)
 ![GitHub Repo stars](https://img.shields.io/github/stars/spotify/pedalboard?style=social)
 
@@ -39,10 +38,26 @@
 
 `pedalboard` is available via PyPI (via [Platform Wheels](https://packaging.python.org/guides/distributing-packages-using-setuptools/#platform-wheels)):
 ```
-pip3 install pedalboard
+pip install pedalboard
 ```
 
-`pedalboard` has been tested heavily at Spotify on Linux, but also works on macOS, and should work on Windows.
+### Compatibility
+
+`pedalboard` is thoroughly tested with Python 3.6, 3.7, 3.8, and 3.9, as well as experimental support for PyPy 7.3.
+
+- Linux
+  - Tested heavily in production use cases at Spotify
+  - Tested automatically on GitHub with VSTs
+  - Platform `manylinux` wheels built for `x86_64`
+  - Most Linux VSTs require a relatively modern Linux installation (with glibc > 2.27)
+- macOS
+  - Tested manually with VSTs and Audio Units
+  - Tested automatically on GitHub with VSTs
+  - Platform wheels available for both Intel and Apple Silicon
+  - Compatible with a wide range of VSTs and Audio Units
+- Windows
+  - Tested automatically on GitHub with VSTs
+  - Platform wheels available for `amd64` (Intel/AMD)
 
 ## Examples
 
@@ -129,6 +144,10 @@ effected = board(audio)
 ```
 
 For more examples, see [the _Pedalboard Demo_ Jupyter notebook at `pedalboard-demo.ipynb`](https://github.com/spotify/pedalboard/blob/master/pedalboard-demo.ipynb).
+
+## Contributing
+
+Contributions to `pedalboard` are welcomed! See [CONTRIBUTING.md](https://github.com/spotify/pedalboard/blob/master/CONTRIBUTING.md) for details.
 
 ## License
 `pedalboard` is Copyright 2021 Spotify AB.
