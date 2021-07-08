@@ -157,4 +157,4 @@ Contributions to `pedalboard` are welcomed! See [CONTRIBUTING.md](https://github
  - The VST3 SDK, bundled with JUCE, is owned by [Steinberg® Media Technologies GmbH](https://www.steinberg.net/en/home.html) and licensed under the GPLv3.
 
 `pedalboard`'s logo contains artwork called
-["guitar pedals" by Jino from the Noun Project](https://thenounproject.com/term/guitar-pedals/3605562).
+["guitar pedals" by Jino from the Noun Project](https://thenounproject.com/term/guitar-pedals/3605562), and the wordmark uses modified glyphs from [Victor Mono](https://github.com/rubjo/victor-mono).
