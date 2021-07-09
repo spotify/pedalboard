@@ -155,6 +155,7 @@ jobs:
           pytest -v
 
   build-wheels:
+    needs: [lint-python, lint-cpp, run-tests, run-tests-with-address-sanitizer]
     runs-on: ${{ matrix.os }}
     continue-on-error: false
     strategy:
@@ -203,7 +204,7 @@ jobs:
           path: ./wheelhouse/*.whl
 
   upload-pypi:
-    needs: [lint-python, lint-cpp, build-wheels, run-tests, run-tests-with-address-sanitizer]
+    needs: [build-wheels]
     runs-on: ubuntu-latest
     name: "Upload wheels to PyPI"
     if: github.event_name == 'release' && github.event.action == 'published'
