@@ -1,4 +1,4 @@
-![Pedalboard logo](https://user-images.githubusercontent.com/213293/124824084-e8681100-df3f-11eb-890a-ade7ccf39075.png)
+![Pedalboard Logo](https://user-images.githubusercontent.com/213293/125090786-bd93cf00-e09d-11eb-9c7f-a1363c0e733c.png)
 
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
