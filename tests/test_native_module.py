@@ -18,7 +18,7 @@
 import os
 import pytest
 import numpy as np
-from pedalboard import process, Gain, Compressor, Convolution
+from pedalboard import process, Distortion, Gain, Compressor, Convolution
 
 
 IMPULSE_RESPONSE_PATH = os.path.join(os.path.dirname(__file__), "impulse_response.wav")
@@ -77,3 +77,16 @@ def test_throw_on_inaccessible_convolution_file():
     # Should fail:
     with pytest.raises(RuntimeError):
         Convolution("missing_impulse_response.wav")
+
+
+@pytest.mark.parametrize("gain_db", [-12, -6, 0, 6, 12, 24, 48, 96])
+@pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 4), (2, 4)])
+def test_distortion(gain_db, shape, sr=44100):
+    full_scale_noise = np.random.rand(*shape).astype(np.float32)
+
+    # Use the Distortion transform with ±0dB, which should change nothing:
+    result = process(full_scale_noise, sr, [Distortion(gain_db)])
+
+    assert full_scale_noise.shape == result.shape
+    gain_scale = 10.0 ** (gain_db / 20.0)
+    assert np.allclose(np.tanh(full_scale_noise * gain_scale), result)
