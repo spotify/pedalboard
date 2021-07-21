@@ -24,7 +24,7 @@ import numpy as np
 import pedalboard
 
 
-@pytest.mark.parametrize("num_concurrent_chains", [10, 24, 50])
+@pytest.mark.parametrize("num_concurrent_chains", [2, 10, 20])
 def test_multiple_threads_using_same_plugin_instances(num_concurrent_chains: int):
     """
     Instantiate a large number of stateful plugins, then run audio through them
