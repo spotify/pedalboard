@@ -200,7 +200,7 @@ if DEBUG:
 
 setup(
     name='pedalboard',
-    version='0.3.3',
+    version='0.3.4',
     author='Peter Sobot',
     author_email='psobot@spotify.com',
     description='A Python library for adding effects to audio.',
