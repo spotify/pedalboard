@@ -87,6 +87,6 @@ def test_distortion(gain_db, shape, sr=44100):
     # Use the Distortion transform with ±0dB, which should change nothing:
     result = process(full_scale_noise, sr, [Distortion(gain_db)])
 
-    assert full_scale_noise.shape == result.shape
+    np.testing.assert_equal(result.shape, full_scale_noise.shape)
     gain_scale = 10.0 ** (gain_db / 20.0)
     assert np.allclose(np.tanh(full_scale_noise * gain_scale), result)
