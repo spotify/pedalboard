@@ -28,7 +28,7 @@ class Distortion
     : public JucePlugin<juce::dsp::ProcessorChain<
           juce::dsp::Gain<SampleType>, juce::dsp::WaveShaper<SampleType>>> {
 public:
-  void setDriveDecibels(float f) noexcept { driveDecibels = f; }
+  void setDriveDecibels(const float f) noexcept { driveDecibels = f; }
   float getDriveDecibels() const noexcept { return driveDecibels; }
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) override {
