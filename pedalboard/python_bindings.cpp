@@ -35,6 +35,7 @@ namespace py = pybind11;
 #include "plugins/Chorus.h"
 #include "plugins/Compressor.h"
 #include "plugins/Convolution.h"
+#include "plugins/Distortion.h"
 #include "plugins/Gain.h"
 #include "plugins/HighpassFilter.h"
 #include "plugins/LadderFilter.h"
@@ -125,6 +126,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
 
   init_compressor(m);
   init_convolution(m);
+  init_distortion(m);
   init_gain(m);
   init_highpass(m);
   init_ladderfilter(m);

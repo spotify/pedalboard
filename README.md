@@ -18,14 +18,15 @@
    - `Convolution`
    - `Compressor`
    - `Chorus`
+   - `Distortion`
    - `Gain`
    - `HighpassFilter`
-   - `Reverb`
    - `LadderFilter`
    - `Limiter`
    - `LowpassFilter`
    - `Phaser`
- - Supports VST3 plugins on macOS, Windows, and Linux
+   - `Reverb`
+ - Supports VST3® plugins on macOS, Windows, and Linux
  - Supports Audio Units on macOS
  - Strong thread-safety, memory usage, and speed guarantees
    - Releases Python's Global Interpreter Lock (GIL) to allow use of multiple CPU cores
@@ -158,3 +159,5 @@ Contributions to `pedalboard` are welcomed! See [CONTRIBUTING.md](https://github
 
 `pedalboard`'s logo contains artwork called
 ["guitar pedals" by Jino from the Noun Project](https://thenounproject.com/term/guitar-pedals/3605562), and the wordmark uses modified glyphs from [Victor Mono](https://github.com/rubjo/victor-mono).
+
+_VST is a registered trademark of Steinberg Media Technologies GmbH._
