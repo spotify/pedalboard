@@ -1,4 +1,4 @@
-![Pedalboard Logo](https://user-images.githubusercontent.com/213293/125090786-bd93cf00-e09d-11eb-9c7f-a1363c0e733c.png)
+![Pedalboard Logo](https://user-images.githubusercontent.com/213293/131147303-4805181a-c7d5-4afe-afb2-f591a4b8e586.png)
 
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -156,8 +156,5 @@ Contributions to `pedalboard` are welcomed! See [CONTRIBUTING.md](https://github
 `pedalboard` is licensed under the [GNU General Public License v3](https://www.gnu.org/licenses/gpl-3.0.en.html), because:
  - The core audio processing code is pulled from JUCE 6, which is [dual-licensed under a commercial license and the GPLv3](https://juce.com/juce-6-licence)
  - The VST3 SDK, bundled with JUCE, is owned by [Steinberg® Media Technologies GmbH](https://www.steinberg.net/en/home.html) and licensed under the GPLv3.
-
-`pedalboard`'s logo contains artwork called
-["guitar pedals" by Jino from the Noun Project](https://thenounproject.com/term/guitar-pedals/3605562), and the wordmark uses modified glyphs from [Victor Mono](https://github.com/rubjo/victor-mono).
 
 _VST is a registered trademark of Steinberg Media Technologies GmbH._
