@@ -98,7 +98,7 @@ docs. Please file an [issue](https://github.com/spotify/pedalboard/issues/new).
 # License 
 
 By contributing your code, you agree to license your contribution under the 
-terms of the [LICENSE](https://github.com/spotify/pedalboard/blob/master/LICENSE)]
+terms of the [LICENSE](https://github.com/spotify/pedalboard/blob/master/LICENSE).
 
 # Code of Conduct
 
