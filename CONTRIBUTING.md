@@ -15,7 +15,7 @@ pip3 install .
 
 ## Workflow
 
-We follow the [GitHub Flow Workflow](https://guides.github.com/introduction/flow/)
+We follow the [GitHub Flow Workflow](https://guides.github.com/introduction/flow/):
 
 1.  Fork the project 
 1.  Check out the `master` branch 
