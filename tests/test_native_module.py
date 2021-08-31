@@ -19,12 +19,11 @@ import os
 import pytest
 import numpy as np
 from pedalboard import process, Distortion, Gain, Compressor, Convolution
-from librosa import db_to_amplitude
 
 IMPULSE_RESPONSE_PATH = os.path.join(os.path.dirname(__file__), "impulse_response.wav")
 
 
-@pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 4), (2, 4)])
+@pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 44100), (2, 44100)])
 def test_no_transforms(shape, sr=44100):
     _input = np.random.rand(*shape).astype(np.float32)
 
@@ -34,7 +33,7 @@ def test_no_transforms(shape, sr=44100):
     assert np.allclose(_input, output, rtol=0.0001)
 
 
-@pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 4), (2, 4)])
+@pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 44100), (2, 44100)])
 def test_noise_gain(shape, sr=44100):
     full_scale_noise = np.random.rand(*shape).astype(np.float32)
 
@@ -80,7 +79,7 @@ def test_throw_on_inaccessible_convolution_file():
 
 
 @pytest.mark.parametrize("gain_db", [-12, -6, 0, 1.1, 6, 12, 24, 48, 96])
-@pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 4), (2, 4)])
+@pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 44100), (2, 44100)])
 def test_distortion(gain_db, shape, sr=44100):
     full_scale_noise = np.random.rand(*shape).astype(np.float32)
 
@@ -88,5 +87,5 @@ def test_distortion(gain_db, shape, sr=44100):
     result = process(full_scale_noise, sr, [Distortion(gain_db)])
 
     np.testing.assert_equal(result.shape, full_scale_noise.shape)
-    gain_scale = db_to_amplitude(gain_db)
+    gain_scale = np.power(10.0, 0.05 * gain_db)
     np.testing.assert_allclose(np.tanh(full_scale_noise * gain_scale), result, rtol=4e-7, atol=2e-7)

@@ -9,7 +9,6 @@ flake8
 black
 interrogate
 
-numpy<=1.20
-librosa
+numpy
 sox
 tensorflow
