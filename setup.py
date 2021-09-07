@@ -198,12 +198,18 @@ if DEBUG:
     # Why does Pybind11 always remove debugging symbols?
     pedalboard_cpp.extra_compile_args.remove('-g0')
 
+# read the contents of the README file
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
+
 setup(
     name='pedalboard',
-    version='0.3.4',
+    version='0.3.5',
     author='Peter Sobot',
     author_email='psobot@spotify.com',
     description='A Python library for adding effects to audio.',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
