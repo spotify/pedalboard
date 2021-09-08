@@ -135,7 +135,7 @@ print(vst.parameters.keys())
 vst.ratio = 15
 
 # Use this VST to process some audio:
-audio, sample_rate = soundfile.read('some-file.wav')
+audio, sample_rate = sf.read('some-file.wav')
 effected = vst(audio, sample_rate=sample_rate)
 
 # ...or put this VST into a chain with other plugins:
