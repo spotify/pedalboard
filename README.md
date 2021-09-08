@@ -78,7 +78,7 @@ from pedalboard import (
     Phaser,
 )
 
-audio, sample_rate = soundfile.read('some-file.wav')
+audio, sample_rate = sf.read('some-file.wav')
 
 # Make a Pedalboard object, containing multiple plugins:
 board = Pedalboard([
@@ -89,7 +89,7 @@ board = Pedalboard([
     Phaser(),
     Convolution("./guitar_amp.wav", 1.0),
     Reverb(room_size=0.25),
-], sample_rate=sr)
+], sample_rate=sample_rate)
 
 # Pedalboard objects behave like lists, so you can add plugins:
 board.append(Compressor(threshold_db=-25, ratio=10))
@@ -100,7 +100,7 @@ board.append(Limiter())
 effected = board(audio)
 
 # Write the audio back as a wav file:
-with sf.SoundFile('./processed-output-stereo.wav', 'w', samplerate=sr, channels=effected.shape[1]) as f:
+with sf.SoundFile('./processed-output-stereo.wav', 'w', samplerate=sample_rate, channels=len(effected.shape)) as f:
     f.write(effected)
 
 ```
