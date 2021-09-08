@@ -54,20 +54,20 @@ PYBIND11_MODULE(pedalboard_native, m) {
         "Run a 32-bit floating point audio buffer through a list of Pedalboard "
         "plugins.",
         py::arg("input_array"), py::arg("sample_rate"), py::arg("plugins"),
-        py::arg("buffer_size") = DEFAULT_BUFFER_SIZE);
+        py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true);
 
   m.def("process", process<double>,
         "Run a 64-bit floating point audio buffer through a list of Pedalboard "
         "plugins. The buffer will be converted to 32-bit for processing.",
         py::arg("input_array"), py::arg("sample_rate"), py::arg("plugins"),
-        py::arg("buffer_size") = DEFAULT_BUFFER_SIZE);
+        py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true);
 
   m.def("process", processSingle<float>,
         "Run a 32-bit floating point audio buffer through a single Pedalboard "
         "plugin. (Note: if calling this multiple times with multiple plugins, "
         "consider passing a list of plugins instead.)",
         py::arg("input_array"), py::arg("sample_rate"), py::arg("plugin"),
-        py::arg("buffer_size") = DEFAULT_BUFFER_SIZE);
+        py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true);
 
   m.def("process", processSingle<double>,
         "Run a 64-bit floating point audio buffer through a single Pedalboard "
@@ -75,7 +75,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
         "consider passing a list of plugins instead.) The buffer will be "
         "converted to 32-bit for processing.",
         py::arg("input_array"), py::arg("sample_rate"), py::arg("plugin"),
-        py::arg("buffer_size") = DEFAULT_BUFFER_SIZE);
+        py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true);
 
   auto plugin =
       py::class_<Plugin>(m, "Plugin",
@@ -94,24 +94,26 @@ PYBIND11_MODULE(pedalboard_native, m) {
               "process",
               [](Plugin *self,
                  const py::array_t<float, py::array::c_style> inputArray,
-                 double sampleRate, unsigned int bufferSize) {
-                return process(inputArray, sampleRate, {self}, bufferSize);
+                 double sampleRate, unsigned int bufferSize, bool reset) {
+                return process(inputArray, sampleRate, {self}, bufferSize,
+                               reset);
               },
               "Run a 32-bit floating point audio buffer through this plugin."
               "(Note: if calling this multiple times with multiple plugins, "
               "consider using pedalboard.process(...) instead.)",
               py::arg("input_array"), py::arg("sample_rate"),
-              py::arg("buffer_size") = DEFAULT_BUFFER_SIZE)
+              py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+              py::arg("reset") = true)
 
           .def(
               "process",
               [](Plugin *self,
                  const py::array_t<double, py::array::c_style> inputArray,
-                 double sampleRate, unsigned int bufferSize) {
+                 double sampleRate, unsigned int bufferSize, bool reset) {
                 const py::array_t<float, py::array::c_style> float32InputArray =
                     inputArray.attr("astype")("float32");
                 return process(float32InputArray, sampleRate, {self},
-                               bufferSize);
+                               bufferSize, reset);
               },
               "Run a 64-bit floating point audio buffer through this plugin."
               "(Note: if calling this multiple times with multiple plugins, "
@@ -119,7 +121,8 @@ PYBIND11_MODULE(pedalboard_native, m) {
               "will be "
               "converted to 32-bit for processing.",
               py::arg("input_array"), py::arg("sample_rate"),
-              py::arg("buffer_size") = DEFAULT_BUFFER_SIZE);
+              py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+              py::arg("reset") = true);
   plugin.attr("__call__") = plugin.attr("process");
 
   init_chorus(m);

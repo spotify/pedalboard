@@ -291,11 +291,16 @@ public:
 
   void prepare(const juce::dsp::ProcessSpec &spec) override {
     if (pluginInstance) {
-      setNumChannels(spec.numChannels);
-      pluginInstance->setRateAndBufferSizeDetails(spec.sampleRate,
-                                                  spec.maximumBlockSize);
-      pluginInstance->prepareToPlay(spec.sampleRate, spec.maximumBlockSize);
-      pluginInstance->setNonRealtime(true);
+      if (lastSpec.sampleRate != spec.sampleRate ||
+          lastSpec.maximumBlockSize != spec.maximumBlockSize ||
+          spec.numChannels != lastSpec.numChannels) {
+        setNumChannels(spec.numChannels);
+        pluginInstance->setRateAndBufferSizeDetails(spec.sampleRate,
+                                                    spec.maximumBlockSize);
+        pluginInstance->prepareToPlay(spec.sampleRate, spec.maximumBlockSize);
+        pluginInstance->setNonRealtime(true);
+        lastSpec = spec;
+      }
     }
   }
 
