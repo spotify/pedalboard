@@ -222,6 +222,13 @@ public:
 
     pluginInstance->setStateInformation(savedState.getData(),
                                         savedState.getSize());
+    
+    const juce::dsp::ProcessSpec _lastSpec = lastSpec;
+
+    // Invalidate lastSpec to force us to update the plugin state:
+    lastSpec.numChannels = 0;
+    prepare(_lastSpec);
+
     pluginInstance->reset();
   }
 
@@ -293,7 +300,7 @@ public:
     if (pluginInstance) {
       if (lastSpec.sampleRate != spec.sampleRate ||
           lastSpec.maximumBlockSize != spec.maximumBlockSize ||
-          spec.numChannels != lastSpec.numChannels) {
+          lastSpec.numChannels != spec.numChannels) {
         setNumChannels(spec.numChannels);
         pluginInstance->setRateAndBufferSizeDetails(spec.sampleRate,
                                                     spec.maximumBlockSize);

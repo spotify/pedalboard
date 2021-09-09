@@ -41,6 +41,6 @@ public:
   std::mutex mutex;
 
 protected:
-  juce::dsp::ProcessSpec lastSpec;
+  juce::dsp::ProcessSpec lastSpec = {0};
 };
 } // namespace Pedalboard

@@ -312,10 +312,10 @@ def test_plugin_state_cleared_between_invocations(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename)
     sr = 44100
     noise = np.random.rand(sr)
-    slience = np.zeros_like(noise)
+    silence = np.zeros_like(noise)
 
-    # Passing zero inputs should return
-    effected_silence = plugin(slience, sr)
+    # Passing zero inputs should return silence
+    effected_silence = plugin(silence, sr)
     plugin_noise_floor = np.amax(np.abs(effected_silence))
 
     effected = plugin(noise, sr)
@@ -323,7 +323,26 @@ def test_plugin_state_cleared_between_invocations(plugin_filename: str):
 
     # Calling plugin again shouldn't allow any audio tails
     # to carry over from previous calls.
-    assert np.allclose(plugin(slience, sr), effected_silence)
+    assert np.allclose(plugin(silence, sr), effected_silence)
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_plugin_state_not_cleared_between_invocations(plugin_filename: str):
+    plugin = load_test_plugin(plugin_filename)
+    sr = 44100
+    noise = np.random.rand(sr)
+    silence = np.zeros_like(noise)
+
+    # Passing zero inputs should return silence
+    effected_silence = plugin(silence, sr, reset=False)
+    plugin_noise_floor = np.amax(np.abs(effected_silence))
+
+    effected = plugin(noise, sr, reset=False)
+    assert np.amax(np.abs(effected)) > plugin_noise_floor * 10
+
+    # Calling plugin again shouldn't allow any audio tails
+    # to carry over from previous calls.
+    assert np.allclose(plugin(silence, sr), effected_silence)
 
 
 @pytest.mark.parametrize("value", (True, False))

@@ -18,7 +18,7 @@
 import os
 import pytest
 import numpy as np
-from pedalboard import process, Distortion, Gain, Compressor, Convolution
+from pedalboard import process, Distortion, Gain, Compressor, Convolution, Reverb
 
 IMPULSE_RESPONSE_PATH = os.path.join(os.path.dirname(__file__), "impulse_response.wav")
 
@@ -89,3 +89,30 @@ def test_distortion(gain_db, shape, sr=44100):
     np.testing.assert_equal(result.shape, full_scale_noise.shape)
     gain_scale = np.power(10.0, 0.05 * gain_db)
     np.testing.assert_allclose(np.tanh(full_scale_noise * gain_scale), result, rtol=4e-7, atol=2e-7)
+
+
+@pytest.mark.parametrize("reset", (True, False))
+def test_plugin_state_not_cleared_between_invocations(reset: bool):
+    """
+    Ensure that if `reset` is True, we do reset the plugin state
+    (i.e.: we cut off reverb tails). If `reset` is False, plugin
+    state should be maintained between calls to `render`
+    (preserving tails).
+    """
+    reverb = Reverb()
+    sr = 44100
+    noise = np.random.rand(sr)
+    silence = np.zeros_like(noise)
+
+    # Assert that reverb adds nothing if no signal was present already:
+    assert np.amax(np.abs(reverb(silence, sr, reset=reset))) == 0.0
+
+    # Pass in noise followed by silence:
+    reverb(noise, sr, reset=reset)
+    effected_silence = reverb(silence, sr, reset=reset)
+    effected_silence_noise_floor = np.amax(np.abs(effected_silence))
+
+    if reset:
+        assert effected_silence_noise_floor == 0.0
+    else:
+        assert effected_silence_noise_floor > 0.25
