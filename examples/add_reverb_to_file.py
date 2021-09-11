@@ -4,6 +4,8 @@ Add reverb to an audio file using Pedalboard.
 The audio file is read in chunks, using nearly no memory.
 This should be one of the fastest possible ways to add reverb to a file.
 On my laptop, this runs about 32x faster than real-time (i.e.: processes a 60-second file in <2 seconds.)
+
+Requirements: `pip install pysoundfile tqdm pedalboard`
 """
 
 import sys
