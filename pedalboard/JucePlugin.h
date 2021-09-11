@@ -51,7 +51,7 @@ public:
 
   void prepare(const juce::dsp::ProcessSpec &spec) override {
     if (lastSpec.sampleRate != spec.sampleRate ||
-        lastSpec.maximumBlockSize != spec.maximumBlockSize ||
+        lastSpec.maximumBlockSize < spec.maximumBlockSize ||
         spec.numChannels != lastSpec.numChannels) {
       dspBlock.prepare(spec);
       lastSpec = spec;

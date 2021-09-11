@@ -116,3 +116,24 @@ def test_plugin_state_not_cleared_between_invocations(reset: bool):
         assert effected_silence_noise_floor == 0.0
     else:
         assert effected_silence_noise_floor > 0.25
+
+
+def test_plugin_state_not_cleared_if_passed_smaller_buffer():
+    """
+    Ensure that if `reset` is False, a smaller buffer size can be
+    passed without clearing the plugin's internal state:
+    """
+    reverb = Reverb()
+    sr = 44100
+    noise = np.random.rand(sr)
+    silence = np.zeros_like(noise)
+
+    # Assert that reverb adds nothing if no signal was present already:
+    assert np.amax(np.abs(reverb(silence, sr, reset=False))) == 0.0
+
+    # Pass in noise followed by silence, but less silence:
+    reverb(noise, sr, reset=False)
+    effected_silence = reverb(silence[: int(len(silence) / 2)], sr, reset=False)
+    effected_silence_noise_floor = np.amax(np.abs(effected_silence))
+
+    assert effected_silence_noise_floor > 0.25

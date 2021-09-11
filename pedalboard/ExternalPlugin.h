@@ -299,7 +299,7 @@ public:
   void prepare(const juce::dsp::ProcessSpec &spec) override {
     if (pluginInstance) {
       if (lastSpec.sampleRate != spec.sampleRate ||
-          lastSpec.maximumBlockSize != spec.maximumBlockSize ||
+          lastSpec.maximumBlockSize < spec.maximumBlockSize ||
           lastSpec.numChannels != spec.numChannels) {
         setNumChannels(spec.numChannels);
         pluginInstance->setRateAndBufferSizeDetails(spec.sampleRate,
