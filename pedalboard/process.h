@@ -50,9 +50,11 @@ process(const py::array_t<SampleType, py::array::c_style> inputArray,
 template <typename SampleType>
 py::array_t<float>
 processSingle(const py::array_t<SampleType, py::array::c_style> inputArray,
-              double sampleRate, Plugin &plugin, unsigned int bufferSize, bool reset) {
+              double sampleRate, Plugin &plugin, unsigned int bufferSize,
+              bool reset) {
   std::vector<Plugin *> plugins{&plugin};
-  return process<SampleType>(inputArray, sampleRate, plugins, bufferSize, reset);
+  return process<SampleType>(inputArray, sampleRate, plugins, bufferSize,
+                             reset);
 }
 
 /**

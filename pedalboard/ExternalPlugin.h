@@ -222,7 +222,7 @@ public:
 
     pluginInstance->setStateInformation(savedState.getData(),
                                         savedState.getSize());
-    
+
     const juce::dsp::ProcessSpec _lastSpec = lastSpec;
 
     // Invalidate lastSpec to force us to update the plugin state:
