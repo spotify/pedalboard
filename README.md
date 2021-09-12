@@ -11,9 +11,6 @@
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/pedalboard)
 ![GitHub Repo stars](https://img.shields.io/github/stars/spotify/pedalboard?style=social)
 
-**NEW**
-- :white_check_mark: Integrated to [Huggingface Spaces](https://huggingface.co/spaces) with [Gradio](https://github.com/gradio-app/gradio). See [Gradio Web Demo](https://huggingface.co/spaces/akhaliq/pedalboard).
-
 `pedalboard` is a Python library for adding effects to audio. It supports a number of common audio effects out of the box, and also allows the use of [VST3®](https://www.steinberg.net/en/company/technologies/vst3.html) and [Audio Unit](https://en.wikipedia.org/wiki/Audio_Units) plugin formats for third-party effects. It was built by [Spotify's Audio Intelligence Lab](https://research.atspotify.com/audio-intelligence/) to enable using studio-quality audio effects from within Python and TensorFlow.
 
 ## Usage 
@@ -151,6 +148,7 @@ effected = board(audio)
 For more examples, see:
  - [the `examples` folder of this repository](https://github.com/spotify/pedalboard/tree/master/examples)
  - [the _Pedalboard Demo_ Colab notebook](https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_lOfG99Xs3qWVrhch)
+ - [an interactive web demo on Hugging Face Spaces and Gradio](https://huggingface.co/spaces/akhaliq/pedalboard) (via [@AK391](https://github.com/AK391)) 
 
 ## Contributing
 
