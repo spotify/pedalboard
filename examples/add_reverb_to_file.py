@@ -2,24 +2,28 @@
 Add reverb to an audio file using Pedalboard.
 
 The audio file is read in chunks, using nearly no memory.
-This should be one of the fastest possible ways to add reverb to a file.
-On my laptop, this runs about 32x faster than real-time
-(i.e.: processes a 60-second file in <2 seconds.)
+This should be one of the fastest possible ways to add reverb to a file
+while also using as little memory as possible.
+
+On my laptop, this runs about 58x faster than real-time
+(i.e.: processes a 60-second file in ~1 second.)
 
 Requirements: `pip install pysoundfile tqdm pedalboard`
 """
 
+import argparse
+import os
 import sys
 import warnings
-import argparse
+
 import numpy as np
-from tqdm import tqdm
 import soundfile as sf
+from tqdm import tqdm
 from tqdm.std import TqdmWarning
+
 from pedalboard import Reverb
 
-
-BUFFER_SIZE_SAMPLES = 1024
+BUFFER_SIZE_SAMPLES = 1024 * 16
 NOISE_FLOOR = 1e-4
 
 
@@ -67,6 +71,13 @@ def main():
     parser.add_argument("--freeze-mode", type=float, default=reverb.freeze_mode)
 
     parser.add_argument(
+        "-y",
+        "--overwrite",
+        action="store_true",
+        help="If passed, overwrite the output file if it already exists.",
+    )
+
+    parser.add_argument(
         "--cut-reverb-tail",
         action="store_true",
         help=(
@@ -86,6 +97,10 @@ def main():
 
     with sf.SoundFile(args.input_file) as input_file:
         sys.stderr.write(f"Writing to {args.output_file}...\n")
+        if os.path.isfile(args.output_file) and not args.overwrite:
+            raise ValueError(
+                f"Output file {args.output_file} already exists! (Pass -y to overwrite.)"
+            )
         with sf.SoundFile(
             args.output_file,
             'w',
