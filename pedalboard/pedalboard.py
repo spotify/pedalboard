@@ -466,7 +466,7 @@ def to_python_parameter_name(parameter: _AudioProcessorParameter) -> Optional[st
     if parameter.label and not parameter.label.startswith(":"):
         name = "{} {}".format(name, parameter.label.lower())
     # Replace all non-alphanumeric characters with underscores
-    name = [c if c.isalpha() or c.isnumeric() else "_" for c in name]
+    name = [c if (c.isalpha() or c.isnumeric()) and c.isascii() else "_" for c in name]
     # Remove any double-underscores:
     name = [a for a, b in zip(name, name[1:]) if a != b or b != "_"] + [name[-1]]
     # Remove any leading or trailing underscores:
