@@ -8,7 +8,8 @@ while also using as little memory as possible.
 On my laptop, this runs about 58x faster than real-time
 (i.e.: processes a 60-second file in ~1 second.)
 
-Requirements: `pip install pysoundfile tqdm pedalboard`
+Requirements: `pip install PySoundFile tqdm pedalboard`
+Note that PySoundFile requires a working libsndfile installation.
 """
 
 import argparse
@@ -39,6 +40,7 @@ def get_num_frames(f: sf.SoundFile) -> int:
             f.seek(1024 * 1024 * 1024, sf.SEEK_CUR)
             new_position = f.tell()
             if new_position == last_position:
+                f.seek(0)
                 return new_position
             else:
                 last_position = new_position
