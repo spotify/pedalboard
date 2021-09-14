@@ -13,6 +13,8 @@
 
 `pedalboard` is a Python library for adding effects to audio. It supports a number of common audio effects out of the box, and also allows the use of [VST3®](https://www.steinberg.net/en/company/technologies/vst3.html) and [Audio Unit](https://en.wikipedia.org/wiki/Audio_Units) plugin formats for third-party effects. It was built by [Spotify's Audio Intelligence Lab](https://research.atspotify.com/audio-intelligence/) to enable using studio-quality audio effects from within Python and TensorFlow.
 
+Internally at Spotify, `pedalboard` has been used for Machine Learning to improve the process of data augmentation. `pedalboard` also helps in the process of content creation, supporting creators in the production of effects that would otherwise be time consuming.     
+
 ## Usage 
 
  - Built-in support for a number of basic audio transformations: 
@@ -42,6 +44,8 @@
 ```
 pip install pedalboard
 ```
+
+If you are new to Python, follow [INSTALLATION.md](https://github.com/spotify/pedalboard/blob/master/INSTALLATION.md) for a robust guide.
 
 ### Compatibility
 

@@ -95,6 +95,17 @@ Some important notes regarding the summary line:
 We also welcome improvements to the project documentation or to the existing
 docs. Please file an [issue](https://github.com/spotify/pedalboard/issues/new).
 
+## First Contributions
+
+If you are a first time contributor to `pedalboard`,  familiarize yourself with the:
+* [Code of Conduct](CODE_OF_CONDUCT.md)
+* [GitHub Flow Workflow](https://guides.github.com/introduction/flow/)
+* Issue and pull request style guides 
+
+When you're ready, navigate to [issues](https://github.com/spotify/pedalboard/issues/new). Some issues have been identified by community members as [good first issues](https://github.com/spotify/pedalboard/labels/good%20first%20issue). 
+
+There is a lot to learn when making your first contribution. As you gain experience, you will be able to make contributions faster. You can submit an issue using the [question](https://github.com/spotify/pedalboard/labels/question) label if you encounter challenges.  
+
 # License 
 
 By contributing your code, you agree to license your contribution under the 
