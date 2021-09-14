@@ -7,7 +7,7 @@ We'd love to get patches from you!
 To get your environment set up to build `pedalboard`, you'll need a working C++ compiler on your machine (`xcode-select --install` on macOS should do it). Try:
 
 ```shell
-git clone git@github.com:spotify/pedalboard.git
+git clone --recurse-submodules --shallow-submodules git@github.com:spotify/pedalboard.git
 cd pedalboard
 pip3 install pybind11
 pip3 install .

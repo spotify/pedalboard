@@ -149,7 +149,10 @@ board = Pedalboard([vst, Reverb()], sample_rate=sample_rate)
 effected = board(audio)
 ```
 
-For more examples, see [the _Pedalboard Demo_ Colab notebook example](https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_lOfG99Xs3qWVrhch).
+For more examples, see:
+ - [the `examples` folder of this repository](https://github.com/spotify/pedalboard/tree/master/examples)
+ - [the _Pedalboard Demo_ Colab notebook](https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_lOfG99Xs3qWVrhch)
+ - [an interactive web demo on Hugging Face Spaces and Gradio](https://huggingface.co/spaces/akhaliq/pedalboard) (via [@AK391](https://github.com/AK391)) 
 
 ## Contributing
 

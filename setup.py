@@ -204,7 +204,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='pedalboard',
-    version='0.3.5',
+    version='0.3.6',
     author='Peter Sobot',
     author_email='psobot@spotify.com',
     description='A Python library for adding effects to audio.',

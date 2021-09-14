@@ -50,7 +50,12 @@ public:
   virtual ~JucePlugin(){};
 
   void prepare(const juce::dsp::ProcessSpec &spec) override {
-    dspBlock.prepare(spec);
+    if (lastSpec.sampleRate != spec.sampleRate ||
+        lastSpec.maximumBlockSize < spec.maximumBlockSize ||
+        spec.numChannels != lastSpec.numChannels) {
+      dspBlock.prepare(spec);
+      lastSpec = spec;
+    }
   }
 
   void process(

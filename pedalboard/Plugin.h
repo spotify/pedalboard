@@ -39,5 +39,8 @@ public:
   // thread-safe. Note: use std::lock or std::scoped_lock when locking multiple
   // plugins to avoid deadlocking.
   std::mutex mutex;
+
+protected:
+  juce::dsp::ProcessSpec lastSpec = {0};
 };
 } // namespace Pedalboard

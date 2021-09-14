@@ -103,6 +103,7 @@ class Pedalboard(collections.MutableSequence):
         audio: np.ndarray,
         sample_rate: Optional[float] = None,
         buffer_size: Optional[int] = None,
+        reset: bool = True,
     ) -> np.ndarray:
         if sample_rate is not None and not isinstance(sample_rate, (int, float)):
             raise TypeError("sample_rate must be None, an integer, or a floating-point number.")
@@ -121,7 +122,7 @@ class Pedalboard(collections.MutableSequence):
             )
 
         # pyBind11 makes a copy of self.plugins when passing it into process.
-        kwargs = {"sample_rate": effective_sample_rate, "plugins": self.plugins}
+        kwargs = {"sample_rate": effective_sample_rate, "plugins": self.plugins, "reset": reset}
         if buffer_size:
             kwargs["buffer_size"] = buffer_size
         return process(audio, **kwargs)

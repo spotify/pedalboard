@@ -38,10 +38,10 @@ template <typename SampleType>
 py::array_t<float>
 process(const py::array_t<SampleType, py::array::c_style> inputArray,
         double sampleRate, const std::vector<Plugin *> &plugins,
-        unsigned int bufferSize) {
+        unsigned int bufferSize, bool reset) {
   const py::array_t<float, py::array::c_style> float32InputArray =
       inputArray.attr("astype")("float32");
-  return process(float32InputArray, sampleRate, plugins, bufferSize);
+  return process(float32InputArray, sampleRate, plugins, bufferSize, reset);
 }
 
 /**
@@ -50,9 +50,11 @@ process(const py::array_t<SampleType, py::array::c_style> inputArray,
 template <typename SampleType>
 py::array_t<float>
 processSingle(const py::array_t<SampleType, py::array::c_style> inputArray,
-              double sampleRate, Plugin &plugin, unsigned int bufferSize) {
+              double sampleRate, Plugin &plugin, unsigned int bufferSize,
+              bool reset) {
   std::vector<Plugin *> plugins{&plugin};
-  return process<SampleType>(inputArray, sampleRate, plugins, bufferSize);
+  return process<SampleType>(inputArray, sampleRate, plugins, bufferSize,
+                             reset);
 }
 
 /**
@@ -64,7 +66,7 @@ template <>
 py::array_t<float>
 process<float>(const py::array_t<float, py::array::c_style> inputArray,
                double sampleRate, const std::vector<Plugin *> &plugins,
-               unsigned int bufferSize) {
+               unsigned int bufferSize, bool reset) {
   // Numpy/Librosa convention is (num_samples, num_channels)
   py::buffer_info inputInfo = inputArray.request();
 
@@ -152,10 +154,12 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
           std::make_unique<std::scoped_lock<std::mutex>>(plugin->mutex));
     }
 
-    for (auto *plugin : plugins) {
-      if (plugin == nullptr)
-        continue;
-      plugin->reset();
+    if (reset) {
+      for (auto *plugin : plugins) {
+        if (plugin == nullptr)
+          continue;
+        plugin->reset();
+      }
     }
 
     juce::dsp::ProcessSpec spec;
