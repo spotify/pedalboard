@@ -230,5 +230,6 @@ setup(
     ],
     ext_modules=[pedalboard_cpp],
     install_requires=['numpy'],
+    package_data={'pedalboard': ['version.txt']},
     packages=['pedalboard'],
 )
