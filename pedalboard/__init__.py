@@ -20,3 +20,6 @@ from .pedalboard import Pedalboard, AVAILABLE_PLUGIN_CLASSES, load_plugin  # noq
 
 for klass in AVAILABLE_PLUGIN_CLASSES:
     vars()[klass.__name__] = klass
+
+# pedalboard current version
+__version__ = '0.3.6'
