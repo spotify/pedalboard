@@ -202,9 +202,13 @@ if DEBUG:
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
+# current version
+with open(os.path.join("pedalboard", "version.txt")) as f:
+    version = f.read().strip()
+
 setup(
     name='pedalboard',
-    version='0.3.6',
+    version=version,
     author='Peter Sobot',
     author_email='psobot@spotify.com',
     description='A Python library for adding effects to audio.',

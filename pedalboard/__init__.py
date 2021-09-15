@@ -22,4 +22,7 @@ for klass in AVAILABLE_PLUGIN_CLASSES:
     vars()[klass.__name__] = klass
 
 # pedalboard current version
-__version__ = '0.3.6'
+from os.path import join, dirname
+
+with open(join(dirname(__file__), "version.txt")) as f:
+    __version__ = f.read().strip()
