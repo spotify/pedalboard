@@ -202,13 +202,14 @@ if DEBUG:
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
-# current version
-with open(os.path.join("pedalboard", "version.txt")) as f:
-    version = f.read().strip()
+# read version
+version = {}
+with open("pedalboard/version.py") as fp:
+    exec(fp.read(), version)
 
 setup(
     name='pedalboard',
-    version=version,
+    version=version['__version__'],
     author='Peter Sobot',
     author_email='psobot@spotify.com',
     description='A Python library for adding effects to audio.',
@@ -230,6 +231,5 @@ setup(
     ],
     ext_modules=[pedalboard_cpp],
     install_requires=['numpy'],
-    package_data={'pedalboard': ['version.txt']},
     packages=['pedalboard'],
 )

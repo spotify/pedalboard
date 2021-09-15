@@ -15,12 +15,8 @@
 # limitations under the License.
 
 
-from pedalboard_native import *  # noqa: F403, F401
-from .pedalboard import Pedalboard, AVAILABLE_PLUGIN_CLASSES, load_plugin  # noqa: F401
-from .version import __version__ # noqa: F401
+MAJOR = 0
+MINOR = 3
+PATCH = 6
 
-for klass in AVAILABLE_PLUGIN_CLASSES:
-    vars()[klass.__name__] = klass
-
-
-
+__version__ = '%d.%d.%d' % (MAJOR, MINOR, PATCH)
