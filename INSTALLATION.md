@@ -87,17 +87,12 @@ The [interactive demo](https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_
 
 ## Other Useful Packages
 
-[NumPy](https://numpy.org/): a package that facilitates mathematical and other operations on data. NumPy is referenced in the `pedalboard` [interactive demo](https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_lOfG99Xs3qWVrhch#scrollTo=iusi0_xLyz97).
+- [NumPy](https://numpy.org/): a package that facilitates mathematical and other operations on data. NumPy is required by `pedalboard` and will automatically be installed with `pedalboard`.
 ```
 pip install numpy
 ```
 
-[Matplotlib](https://matplotlib.org/stable/index.html): a package for data visualization. Matplotlib is referenced in the `pedalboard` [interactive demo](https://matplotlib.org/).
+- [Matplotlib](https://matplotlib.org/stable/index.html): a package for data visualization. Matplotlib is referenced in the `pedalboard` [interactive demo](https://matplotlib.org/).
 ```
 pip install matplotlib
 ```
-
-
-
-
-
