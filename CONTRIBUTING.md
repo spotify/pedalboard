@@ -100,7 +100,7 @@ docs. Please file an [issue](https://github.com/spotify/pedalboard/issues/new).
 If you are a first time contributor to `pedalboard`,  familiarize yourself with the:
 * [Code of Conduct](CODE_OF_CONDUCT.md)
 * [GitHub Flow Workflow](https://guides.github.com/introduction/flow/)
-* Issue and pull request style guides 
+<!-- * Issue and pull request style guides -->
 
 When you're ready, navigate to [issues](https://github.com/spotify/pedalboard/issues/new). Some issues have been identified by community members as [good first issues](https://github.com/spotify/pedalboard/labels/good%20first%20issue). 
 
