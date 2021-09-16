@@ -78,17 +78,12 @@ The [interactive demo](https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_
 
 # Key Terms
 
-package: a collection of modules (a Python program that you import), bound by a package name. `pedalboard` is a package.
-
-virtual environment: an environment that allows packages to be installed for a specific project, rather than system wide. 
-
-[venv](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/): a tool used for creating virtual environments in Python.
-
-[pip](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/): a package manager for Python. Allows you to install and use packages, including `pedalboard`. 
-
-[wheel](https://packaging.python.org/guides/distributing-packages-using-setuptools/#wheels): a way of delivering packages in Python. Allows the user to install the package quicker. `pedalboard` is delivered as a wheel. 
-
-Integrated Development Environment (IDE): a software application that combines different programming activities, including writing, executing, and debugging code.   
+- package: a collection of modules (a Python program that you import), bound by a package name. `pedalboard` is a package.
+- virtual environment: an environment that allows packages to be installed for a specific project, rather than system wide. 
+- [venv](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/): a tool used for creating virtual environments in Python.
+- [pip](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/): a package manager for Python. Allows you to install and use packages, including `pedalboard`. 
+- [wheel](https://packaging.python.org/guides/distributing-packages-using-setuptools/#wheels): a way of delivering packages in Python. Allows the user to install the package quicker. `pedalboard` is delivered as a wheel. 
+- Integrated Development Environment (IDE): a software application that combines different programming activities, including writing, executing, and debugging code.   
 
 ## Other Useful Packages
 
