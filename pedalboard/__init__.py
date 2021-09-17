@@ -21,6 +21,3 @@ from .version import __version__ # noqa: F401
 
 for klass in AVAILABLE_PLUGIN_CLASSES:
     vars()[klass.__name__] = klass
-
-
-

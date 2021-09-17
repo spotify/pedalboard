@@ -202,10 +202,10 @@ if DEBUG:
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
-# read version
+# read the contents of the version.py
 version = {}
-with open("pedalboard/version.py") as fp:
-    exec(fp.read(), version)
+version_file_contents = (this_directory / "pedalboard" / "version.py").read_text()
+exec(version_file_contents, version)
 
 setup(
     name='pedalboard',
