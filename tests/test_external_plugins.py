@@ -444,6 +444,38 @@ def test_plugin_state_not_cleared_between_invocations_if_reset_is_false(plugin_f
     assert max_volume_of(plugin(silence, sr, reset=False)) > 0.00001
 
 
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_explicit_reset(plugin_filename: str):
+    plugin = load_test_plugin(plugin_filename, disable_caching=True)
+
+    sr = 44100
+    noise = np.random.rand(sr, 2)
+    assert max_volume_of(noise) > 0.95
+    silence = np.zeros_like(noise)
+    assert max_volume_of(silence) == 0.0
+
+    assert max_volume_of(plugin(silence, sr, reset=False)) < 0.00001
+    assert max_volume_of(plugin(noise, sr, reset=False)) > 0.00001
+    plugin.reset()
+    assert max_volume_of(plugin(silence, sr, reset=False)) < 0.00001
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_explicit_reset_in_pedalboard(plugin_filename: str):
+    sr = 44100
+    board = pedalboard.Pedalboard([load_test_plugin(plugin_filename, disable_caching=True)], sr)
+    noise = np.random.rand(sr, 2)
+
+    assert max_volume_of(noise) > 0.95
+    silence = np.zeros_like(noise)
+    assert max_volume_of(silence) == 0.0
+
+    assert max_volume_of(board(silence, reset=False)) < 0.00001
+    assert max_volume_of(board(noise, reset=False)) > 0.00001
+    board.reset()
+    assert max_volume_of(board(silence, reset=False)) < 0.00001
+
+
 @pytest.mark.parametrize("value", (True, False))
 def test_wrapped_bool(value: bool):
     wrapped = WrappedBool(value)

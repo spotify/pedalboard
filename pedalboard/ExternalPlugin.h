@@ -290,11 +290,16 @@ public:
     pluginInstance->setStateInformation(savedState.getData(),
                                         savedState.getSize());
 
-    for (auto *parameter : pluginInstance->getParameters()) {
-      if (currentParameters.count(parameter->getParameterIndex()) > 0) {
-        parameter->setValue(currentParameters[parameter->getParameterIndex()]);
+    // Set all of the parameters twice: we may have meta-parameters that change the
+    // validity of other `setValue` calls. (i.e.: param1 can't be set until param2 is set.)
+    for (int i = 0; i < 2; i++) {
+      for (auto *parameter : pluginInstance->getParameters()) {
+        if (currentParameters.count(parameter->getParameterIndex()) > 0) {
+          parameter->setValue(currentParameters[parameter->getParameterIndex()]);
+        }
       }
     }
+    
 
     if (lastSpec.numChannels != 0) {
       const juce::dsp::ProcessSpec _lastSpec = lastSpec;

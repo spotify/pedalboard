@@ -98,6 +98,15 @@ class Pedalboard(collections.MutableSequence):
     def __getitem__(self, index: int) -> Optional[Plugin]:
         return self.plugins.__getitem__(index)
 
+    def reset(self):
+        """
+        Clear any internal state (e.g.: reverb tails) kept by all of the plugins in this
+        Pedalboard. The values of plugin parameters will remain unchanged. For most plugins,
+        this is a fast operation; for some, this will cause a full re-instantiation of the plugin.
+        """
+        for plugin in self.plugins:
+            plugin.reset()
+
     def process(
         self,
         audio: np.ndarray,
