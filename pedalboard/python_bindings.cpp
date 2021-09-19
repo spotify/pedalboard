@@ -91,8 +91,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
             return nullptr;
           }))
           .def(
-              "reset",
-              &Plugin::reset,
+              "reset", &Plugin::reset,
               "Clear any internal state kept by this plugin (e.g.: reverb "
               "tails). The values of plugin parameters will remain unchanged. "
               "For most plugins, this is a fast operation; for some, this will "

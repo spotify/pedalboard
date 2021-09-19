@@ -115,23 +115,23 @@ enum class ExternalPluginReloadType {
    * Unknown: we need to determine the reload type.
    */
   Unknown,
-  
+
   /**
-   * Most plugins are of this type: calling .reset() on them will clear their internal state.
-   * This is quick and easy: to start processing a new buffer, all we need to do is call
-   * .reset() and optionally prepareToPlay().
+   * Most plugins are of this type: calling .reset() on them will clear their
+   * internal state. This is quick and easy: to start processing a new buffer,
+   * all we need to do is call .reset() and optionally prepareToPlay().
    */
   ClearsAudioOnReset,
 
   /**
-   * This plugin type is a bit more of a pain to deal with; it could be argued that plugins
-   * that don't clear their internal buffers when reset() is called are buggy.
-   * To start processing a new buffer, we'll have to find another way to clear the buffer,
-   * usually by reloading the plugin from scratch and persisting its parameters somehow.
+   * This plugin type is a bit more of a pain to deal with; it could be argued
+   * that plugins that don't clear their internal buffers when reset() is called
+   * are buggy. To start processing a new buffer, we'll have to find another way
+   * to clear the buffer, usually by reloading the plugin from scratch and
+   * persisting its parameters somehow.
    */
   PersistsAudioOnReset,
 };
-
 
 template <typename ExternalPluginType> class ExternalPlugin : public Plugin {
 public:
@@ -222,7 +222,8 @@ public:
       pluginInstance->getStateInformation(savedState);
 
       for (auto *parameter : pluginInstance->getParameters()) {
-        currentParameters[parameter->getParameterIndex()] = parameter->getValue();
+        currentParameters[parameter->getParameterIndex()] =
+            parameter->getValue();
       }
 
       {
@@ -272,17 +273,16 @@ public:
           // Reload again, as we just passed audio into a plugin that
           // we know doesn't reset itself cleanly!
           pluginInstance = pluginFormatManager.createPluginInstance(
-            foundPluginDescription, ExternalLoadSampleRate,
-            ExternalLoadMaximumBlockSize, loadError);
+              foundPluginDescription, ExternalLoadSampleRate,
+              ExternalLoadMaximumBlockSize, loadError);
 
-            if (!pluginInstance) {
-              throw pybind11::import_error("Unable to load plugin " +
-                                          pathToPluginFile.toStdString() + ": " +
-                                          loadError.toStdString());
-            }
+          if (!pluginInstance) {
+            throw pybind11::import_error("Unable to load plugin " +
+                                         pathToPluginFile.toStdString() + ": " +
+                                         loadError.toStdString());
+          }
         }
       }
-      
 
       NUM_ACTIVE_EXTERNAL_PLUGINS++;
     }
@@ -290,16 +290,17 @@ public:
     pluginInstance->setStateInformation(savedState.getData(),
                                         savedState.getSize());
 
-    // Set all of the parameters twice: we may have meta-parameters that change the
-    // validity of other `setValue` calls. (i.e.: param1 can't be set until param2 is set.)
+    // Set all of the parameters twice: we may have meta-parameters that change
+    // the validity of other `setValue` calls. (i.e.: param1 can't be set until
+    // param2 is set.)
     for (int i = 0; i < 2; i++) {
       for (auto *parameter : pluginInstance->getParameters()) {
         if (currentParameters.count(parameter->getParameterIndex()) > 0) {
-          parameter->setValue(currentParameters[parameter->getParameterIndex()]);
+          parameter->setValue(
+              currentParameters[parameter->getParameterIndex()]);
         }
       }
     }
-    
 
     if (lastSpec.numChannels != 0) {
       const juce::dsp::ProcessSpec _lastSpec = lastSpec;
@@ -413,9 +414,10 @@ public:
 
     // Send in a buffer full of silence to get a baseline noise level:
     juce::AudioBuffer<float> audioBuffer(numInputChannels, bufferSize);
-    juce::MidiBuffer emptyMidiBuffer;    
+    juce::MidiBuffer emptyMidiBuffer;
 
-    // Process the silent buffer a couple of times to give the plugin time to "warm up"
+    // Process the silent buffer a couple of times to give the plugin time to
+    // "warm up"
     for (int i = 0; i < 5; i++) {
       audioBuffer.clear();
       {
@@ -432,9 +434,9 @@ public:
     pluginInstance->releaseResources();
     pluginInstance->setNonRealtime(true);
     pluginInstance->prepareToPlay(sampleRate, bufferSize);
-    
+
     juce::Random random;
-  
+
     // Send noise into the plugin:
     for (int i = 0; i < 5; i++) {
       for (auto i = 0; i < bufferSize; i++) {
@@ -446,7 +448,7 @@ public:
       juce::dsp::ProcessContextReplacing<float> context(block);
       process(context);
     }
-    
+
     auto signalVolume = audioBuffer.getMagnitude(0, bufferSize);
 
     // Reset again, and send in silence:
@@ -459,7 +461,7 @@ public:
       juce::dsp::ProcessContextReplacing<float> context(block);
       process(context);
     }
-    
+
     auto magnitudeOfSilentBuffer = audioBuffer.getMagnitude(0, bufferSize);
 
     // If the silent buffer we passed in post-reset is noticeably louder
@@ -468,7 +470,7 @@ public:
     bool pluginPersistsAudioOnReset = magnitudeOfSilentBuffer > noiseFloor * 5;
 
     if (pluginPersistsAudioOnReset) {
-      return ExternalPluginReloadType::PersistsAudioOnReset;  
+      return ExternalPluginReloadType::PersistsAudioOnReset;
     } else {
       return ExternalPluginReloadType::ClearsAudioOnReset;
     }
@@ -480,18 +482,21 @@ public:
   void reset() noexcept override {
     if (pluginInstance) {
       switch (reloadType) {
-        case ExternalPluginReloadType::ClearsAudioOnReset:
-          pluginInstance->reset();
-          pluginInstance->releaseResources();
-          break;
-          
-        case ExternalPluginReloadType::Unknown:
-        case ExternalPluginReloadType::PersistsAudioOnReset:
-          pluginInstance->releaseResources();
-          reinstantiatePlugin();
-          break;
-        default:
-          throw std::runtime_error("Plugin reload type is an invalid value (" + std::to_string((int) reloadType) +  ") - this likely indicates a programming error or memory corruption.");
+      case ExternalPluginReloadType::ClearsAudioOnReset:
+        pluginInstance->reset();
+        pluginInstance->releaseResources();
+        break;
+
+      case ExternalPluginReloadType::Unknown:
+      case ExternalPluginReloadType::PersistsAudioOnReset:
+        pluginInstance->releaseResources();
+        reinstantiatePlugin();
+        break;
+      default:
+        throw std::runtime_error("Plugin reload type is an invalid value (" +
+                                 std::to_string((int)reloadType) +
+                                 ") - this likely indicates a programming "
+                                 "error or memory corruption.");
       }
 
       // Force prepare() to be called again later by invalidating lastSpec:
@@ -500,7 +505,8 @@ public:
   }
 
   /**
-   * prepare() is called on every render call, regardless of if the plugin has been reset.
+   * prepare() is called on every render call, regardless of if the plugin has
+   * been reset.
    */
   void prepare(const juce::dsp::ProcessSpec &spec) override {
     if (!pluginInstance) {
@@ -510,7 +516,7 @@ public:
     if (lastSpec.sampleRate != spec.sampleRate ||
         lastSpec.maximumBlockSize < spec.maximumBlockSize ||
         lastSpec.numChannels != spec.numChannels) {
-      
+
       // Changing the number of channels requires releaseResources to be called:
       if (lastSpec.numChannels != spec.numChannels) {
         pluginInstance->releaseResources();
@@ -519,15 +525,14 @@ public:
 
       pluginInstance->setNonRealtime(true);
       pluginInstance->prepareToPlay(spec.sampleRate, spec.maximumBlockSize);
-      
+
       lastSpec = spec;
     }
   }
 
-
   void
   process(const juce::dsp::ProcessContextReplacing<float> &context) override {
-    
+
     if (pluginInstance) {
       juce::MidiBuffer emptyMidiBuffer;
       if (context.usesSeparateInputAndOutputBlocks()) {
@@ -538,7 +543,8 @@ public:
 
       juce::dsp::AudioBlock<float> &outputBlock = context.getOutputBlock();
 
-      // This should already be true, as prepare() should have been called before this!
+      // This should already be true, as prepare() should have been called
+      // before this!
       if ((size_t)pluginInstance->getMainBusNumInputChannels() !=
           outputBlock.getNumChannels()) {
         throw std::invalid_argument(
@@ -565,7 +571,7 @@ public:
       // Iterate through all input busses and add their input channels to our
       // buffer:
       for (size_t i = 0;
-            i < static_cast<size_t>(pluginInstance->getBusCount(true)); i++) {
+           i < static_cast<size_t>(pluginInstance->getBusCount(true)); i++) {
         if (pluginInstance->getBus(true, i)->isEnabled()) {
           pluginBufferChannelCount +=
               pluginInstance->getBus(true, i)->getNumberOfChannels();
@@ -583,7 +589,7 @@ public:
       // freed via RAII.
       std::vector<std::vector<float>> dummyChannels;
       for (size_t i = outputBlock.getNumChannels();
-            i < pluginBufferChannelCount; i++) {
+           i < pluginBufferChannelCount; i++) {
         std::vector<float> dummyChannel(outputBlock.getNumSamples());
         channelPointers[i] = dummyChannel.data();
         dummyChannels.push_back(dummyChannel);
@@ -592,8 +598,8 @@ public:
       // Create an audio buffer that doesn't actually allocate anything, but
       // just points to the data in the ProcessContext.
       juce::AudioBuffer<float> audioBuffer(channelPointers.data(),
-                                            pluginBufferChannelCount,
-                                            outputBlock.getNumSamples());
+                                           pluginBufferChannelCount,
+                                           outputBlock.getNumSamples());
       pluginInstance->processBlock(audioBuffer, emptyMidiBuffer);
     }
   }
@@ -622,7 +628,7 @@ private:
   juce::PluginDescription foundPluginDescription;
   juce::AudioPluginFormatManager pluginFormatManager;
   std::unique_ptr<juce::AudioPluginInstance> pluginInstance;
-  
+
   ExternalPluginReloadType reloadType = ExternalPluginReloadType::Unknown;
 };
 
