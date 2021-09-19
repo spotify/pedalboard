@@ -20,7 +20,6 @@ import weakref
 from functools import update_wrapper
 from contextlib import contextmanager
 from typing import List, Optional, Dict, Union, Tuple, Iterable
-from curses.ascii import isascii  # needed for Python 3.6 compatibility
 
 import numpy as np
 
@@ -467,7 +466,7 @@ def to_python_parameter_name(parameter: _AudioProcessorParameter) -> Optional[st
     if parameter.label and not parameter.label.startswith(":"):
         name = "{} {}".format(name, parameter.label.lower())
     # Replace all non-alphanumeric characters with underscores
-    name = [c if (c.isalpha() or c.isnumeric()) and isascii(c) else "_" for c in name]
+    name = [c if (c.isalpha() or c.isnumeric()) and c.isprintable() and ord(c) < 128 else "_" for c in name]
     # Remove any double-underscores:
     name = [a for a, b in zip(name, name[1:]) if a != b or b != "_"] + [name[-1]]
     # Remove any leading or trailing underscores:
