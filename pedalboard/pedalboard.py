@@ -151,6 +151,16 @@ def looks_like_float(s: str) -> bool:
         return False
 
 
+class ReadOnlyDictWrapper(dict):
+    def __setitem__(self, name, value):
+        raise TypeError(
+            "The .parameters dictionary on a Plugin instance returns "
+            "a read-only dictionary of its parameters. To change a "
+            "parameter, set the parameter on the plugin directly as "
+            f"an attribute. (`my_plugin.{name} = {value}`)"
+        )
+
+
 def wrap_type(base_type):
     class WeakTypeWrapper(base_type):
         """
@@ -506,7 +516,9 @@ class ExternalPlugin(object):
 
     @property
     def parameters(self) -> Dict[str, AudioProcessorParameter]:
-        return self._get_parameters()
+        # Return a read-only version of this dictionary,
+        # to prevent people from trying to assign to it.
+        return ReadOnlyDictWrapper(self._get_parameters())
 
     def _get_parameters(self):
         if not hasattr(self, "__python_parameter_cache__"):

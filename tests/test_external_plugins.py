@@ -206,6 +206,16 @@ def test_all_parameters_are_accessible_as_properties(plugin_filename: str):
 
 
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_parameters_cant_be_assigned_to_directly(plugin_filename: str):
+    plugin = load_test_plugin(plugin_filename)
+    assert plugin.parameters
+    for parameter_name in plugin.parameters.keys():
+        current_value = getattr(plugin, parameter_name)
+        with pytest.raises(TypeError):
+            plugin.parameters[parameter_name] = current_value
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_all_parameters_have_accessors(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename)
     assert plugin.parameters
