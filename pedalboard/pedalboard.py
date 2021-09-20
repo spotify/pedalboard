@@ -140,12 +140,20 @@ class Pedalboard(collections.MutableSequence):
     __call__ = process
 
 
-FLOAT_SUFFIXES_TO_IGNORE = "x%*,."
+FLOAT_SUFFIXES_TO_IGNORE = set(["x", "%", "*", ",", ".", "hz"])
+
+
+def strip_common_float_suffixes(s: str) -> str:
+    value = s.lower()
+    for suffix in FLOAT_SUFFIXES_TO_IGNORE:
+        if suffix in value:
+            value = value[: -len(suffix)]
+    return value
 
 
 def looks_like_float(s: str) -> bool:
     try:
-        float(s.rstrip(FLOAT_SUFFIXES_TO_IGNORE))
+        float(strip_common_float_suffixes(s))
         return True
     except ValueError:
         return False
@@ -293,9 +301,7 @@ class AudioProcessorParameter(object):
 
         if all(looks_like_float(v) for v in self.ranges.values()):
             self.type = float
-            self.ranges = {
-                k: float(v.rstrip(FLOAT_SUFFIXES_TO_IGNORE)) for k, v in self.ranges.items()
-            }
+            self.ranges = {k: float(strip_common_float_suffixes(v)) for k, v in self.ranges.items()}
             self.min_value = min(self.ranges.values())
             self.max_value = max(self.ranges.values())
 
@@ -573,7 +579,7 @@ class ExternalPlugin(object):
                 string_value = parameter.string_value
                 if parameter.type is float:
                     return FloatWithParameter(
-                        float(string_value.rstrip(FLOAT_SUFFIXES_TO_IGNORE)), wrapped=parameter
+                        float(strip_common_float_suffixes(string_value)), wrapped=parameter
                     )
                 elif parameter.type is bool:
                     return BooleanWithParameter(parameter.raw_value >= 0.5, wrapped=parameter)

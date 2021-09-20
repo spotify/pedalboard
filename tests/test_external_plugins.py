@@ -74,13 +74,16 @@ def load_test_plugin(plugin_filename: str, disable_caching: bool = False, *args,
             key: getattr(plugin, key) for key in plugin.parameters.keys()
         }
 
-    # Reset default parameters when loading:
+    # Try to reset default parameters when loading:
     plugin = TEST_PLUGIN_CACHE[key]
     for name in plugin.parameters.keys():
-        setattr(plugin, name, TEST_PLUGIN_ORIGINAL_PARAMETER_CACHE[key][name])
+        try:
+            setattr(plugin, name, TEST_PLUGIN_ORIGINAL_PARAMETER_CACHE[key][name])
+        except ValueError:
+            pass
 
-    # Throw some silence in and force a reset:
-    plugin.process(np.zeros((44100, 2)), 44100, reset=True)
+    # Force a reset:
+    plugin.reset()
     return plugin
 
 
@@ -300,7 +303,11 @@ def test_float_parameters(plugin_filename: str, parameter_name: str):
         setattr(plugin, parameter_name, new_value)
         if math.isnan(getattr(plugin, parameter_name)):
             continue
-        assert math.isclose(new_value, getattr(plugin, parameter_name), abs_tol=step_size * 2)
+        if step_size == parameter_value.step_size:
+            assert math.isclose(new_value, getattr(plugin, parameter_name), abs_tol=step_size * 2)
+        else:
+            # In "approximate" mode, allow the values to vary more:
+            assert math.isclose(new_value, getattr(plugin, parameter_name), abs_tol=step_size * 3)
 
     # Ensure that if we access an attribute that we're not adding to the value,
     # we fall back to the underlying type (float) or we raise an exception if not:

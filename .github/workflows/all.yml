@@ -90,6 +90,11 @@ jobs:
         if: runner.os == 'Windows'
       - name: Build pedalboard locally
         run: python setup.py install
+      - name: Install VSTs for testing
+        env:
+          GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
+          GCS_READER_SERVICE_ACCOUNT_KEY: ${{ secrets.GCS_READER_SERVICE_ACCOUNT_KEY }}
+        run: python ./tests/download_test_plugins.py
       - name: Run tests
         if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.6'
         run: pytest -v --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard
