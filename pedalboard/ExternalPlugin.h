@@ -110,6 +110,29 @@ private:
 };
 #endif
 
+enum class ExternalPluginReloadType {
+  /**
+   * Unknown: we need to determine the reload type.
+   */
+  Unknown,
+
+  /**
+   * Most plugins are of this type: calling .reset() on them will clear their
+   * internal state. This is quick and easy: to start processing a new buffer,
+   * all we need to do is call .reset() and optionally prepareToPlay().
+   */
+  ClearsAudioOnReset,
+
+  /**
+   * This plugin type is a bit more of a pain to deal with; it could be argued
+   * that plugins that don't clear their internal buffers when reset() is called
+   * are buggy. To start processing a new buffer, we'll have to find another way
+   * to clear the buffer, usually by reloading the plugin from scratch and
+   * persisting its parameters somehow.
+   */
+  PersistsAudioOnReset,
+};
+
 template <typename ExternalPluginType> class ExternalPlugin : public Plugin {
 public:
   ExternalPlugin(std::string &_pathToPluginFile)
@@ -193,8 +216,15 @@ public:
   void reinstantiatePlugin() {
     // If we have an existing plugin, save its state and reload its state later:
     juce::MemoryBlock savedState;
+    std::map<int, float> currentParameters;
+
     if (pluginInstance) {
       pluginInstance->getStateInformation(savedState);
+
+      for (auto *parameter : pluginInstance->getParameters()) {
+        currentParameters[parameter->getParameterIndex()] =
+            parameter->getValue();
+      }
 
       {
         std::lock_guard<std::mutex> lock(EXTERNAL_PLUGIN_MUTEX);
@@ -217,23 +247,76 @@ public:
                                      loadError.toStdString());
       }
 
+      auto mainInputBus = pluginInstance->getBus(true, 0);
+      auto mainOutputBus = pluginInstance->getBus(false, 0);
+
+      if (!mainInputBus) {
+        auto exception = std::invalid_argument(
+            "Plugin '" + pluginInstance->getName().toStdString() +
+            "' does not accept audio input. It may be an instrument plug-in "
+            "and not an audio effect processor.");
+        pluginInstance.reset();
+        throw exception;
+      }
+
+      if (!mainOutputBus) {
+        auto exception = std::invalid_argument(
+            "Plugin '" + pluginInstance->getName().toStdString() +
+            "' does not produce audio output.");
+        pluginInstance.reset();
+        throw exception;
+      }
+
+      if (reloadType == ExternalPluginReloadType::Unknown) {
+        reloadType = detectReloadType();
+        if (reloadType == ExternalPluginReloadType::PersistsAudioOnReset) {
+          // Reload again, as we just passed audio into a plugin that
+          // we know doesn't reset itself cleanly!
+          pluginInstance = pluginFormatManager.createPluginInstance(
+              foundPluginDescription, ExternalLoadSampleRate,
+              ExternalLoadMaximumBlockSize, loadError);
+
+          if (!pluginInstance) {
+            throw pybind11::import_error("Unable to load plugin " +
+                                         pathToPluginFile.toStdString() + ": " +
+                                         loadError.toStdString());
+          }
+        }
+      }
+
       NUM_ACTIVE_EXTERNAL_PLUGINS++;
     }
 
     pluginInstance->setStateInformation(savedState.getData(),
                                         savedState.getSize());
 
-    const juce::dsp::ProcessSpec _lastSpec = lastSpec;
+    // Set all of the parameters twice: we may have meta-parameters that change
+    // the validity of other `setValue` calls. (i.e.: param1 can't be set until
+    // param2 is set.)
+    for (int i = 0; i < 2; i++) {
+      for (auto *parameter : pluginInstance->getParameters()) {
+        if (currentParameters.count(parameter->getParameterIndex()) > 0) {
+          parameter->setValue(
+              currentParameters[parameter->getParameterIndex()]);
+        }
+      }
+    }
 
-    // Invalidate lastSpec to force us to update the plugin state:
-    lastSpec.numChannels = 0;
-    prepare(_lastSpec);
+    if (lastSpec.numChannels != 0) {
+      const juce::dsp::ProcessSpec _lastSpec = lastSpec;
+      // Invalidate lastSpec to force us to update the plugin state:
+      lastSpec.numChannels = 0;
+      prepare(_lastSpec);
+    }
 
     pluginInstance->reset();
   }
 
   void setNumChannels(int numChannels) {
     if (!pluginInstance)
+      return;
+
+    if (numChannels == 0)
       return;
 
     pluginInstance->disableNonMainBuses();
@@ -258,6 +341,15 @@ public:
       pluginInstance->getBus(false, i)->enable(false);
     }
 
+    if (mainInputBus->getNumberOfChannels() == numChannels &&
+        mainOutputBus->getNumberOfChannels() == numChannels) {
+      return;
+    }
+
+    // Cache these values in case the plugin fails to update:
+    auto previousInputChannelCount = mainInputBus->getNumberOfChannels();
+    auto previousOutputChannelCount = mainOutputBus->getNumberOfChannels();
+
     // Try to change the input and output bus channel counts...
     mainInputBus->setNumberOfChannels(numChannels);
     mainOutputBus->setNumberOfChannels(numChannels);
@@ -266,6 +358,11 @@ public:
     // conclude the plugin doesn't allow this channel count.
     if (mainInputBus->getNumberOfChannels() != numChannels ||
         mainOutputBus->getNumberOfChannels() != numChannels) {
+
+      // Reset the bus configuration to what it was before, so we don't
+      // leave one of the buses smaller than the other:
+      mainInputBus->setNumberOfChannels(previousInputChannelCount);
+      mainOutputBus->setNumberOfChannels(previousOutputChannelCount);
 
       throw std::invalid_argument(
           "Plugin '" + pluginInstance->getName().toStdString() +
@@ -296,98 +393,214 @@ public:
     return mainInputBus->getNumberOfChannels();
   }
 
-  void prepare(const juce::dsp::ProcessSpec &spec) override {
-    if (pluginInstance) {
-      if (lastSpec.sampleRate != spec.sampleRate ||
-          lastSpec.maximumBlockSize < spec.maximumBlockSize ||
-          lastSpec.numChannels != spec.numChannels) {
-        setNumChannels(spec.numChannels);
-        pluginInstance->setRateAndBufferSizeDetails(spec.sampleRate,
-                                                    spec.maximumBlockSize);
-        pluginInstance->prepareToPlay(spec.sampleRate, spec.maximumBlockSize);
-        pluginInstance->setNonRealtime(true);
-        lastSpec = spec;
+  /**
+   * Send some audio through the plugin to detect if the ->reset() call
+   * actually resets internal buffers. This determines how quickly we
+   * can reset the plugin and is only called on instantiation.
+   */
+  ExternalPluginReloadType detectReloadType() {
+    const int numInputChannels = pluginInstance->getMainBusNumInputChannels();
+    const int bufferSize = 512;
+    const float sampleRate = 44100.0f;
+
+    if (numInputChannels == 0) {
+      return ExternalPluginReloadType::Unknown;
+    }
+
+    // Set input and output busses/channels appropriately:
+    setNumChannels(numInputChannels);
+    pluginInstance->setNonRealtime(true);
+    pluginInstance->prepareToPlay(sampleRate, bufferSize);
+
+    // Send in a buffer full of silence to get a baseline noise level:
+    juce::AudioBuffer<float> audioBuffer(numInputChannels, bufferSize);
+    juce::MidiBuffer emptyMidiBuffer;
+
+    // Process the silent buffer a couple of times to give the plugin time to
+    // "warm up"
+    for (int i = 0; i < 5; i++) {
+      audioBuffer.clear();
+      {
+        juce::dsp::AudioBlock<float> block(audioBuffer);
+        juce::dsp::ProcessContextReplacing<float> context(block);
+        process(context);
       }
+    }
+
+    // Measure the noise floor of the plugin:
+    auto noiseFloor = audioBuffer.getMagnitude(0, bufferSize);
+
+    // Reset:
+    pluginInstance->releaseResources();
+    pluginInstance->setNonRealtime(true);
+    pluginInstance->prepareToPlay(sampleRate, bufferSize);
+
+    juce::Random random;
+
+    // Send noise into the plugin:
+    for (int i = 0; i < 5; i++) {
+      for (auto i = 0; i < bufferSize; i++) {
+        for (int c = 0; c < numInputChannels; c++) {
+          audioBuffer.setSample(c, i, (random.nextFloat() * 2.0f) - 1.0f);
+        }
+      }
+      juce::dsp::AudioBlock<float> block(audioBuffer);
+      juce::dsp::ProcessContextReplacing<float> context(block);
+      process(context);
+    }
+
+    auto signalVolume = audioBuffer.getMagnitude(0, bufferSize);
+
+    // Reset again, and send in silence:
+    pluginInstance->releaseResources();
+    pluginInstance->setNonRealtime(true);
+    pluginInstance->prepareToPlay(sampleRate, bufferSize);
+    audioBuffer.clear();
+    {
+      juce::dsp::AudioBlock<float> block(audioBuffer);
+      juce::dsp::ProcessContextReplacing<float> context(block);
+      process(context);
+    }
+
+    auto magnitudeOfSilentBuffer = audioBuffer.getMagnitude(0, bufferSize);
+
+    // If the silent buffer we passed in post-reset is noticeably louder
+    // than the first buffer we passed in, this plugin probably persists
+    // internal state across calls to releaseResources().
+    bool pluginPersistsAudioOnReset = magnitudeOfSilentBuffer > noiseFloor * 5;
+
+    if (pluginPersistsAudioOnReset) {
+      return ExternalPluginReloadType::PersistsAudioOnReset;
+    } else {
+      return ExternalPluginReloadType::ClearsAudioOnReset;
     }
   }
 
+  /**
+   * reset() is only called if reset=True is passed.
+   */
   void reset() noexcept override {
     if (pluginInstance) {
-      // Some VSTs don't actually clear their internal state when calling
-      // reset(). Here, we force a reset by reinstantiating the plugin.
-      pluginInstance->reset();
-      reinstantiatePlugin();
+      switch (reloadType) {
+      case ExternalPluginReloadType::ClearsAudioOnReset:
+        pluginInstance->reset();
+        pluginInstance->releaseResources();
+        break;
+
+      case ExternalPluginReloadType::Unknown:
+      case ExternalPluginReloadType::PersistsAudioOnReset:
+        pluginInstance->releaseResources();
+        reinstantiatePlugin();
+        break;
+      default:
+        throw std::runtime_error("Plugin reload type is an invalid value (" +
+                                 std::to_string((int)reloadType) +
+                                 ") - this likely indicates a programming "
+                                 "error or memory corruption.");
+      }
+
+      // Force prepare() to be called again later by invalidating lastSpec:
+      lastSpec.maximumBlockSize = 0;
+    }
+  }
+
+  /**
+   * prepare() is called on every render call, regardless of if the plugin has
+   * been reset.
+   */
+  void prepare(const juce::dsp::ProcessSpec &spec) override {
+    if (!pluginInstance) {
+      return;
+    }
+
+    if (lastSpec.sampleRate != spec.sampleRate ||
+        lastSpec.maximumBlockSize < spec.maximumBlockSize ||
+        lastSpec.numChannels != spec.numChannels) {
+
+      // Changing the number of channels requires releaseResources to be called:
+      if (lastSpec.numChannels != spec.numChannels) {
+        pluginInstance->releaseResources();
+        setNumChannels(spec.numChannels);
+      }
+
+      pluginInstance->setNonRealtime(true);
+      pluginInstance->prepareToPlay(spec.sampleRate, spec.maximumBlockSize);
+
+      lastSpec = spec;
     }
   }
 
   void
   process(const juce::dsp::ProcessContextReplacing<float> &context) override {
+
     if (pluginInstance) {
       juce::MidiBuffer emptyMidiBuffer;
       if (context.usesSeparateInputAndOutputBlocks()) {
         throw std::runtime_error("Not implemented yet - "
                                  "no support for using separate "
                                  "input and output blocks.");
-      } else {
-        size_t pluginBufferChannelCount = 0;
-        // Iterate through all input busses and add their input channels to our
-        // buffer:
-        for (size_t i = 0;
-             i < static_cast<size_t>(pluginInstance->getBusCount(true)); i++) {
-          if (pluginInstance->getBus(true, i)->isEnabled()) {
-            pluginBufferChannelCount +=
-                pluginInstance->getBus(true, i)->getNumberOfChannels();
-          }
-        }
-
-        juce::dsp::AudioBlock<float> &outputBlock = context.getOutputBlock();
-
-        std::vector<float *> channelPointers(pluginBufferChannelCount);
-
-        for (size_t i = 0; i < outputBlock.getNumChannels(); i++) {
-          channelPointers[i] = outputBlock.getChannelPointer(i);
-        }
-
-        // Depending on the bus layout, we may have to pass extra buffers to the
-        // plugin that we don't use. Use vector here to ensure the memory is
-        // freed via RAII.
-        std::vector<std::vector<float>> dummyChannels;
-        for (size_t i = outputBlock.getNumChannels();
-             i < pluginBufferChannelCount; i++) {
-          std::vector<float> dummyChannel(outputBlock.getNumSamples());
-          channelPointers[i] = dummyChannel.data();
-          dummyChannels.push_back(dummyChannel);
-        }
-
-        if ((size_t)pluginInstance->getMainBusNumInputChannels() !=
-            outputBlock.getNumChannels()) {
-          throw std::invalid_argument(
-              "Plugin '" + pluginInstance->getName().toStdString() +
-              "' was instantiated with " +
-              std::to_string(pluginInstance->getMainBusNumInputChannels()) +
-              "-channel input, but data provided was " +
-              std::to_string(outputBlock.getNumChannels()) + "-channel.");
-        }
-
-        if ((size_t)pluginInstance->getMainBusNumOutputChannels() <
-            outputBlock.getNumChannels()) {
-          throw std::invalid_argument(
-              "Plugin '" + pluginInstance->getName().toStdString() +
-              "' produces " +
-              std::to_string(pluginInstance->getMainBusNumOutputChannels()) +
-              "-channel output, but data provided was " +
-              std::to_string(outputBlock.getNumChannels()) +
-              "-channel. (The number of channels returned must match the "
-              "number of channels passed in.)");
-        }
-
-        // Create an audio buffer that doesn't actually allocate anything, but
-        // just points to the data in the ProcessContext.
-        juce::AudioBuffer<float> audioBuffer(channelPointers.data(),
-                                             pluginBufferChannelCount,
-                                             outputBlock.getNumSamples());
-        pluginInstance->processBlock(audioBuffer, emptyMidiBuffer);
       }
+
+      juce::dsp::AudioBlock<float> &outputBlock = context.getOutputBlock();
+
+      // This should already be true, as prepare() should have been called
+      // before this!
+      if ((size_t)pluginInstance->getMainBusNumInputChannels() !=
+          outputBlock.getNumChannels()) {
+        throw std::invalid_argument(
+            "Plugin '" + pluginInstance->getName().toStdString() +
+            "' was instantiated with " +
+            std::to_string(pluginInstance->getMainBusNumInputChannels()) +
+            "-channel input, but data provided was " +
+            std::to_string(outputBlock.getNumChannels()) + "-channel.");
+      }
+
+      if ((size_t)pluginInstance->getMainBusNumOutputChannels() <
+          outputBlock.getNumChannels()) {
+        throw std::invalid_argument(
+            "Plugin '" + pluginInstance->getName().toStdString() +
+            "' produces " +
+            std::to_string(pluginInstance->getMainBusNumOutputChannels()) +
+            "-channel output, but data provided was " +
+            std::to_string(outputBlock.getNumChannels()) +
+            "-channel. (The number of channels returned must match the "
+            "number of channels passed in.)");
+      }
+
+      size_t pluginBufferChannelCount = 0;
+      // Iterate through all input busses and add their input channels to our
+      // buffer:
+      for (size_t i = 0;
+           i < static_cast<size_t>(pluginInstance->getBusCount(true)); i++) {
+        if (pluginInstance->getBus(true, i)->isEnabled()) {
+          pluginBufferChannelCount +=
+              pluginInstance->getBus(true, i)->getNumberOfChannels();
+        }
+      }
+
+      std::vector<float *> channelPointers(pluginBufferChannelCount);
+
+      for (size_t i = 0; i < outputBlock.getNumChannels(); i++) {
+        channelPointers[i] = outputBlock.getChannelPointer(i);
+      }
+
+      // Depending on the bus layout, we may have to pass extra buffers to the
+      // plugin that we don't use. Use vector here to ensure the memory is
+      // freed via RAII.
+      std::vector<std::vector<float>> dummyChannels;
+      for (size_t i = outputBlock.getNumChannels();
+           i < pluginBufferChannelCount; i++) {
+        std::vector<float> dummyChannel(outputBlock.getNumSamples());
+        channelPointers[i] = dummyChannel.data();
+        dummyChannels.push_back(dummyChannel);
+      }
+
+      // Create an audio buffer that doesn't actually allocate anything, but
+      // just points to the data in the ProcessContext.
+      juce::AudioBuffer<float> audioBuffer(channelPointers.data(),
+                                           pluginBufferChannelCount,
+                                           outputBlock.getNumSamples());
+      pluginInstance->processBlock(audioBuffer, emptyMidiBuffer);
     }
   }
 
@@ -415,6 +628,8 @@ private:
   juce::PluginDescription foundPluginDescription;
   juce::AudioPluginFormatManager pluginFormatManager;
   std::unique_ptr<juce::AudioPluginInstance> pluginInstance;
+
+  ExternalPluginReloadType reloadType = ExternalPluginReloadType::Unknown;
 };
 
 inline void init_external_plugins(py::module &m) {

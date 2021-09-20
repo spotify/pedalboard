@@ -17,6 +17,7 @@
 
 import os
 import math
+import random
 import platform
 from glob import glob
 
@@ -49,9 +50,10 @@ def get_parameters(plugin_filename: str):
 
 
 TEST_PLUGIN_CACHE = {}
+TEST_PLUGIN_ORIGINAL_PARAMETER_CACHE = {}
 
 
-def load_test_plugin(plugin_filename: str, *args, **kwargs):
+def load_test_plugin(plugin_filename: str, disable_caching: bool = False, *args, **kwargs):
     """
     Load a plugin file from disk, or use an existing instance to save
     on test runtime if we already have one in memory.
@@ -61,11 +63,40 @@ def load_test_plugin(plugin_filename: str, *args, **kwargs):
     """
 
     key = repr((plugin_filename, args, tuple(kwargs.items())))
-    if key not in TEST_PLUGIN_CACHE:
-        TEST_PLUGIN_CACHE[key] = pedalboard.load_plugin(
+    if key not in TEST_PLUGIN_CACHE or disable_caching:
+        plugin = pedalboard.load_plugin(
             os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_filename), *args, **kwargs
         )
-    return TEST_PLUGIN_CACHE[key]
+        if disable_caching:
+            return plugin
+        TEST_PLUGIN_CACHE[key] = plugin
+        TEST_PLUGIN_ORIGINAL_PARAMETER_CACHE[key] = {
+            key: getattr(plugin, key) for key in plugin.parameters.keys()
+        }
+
+    # Reset default parameters when loading:
+    plugin = TEST_PLUGIN_CACHE[key]
+    for name in plugin.parameters.keys():
+        setattr(plugin, name, TEST_PLUGIN_ORIGINAL_PARAMETER_CACHE[key][name])
+
+    # Throw some silence in and force a reset:
+    plugin.process(np.zeros((44100, 2)), 44100, reset=True)
+    return plugin
+
+
+# Allow testing with all of the plugins on the local machine:
+if os.environ.get("ENABLE_TESTING_WITH_LOCAL_PLUGINS", False):
+    for plugin_class in pedalboard.AVAILABLE_PLUGIN_CLASSES:
+        for plugin_path in plugin_class.installed_plugins:
+            try:
+                load_test_plugin(plugin_path)
+                AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT.append(plugin_path)
+            except Exception:
+                pass
+
+
+def max_volume_of(x: np.ndarray) -> float:
+    return np.amax(np.abs(x))
 
 
 def test_at_least_one_plugin_is_available_for_testing():
@@ -90,10 +121,13 @@ def test_initial_parameters(plugin_filename: str):
     }
 
     # Reload the plugin, but set the initial parameters in the load call.
-    plugin = load_test_plugin(plugin_filename, parameters)
+    plugin = load_test_plugin(plugin_filename, parameter_values=parameters)
 
-    for name, value in parameters.items():
-        assert getattr(plugin, name) == value
+    for name, expected in parameters.items():
+        actual = getattr(plugin, name)
+        if math.isnan(actual):
+            continue
+        assert actual == expected, f"Expected attribute {name} to be {expected}, but was {actual}"
 
 
 @pytest.mark.parametrize(
@@ -108,14 +142,15 @@ def test_initial_parameter_validation(plugin_filename: str, parameter_name: str)
     plugin = load_test_plugin(plugin_filename)
     with pytest.raises(ValueError):
         load_test_plugin(
-            plugin_filename, {parameter_name: getattr(plugin, parameter_name).max_value + 100}
+            plugin_filename,
+            parameter_values={parameter_name: getattr(plugin, parameter_name).max_value + 100},
         )
 
 
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_initial_parameter_validation_missing(plugin_filename: str):
     with pytest.raises(AttributeError):
-        load_test_plugin(plugin_filename, {"missing_parameter": 123})
+        load_test_plugin(plugin_filename, parameter_values={"missing_parameter": 123})
 
 
 @pytest.mark.parametrize("loader", [pedalboard.load_plugin] + pedalboard.AVAILABLE_PLUGIN_CLASSES)
@@ -134,8 +169,32 @@ def test_plugin_accepts_variable_channel_count(
 ):
     plugin = load_test_plugin(plugin_filename)
     noise = np.random.rand(num_channels, sample_rate)
-    effected = plugin(noise, sample_rate)
-    assert effected.shape == noise.shape
+    try:
+        effected = plugin(noise, sample_rate)
+        assert effected.shape == noise.shape
+    except ValueError as e:
+        if "does not support" not in str(e):
+            raise
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_plugin_accepts_variable_channel_count_without_reloading(plugin_filename: str):
+    plugin = load_test_plugin(plugin_filename)
+    for num_channels, sample_rate in [
+        (1, 48000),
+        (2, 48000),
+        (1, 44100),
+        (2, 44100),
+        (1, 22050),
+        (2, 22050),
+    ]:
+        noise = np.random.rand(num_channels, sample_rate)
+        try:
+            effected = plugin(noise, sample_rate)
+            assert effected.shape == noise.shape
+        except ValueError as e:
+            if "does not support" not in str(e):
+                raise
 
 
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
@@ -229,6 +288,8 @@ def test_float_parameters(plugin_filename: str, parameter_name: str):
     step_size = parameter_value.step_size or parameter_value.approximate_step_size
     for new_value in np.arange(_min, _max, step_size):
         setattr(plugin, parameter_name, new_value)
+        if math.isnan(getattr(plugin, parameter_name)):
+            continue
         assert math.isclose(new_value, getattr(plugin, parameter_name), abs_tol=step_size * 2)
 
     # Ensure that if we access an attribute that we're not adding to the value,
@@ -308,41 +369,111 @@ def test_string_parameter_valdation(plugin_filename: str, parameter_name: str):
 
 
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
-def test_plugin_state_cleared_between_invocations(plugin_filename: str):
+def test_plugin_parameters_persist_between_calls(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename)
     sr = 44100
-    noise = np.random.rand(sr)
-    silence = np.zeros_like(noise)
+    noise = np.random.rand(2, sr)
 
-    # Passing zero inputs should return silence
-    effected_silence = plugin(silence, sr)
-    plugin_noise_floor = np.amax(np.abs(effected_silence))
+    # Set random parameter values on the plugin:
+    for name, parameter in plugin.parameters.items():
+        if name == "program":
+            continue
+        if parameter.type == float:
+            low, high, step = parameter.range
+            if not step:
+                step = 0.1
+            if low is None:
+                low = 0.0
+            if high is None:
+                high = 1.0
+            values = [
+                x * step for x in list(range(int(low / step), int(high / step), 1)) + [high / step]
+            ]
+            random_value = random.choice(values)
+        elif parameter.type == bool:
+            random_value = bool(random.random())
+        elif parameter.type == str:
+            if parameter.valid_values:
+                random_value = random.choice(parameter.valid_values)
+            else:
+                random_value = None
+        if random_value is not None:
+            setattr(plugin, name, random_value)
 
-    effected = plugin(noise, sr)
-    assert np.amax(np.abs(effected)) > plugin_noise_floor * 10
+    expected_values = {}
+    for name, parameter in plugin.parameters.items():
+        expected_values[name] = getattr(plugin, name)
 
-    # Calling plugin again shouldn't allow any audio tails
-    # to carry over from previous calls.
-    assert np.allclose(plugin(silence, sr), effected_silence)
+    plugin.process(noise, sr)
+
+    for name, parameter in plugin.parameters.items():
+        assert (
+            getattr(plugin, name) == expected_values[name]
+        ), f"Expected {name} to match saved value"
 
 
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
-def test_plugin_state_not_cleared_between_invocations(plugin_filename: str):
-    plugin = load_test_plugin(plugin_filename)
+def test_plugin_state_cleared_between_invocations_by_default(plugin_filename: str):
+    plugin = load_test_plugin(plugin_filename, disable_caching=True)
+
     sr = 44100
-    noise = np.random.rand(sr)
+    noise = np.random.rand(sr, 2)
+    assert max_volume_of(noise) > 0.95
     silence = np.zeros_like(noise)
+    assert max_volume_of(silence) == 0.0
 
-    # Passing zero inputs should return silence
-    effected_silence = plugin(silence, sr, reset=False)
-    plugin_noise_floor = np.amax(np.abs(effected_silence))
+    assert max_volume_of(plugin(silence, sr)) < 0.00001
+    assert max_volume_of(plugin(noise, sr)) > 0.00001
+    for _ in range(10):
+        assert max_volume_of(silence) == 0.0
+        assert max_volume_of(plugin(silence, sr)) < 0.00001
 
-    effected = plugin(noise, sr, reset=False)
-    assert np.amax(np.abs(effected)) > plugin_noise_floor * 10
 
-    # Calling plugin again shouldn't allow any audio tails
-    # to carry over from previous calls.
-    assert np.allclose(plugin(silence, sr), effected_silence)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_plugin_state_not_cleared_between_invocations_if_reset_is_false(plugin_filename: str):
+    plugin = load_test_plugin(plugin_filename, disable_caching=True)
+
+    sr = 44100
+    noise = np.random.rand(sr, 2)
+    assert max_volume_of(noise) > 0.95
+    silence = np.zeros_like(noise)
+    assert max_volume_of(silence) == 0.0
+
+    assert max_volume_of(plugin(silence, sr, reset=False)) < 0.00001
+    assert max_volume_of(plugin(noise, sr, reset=False)) > 0.00001
+    assert max_volume_of(plugin(silence, sr, reset=False)) > 0.00001
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_explicit_reset(plugin_filename: str):
+    plugin = load_test_plugin(plugin_filename, disable_caching=True)
+
+    sr = 44100
+    noise = np.random.rand(sr, 2)
+    assert max_volume_of(noise) > 0.95
+    silence = np.zeros_like(noise)
+    assert max_volume_of(silence) == 0.0
+
+    assert max_volume_of(plugin(silence, sr, reset=False)) < 0.00001
+    assert max_volume_of(plugin(noise, sr, reset=False)) > 0.00001
+    plugin.reset()
+    assert max_volume_of(plugin(silence, sr, reset=False)) < 0.00001
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_explicit_reset_in_pedalboard(plugin_filename: str):
+    sr = 44100
+    board = pedalboard.Pedalboard([load_test_plugin(plugin_filename, disable_caching=True)], sr)
+    noise = np.random.rand(sr, 2)
+
+    assert max_volume_of(noise) > 0.95
+    silence = np.zeros_like(noise)
+    assert max_volume_of(silence) == 0.0
+
+    assert max_volume_of(board(silence, reset=False)) < 0.00001
+    assert max_volume_of(board(noise, reset=False)) > 0.00001
+    board.reset()
+    assert max_volume_of(board(silence, reset=False)) < 0.00001
 
 
 @pytest.mark.parametrize("value", (True, False))
