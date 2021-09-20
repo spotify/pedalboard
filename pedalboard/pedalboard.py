@@ -335,6 +335,10 @@ class AudioProcessorParameter(object):
                         self.max_value,
                         self.approximate_step_size,
                     )
+                else:
+                    return "{} value={} range=({}, {}, ?)>".format(
+                        cpp_repr_value, self.string_value, self.min_value, self.max_value
+                    )
             elif self.type is str:
                 return '{} value="{}" ({} valid string value{})>'.format(
                     cpp_repr_value,
