@@ -297,17 +297,20 @@ def test_float_parameters(plugin_filename: str, parameter_name: str):
     assert repr(parameter_value) == repr(float(parameter_value))
     assert isinstance(parameter_value, float)
     # Change the parameter and ensure that it does change:
-    _min, _max, _ = parameter_value.range
-    step_size = parameter_value.step_size or parameter_value.approximate_step_size
-    for new_value in np.arange(_min, _max, step_size):
+    new_values = parameter_value.valid_values
+
+    if parameter_value.step_size is not None:
+        _min, _max, _ = parameter_value.range
+        step_size = parameter_value.step_size
+        new_values = np.arange(_min, _max, step_size)
+
+    epsilon = parameter_value.step_size or parameter_value.approximate_step_size or 0.001
+
+    for new_value in new_values:
         setattr(plugin, parameter_name, new_value)
         if math.isnan(getattr(plugin, parameter_name)):
             continue
-        if step_size == parameter_value.step_size:
-            assert math.isclose(new_value, getattr(plugin, parameter_name), abs_tol=step_size * 2)
-        else:
-            # In "approximate" mode, allow the values to vary more:
-            assert math.isclose(new_value, getattr(plugin, parameter_name), abs_tol=step_size * 3)
+        assert math.isclose(new_value, getattr(plugin, parameter_name), abs_tol=epsilon * 2.0)
 
     # Ensure that if we access an attribute that we're not adding to the value,
     # we fall back to the underlying type (float) or we raise an exception if not:

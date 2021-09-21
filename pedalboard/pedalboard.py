@@ -296,7 +296,6 @@ class AudioProcessorParameter(object):
         self.max_value = None
         self.step_size = None
         self.approximate_step_size = None
-        self.valid_values = list(self.ranges.values())
         self.type = str
 
         if all(looks_like_float(v) for v in self.ranges.values()):
@@ -315,15 +314,14 @@ class AudioProcessorParameter(object):
                 self.approximate_step_size = sum(first_derivative_steps) / len(
                     first_derivative_steps
                 )
-        elif len(self.valid_values) == 2 and (
-            TRUE_BOOLEANS & {v.lower() for v in self.valid_values}
-        ):
+        elif len(self.ranges) == 2 and (TRUE_BOOLEANS & {v.lower() for v in self.ranges.values()}):
             self.type = bool
             self.ranges = {k: v.lower() in TRUE_BOOLEANS for k, v in self.ranges.items()}
             self.min_value = False
             self.max_value = True
             self.step_size = 1
 
+        self.valid_values = list(self.ranges.values())
         self.range = self.min_value, self.max_value, self.step_size
         self._value_to_raw_value_ranges = {value: _range for _range, value in self.ranges.items()}
 
