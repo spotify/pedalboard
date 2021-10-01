@@ -417,10 +417,11 @@ def test_plugin_parameters_persist_between_calls(plugin_filename: str):
                 random_value = random.choice(parameter.valid_values)
             else:
                 random_value = None
-        if random_value is not None:
-            print(
-                f"Setting parameter {name} to random value: {random_value} ({type(random_value)})"
-            )
+        if (
+            random_value is not None
+            and "bypass" not in name.lower()
+            and "preset" not in name.lower()
+        ):
             setattr(plugin, name, random_value)
 
     expected_values = {}
