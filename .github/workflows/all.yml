@@ -155,9 +155,10 @@ jobs:
           pytest -v
 
   build-wheels:
-    needs: [lint-python, lint-cpp, run-tests, run-tests-with-address-sanitizer]
+    needs: [lint-python, lint-cpp]
     runs-on: ${{ matrix.os }}
     continue-on-error: false
+    if: github.event_name == 'release' && github.event.action == 'published'
     strategy:
       matrix:
         python-version: ['3.8']
