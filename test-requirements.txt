@@ -12,3 +12,5 @@ interrogate
 numpy
 sox
 tensorflow==2.5.0
+google-cloud-storage
+tqdm

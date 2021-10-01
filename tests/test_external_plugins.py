@@ -74,13 +74,16 @@ def load_test_plugin(plugin_filename: str, disable_caching: bool = False, *args,
             key: getattr(plugin, key) for key in plugin.parameters.keys()
         }
 
-    # Reset default parameters when loading:
+    # Try to reset default parameters when loading:
     plugin = TEST_PLUGIN_CACHE[key]
     for name in plugin.parameters.keys():
-        setattr(plugin, name, TEST_PLUGIN_ORIGINAL_PARAMETER_CACHE[key][name])
+        try:
+            setattr(plugin, name, TEST_PLUGIN_ORIGINAL_PARAMETER_CACHE[key][name])
+        except ValueError:
+            pass
 
-    # Throw some silence in and force a reset:
-    plugin.process(np.zeros((44100, 2)), 44100, reset=True)
+    # Force a reset:
+    plugin.reset()
     return plugin
 
 
@@ -294,13 +297,20 @@ def test_float_parameters(plugin_filename: str, parameter_name: str):
     assert repr(parameter_value) == repr(float(parameter_value))
     assert isinstance(parameter_value, float)
     # Change the parameter and ensure that it does change:
-    _min, _max, _ = parameter_value.range
-    step_size = parameter_value.step_size or parameter_value.approximate_step_size
-    for new_value in np.arange(_min, _max, step_size):
+    new_values = parameter_value.valid_values
+
+    if parameter_value.step_size is not None:
+        _min, _max, _ = parameter_value.range
+        step_size = parameter_value.step_size
+        new_values = np.arange(_min, _max, step_size)
+
+    epsilon = parameter_value.step_size or parameter_value.approximate_step_size or 0.001
+
+    for new_value in new_values:
         setattr(plugin, parameter_name, new_value)
         if math.isnan(getattr(plugin, parameter_name)):
             continue
-        assert math.isclose(new_value, getattr(plugin, parameter_name), abs_tol=step_size * 2)
+        assert math.isclose(new_value, getattr(plugin, parameter_name), abs_tol=epsilon * 2.0)
 
     # Ensure that if we access an attribute that we're not adding to the value,
     # we fall back to the underlying type (float) or we raise an exception if not:
@@ -407,7 +417,11 @@ def test_plugin_parameters_persist_between_calls(plugin_filename: str):
                 random_value = random.choice(parameter.valid_values)
             else:
                 random_value = None
-        if random_value is not None:
+        if (
+            random_value is not None
+            and "bypass" not in name.lower()
+            and "preset" not in name.lower()
+        ):
             setattr(plugin, name, random_value)
 
     expected_values = {}

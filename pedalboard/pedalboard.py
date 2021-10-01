@@ -140,12 +140,20 @@ class Pedalboard(collections.MutableSequence):
     __call__ = process
 
 
-FLOAT_SUFFIXES_TO_IGNORE = "x%*,."
+FLOAT_SUFFIXES_TO_IGNORE = set(["x", "%", "*", ",", ".", "hz"])
+
+
+def strip_common_float_suffixes(s: str) -> str:
+    value = s.lower()
+    for suffix in FLOAT_SUFFIXES_TO_IGNORE:
+        if suffix in value:
+            value = value[: -len(suffix)]
+    return value
 
 
 def looks_like_float(s: str) -> bool:
     try:
-        float(s.rstrip(FLOAT_SUFFIXES_TO_IGNORE))
+        float(strip_common_float_suffixes(s))
         return True
     except ValueError:
         return False
@@ -238,6 +246,12 @@ FloatWithParameter = wrap_type(float)
 BooleanWithParameter = wrap_type(WrappedBool)
 
 
+# Some plugins, on some platforms (TAL Reverb 3 on Ubuntu, so far) seem to
+# expose every possible MIDI CC value as a separate parameter
+# (i.e.: MIDI CC [0-16]|[0-128], resulting in 2,048 parameters).
+# This hugely delays load times and adds complexity to the interface.
+PARAMETER_NAME_SUBSTRINGS_TO_IGNORE = {"MIDI CC "}
+
 TRUE_BOOLEANS = {"on", "yes", "true", "enabled"}
 
 
@@ -288,14 +302,11 @@ class AudioProcessorParameter(object):
         self.max_value = None
         self.step_size = None
         self.approximate_step_size = None
-        self.valid_values = list(self.ranges.values())
         self.type = str
 
         if all(looks_like_float(v) for v in self.ranges.values()):
             self.type = float
-            self.ranges = {
-                k: float(v.rstrip(FLOAT_SUFFIXES_TO_IGNORE)) for k, v in self.ranges.items()
-            }
+            self.ranges = {k: float(strip_common_float_suffixes(v)) for k, v in self.ranges.items()}
             self.min_value = min(self.ranges.values())
             self.max_value = max(self.ranges.values())
 
@@ -309,15 +320,14 @@ class AudioProcessorParameter(object):
                 self.approximate_step_size = sum(first_derivative_steps) / len(
                     first_derivative_steps
                 )
-        elif len(self.valid_values) == 2 and (
-            TRUE_BOOLEANS & {v.lower() for v in self.valid_values}
-        ):
+        elif len(self.ranges) == 2 and (TRUE_BOOLEANS & {v.lower() for v in self.ranges.values()}):
             self.type = bool
             self.ranges = {k: v.lower() in TRUE_BOOLEANS for k, v in self.ranges.items()}
             self.min_value = False
             self.max_value = True
             self.step_size = 1
 
+        self.valid_values = list(self.ranges.values())
         self.range = self.min_value, self.max_value, self.step_size
         self._value_to_raw_value_ranges = {value: _range for _range, value in self.ranges.items()}
 
@@ -528,6 +538,10 @@ class ExternalPlugin(object):
 
         parameters = {}
         for cpp_parameter in self._parameters:
+            if any(
+                [substr in cpp_parameter.name for substr in PARAMETER_NAME_SUBSTRINGS_TO_IGNORE]
+            ):
+                continue
             if cpp_parameter.name not in self.__python_parameter_cache__:
                 self.__python_parameter_cache__[cpp_parameter.name] = AudioProcessorParameter(
                     self, cpp_parameter.name
@@ -573,7 +587,7 @@ class ExternalPlugin(object):
                 string_value = parameter.string_value
                 if parameter.type is float:
                     return FloatWithParameter(
-                        float(string_value.rstrip(FLOAT_SUFFIXES_TO_IGNORE)), wrapped=parameter
+                        float(strip_common_float_suffixes(string_value)), wrapped=parameter
                     )
                 elif parameter.type is bool:
                     return BooleanWithParameter(parameter.raw_value >= 0.5, wrapped=parameter)
