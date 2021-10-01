@@ -246,6 +246,12 @@ FloatWithParameter = wrap_type(float)
 BooleanWithParameter = wrap_type(WrappedBool)
 
 
+# Some plugins, on some platforms (TAL Reverb 3 on Ubuntu, so far) seem to
+# expose every possible MIDI CC value as a separate parameter
+# (i.e.: MIDI CC [0-16]|[0-128], resulting in 2,048 parameters).
+# This hugely delays load times and adds complexity to the interface.
+PARAMETER_NAME_SUBSTRINGS_TO_IGNORE = {"MIDI CC "}
+
 TRUE_BOOLEANS = {"on", "yes", "true", "enabled"}
 
 
@@ -532,6 +538,10 @@ class ExternalPlugin(object):
 
         parameters = {}
         for cpp_parameter in self._parameters:
+            if any(
+                [substr in cpp_parameter.name for substr in PARAMETER_NAME_SUBSTRINGS_TO_IGNORE]
+            ):
+                continue
             if cpp_parameter.name not in self.__python_parameter_cache__:
                 self.__python_parameter_cache__[cpp_parameter.name] = AudioProcessorParameter(
                     self, cpp_parameter.name

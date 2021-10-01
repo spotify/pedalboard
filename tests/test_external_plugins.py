@@ -44,11 +44,7 @@ if os.getenv("CIBW_TEST_REQUIRES") or os.getenv("CI"):
 
 def get_parameters(plugin_filename: str):
     try:
-        return {
-            k: v
-            for k, v in load_test_plugin(plugin_filename).parameters.items()
-            if "midi_cc_" not in k
-        }
+        return load_test_plugin(plugin_filename).parameters
     except ImportError:
         return {}
 
