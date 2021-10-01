@@ -418,6 +418,9 @@ def test_plugin_parameters_persist_between_calls(plugin_filename: str):
             else:
                 random_value = None
         if random_value is not None:
+            print(
+                f"Setting parameter {name} to random value: {random_value} ({type(random_value)})"
+            )
             setattr(plugin, name, random_value)
 
     expected_values = {}
