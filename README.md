@@ -15,7 +15,7 @@
 
 Internally at Spotify, `pedalboard` is used for [data augmentation](https://en.wikipedia.org/wiki/Data_augmentation) to improve machine learning models. `pedalboard` also helps in the process of content creation, making it possible to add effects to audio without using a Digital Audio Workstation.
 
-## Usage 
+## Features 
 
  - Built-in support for a number of basic audio transformations: 
    - `Convolution`
@@ -29,13 +29,13 @@ Internally at Spotify, `pedalboard` is used for [data augmentation](https://en.w
    - `LowpassFilter`
    - `Phaser`
    - `Reverb`
- - Supports VST3® plugins on macOS, Windows, and Linux
+ - Supports VST3® plugins on macOS, Windows, and Linux (`pedalboard.load_plugin`)
  - Supports Audio Units on macOS
  - Strong thread-safety, memory usage, and speed guarantees
    - Releases Python's Global Interpreter Lock (GIL) to allow use of multiple CPU cores
      - No need to use `multiprocessing`!
    - Even when only using one thread:
-     - Processes audio up to **300x** faster than [pySoX](https://github.com/rabitt/pysox)
+     - Processes audio up to **300x** faster than [pySoX](https://github.com/rabitt/pysox) for single transforms, and 2-5x faster<sup>[1](https://github.com/iCorv/pedalboard_with_tfdata)</sup> than [SoxBindings](https://github.com/pseeth/soxbindings)
  - Tested compatibility with TensorFlow - can be used in `tf.data` pipelines!
 
 ## Installation
@@ -63,7 +63,7 @@ If you are new to Python, follow [INSTALLATION.md](https://github.com/spotify/pe
   - Compatible with a wide range of VSTs and Audio Units
 - Windows
   - Tested automatically on GitHub with VSTs
-  - Platform wheels available for `amd64` (Intel/AMD)
+  - Platform wheels available for `amd64` (x86-84, Intel/AMD)
 
 #### Plugin Compatibility
 
