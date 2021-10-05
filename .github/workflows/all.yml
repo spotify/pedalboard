@@ -120,7 +120,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.x']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10']
         os: [ubuntu-latest]
     name: Test with Python ${{ matrix.python-version }} + Address Sanitizer
     steps:
