@@ -14,11 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import sys
 import numpy as np
-
-import tensorflow as tf
-
 import pedalboard
 
 
@@ -27,6 +24,15 @@ def test_can_be_called_in_tensorflow_data_pipeline():
     plugins = pedalboard.Pedalboard([pedalboard.Gain(), pedalboard.Reverb()], sample_rate=sr)
 
     noise = np.random.rand(sr)
+    
+    try:
+        import tensorflow as tf
+    except ImportError:
+        # TensorFlow is not yet supported on Python 3.10 - don't bother testing.
+        if sys.version_info.micro >= 10:
+            return
+        raise
+
     ds = tf.data.Dataset.from_tensor_slices([noise]).map(
         lambda audio: tf.numpy_function(plugins.process, [audio], tf.float32)
     )
