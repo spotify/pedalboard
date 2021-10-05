@@ -14,7 +14,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.x']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10']
         os: [ubuntu-latest]
     name: Lint Python
     steps:
@@ -26,6 +26,10 @@ jobs:
         with:
           submodules: recursive
       - name: Install lint dependencies
+        env:
+          # on macOS and with Python 3.10: building NumPy from source fails without these options:
+          NPY_BLAS_ORDER: ""
+          NPY_LAPACK_ORDER: ""
         run: |
           python -m pip install --upgrade pip
           pip install wheel
@@ -55,7 +59,7 @@ jobs:
       MINIMUM_COVERAGE_PERCENTAGE: 90
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.x']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10']
         os: [ubuntu-18.04, ubuntu-latest, windows-latest, macos-10.15, macos-latest]
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
@@ -75,6 +79,10 @@ jobs:
           libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
           libxcursor-dev libfreetype6 libfreetype6-dev
       - name: Install test dependencies
+        env:
+          # on macOS and with Python 3.10: building NumPy from source fails without these options:
+          NPY_BLAS_ORDER: ""
+          NPY_LAPACK_ORDER: ""
         run: |
           python -m pip install --upgrade pip
           pip install wheel
@@ -120,7 +128,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.x']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10']
         os: [ubuntu-latest]
     name: Test with Python ${{ matrix.python-version }} + Address Sanitizer
     steps:
@@ -187,7 +195,7 @@ jobs:
           CIBW_TEST_REQUIRES: -r test-requirements.txt
           CIBW_TEST_COMMAND: "pytest {project}/tests"
           CIBW_ARCHS: auto64 # Only support building 64-bit wheels. It's 2021!
-          CIBW_SKIP: '*27* *35* *310*' # Ignore Python 2.x, 3.5 (too old), and 3.10 (too new)
+          CIBW_SKIP: '*27* *35*' # Ignore Python 2.x, 3.5
           CIBW_ARCHS_MACOS: x86_64 universal2 # Support Apple Silicon
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: pip install auditwheel-symbols && (auditwheel repair -w {dest_dir} {wheel} || auditwheel-symbols --manylinux 2010 {wheel})
           CIBW_BEFORE_BUILD_LINUX: |
