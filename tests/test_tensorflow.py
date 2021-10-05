@@ -24,7 +24,7 @@ def test_can_be_called_in_tensorflow_data_pipeline():
     plugins = pedalboard.Pedalboard([pedalboard.Gain(), pedalboard.Reverb()], sample_rate=sr)
 
     noise = np.random.rand(sr)
-    
+
     try:
         import tensorflow as tf
     except ImportError:
