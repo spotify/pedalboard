@@ -27,9 +27,9 @@ def test_can_be_called_in_tensorflow_data_pipeline():
 
     try:
         import tensorflow as tf
-    except Exception:
+    except ModuleNotFoundError:
         # TensorFlow is not yet supported on Python 3.10 - don't bother testing.
-        if sys.version_info.micro >= 10:
+        if sys.version_info.minor >= 10:
             return
         raise
 
