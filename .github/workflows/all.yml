@@ -197,6 +197,8 @@ jobs:
           CIBW_ARCHS: auto64 # Only support building 64-bit wheels. It's 2021!
           CIBW_SKIP: '*27* *35*' # Ignore Python 2.x, 3.5
           CIBW_ARCHS_MACOS: x86_64 universal2 # Support Apple Silicon
+          # on macOS and with Python 3.10: building NumPy from source fails without these options:
+          CIBW_ENVIRONMENT: NPY_BLAS_ORDER="" NPY_LAPACK_ORDER=""
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: pip install auditwheel-symbols && (auditwheel repair -w {dest_dir} {wheel} || auditwheel-symbols --manylinux 2010 {wheel})
           CIBW_BEFORE_BUILD_LINUX: |
             yum install -y libsndfile \
