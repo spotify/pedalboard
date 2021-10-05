@@ -26,7 +26,7 @@ import numpy as np
 from pedalboard_native import Plugin, process, _AudioProcessorParameter
 
 
-class Pedalboard(collections.MutableSequence):
+class Pedalboard(collections.abc.MutableSequence):
     """
     A container for a chain of plugins, to use for processing audio.
     """
