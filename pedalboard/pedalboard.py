@@ -140,14 +140,14 @@ class Pedalboard(collections.abc.MutableSequence):
     __call__ = process
 
 
-FLOAT_SUFFIXES_TO_IGNORE = set(["x", "%", "*", ",", ".", "hz"])
+FLOAT_SUFFIXES_TO_IGNORE = set(["x", "%", "*", ",", "hz"])
 
 
 def strip_common_float_suffixes(s: str) -> str:
-    value = s.lower()
+    value = s.lower().strip()
     for suffix in FLOAT_SUFFIXES_TO_IGNORE:
         if suffix in value:
-            value = value[: -len(suffix)]
+            value = value.replace(suffix, "")
     return value
 
 
