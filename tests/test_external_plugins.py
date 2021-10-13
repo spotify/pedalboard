@@ -106,13 +106,16 @@ def test_at_least_one_plugin_is_available_for_testing():
     assert AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
 
 
-@pytest.mark.parametrize("value,expected", [
-    ("nope", "nope"),
-    ("10.5x", "10.5"),
-    ("12%", "12"),
-    ("123 Hz", "123"),
-    ("123.45 Hz", "123.45")
-])
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("nope", "nope"),
+        ("10.5x", "10.5"),
+        ("12%", "12"),
+        ("123 Hz", "123"),
+        ("123.45 Hz", "123.45"),
+    ],
+)
 def test_strip_common_float_suffixes(value, expected):
     assert strip_common_float_suffixes(value) == expected
 
