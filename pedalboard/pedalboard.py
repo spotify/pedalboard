@@ -144,10 +144,10 @@ FLOAT_SUFFIXES_TO_IGNORE = set(["x", "%", "*", ",", ".", "hz"])
 
 
 def strip_common_float_suffixes(s: str) -> str:
-    value = s.lower()
+    value = s.lower().strip()
     for suffix in FLOAT_SUFFIXES_TO_IGNORE:
-        if suffix in value:
-            value = value[: -len(suffix)]
+        if value[-len(suffix) :] == suffix:
+            value = value[: -len(suffix)].strip()
     return value
 
 
