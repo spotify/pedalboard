@@ -15,11 +15,13 @@ from google.oauth2 import service_account
 def main():
     GCS_ASSET_BUCKET_NAME = os.environ.get("GCS_ASSET_BUCKET_NAME")
     if not GCS_ASSET_BUCKET_NAME:
-        raise ValueError("Missing GCS_ASSET_BUCKET_NAME environment variable!")
+        print("Missing GCS_ASSET_BUCKET_NAME environment variable! Not downloading.")
+        return
 
     GCS_READER_SERVICE_ACCOUNT_KEY = os.environ.get("GCS_READER_SERVICE_ACCOUNT_KEY")
     if not GCS_READER_SERVICE_ACCOUNT_KEY:
-        raise ValueError("Missing GCS_READER_SERVICE_ACCOUNT_KEY environment variable!")
+        print("Missing GCS_READER_SERVICE_ACCOUNT_KEY environment variable! Not downloading.")
+        return
 
     json_acct_info = json.loads(GCS_READER_SERVICE_ACCOUNT_KEY)
     credentials = service_account.Credentials.from_service_account_info(json_acct_info)
