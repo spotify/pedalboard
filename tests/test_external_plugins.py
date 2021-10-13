@@ -117,7 +117,8 @@ def test_at_least_one_plugin_is_available_for_testing():
     ],
 )
 def test_strip_common_float_suffixes(value, expected):
-    assert strip_common_float_suffixes(value) == expected
+    actual = strip_common_float_suffixes(value)
+    assert actual == expected
 
 
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
