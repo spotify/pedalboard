@@ -572,6 +572,22 @@ class ExternalPlugin(object):
             )
         return self.__python_parameter_cache__[cpp_parameter.name]
 
+    def set_raw_value(self, name: str, raw_value: float):
+        """
+        Function to set raw value for a given parameter
+        :param name: Name of the parameter
+        :param raw_value: Raw value to set. From 0 to 1
+        """
+        parameter = self._get_parameter_by_python_name(name)
+        if parameter:
+            if not type(raw_value) == float and not type(raw_value) == int:
+                raise TypeError(f'Expected type int or float, got: {type(raw_value)}')
+            if not 0 <= raw_value <= 1:
+                raise ValueError(f'Expected number from 0 to 1, got {raw_value}')
+            parameter.raw_value = raw_value
+            return
+        raise ValueError(f'Invalid parameter name: {name}')
+
     def __dir__(self):
         parameter_names = []
         for parameter in self._parameters:
