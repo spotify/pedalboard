@@ -195,7 +195,7 @@ jobs:
           CIBW_TEST_REQUIRES: -r test-requirements.txt
           CIBW_TEST_COMMAND: "pytest {project}/tests"
           CIBW_ARCHS: auto64 # Only support building 64-bit wheels. It's 2021!
-          CIBW_ARCHS_LINUX: aarch64 # Useful for building linux images with Apple Silicon
+          CIBW_ARCHS_LINUX: auto64 aarch64 # Useful for building linux images with Apple Silicon
           CIBW_SKIP: '*27* *35*' # Ignore Python 2.x, 3.5
           CIBW_ARCHS_MACOS: x86_64 universal2 # Support Apple Silicon
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
