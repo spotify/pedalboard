@@ -180,6 +180,58 @@ For more examples, see:
 
 Contributions to `pedalboard` are welcomed! See [CONTRIBUTING.md](https://github.com/spotify/pedalboard/blob/master/CONTRIBUTING.md) for details.
 
+## Frequently Asked Questions
+
+
+### Can Pedalboard be used with live (real-time) audio?
+
+Technically, yes, Pedalboard could be used with live audio input/output. See [@stefanobazzi](https://github.com/stefanobazzi)'s [guitarboard](https://github.com/stefanobazzi/guitarboard) project for an example that uses the `python-sounddevice` library to wire Pedalboard up to live audio.
+
+However, there are a couple big caveats when talking about using Pedalboard in a live context. Python, as a language, is [garbage-collected](https://devguide.python.org/garbage_collector/), meaning that your code randomly pauses on a regular interval to clean up unused objects. In most programs, this is not an issue at all. However, for live audio, garbage collection can result in random pops, clicks, or audio drop-outs that are very difficult to prevent.
+
+Note that if your application processes audio in a streaming fashion, but allows for large buffer sizes (multiple seconds of audio) or soft real-time requirements, Pedalboard can be used there without issue. Examples of this use case include streaming audio processing over the network, or processing data offline but chunk-by-chunk.
+
+### Does Pedalboard support changing a plugin's parameters over time?
+
+Yes! While there's no built-in function for this, it is possible to
+vary the parameters of a plugin over time manually:
+
+```python
+import numpy
+from pedalboard import Pedalboard, Compressor, Reverb
+
+input_audio = ...
+output_audio = np.zeros_like(input_audio)
+board = Pedalboard([Compressor(), Reverb()])
+reverb = board[-1]
+
+# smaller step sizes would give a smoother transition,
+# at the expense of processing speed
+step_size_in_samples = 100
+
+# Manually step through the audio 100 samples at a time
+for i in range(0, input_audio.shape[0], step_size_in_samples):
+    # Set the reverb's "wet" parameter to be equal to the percentage through the track
+    # (i.e.: make a ramp from 0% to 100%)
+    percentage_through_track = i / input_audio.shape[0]
+    reverb.wet_level = percentage_through_track
+    
+    # Process this chunk of audio, setting `reset` to `False`
+    # to ensure that reverb tails aren't cut off
+    chunk = board.process(input_audio[i : i + step_size_in_samples], reset=False)
+    output_audio[i : i + step_size_in_samples] = chunk
+```
+
+With this technique, it's possible to automate any parameter. Usually, using a step size of somewhere between 100 and 1,000 (2ms to 22ms at a 44.1kHz sample rate) is small enough to avoid hearing any audio artifacts, but big enough to avoid slowing down the code dramatically.
+
+### Can Pedalboard be used with VST instruments, instead of effects?
+
+Not yet! The underlying framework (JUCE) supports VST and AU instruments just fine, but Pedalboard itself would have to be modified to support instruments.
+
+### Can Pedalboard plugins accept MIDI?
+
+Not yet, either - although the underlying framework (JUCE) supports passing MIDI to plugins, so this would also be possible to add.
+
 ## License
 `pedalboard` is Copyright 2021 Spotify AB.
 
