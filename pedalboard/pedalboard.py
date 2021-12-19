@@ -638,7 +638,6 @@ try:
             super().__init__(path_to_plugin_file)
             self.__set_initial_parameter_values__(parameter_values)
 
-
 except ImportError:
     # We may be on a system that doesn't have native AudioUnitPlugin support.
     # (i.e.: any platform that's not macOS.)
