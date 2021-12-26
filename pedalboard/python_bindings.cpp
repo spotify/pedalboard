@@ -49,13 +49,23 @@ namespace py = pybind11;
 #include "plugins/GSMFullRateCompressor.h"
 #include "plugins/Gain.h"
 #include "plugins/HighpassFilter.h"
+<<<<<<< HEAD
 #include "plugins/Invert.h"
 #include "plugins/LadderFilter.h"
 #include "plugins/Limiter.h"
 #include "plugins/LowpassFilter.h"
 #include "plugins/MP3Compressor.h"
 #include "plugins/Mix.h"
+=======
+#include "plugins/HighShelfFilter.h"
+#include "plugins/LadderFilter.h"
+#include "plugins/Limiter.h"
+#include "plugins/LowpassFilter.h"
+#include "plugins/LowShelfFilter.h"
+>>>>>>>  On branch add-dsp-filters
 #include "plugins/NoiseGate.h"
+#include "plugins/NotchFilter.h"
+#include "plugins/PeakingFilter.h"
 #include "plugins/Phaser.h"
 #include "plugins/PitchShift.h"
 #include "plugins/Reverb.h"
@@ -160,12 +170,16 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_gsm_full_rate_compressor(m);
 
   init_highpass(m);
+  init_highshelf(m);
   init_invert(m);
   init_ladderfilter(m);
   init_limiter(m);
   init_lowpass(m);
+  init_lowshelf(m);
   init_mp3_compressor(m);
   init_noisegate(m);
+  init_notch(m);
+  init_peaking(m);
   init_phaser(m);
   init_pitch_shift(m);
   init_reverb(m);
