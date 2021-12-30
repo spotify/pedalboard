@@ -194,9 +194,8 @@ public:
           "see which dependencies might be missing.).");
 #else
 
-// Only on M1 Macs, it seems that plugins must be installed in the appropriate
-// path.
-#if JUCE_ARM && JUCE_MAC
+// On certain Macs, plugins will only load if installed in the appropriate path.
+#if JUCE_MAC
       bool pluginIsInstalled =
           pluginFileStripped.contains("/Library/Audio/Plug-Ins/Components/");
       if (!pluginIsInstalled) {
