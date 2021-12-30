@@ -23,6 +23,7 @@ import random
 import shutil
 import platform
 from glob import glob
+from pathlib import Path
 
 from pedalboard.pedalboard import WrappedBool, strip_common_float_suffixes
 import pytest
@@ -57,9 +58,7 @@ TEST_PLUGIN_ORIGINAL_PARAMETER_CACHE = {}
 # else Audio Units won't load.
 TEMPORARILY_INSTALL_AUDIO_UNITS = True
 PLUGIN_FILES_TO_DELETE = set()
-MACOS_PLUGIN_INSTALL_PATH = os.path.expanduser(
-    os.path.join("~", "Library", "Audio", "Plug-Ins", "Components")
-)
+MACOS_PLUGIN_INSTALL_PATH = Path.home() / "Library" / "Audio" / "Plug-Ins" / "Components"
 
 
 def load_test_plugin(plugin_filename: str, disable_caching: bool = False, *args, **kwargs):
