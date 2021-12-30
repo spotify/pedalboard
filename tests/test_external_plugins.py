@@ -76,7 +76,7 @@ def load_test_plugin(plugin_filename: str, disable_caching: bool = False, *args,
         plugin_path = os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_filename)
 
         if (
-            platform.system() == 'Darwin'
+            platform.system() == "Darwin"
             and plugin_filename.endswith(".component")
             and TEMPORARILY_INSTALL_AUDIO_UNITS
         ):
