@@ -15,22 +15,17 @@
 # limitations under the License.
 
 
-import os
 import gc
 import weakref
 import pytest
-import platform
 
-import pedalboard
-from .test_external_plugins import TEST_PLUGIN_BASE_PATH, AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
+from .test_external_plugins import load_test_plugin, AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
 
 
 @pytest.mark.parametrize("plugin_path", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_plugin_can_be_garbage_collected(plugin_path: str):
-    # Load a VST3 plugin from disk:
-    plugin = pedalboard.load_plugin(
-        os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_path)
-    )
+    # Load a VST3 or Audio Unit plugin from disk:
+    plugin = load_test_plugin(plugin_path, disable_caching=True)
 
     _plugin_ref = weakref.ref(plugin)
     param_name, param = next(

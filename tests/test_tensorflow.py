@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import sys
+import platform
 import numpy as np
 import pedalboard
 
@@ -28,8 +29,10 @@ def test_can_be_called_in_tensorflow_data_pipeline():
     try:
         import tensorflow as tf
     except ModuleNotFoundError:
-        # TensorFlow is not yet supported on Python 3.10 - don't bother testing.
-        if sys.version_info.minor >= 10:
+        # TensorFlow is not yet supported on Python 3.10 or M1 Macs - don't bother testing.
+        if sys.version_info.minor >= 10 or (
+            platform.processor() == "arm" and platform.system() == "Darwin"
+        ):
             return
         raise
 

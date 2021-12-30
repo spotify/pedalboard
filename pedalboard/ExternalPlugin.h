@@ -193,6 +193,20 @@ public:
           pathToSharedObjectFile.getFullPathName().toStdString() + "\"` to " +
           "see which dependencies might be missing.).");
 #else
+
+// Only on M1 Macs, it seems that plugins must be installed in the appropriate
+// path.
+#if JUCE_ARM && JUCE_MAC
+      bool pluginIsInstalled =
+          pluginFileStripped.contains("/Library/Audio/Plug-Ins/Components/");
+      if (!pluginIsInstalled) {
+        throw pybind11::import_error(
+            "Unable to load plugin " + pathToPluginFile.toStdString() +
+            ": unsupported plugin format or load failure. Plugin file may need "
+            "to be moved to /Library/Audio/Plug-Ins/Components/ or "
+            "~/Library/Audio/Plug-Ins/Components/.");
+      }
+#endif
       throw pybind11::import_error(
           "Unable to load plugin " + pathToPluginFile.toStdString() +
           ": unsupported plugin format or load failure.");
