@@ -21,7 +21,9 @@ import numpy as np
 import pedalboard
 
 
-@pytest.mark.skipif(sys.version_info.minor >= 10, reason="TensorFlow not supported on Python 3.10+ yet.")
+@pytest.mark.skipif(
+    sys.version_info.minor >= 10, reason="TensorFlow not supported on Python 3.10+ yet."
+)
 @pytest.mark.skipif(
     (platform.processor() == "arm" and platform.system() == "Darwin"),
     reason="TensorFlow not supported on M1 Macs yet.",
