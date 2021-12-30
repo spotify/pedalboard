@@ -16,10 +16,14 @@
 
 
 import os
+import time
 import math
+import atexit
 import random
+import shutil
 import platform
 from glob import glob
+from pathlib import Path
 
 from pedalboard.pedalboard import WrappedBool, strip_common_float_suffixes
 import pytest
@@ -43,14 +47,18 @@ if os.getenv("CIBW_TEST_REQUIRES") or os.getenv("CI"):
 
 
 def get_parameters(plugin_filename: str):
-    try:
-        return load_test_plugin(plugin_filename).parameters
-    except ImportError:
-        return {}
+    return load_test_plugin(plugin_filename).parameters
 
 
 TEST_PLUGIN_CACHE = {}
 TEST_PLUGIN_ORIGINAL_PARAMETER_CACHE = {}
+
+# If true, copy all test Audio Units into the appropriate install path
+# before running tests. On some versions of macOS, this is necessary or
+# else Audio Units won't load.
+TEMPORARILY_INSTALL_AUDIO_UNITS = True
+PLUGIN_FILES_TO_DELETE = set()
+MACOS_PLUGIN_INSTALL_PATH = Path.home() / "Library" / "Audio" / "Plug-Ins" / "Components"
 
 
 def load_test_plugin(plugin_filename: str, disable_caching: bool = False, *args, **kwargs):
@@ -64,9 +72,35 @@ def load_test_plugin(plugin_filename: str, disable_caching: bool = False, *args,
 
     key = repr((plugin_filename, args, tuple(kwargs.items())))
     if key not in TEST_PLUGIN_CACHE or disable_caching:
-        plugin = pedalboard.load_plugin(
-            os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_filename), *args, **kwargs
-        )
+        plugin_path = os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_filename)
+
+        if (
+            platform.system() == "Darwin"
+            and plugin_filename.endswith(".component")
+            and TEMPORARILY_INSTALL_AUDIO_UNITS
+        ):
+            # On certain macOS machines, it seems AudioUnit components must be
+            # installed in ~/Library/Audio/Plug-Ins/Components in order to be loaded.
+            installed_plugin_path = os.path.join(MACOS_PLUGIN_INSTALL_PATH, plugin_filename)
+            plugin_already_installed = os.path.exists(installed_plugin_path)
+            if not plugin_already_installed:
+                shutil.copytree(plugin_path, installed_plugin_path)
+                PLUGIN_FILES_TO_DELETE.add(installed_plugin_path)
+            plugin_path = installed_plugin_path
+
+        # Try to load a given plugin multiple times if necessary.
+        # Unsure why this is necessary, but it seems this only happens in test.
+        exception = None
+        for attempt in range(5):
+            try:
+                plugin = pedalboard.load_plugin(plugin_path, *args, **kwargs)
+                break
+            except ImportError as e:
+                exception = e
+                time.sleep(attempt)
+        else:
+            raise exception
+
         if disable_caching:
             return plugin
         TEST_PLUGIN_CACHE[key] = plugin
@@ -85,6 +119,14 @@ def load_test_plugin(plugin_filename: str, disable_caching: bool = False, *args,
     # Force a reset:
     plugin.reset()
     return plugin
+
+
+def delete_installed_plugins():
+    for plugin_file in PLUGIN_FILES_TO_DELETE:
+        shutil.rmtree(plugin_file)
+
+
+atexit.register(delete_installed_plugins)
 
 
 # Allow testing with all of the plugins on the local machine:

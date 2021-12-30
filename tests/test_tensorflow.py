@@ -15,23 +15,26 @@
 # limitations under the License.
 
 import sys
+import pytest
+import platform
 import numpy as np
 import pedalboard
 
 
+@pytest.mark.skipif(
+    sys.version_info.minor >= 10, reason="TensorFlow not supported on Python 3.10+ yet."
+)
+@pytest.mark.skipif(
+    (platform.processor() == "arm" and platform.system() == "Darwin"),
+    reason="TensorFlow not supported on M1 Macs yet.",
+)
 def test_can_be_called_in_tensorflow_data_pipeline():
+    import tensorflow as tf
+
     sr = 48000
     plugins = pedalboard.Pedalboard([pedalboard.Gain(), pedalboard.Reverb()], sample_rate=sr)
 
     noise = np.random.rand(sr)
-
-    try:
-        import tensorflow as tf
-    except ModuleNotFoundError:
-        # TensorFlow is not yet supported on Python 3.10 - don't bother testing.
-        if sys.version_info.minor >= 10:
-            return
-        raise
 
     ds = tf.data.Dataset.from_tensor_slices([noise]).map(
         lambda audio: tf.numpy_function(plugins.process, [audio], tf.float32)
