@@ -67,7 +67,7 @@ inline void init_lowshelf(py::module &m) {
       .def("__repr__",
            [](const LowShelfFilter<float> &plugin) {
              std::ostringstream ss;
-             ss << "<pedalboard.LowShelf";
+             ss << "<pedalboard.LowShelfFilter";
              ss << " cutoff_frequency_hz=" << plugin.getCutoffFrequencyHz();
              ss << " Q=" << plugin.getQ();
              ss << " gain_factor=" << plugin.getGainFactor();
