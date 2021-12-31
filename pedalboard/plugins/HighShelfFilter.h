@@ -50,7 +50,7 @@ private:
 inline void init_highshelf(py::module &m) {
   py::class_<HighShelfFilter<float>, Plugin>(
       m, "HighShelfFilter",
-      "Apply a High Shelf filter with"
+      "Apply a high-pass shelf filter with variable Q and gain. "
       "The gain is a scale factor that the high frequencies are multiplied by, so values"
       "greater than 1.0 will boost the high frequencies, values less than 1.0 will"
       "attenuate them.")
