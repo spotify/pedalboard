@@ -50,12 +50,10 @@ private:
 inline void init_lowshelf(py::module &m) {
   py::class_<LowShelfFilter<float>, Plugin>(
       m, "LowShelfFilter",
-      "Apply a Low Shelf filter with"
-      "The gain is a scale factor that the high frequencies are multiplied by, so values"
-      "greater than 1.0 will boost the high frequencies, values less than 1.0 will"
-      "attenuate them."
-      "The cutoff frequency will be attenuated by -3dB (i.e.: 0.707x as "
-      "loud).")
+      "Apply a low-pass shelf filter with variable Q and gain. "
+      "The gain is a scale factor that the low frequencies are multiplied by, so values"
+      "greater than 1.0 will boost the low frequencies, values less than 1.0 will"
+      "attenuate them.")
       .def(py::init([](float cutoff_frequency_hz, float Q_val, float gainFactorBoost) {
              auto plugin = new LowShelfFilter<float>();
              plugin->setCutoffFrequencyHz(cutoff_frequency_hz);
