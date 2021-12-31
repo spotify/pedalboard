@@ -78,7 +78,7 @@ inline void init_lowshelf(py::module &m) {
       .def_property("cutoff_frequency_hz",
                     &LowShelfFilter<float>::getCutoffFrequencyHz,
                     &LowShelfFilter<float>::setCutoffFrequencyHz)
-      .def_property("Q_val", 
+      .def_property("q", 
                     &LowShelfFilter<float>::getQ,
                     &LowShelfFilter<float>::setQ)
       .def_property("gain_factor", 
