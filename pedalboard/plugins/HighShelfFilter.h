@@ -69,7 +69,7 @@ inline void init_highshelf(py::module &m) {
              std::ostringstream ss;
              ss << "<pedalboard.HighShelfFilter";
              ss << " cutoff_frequency_hz=" << plugin.getCutoffFrequencyHz();
-             ss << " Q=" << plugin.getQ();
+             ss << " q=" << plugin.getQ();
              ss << " gain_factor=" << plugin.getGainFactor();
              ss << " at " << &plugin;
              ss << ">";
