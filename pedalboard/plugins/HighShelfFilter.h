@@ -67,7 +67,7 @@ inline void init_highshelf(py::module &m) {
       .def("__repr__",
            [](const HighShelfFilter<float> &plugin) {
              std::ostringstream ss;
-             ss << "<pedalboard.HighShelf";
+             ss << "<pedalboard.HighShelfFilter";
              ss << " cutoff_frequency_hz=" << plugin.getCutoffFrequencyHz();
              ss << " Q=" << plugin.getQ();
              ss << " gain_factor=" << plugin.getGainFactor();
