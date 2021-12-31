@@ -78,7 +78,7 @@ inline void init_peaking(py::module &m) {
       .def_property("centre_frequency_hz",
                     &PeakingFilter<float>::getCentreFrequencyHz,
                     &PeakingFilter<float>::setCentreFrequencyHz)
-      .def_property("Q", 
+      .def_property("q", 
                     &PeakingFilter<float>::getQ,
                     &PeakingFilter<float>::setQ)
       .def_property("gain_factor", 
