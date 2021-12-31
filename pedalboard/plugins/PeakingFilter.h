@@ -69,7 +69,7 @@ inline void init_peaking(py::module &m) {
              std::ostringstream ss;
              ss << "<pedalboard.PeakFilter";
              ss << " centre_frequency_hz=" << plugin.getCentreFrequencyHz();
-             ss << " Q=" << plugin.getQ();
+             ss << " q=" << plugin.getQ();
              ss << " gain_factor=" << plugin.getGainFactor();
              ss << " at " << &plugin;
              ss << ">";
