@@ -46,7 +46,7 @@ private:
 inline void init_notch(py::module &m) {
   py::class_<NotchFilter<float>, Plugin>(
       m, "NotchFilter",
-      "Create a notch filter with a variable Q, set around cutoffFrequencyHz")
+      "Create a notch filter with a variable Q, set around cutoff_frequency_hz.")
       .def(py::init([](float cutoff_frequency_hz, float Q_val) {
              auto plugin = new NotchFilter<float>();
              plugin->setCutoffFrequencyHz(cutoff_frequency_hz);
