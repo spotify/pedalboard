@@ -174,28 +174,59 @@ jobs:
     if: github.event_name == 'release' && github.event.action == 'published'
     strategy:
       matrix:
-        python-version: ['3.8']
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    name: Build wheels on ${{ matrix.os }}
+        include:
+        - { os: macos-latest, build: cp36-macosx_x86_64 }
+        - { os: macos-latest, build: cp37-macosx_x86_64 }
+        - { os: macos-latest, build: cp38-macosx_universal2 }
+        - { os: macos-latest, build: cp39-macosx_universal2 }
+        - { os: macos-latest, build: cp310-macosx_universal2 }
+        - { os: macos-latest, build: pp37-macosx_x86_64 }
+        - { os: macos-latest, build: pp38-macosx_x86_64 }
+        - { os: windows-latest, build: cp36-win_amd64 }
+        - { os: windows-latest, build: cp37-win_amd64 }
+        - { os: windows-latest, build: cp38-win_amd64 }
+        - { os: windows-latest, build: cp39-win_amd64 }
+        - { os: windows-latest, build: cp310-win_amd64 }
+        - { os: windows-latest, build: pp37-win_amd64 }
+        - { os: windows-latest, build: pp38-win_amd64 }
+        - { os: ubuntu-latest, build: cp36-manylinux_x86_64 }
+        - { os: ubuntu-latest, build: cp36-manylinux_aarch64 }
+        - { os: ubuntu-latest, build: cp37-manylinux_x86_64 }
+        - { os: ubuntu-latest, build: cp37-manylinux_aarch64 }
+        - { os: ubuntu-latest, build: cp38-manylinux_x86_64 }
+        - { os: ubuntu-latest, build: cp38-manylinux_aarch64 }
+        - { os: ubuntu-latest, build: cp39-manylinux_x86_64 }
+        - { os: ubuntu-latest, build: cp39-manylinux_aarch64 }
+        - { os: ubuntu-latest, build: cp310-manylinux_x86_64 }
+        - { os: ubuntu-latest, build: cp310-manylinux_aarch64 }
+        - { os: ubuntu-latest, build: pp37-manylinux_x86_64 }
+        - { os: ubuntu-latest, build: pp37-manylinux_aarch64 }
+        - { os: ubuntu-latest, build: pp38-manylinux_x86_64 }
+        - { os: ubuntu-latest, build: pp38-manylinux_aarch64 }
+    name: Build wheel for ${{ matrix.build }}
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-
       # Used to host cibuildwheel, so version doesn't really matter
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.8"
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel>=2.0.0a4
-
+      - name: Set up QEMU for aarch64 on Linux
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v1
+        with:
+          platforms: all
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_TEST_REQUIRES: -r test-requirements.txt
           CIBW_TEST_COMMAND: "pytest {project}/tests"
-          CIBW_ARCHS: auto64 # Only support building 64-bit wheels. It's 2021!
-          CIBW_SKIP: '*27* *35*' # Ignore Python 2.x, 3.5
+          CIBW_BUILD: ${{ matrix.build }}
+          CIBW_ARCHS: auto64 # Only support building 64-bit wheels. It's 2022!
+          CIBW_ARCHS_LINUX: auto64 aarch64 # Useful for building linux images with Apple Silicon
           CIBW_ARCHS_MACOS: x86_64 universal2 # Support Apple Silicon
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
           CIBW_ENVIRONMENT: NPY_BLAS_ORDER="" NPY_LAPACK_ORDER=""
@@ -214,7 +245,6 @@ jobs:
           # so we can't run post-wheel-build tests there.
           # Also testing any pypy versions fails, as TensorFlow isn't pypy compatible.
           CIBW_TEST_SKIP: "*manylinux* *pp* *-macosx_universal2:arm64"
-
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl

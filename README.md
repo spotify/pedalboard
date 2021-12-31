@@ -4,7 +4,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pedalboard)
 ![Supported Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-green)
-![Apple Silicon supported](https://img.shields.io/badge/Apple%20Silicon-supported-brightgreen)
+![Apple Silicon support for macOS and Linux (Docker)](https://img.shields.io/badge/Apple%20Silicon-macOS%20and%20Linux-brightgreen)
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/pedalboard)
 [![Test Badge](https://github.com/spotify/pedalboard/actions/workflows/all.yml/badge.svg)](https://github.com/spotify/pedalboard/actions/workflows/all.yml)
 ![Coverage Badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/psobot/8736467e9952991ef44a67915ee7c762/raw/coverage.json)
@@ -54,7 +54,7 @@ If you are new to Python, follow [INSTALLATION.md](https://github.com/spotify/pe
 - Linux
   - Tested heavily in production use cases at Spotify
   - Tested automatically on GitHub with VSTs
-  - Platform `manylinux` wheels built for `x86_64`
+  - Platform `manylinux` wheels built for `x86_64` (Intel/AMD) and `aarch64` (ARM/Apple Silicon)
   - Most Linux VSTs require a relatively modern Linux installation (with glibc > 2.27)
 - macOS
   - Tested manually with VSTs and Audio Units
@@ -63,7 +63,7 @@ If you are new to Python, follow [INSTALLATION.md](https://github.com/spotify/pe
   - Compatible with a wide range of VSTs and Audio Units
 - Windows
   - Tested automatically on GitHub with VSTs
-  - Platform wheels available for `amd64` (x86-84, Intel/AMD)
+  - Platform wheels available for `amd64` (x86-64, Intel/AMD)
 
 #### Plugin Compatibility
 
