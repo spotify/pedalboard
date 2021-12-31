@@ -78,7 +78,7 @@ inline void init_highshelf(py::module &m) {
       .def_property("cutoff_frequency_hz",
                     &HighShelfFilter<float>::getCutoffFrequencyHz,
                     &HighShelfFilter<float>::setCutoffFrequencyHz)
-      .def_property("Q", 
+      .def_property("q", 
                     &HighShelfFilter<float>::getQ,
                     &HighShelfFilter<float>::setQ)
       .def_property("gain_factor", 
