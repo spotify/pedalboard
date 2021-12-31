@@ -171,7 +171,7 @@ jobs:
     needs: [lint-python, lint-cpp]
     runs-on: ${{ matrix.os }}
     continue-on-error: false
-    # if: github.event_name == 'release' && github.event.action == 'published'
+    if: github.event_name == 'release' && github.event.action == 'published'
     strategy:
       matrix:
         include:
@@ -203,7 +203,7 @@ jobs:
         - { os: ubuntu-latest, build: pp37-manylinux_aarch64 }
         - { os: ubuntu-latest, build: pp38-manylinux_x86_64 }
         - { os: ubuntu-latest, build: pp38-manylinux_aarch64 }
-    name: Build wheels for ${{ matrix.build }}
+    name: Build wheel for ${{ matrix.build }}
     steps:
       - uses: actions/checkout@v2
         with:
