@@ -65,7 +65,7 @@ inline void init_peaking(py::module &m) {
            py::arg("Q") = 0.0,
            py::arg("gain_factor") = .707)
       .def("__repr__",
-           [](const PeakingFilter<float> &plugin) {
+           [](const PeakFilter<float> &plugin) {
              std::ostringstream ss;
              ss << "<pedalboard.PeakFilter";
              ss << " centre_frequency_hz=" << plugin.getCentreFrequencyHz();
