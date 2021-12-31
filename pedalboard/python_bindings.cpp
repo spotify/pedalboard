@@ -149,7 +149,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_lowshelf(m);
   init_noisegate(m);
   init_notch(m);
-  init_peaking(m);
+  init_peak(m);
   init_phaser(m);
   init_reverb(m);
 
