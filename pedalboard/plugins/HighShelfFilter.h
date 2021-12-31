@@ -62,7 +62,7 @@ inline void init_highshelf(py::module &m) {
              return plugin;
            }),
            py::arg("cutoff_frequency_hz") = 50,
-           py::arg("Q") = 0.707,
+           py::arg("q") = (juce::MathConstants<double>::sqrt2 / 2.0),
            py::arg("gain_factor") = 1.0)
       .def("__repr__",
            [](const HighShelfFilter<float> &plugin) {
