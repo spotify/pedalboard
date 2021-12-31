@@ -68,7 +68,7 @@ inline void init_notch(py::module &m) {
       .def_property("cutoff_frequency_hz",
                     &NotchFilter<float>::getCutoffFrequencyHz,
                     &NotchFilter<float>::setCutoffFrequencyHz)
-      .def_property("Q", 
+      .def_property("q", 
                     &NotchFilter<float>::getQ,
                     &NotchFilter<float>::setQ);
 }
