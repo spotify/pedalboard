@@ -65,7 +65,7 @@ namespace py = pybind11;
 >>>>>>>  On branch add-dsp-filters
 #include "plugins/NoiseGate.h"
 #include "plugins/NotchFilter.h"
-#include "plugins/PeakingFilter.h"
+#include "plugins/PeakFilter.h"
 #include "plugins/Phaser.h"
 #include "plugins/PitchShift.h"
 #include "plugins/Reverb.h"
