@@ -179,7 +179,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_mp3_compressor(m);
   init_noisegate(m);
   init_notch(m);
-  init_peaking(m);
+  init_peak(m);
   init_phaser(m);
   init_pitch_shift(m);
   init_reverb(m);
