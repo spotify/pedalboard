@@ -60,7 +60,7 @@ inline void init_notch(py::module &m) {
              std::ostringstream ss;
              ss << "<pedalboard.NotchFilter";
              ss << " cutoff_frequency_hz=" << plugin.getCutoffFrequencyHz();
-             ss << " Q=" << plugin.getQ();
+             ss << " q=" << plugin.getQ();
              ss << " at " << &plugin;
              ss << ">";
              return ss.str();
