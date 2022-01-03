@@ -25,7 +25,11 @@ import platform
 from glob import glob
 from pathlib import Path
 
-from pedalboard.pedalboard import WrappedBool, strip_common_float_suffixes
+from pedalboard.pedalboard import (
+    WrappedBool,
+    strip_common_float_suffixes,
+    normalize_python_parameter_name,
+)
 import pytest
 import pedalboard
 import numpy as np
@@ -572,3 +576,16 @@ def test_wrapped_bool(value: bool):
 def test_wrapped_bool_requires_bool():
     with pytest.raises(TypeError):
         assert WrappedBool(None)
+
+
+@pytest.mark.parametrize(
+    "_input,expected",
+    [
+        ("C#", "c_sharp"),
+        ("B♭", "b_flat"),
+        ("Azimuth (º)", "azimuth"),
+        ("Normal String", "normal_string"),
+    ],
+)
+def test_parameter_name_normalization(_input: str, expected: str):
+    assert normalize_python_parameter_name(_input) == expected
