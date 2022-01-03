@@ -495,9 +495,16 @@ def to_python_parameter_name(parameter: _AudioProcessorParameter) -> Optional[st
     if not parameter.name and not parameter.label:
         return None
 
-    name = parameter.name.lower().strip()
+    name = parameter.name
     if parameter.label and not parameter.label.startswith(":"):
-        name = "{} {}".format(name, parameter.label.lower())
+        name = "{} {}".format(name, parameter.label)
+    return normalize_python_parameter_name(name)
+
+
+def normalize_python_parameter_name(name: str) -> str:
+    name = name.lower().strip()
+    # Special case: some plugins expose parameters with "#"/"♯" or "b"/"♭" in their names.
+    name = name.replace("#", "_sharp").replace("♯", "_sharp").replace("♭", "_flat")
     # Replace all non-alphanumeric characters with underscores
     name = [
         c if (c.isalpha() or c.isnumeric()) and c.isprintable() and ord(c) < 128 else "_"
