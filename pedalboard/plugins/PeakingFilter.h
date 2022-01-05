@@ -63,7 +63,7 @@ inline void init_peaking(py::module &m) {
            }),
            py::arg("centre_frequency_hz") = 50,
            py::arg("Q") = 0.0,
-           py::arg("gain_factor") = .707)
+           py::arg("gain_factor") = (juce::MathConstants<double>::sqrt2 / 2.0))
       .def("__repr__",
            [](const PeakFilter<float> &plugin) {
              std::ostringstream ss;
