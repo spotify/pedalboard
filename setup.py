@@ -49,8 +49,12 @@ JUCE_CPPFLAGS = [
 
 if platform.system() == "Darwin":
     JUCE_CPPFLAGS.append("-DMACOS=1")
+    JUCE_CPPFLAGS.append("-DUSE_PTHREADS=1")
+    JUCE_CPPFLAGS.append("-DHAVE_VDSP=1")
+    JUCE_CPPFLAGS.append("-DUSE_BQRESAMPLER=1")
 elif platform.system() == "Linux":
     JUCE_CPPFLAGS.append("-DLINUX=1")
+    JUCE_CPPFLAGS.append("-DUSE_PTHREADS=1")
 elif platform.system() == "Windows":
     JUCE_CPPFLAGS.append("-DWINDOWS=1")
 else:
@@ -127,6 +131,12 @@ if platform.system() == "Darwin":
     JUCE_CPPFLAGS.append('-xobjective-c++')
 
     sources = list(Path("pedalboard").glob("**/*.cpp"))
+    # sources += list(Path("pedalboard").glob("**/*.c"))
+    sources = [
+        source
+        for source in sources
+        if "rubberband/src" not in str(source)
+    ]
 
     # Replace .cpp sources with matching .mm sources on macOS to force the
     # compiler to use Apple's Objective-C and Objective-C++ code.
