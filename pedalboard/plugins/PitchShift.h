@@ -63,9 +63,7 @@ namespace Pedalboard
                 // No need to explicitly call reset if constructing new object
 
                 // Is this appropriate to create a new object every time the spec changes?
-
-                // TODO: Need to add streaming mode!
-                auto rb = new RubberBandStretcher(spec.sampleRate, spec.numChannels);
+                auto rb = new RubberBandStretcher(spec.sampleRate, spec.numChannels, RubberBandStretcher::OptionProcessRealTime | RubberBandStretcher::OptionThreadingNever);
                 rb->setMaxProcessSize(spec.maximumBlockSize);
                 rb->setPitchScale(_pitchScale);
                 // what about deallocating?
