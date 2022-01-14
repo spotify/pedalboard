@@ -26,7 +26,7 @@ namespace Pedalboard
 {
     class PitchShift : public RubberbandPlugin
     /*
-    Modifies an audios pitch (without affecting duration [confirm if this is the case in RT mode])
+    Modifies pitch of an audio without affecting duration
     */
     {
     private:
@@ -34,10 +34,6 @@ namespace Pedalboard
 
     public:
         void setPitchScale(double scale)
-        // Instead of mirroring pitchScale value would it be better
-        // to check pointer and then throw error if doesn't exist?
-        // Cannot create ptr to rubberband object in constructor because don't
-        // have sample rate / num channels. Could use dummy instead however.
         {
             if (scale < 0)
             {
@@ -46,10 +42,7 @@ namespace Pedalboard
             _pitchScale = scale;
         }
 
-        double getPitchScale()
-        {
-            return _pitchScale;
-        }
+        double getPitchScale() { return _pitchScale; }
 
         void prepare(const juce::dsp::ProcessSpec &spec) override final
         {
@@ -57,22 +50,16 @@ namespace Pedalboard
                                lastSpec.maximumBlockSize < spec.maximumBlockSize ||
                                spec.numChannels != lastSpec.numChannels;
 
-            std::cout << specChanged << " " << !rbPtr << "\n";
             if (!rbPtr || specChanged)
             {
-                // No need to explicitly call reset if constructing new object
-
-                // Is this appropriate to create a new object every time the spec changes?
-                auto rb = new RubberBandStretcher(spec.sampleRate, spec.numChannels, RubberBandStretcher::OptionProcessRealTime | RubberBandStretcher::OptionThreadingNever);
+                auto stretcherOptions = RubberBandStretcher::OptionProcessRealTime | RubberBandStretcher::OptionThreadingNever;
+                auto rb = new RubberBandStretcher(spec.sampleRate, spec.numChannels, stretcherOptions);
                 rb->setMaxProcessSize(spec.maximumBlockSize);
                 rb->setPitchScale(_pitchScale);
-                // rb->setDebugLevel(2);
                 delete rbPtr;
                 rbPtr = rb;
-                // dspBlock.prepare(spec);
                 lastSpec = spec;
             }
-            // When prepare reset Rubberband buffers regardless if a new object was created or not
             reset();
         }
     };

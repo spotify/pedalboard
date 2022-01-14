@@ -166,7 +166,6 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = static_cast<juce::uint32>(bufferSize);
     spec.numChannels = static_cast<juce::uint32>(numChannels);
-    std::cout << "sampleRate " << spec.sampleRate << " max Size " << spec.maximumBlockSize << " channels " << spec.numChannels << "\n";
 
     for (auto *plugin : plugins) {
       if (plugin == nullptr)
@@ -183,13 +182,11 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
     juce::AudioBuffer<float> ioBuffer(ioBufferChannelPointers.data(),
                                       numChannels, numSamples);
 
-    for (unsigned int blockStart = 0; blockStart < numSamples; blockStart += bufferSize)
-    {
+    for (unsigned int blockStart = 0; blockStart < numSamples;
+         blockStart += bufferSize) {
       unsigned int blockEnd = std::min(blockStart + bufferSize,
                                        static_cast<unsigned int>(numSamples));
       unsigned int blockSize = blockEnd - blockStart;
-      std::cout << "Block start " << blockStart << " " << " block end " << blockEnd << "\n";
-      std::cout << "Entering buffer loop " << numSamples << " " << bufferSize << " " << blockSize << "\n";
 
       // Copy the input audio into the ioBuffer, which will be used for
       // processing and will be returned.

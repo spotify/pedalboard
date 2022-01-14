@@ -5,9 +5,6 @@ using namespace RubberBand;
 
 namespace Pedalboard
 {
-
-  // TODO: Is this template needed?
-  // template <typename DSPType>
   class RubberbandPlugin : public Plugin
   /*
   Base class for rubberband plugins.
@@ -15,8 +12,6 @@ namespace Pedalboard
   {
   public:
     virtual ~RubberbandPlugin(){};
-
-    // virtual void prepare(const juce::dsp::ProcessSpec &spec) = 0;
 
     void process(
         const juce::dsp::ProcessContextReplacing<float> &context) override final
@@ -43,30 +38,43 @@ namespace Pedalboard
         }
 
         // Rubberband expects all channel data with one float array per channel
-        processSamples(inChannels, outChannels, len, numChans, false);
+        processSamples(inChannels, outChannels, len, numChannels, false);
       }
     }
 
+    void reset() override final
+    {
+      if (rbPtr)
+      {
+        rbPtr->reset();
+      }
+    }
+
+  private:
     void processSamples(const float *const *inBlock, float **outBlock, size_t samples, size_t numChannels, bool final)
     {
       // Push all of the input samples into RubberBand:
-      rbPtr->process(inBlock, samples, false);
-      
+      rbPtr->process(inBlock, samples, final);
+
       // Figure out how many samples RubberBand is ready to give to us:
       int availableSamples = rbPtr->available();
 
       // ...but only actually ask Rubberband for at most the number of samples we can handle:
       int samplesToPull = samples;
-      if (samplesToPull > availableSamples) samplesToPull = availableSamples;
+      if (samplesToPull > availableSamples)
+        samplesToPull = availableSamples;
 
       // If we don't have enough samples to fill a full buffer,
       // right-align the samples that we do have (i..e: start with silence).
       int missingSamples = samples - availableSamples;
-      if (missingSamples > 0) {
-        for (int c = 0; c < numChannels; c++) {
+      if (missingSamples > 0)
+      {
+        for (int c = 0; c < numChannels; c++)
+        {
           // Clear the start of the buffer so that we start
           // the buffer with silence:
-          for (int i = 0; i < missingSamples; i++) {
+          for (int i = 0; i < missingSamples; i++)
+          {
             outBlock[c][i] = 0.0;
           }
 
@@ -76,25 +84,12 @@ namespace Pedalboard
           outBlock[c] += missingSamples;
         }
       }
-      
+
       // Pull the next audio data out of Rubberband:
       rbPtr->retrieve(outBlock, samplesToPull);
     }
 
-    void reset() override final
-    {
-      // dspBlock.reset();
-      if (rbPtr)
-      {
-        rbPtr->reset();
-      }
-    }
-
-    // RubberBandStretcher *getRb() { return rbPtr; }
-
   protected:
-    // TODO: Do I need the DSP block?
-    // DSPType dspBlock;
     RubberBandStretcher *rbPtr = nullptr;
   };
 }; // pedalboard
