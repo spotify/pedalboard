@@ -40,36 +40,45 @@ namespace Pedalboard
         {
           inChannels[i] = inBlock.getChannelPointer(i);
           outChannels[i] = outBlock.getChannelPointer(i);
-
-          // Currently these point to the same array so data will be overwritten in the input channel
-          std::cout << "input channel " << i << " = " << inChannels[i] << "\n";
-          std::cout << "output channel " << i << " = " << outChannels[i] << "\n";
         }
 
         // Rubberband expects all channel data with one float array per channel
-        std::cout << "Processing context with n samples " << len << "\n";
-        processSamples(inChannels, outChannels, len, false);
+        processSamples(inChannels, outChannels, len, numChans, false);
       }
     }
 
-    void processSamples(const float *const *inBlock, float *const *outBlock, size_t nframes, bool final)
+    void processSamples(const float *const *inBlock, float **outBlock, size_t samples, size_t numChannels, bool final)
     {
-      // Impact of not setting final to true?
-      // std::cout << rbPtr->getSamplesRequired() << "\n";
-      rbPtr->process(inBlock, nframes, false);
-      int samplesAvailable = 0;
+      // Push all of the input samples into RubberBand:
+      rbPtr->process(inBlock, samples, false);
+      
+      // Figure out how many samples RubberBand is ready to give to us:
+      int availableSamples = rbPtr->available();
 
-      // TODO: Find out when to finish processing samples
-      // Otherwise if we just call retrieve straight after and don't fetch anything, what do we do?
-      // Do we just return all zeros i.e. a silence? Do we return the same as the input?
-      size_t count = 0;
-      while (count < 3)
-      {
-        samplesAvailable = rbPtr->available();
-        std::cout << samplesAvailable << "\n";
-        rbPtr->retrieve(outBlock, nframes);
-        count++;
+      // ...but only actually ask Rubberband for at most the number of samples we can handle:
+      int samplesToPull = samples;
+      if (samplesToPull > availableSamples) samplesToPull = availableSamples;
+
+      // If we don't have enough samples to fill a full buffer,
+      // right-align the samples that we do have (i..e: start with silence).
+      int missingSamples = samples - availableSamples;
+      if (missingSamples > 0) {
+        for (int c = 0; c < numChannels; c++) {
+          // Clear the start of the buffer so that we start
+          // the buffer with silence:
+          for (int i = 0; i < missingSamples; i++) {
+            outBlock[c][i] = 0.0;
+          }
+
+          // Move the output buffer pointer forward so that
+          // RubberBandStretcher::retrieve(...) places its
+          // output at the end of the buffer:
+          outBlock[c] += missingSamples;
+        }
       }
+      
+      // Pull the next audio data out of Rubberband:
+      rbPtr->retrieve(outBlock, samplesToPull);
     }
 
     void reset() override final

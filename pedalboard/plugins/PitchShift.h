@@ -60,8 +60,10 @@ namespace Pedalboard
             std::cout << specChanged << " " << !rbPtr << "\n";
             if (!rbPtr || specChanged)
             {
-                auto stretcherOptions = RubberBand::RubberBandStretcher::OptionProcessRealTime;
-                auto rb = new RubberBandStretcher(spec.sampleRate, spec.numChannels, stretcherOptions);
+                // No need to explicitly call reset if constructing new object
+
+                // Is this appropriate to create a new object every time the spec changes?
+                auto rb = new RubberBandStretcher(spec.sampleRate, spec.numChannels, RubberBandStretcher::OptionProcessRealTime | RubberBandStretcher::OptionThreadingNever);
                 rb->setMaxProcessSize(spec.maximumBlockSize);
                 rb->setPitchScale(_pitchScale);
                 // rb->setDebugLevel(2);
