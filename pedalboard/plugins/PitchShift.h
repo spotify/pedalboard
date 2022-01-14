@@ -35,9 +35,9 @@ namespace Pedalboard
     public:
         void setPitchScale(double scale)
         {
-            if (scale < 0)
+            if (scale <= 0)
             {
-                // Throw error
+                throw std::range_error("Pitch scale be a value > 0");
             }
             _pitchScale = scale;
         }
