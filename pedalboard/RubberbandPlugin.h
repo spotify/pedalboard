@@ -21,54 +21,53 @@ namespace Pedalboard
     void process(
         const juce::dsp::ProcessContextReplacing<float> &context) override final
     {
-      // This part might be the same across all rubberband plugins?
       if (rbPtr)
       {
-        // Is this the right way to get the next input block?
-        // Do I have to shift something?
-        // size_t sampleFrames = 0; // How do I compute this? Is there a value somewhere
-
         auto inBlock = context.getInputBlock();
         auto outBlock = context.getOutputBlock();
 
-        // TODO: Is num samples the total number of frames or n_samples_per_channel * n_channels
+        // TODO: Is num samples the total number of frames or n_samples_per_channel * n_channels?
         auto len = inBlock.getNumSamples();
-        auto numChans = inBlock.getNumChannels();
+        auto numChannels = inBlock.getNumChannels();
 
         jassert(len == outBlock.getNumSamples());
-        jassert(numChans == outBlock.getNumChannels());
+        jassert(numChannels == outBlock.getNumChannels());
 
         // Have to find way to get all channel data?
-        const float *inChannels[numChans];
-        float *outChannels[numChans];
-        for (size_t i = 0; i < numChans; i++)
+        const float *inChannels[numChannels];
+        float *outChannels[numChannels];
+        for (size_t i = 0; i < numChannels; i++)
         {
           inChannels[i] = inBlock.getChannelPointer(i);
           outChannels[i] = outBlock.getChannelPointer(i);
+
+          // Currently these point to the same array so data will be overwritten in the input channel
           std::cout << "input channel " << i << " = " << inChannels[i] << "\n";
           std::cout << "output channel " << i << " = " << outChannels[i] << "\n";
         }
 
         // Rubberband expects all channel data with one float array per channel
+        std::cout << "Processing context with n samples " << len << "\n";
         processSamples(inChannels, outChannels, len, false);
       }
     }
 
-    void processSamples(const float *const *inBlock, float *const *outBlock, size_t samples, bool final)
+    void processSamples(const float *const *inBlock, float *const *outBlock, size_t nframes, bool final)
     {
-      rbPtr->process(inBlock, samples, false); // Impact of not setting final to true?
-      std::cout << rbPtr->getSamplesRequired() << "\n";
-      size_t samplesRetrieved = 0;
-      size_t samplesAvailable = 0;
-      int count = 0;
-      while (count < 10) // is this correct to hang here for each block?
+      // Impact of not setting final to true?
+      // std::cout << rbPtr->getSamplesRequired() << "\n";
+      rbPtr->process(inBlock, nframes, false);
+      int samplesAvailable = 0;
+
+      // TODO: Find out when to finish processing samples
+      // Otherwise if we just call retrieve straight after and don't fetch anything, what do we do?
+      // Do we just return all zeros i.e. a silence? Do we return the same as the input?
+      size_t count = 0;
+      while (count < 3)
       {
         samplesAvailable = rbPtr->available();
         std::cout << samplesAvailable << "\n";
-        if (samplesAvailable)
-        {
-          samplesRetrieved += rbPtr->retrieve(outBlock, samplesAvailable);
-        }
+        rbPtr->retrieve(outBlock, nframes);
         count++;
       }
     }
