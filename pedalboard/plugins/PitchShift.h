@@ -56,11 +56,11 @@ namespace Pedalboard
                 auto rb = new RubberBandStretcher(spec.sampleRate, spec.numChannels, stretcherOptions);
                 rb->setMaxProcessSize(spec.maximumBlockSize);
                 rb->setPitchScale(_pitchScale);
+                rb->reset();
                 delete rbPtr;
                 rbPtr = rb;
                 lastSpec = spec;
             }
-            reset();
         }
     };
 
@@ -71,8 +71,7 @@ namespace Pedalboard
                           {
                               auto plugin = new PitchShift();
                               plugin->setPitchScale(scale);
-                              return plugin;
-                          }),
+                              return plugin; }),
                  py::arg("pitch_scale") = 1.0)
             .def_property("pitch_scale", &PitchShift::getPitchScale, &PitchShift::setPitchScale);
     }

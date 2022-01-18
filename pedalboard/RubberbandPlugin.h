@@ -21,14 +21,12 @@ namespace Pedalboard
         auto inBlock = context.getInputBlock();
         auto outBlock = context.getOutputBlock();
 
-        // TODO: Is num samples the total number of frames or n_samples_per_channel * n_channels?
         auto len = inBlock.getNumSamples();
         auto numChannels = inBlock.getNumChannels();
 
         jassert(len == outBlock.getNumSamples());
         jassert(numChannels == outBlock.getNumChannels());
 
-        // Have to find way to get all channel data?
         const float *inChannels[numChannels];
         float *outChannels[numChannels];
         for (size_t i = 0; i < numChannels; i++)
@@ -38,7 +36,7 @@ namespace Pedalboard
         }
 
         // Rubberband expects all channel data with one float array per channel
-        processSamples(inChannels, outChannels, len, numChannels, false);
+        processSamples(inChannels, outChannels, len, numChannels);
       }
     }
 
@@ -51,10 +49,10 @@ namespace Pedalboard
     }
 
   private:
-    void processSamples(const float *const *inBlock, float **outBlock, size_t samples, size_t numChannels, bool final)
+    void processSamples(const float *const *inBlock, float **outBlock, size_t samples, size_t numChannels)
     {
       // Push all of the input samples into RubberBand:
-      rbPtr->process(inBlock, samples, final);
+      rbPtr->process(inBlock, samples, false);
 
       // Figure out how many samples RubberBand is ready to give to us:
       int availableSamples = rbPtr->available();
