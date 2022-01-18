@@ -62,7 +62,6 @@ def main():
         default=None,
     )
 
-    # Instantiate the Reverb object early so we can read its defaults for the argparser --help:
     plugin = PitchShift()
 
     parser.add_argument("--pitch_scale", type=float, default=plugin.pitch_scale)
