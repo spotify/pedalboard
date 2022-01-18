@@ -17,7 +17,6 @@ import os
 import sys
 import warnings
 
-import numpy as np
 import soundfile as sf
 from tqdm import tqdm
 from tqdm.std import TqdmWarning
