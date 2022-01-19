@@ -20,7 +20,7 @@ import numpy as np
 from pedalboard import PitchShift
 
 
-@pytest.mark.parametrize("scale", [0.5, 1., 2.0])
+@pytest.mark.parametrize("scale", [0.5, 1.0, 2.0])
 @pytest.mark.parametrize("fundamental_hz", [440, 880])
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
 def test_pitch_shift(scale, fundamental_hz, sample_rate):
