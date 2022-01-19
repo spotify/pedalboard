@@ -37,9 +37,10 @@ namespace Pedalboard
         {
             if (scale <= 0)
             {
-                throw std::range_error("Pitch scale be a value > 0");
+                throw std::range_error("Pitch scale must be a value greater than 0.0.");
             }
             _pitchScale = scale;
+            if (rbPtr) rbPtr->setPitchScale(_pitchScale);
         }
 
         double getPitchScale() { return _pitchScale; }
