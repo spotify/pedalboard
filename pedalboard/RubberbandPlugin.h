@@ -24,8 +24,10 @@ public:
       jassert(len == outBlock.getNumSamples());
       jassert(numChannels == outBlock.getNumChannels());
 
-      const float *inChannels[numChannels];
-      float *outChannels[numChannels];
+      const float **inChannels =
+          (const float **)alloca(numChannels * sizeof(float *));
+      float **outChannels = (float **)alloca(numChannels * sizeof(float *));
+
       for (size_t i = 0; i < numChannels; i++) {
         inChannels[i] = inBlock.getChannelPointer(i);
         outChannels[i] = outBlock.getChannelPointer(i);

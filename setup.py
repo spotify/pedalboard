@@ -108,6 +108,9 @@ UnixCCompiler.src_extensions.append(".mm")
 UnixCCompiler.language_map[".mm"] = "objc++"
 
 LIBS = []
+sources = list(Path("pedalboard").glob("**/*.cpp"))
+sources += list(Path("vendors/rubberband/single").glob("*.cpp"))
+
 if platform.system() == "Darwin":
     MACOS_FRAMEWORKS = [
         'Accelerate',
@@ -129,9 +132,6 @@ if platform.system() == "Darwin":
         LINK_ARGS += ['-framework', f]
     JUCE_CPPFLAGS_CONSOLEAPP += ["-DJUCE_PLUGINHOST_AU=1"]
     JUCE_CPPFLAGS.append('-xobjective-c++')
-
-    sources = list(Path("pedalboard").glob("**/*.cpp"))
-    sources += list(Path("vendors/rubberband/single").glob("*.cpp"))
 
     # Replace .cpp sources with matching .mm sources on macOS to force the
     # compiler to use Apple's Objective-C and Objective-C++ code.
@@ -161,7 +161,7 @@ elif platform.system() == "Linux":
         JUCE_INCLUDES += include_paths
     LINK_ARGS += ['-lfreetype']
 
-    PEDALBOARD_SOURCES = [str(p.resolve()) for p in (list(Path("pedalboard").glob("**/*.cpp")))]
+    PEDALBOARD_SOURCES = [str(p.resolve()) for p in sources]
 elif platform.system() == "Windows":
     JUCE_CPPFLAGS += ['-DJUCE_DLL_BUILD=1']
     # https://forum.juce.com/t/statically-linked-exe-in-win-10-not-working/25574/3
@@ -181,7 +181,7 @@ elif platform.system() == "Windows":
             "odbccp32",
         ]
     )
-    PEDALBOARD_SOURCES = [str(p.resolve()) for p in (list(Path("pedalboard").glob("**/*.cpp")))]
+    PEDALBOARD_SOURCES = [str(p.resolve()) for p in sources]
 else:
     raise NotImplementedError(
         "Not sure how to build JUCE on platform: {}!".format(platform.system())
