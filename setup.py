@@ -44,17 +44,16 @@ JUCE_CPPFLAGS = [
     "-DJUCER_LINUX_MAKE_6D53C8B4=1",
     "-DJUCE_APP_VERSION=1.0.0",
     "-DJUCE_APP_VERSION_HEX=0x10000",
+    "-DUSE_BQRESAMPLER=1",
+    "-DNO_THREADING=1",  # for RubberBand, whose threading we have disabled
     '-Wall',
 ]
 
 if platform.system() == "Darwin":
     JUCE_CPPFLAGS.append("-DMACOS=1")
-    JUCE_CPPFLAGS.append("-DUSE_PTHREADS=1")
     JUCE_CPPFLAGS.append("-DHAVE_VDSP=1")
-    JUCE_CPPFLAGS.append("-DUSE_BQRESAMPLER=1")
 elif platform.system() == "Linux":
     JUCE_CPPFLAGS.append("-DLINUX=1")
-    JUCE_CPPFLAGS.append("-DUSE_PTHREADS=1")
 elif platform.system() == "Windows":
     JUCE_CPPFLAGS.append("-DWINDOWS=1")
 else:
