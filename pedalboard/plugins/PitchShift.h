@@ -57,7 +57,6 @@ namespace Pedalboard
                 rb->setMaxProcessSize(spec.maximumBlockSize);
                 rb->setPitchScale(_pitchScale);
                 rb->reset();
-                delete rbPtr;
                 rbPtr = rb;
                 lastSpec = spec;
             }

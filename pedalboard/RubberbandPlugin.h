@@ -88,6 +88,6 @@ namespace Pedalboard
     }
 
   protected:
-    RubberBandStretcher *rbPtr = nullptr;
+    std::unique_ptr<RubberBandStretcher> rbPtr;
   };
 }; // pedalboard
