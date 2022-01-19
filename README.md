@@ -28,6 +28,7 @@ Internally at Spotify, `pedalboard` is used for [data augmentation](https://en.w
    - `Limiter`
    - `LowpassFilter`
    - `Phaser`
+   - `PitchShift` (provided by Chris Cannam's [Rubber Band Library](https://github.com/breakfastquay/rubberband))
    - `Reverb`
  - Supports VST3® plugins on macOS, Windows, and Linux (`pedalboard.load_plugin`)
  - Supports Audio Units on macOS
@@ -236,7 +237,8 @@ Not yet, either - although the underlying framework (JUCE) supports passing MIDI
 `pedalboard` is Copyright 2021 Spotify AB.
 
 `pedalboard` is licensed under the [GNU General Public License v3](https://www.gnu.org/licenses/gpl-3.0.en.html), because:
- - The core audio processing code is pulled from JUCE 6, which is [dual-licensed under a commercial license and the GPLv3](https://juce.com/juce-6-licence)
+ - The core audio processing code is pulled from JUCE 6, which is [dual-licensed under a commercial license and the GPLv3](https://juce.com/juce-6-licence).
  - The VST3 SDK, bundled with JUCE, is owned by [Steinberg® Media Technologies GmbH](https://www.steinberg.net/en/home.html) and licensed under the GPLv3.
+ - The `PitchShift` plugin uses [the Rubber Band Library](https://github.com/breakfastquay/rubberband), which is licensed under the GPLv2.
 
 _VST is a registered trademark of Steinberg Media Technologies GmbH._
