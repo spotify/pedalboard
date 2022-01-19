@@ -26,24 +26,25 @@ namespace Pedalboard
 {
     class PitchShift : public RubberbandPlugin
     /*
-    Modifies pitch of an audio without affecting duration
-    */
+Modifies pitch of an audio without affecting duration
+*/
     {
     private:
-        double _pitchScale = 1.0;
+        double _scaleFactor = 1.0;
 
     public:
-        void setPitchScale(double scale)
+        void setScaleFactor(double scale)
         {
             if (scale <= 0)
             {
                 throw std::range_error("Pitch scale must be a value greater than 0.0.");
             }
-            _pitchScale = scale;
-            if (rbPtr) rbPtr->setPitchScale(_pitchScale);
+            _scaleFactor = scale;
+            if (rbPtr)
+                rbPtr->setPitchScale(_scaleFactor);
         }
 
-        double getPitchScale() { return _pitchScale; }
+        double getScaleFactor() { return _scaleFactor; }
 
         void prepare(const juce::dsp::ProcessSpec &spec) override final
         {
@@ -53,12 +54,13 @@ namespace Pedalboard
 
             if (!rbPtr || specChanged)
             {
-                auto stretcherOptions = RubberBandStretcher::OptionProcessRealTime | RubberBandStretcher::OptionThreadingNever;
-                auto rb = new RubberBandStretcher(spec.sampleRate, spec.numChannels, stretcherOptions);
-                rb->setMaxProcessSize(spec.maximumBlockSize);
-                rb->setPitchScale(_pitchScale);
-                rb->reset();
-                rbPtr = rb;
+                auto stretcherOptions = RubberBandStretcher::OptionProcessRealTime |
+                                        RubberBandStretcher::OptionThreadingNever;
+                rbPtr = std::make_unique<RubberBandStretcher>(spec.sampleRate, spec.numChannels,
+                                                              stretcherOptions);
+                rbPtr->setMaxProcessSize(spec.maximumBlockSize);
+                rbPtr->setPitchScale(_scaleFactor);
+                rbPtr->reset();
                 lastSpec = spec;
             }
         }
@@ -66,13 +68,19 @@ namespace Pedalboard
 
     inline void init_pitch_shift(py::module &m)
     {
-        py::class_<PitchShift, Plugin>(m, "PitchShift", "Shift pitch without affecting audio duration")
+        py::class_<PitchShift, Plugin>(
+            m, "PitchShift",
+            "Shift pitch without affecting audio duration. Shifted audio may start "
+            "with a short duration of silence, depending on the scale factor used. "
+            "The rate of the audio will be multiplied by scale_factor (i.e.: 2x "
+            "means one octave up, 0.5x means one octave down).")
             .def(py::init([](double scale)
                           {
                               auto plugin = new PitchShift();
-                              plugin->setPitchScale(scale);
-                              return plugin; }),
-                 py::arg("pitch_scale") = 1.0)
-            .def_property("pitch_scale", &PitchShift::getPitchScale, &PitchShift::setPitchScale);
+                              plugin->setScaleFactor(scale);
+                              return plugin;
+                          }),
+                 py::arg("scale_factor") = 1.0)
+            .def_property("scale_factor", &PitchShift::getScaleFactor, &PitchShift::setScaleFactor);
     }
 }; // namespace Pedalboard

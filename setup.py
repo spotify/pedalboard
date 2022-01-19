@@ -131,12 +131,7 @@ if platform.system() == "Darwin":
     JUCE_CPPFLAGS.append('-xobjective-c++')
 
     sources = list(Path("pedalboard").glob("**/*.cpp"))
-    # sources += list(Path("pedalboard").glob("**/*.c"))
-    sources = [
-        source
-        for source in sources
-        if "rubberband/src" not in str(source)
-    ]
+    sources += list(Path("vendors/rubberband/single").glob("*.cpp"))
 
     # Replace .cpp sources with matching .mm sources on macOS to force the
     # compiler to use Apple's Objective-C and Objective-C++ code.

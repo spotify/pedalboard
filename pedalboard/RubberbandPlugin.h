@@ -1,4 +1,4 @@
-#include "./vendors/rubberband/rubberband/RubberBandStretcher.h"
+#include "../vendors/rubberband/rubberband/RubberBandStretcher.h"
 #include "Plugin.h"
 
 using namespace RubberBand;
@@ -7,8 +7,8 @@ namespace Pedalboard
 {
   class RubberbandPlugin : public Plugin
   /*
-  Base class for rubberband plugins.
-  */
+Base class for rubberband plugins.
+*/
   {
   public:
     virtual ~RubberbandPlugin(){};
@@ -49,7 +49,8 @@ namespace Pedalboard
     }
 
   private:
-    void processSamples(const float *const *inBlock, float **outBlock, size_t samples, size_t numChannels)
+    void processSamples(const float *const *inBlock, float **outBlock,
+                        size_t samples, size_t numChannels)
     {
       // Push all of the input samples into RubberBand:
       rbPtr->process(inBlock, samples, false);
@@ -57,7 +58,8 @@ namespace Pedalboard
       // Figure out how many samples RubberBand is ready to give to us:
       int availableSamples = rbPtr->available();
 
-      // ...but only actually ask Rubberband for at most the number of samples we can handle:
+      // ...but only actually ask Rubberband for at most the number of samples we
+      // can handle:
       int samplesToPull = samples;
       if (samplesToPull > availableSamples)
         samplesToPull = availableSamples;
@@ -67,11 +69,11 @@ namespace Pedalboard
       int missingSamples = samples - availableSamples;
       if (missingSamples > 0)
       {
-        for (int c = 0; c < numChannels; c++)
+        for (size_t c = 0; c < numChannels; c++)
         {
           // Clear the start of the buffer so that we start
           // the buffer with silence:
-          for (int i = 0; i < missingSamples; i++)
+          for (size_t i = 0; i < missingSamples; i++)
           {
             outBlock[c][i] = 0.0;
           }
@@ -90,4 +92,4 @@ namespace Pedalboard
   protected:
     std::unique_ptr<RubberBandStretcher> rbPtr;
   };
-}; // pedalboard
+}; // namespace Pedalboard
