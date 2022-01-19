@@ -43,6 +43,7 @@ namespace py = pybind11;
 #include "plugins/LowpassFilter.h"
 #include "plugins/NoiseGate.h"
 #include "plugins/Phaser.h"
+#include "plugins/PitchShift.h"
 #include "plugins/Reverb.h"
 
 using namespace Pedalboard;
@@ -132,7 +133,6 @@ PYBIND11_MODULE(pedalboard_native, m) {
   plugin.attr("__call__") = plugin.attr("process");
 
   init_chorus(m);
-
   init_compressor(m);
   init_convolution(m);
   init_distortion(m);
@@ -143,6 +143,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_lowpass(m);
   init_noisegate(m);
   init_phaser(m);
+  init_pitch_shift(m);
   init_reverb(m);
 
   init_external_plugins(m);
