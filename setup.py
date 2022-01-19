@@ -56,6 +56,7 @@ elif platform.system() == "Linux":
     JUCE_CPPFLAGS.append("-DLINUX=1")
 elif platform.system() == "Windows":
     JUCE_CPPFLAGS.append("-DWINDOWS=1")
+    JUCE_CPPFLAGS.append("-D_HAS_STD_BYTE=0")
     JUCE_CPPFLAGS.append("-DNOMINMAX")
 else:
     raise NotImplementedError(
