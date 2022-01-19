@@ -66,9 +66,7 @@ private:
       for (size_t c = 0; c < numChannels; c++) {
         // Clear the start of the buffer so that we start
         // the buffer with silence:
-        for (size_t i = 0; i < missingSamples; i++) {
-          outBlock[c][i] = 0.0;
-        }
+        std::fill_n(outBlock[c], missingSamples, 0.0);
 
         // Move the output buffer pointer forward so that
         // RubberBandStretcher::retrieve(...) places its
