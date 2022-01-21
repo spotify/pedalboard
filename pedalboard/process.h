@@ -57,40 +57,51 @@ processSingle(const py::array_t<SampleType, py::array::c_style> inputArray,
                              reset);
 }
 
-/**
- * Process a given audio buffer through a list of
- * Pedalboard plugins at a given sample rate.
- * Only supports float processing, not double, at the moment.
- */
-template <>
-py::array_t<float>
-process<float>(const py::array_t<float, py::array::c_style> inputArray,
-               double sampleRate, const std::vector<Plugin *> &plugins,
-               unsigned int bufferSize, bool reset) {
+template <typename T>
+ChannelLayout
+detectChannelLayout(const py::array_t<T, py::array::c_style> inputArray) {
+  py::buffer_info inputInfo = inputArray.request();
+
+  if (inputInfo.ndim == 1) {
+    return ChannelLayout::Interleaved;
+  } else if (inputInfo.ndim == 2) {
+    // Try to auto-detect the channel layout from the shape
+    if (inputInfo.shape[1] < inputInfo.shape[0]) {
+      return ChannelLayout::Interleaved;
+    } else if (inputInfo.shape[0] < inputInfo.shape[1]) {
+      return ChannelLayout::NotInterleaved;
+    } else {
+      throw std::runtime_error(
+          "Unable to determine channel layout from shape!");
+    }
+  } else {
+    throw std::runtime_error("Number of input dimensions must be 1 or 2.");
+  }
+}
+
+template <typename T>
+juce::AudioBuffer<T>
+copyPyArrayIntoJuceBuffer(const py::array_t<T, py::array::c_style> inputArray) {
   // Numpy/Librosa convention is (num_samples, num_channels)
   py::buffer_info inputInfo = inputArray.request();
 
   unsigned int numChannels = 0;
   unsigned int numSamples = 0;
-  ChannelLayout inputChannelLayout;
+  ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
 
   if (inputInfo.ndim == 1) {
     numSamples = inputInfo.shape[0];
     numChannels = 1;
-    inputChannelLayout = ChannelLayout::Interleaved;
   } else if (inputInfo.ndim == 2) {
     // Try to auto-detect the channel layout from the shape
     if (inputInfo.shape[1] < inputInfo.shape[0]) {
       numSamples = inputInfo.shape[0];
       numChannels = inputInfo.shape[1];
-      inputChannelLayout = ChannelLayout::Interleaved;
     } else if (inputInfo.shape[0] < inputInfo.shape[1]) {
       numSamples = inputInfo.shape[1];
       numChannels = inputInfo.shape[0];
-      inputChannelLayout = ChannelLayout::NotInterleaved;
     } else {
-      throw std::runtime_error(
-          "Unable to determine channel layout from shape!");
+      throw std::runtime_error("Unable to determine shape of audio input!");
     }
   } else {
     throw std::runtime_error("Number of input dimensions must be 1 or 2.");
@@ -102,18 +113,104 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
     throw std::runtime_error("More than two channels received!");
   }
 
-  // Cap the buffer size in use to the size of the input data:
-  bufferSize = std::min(bufferSize, numSamples);
+  juce::AudioBuffer<T> ioBuffer(numChannels, numSamples);
 
-  // JUCE uses separate channel buffers, so the output shape is (num_channels,
-  // num_samples)
-  py::array_t<float> outputArray =
-      inputInfo.ndim == 2 ? py::array_t<float>({numChannels, numSamples})
-                          : py::array_t<float>(numSamples);
+  // Depending on the input channel layout, we need to copy data
+  // differently. This loop is duplicated here to move the if statement
+  // outside of the tight loop, as we don't need to re-check that the input
+  // channel is still the same on every iteration of the loop.
+  switch (inputChannelLayout) {
+  case ChannelLayout::Interleaved:
+    for (unsigned int i = 0; i < numChannels; i++) {
+      T *channelBuffer = ioBuffer.getWritePointer(i);
+      // We're de-interleaving the data here, so we can't use copyFrom.
+      for (unsigned int j = 0; j < numSamples; j++) {
+        channelBuffer[j] = static_cast<T *>(inputInfo.ptr)[j * numChannels + i];
+      }
+    }
+    break;
+  case ChannelLayout::NotInterleaved:
+    for (unsigned int i = 0; i < numChannels; i++) {
+      ioBuffer.copyFrom(
+          i, 0, static_cast<T *>(inputInfo.ptr) + (numSamples * i), numSamples);
+    }
+  }
+
+  return ioBuffer;
+}
+
+template <typename T>
+py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> juceBuffer,
+                                         ChannelLayout channelLayout,
+                                         int offsetSamples, int ndim = 2) {
+  unsigned int numChannels = juceBuffer.getNumChannels();
+  unsigned int numSamples = juceBuffer.getNumSamples();
+  unsigned int outputSampleCount =
+      std::max((int)numSamples - (int)offsetSamples, 0);
+
+  // TODO: Avoid the need to copy here if offsetSamples is 0!
+  py::array_t<T> outputArray;
+  if (ndim == 2) {
+    switch (channelLayout) {
+    case ChannelLayout::Interleaved:
+      outputArray = py::array_t<T>({outputSampleCount, numChannels});
+      break;
+    case ChannelLayout::NotInterleaved:
+      outputArray = py::array_t<T>({numChannels, outputSampleCount});
+      break;
+    }
+  } else {
+    outputArray = py::array_t<T>(outputSampleCount);
+  }
+
   py::buffer_info outputInfo = outputArray.request();
+
+  // Depending on the input channel layout, we need to copy data
+  // differently. This loop is duplicated here to move the if statement
+  // outside of the tight loop, as we don't need to re-check that the input
+  // channel is still the same on every iteration of the loop.
+  T *outputBasePointer = static_cast<T *>(outputInfo.ptr);
+
+  switch (channelLayout) {
+  case ChannelLayout::Interleaved:
+    for (unsigned int i = 0; i < numChannels; i++) {
+      const T *channelBuffer = juceBuffer.getReadPointer(i, offsetSamples);
+      // We're interleaving the data here, so we can't use copyFrom.
+      for (unsigned int j = 0; j < outputSampleCount; j++) {
+        outputBasePointer[j * numChannels + i] = channelBuffer[j];
+      }
+    }
+    break;
+  case ChannelLayout::NotInterleaved:
+    for (unsigned int i = 0; i < numChannels; i++) {
+      const T *channelBuffer = juceBuffer.getReadPointer(i, offsetSamples);
+      std::copy(channelBuffer, channelBuffer + outputSampleCount,
+                &outputBasePointer[outputSampleCount * i]);
+    }
+    break;
+  }
+
+  return outputArray;
+}
+
+/**
+ * Process a given audio buffer through a list of
+ * Pedalboard plugins at a given sample rate.
+ * Only supports float processing, not double, at the moment.
+ */
+template <>
+py::array_t<float>
+process<float>(const py::array_t<float, py::array::c_style> inputArray,
+               double sampleRate, const std::vector<Plugin *> &plugins,
+               unsigned int bufferSize, bool reset) {
+  const ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
+  juce::AudioBuffer<float> ioBuffer = copyPyArrayIntoJuceBuffer(inputArray);
+  int totalOutputLatencySamples = 0;
 
   {
     py::gil_scoped_release release;
+
+    bufferSize = std::min(bufferSize, (unsigned int)ioBuffer.getNumSamples());
 
     unsigned int countOfPluginsIgnoringNull = 0;
     for (auto *plugin : plugins) {
@@ -165,75 +262,119 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
     juce::dsp::ProcessSpec spec;
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = static_cast<juce::uint32>(bufferSize);
-    spec.numChannels = static_cast<juce::uint32>(numChannels);
+    spec.numChannels = static_cast<juce::uint32>(ioBuffer.getNumChannels());
+
+    int expectedOutputLatency = 0;
 
     for (auto *plugin : plugins) {
       if (plugin == nullptr)
         continue;
       plugin->prepare(spec);
+      expectedOutputLatency += plugin->getLatencyHint();
     }
 
-    // Manually construct channel pointers to pass to AudioBuffer.
-    std::vector<float *> ioBufferChannelPointers(numChannels);
-    for (unsigned int i = 0; i < numChannels; i++) {
-      ioBufferChannelPointers[i] = ((float *)outputInfo.ptr) + (i * numSamples);
+    int intendedOutputBufferSize = ioBuffer.getNumSamples();
+
+    if (expectedOutputLatency > 0) {
+      // This is a hint - it's possible that the plugin(s) latency values
+      // will change and we'll have to reallocate again later on.
+      ioBuffer.setSize(ioBuffer.getNumChannels(),
+                       ioBuffer.getNumSamples() + expectedOutputLatency,
+                       /* keepExistingContent= */ true,
+                       /* clearExtraSpace= */ true);
     }
+    
+    // Actually run the plugins over the ioBuffer, in small chunks, to minimize
+    // memory usage:
+    int startOfOutputInBuffer = 0;
+    int lastSampleInBuffer = 0;
 
-    juce::AudioBuffer<float> ioBuffer(ioBufferChannelPointers.data(),
-                                      numChannels, numSamples);
+    for (auto *plugin : plugins) {
+      if (plugin == nullptr)
+        continue;
 
-    for (unsigned int blockStart = 0; blockStart < numSamples;
-         blockStart += bufferSize) {
-      unsigned int blockEnd = std::min(blockStart + bufferSize,
-                                       static_cast<unsigned int>(numSamples));
-      unsigned int blockSize = blockEnd - blockStart;
+      int pluginSamplesReceived = 0;
 
-      // Copy the input audio into the ioBuffer, which will be used for
-      // processing and will be returned.
+      for (unsigned int blockStart = startOfOutputInBuffer;
+           blockStart < (unsigned int)ioBuffer.getNumSamples();
+           blockStart += bufferSize) {
+        unsigned int blockEnd =
+            std::min(blockStart + bufferSize,
+                     static_cast<unsigned int>(ioBuffer.getNumSamples()));
+        unsigned int blockSize = blockEnd - blockStart;
 
-      // Depending on the input channel layout, we need to copy data
-      // differently. This loop is duplicated here to move the if statement
-      // outside of the tight loop, as we don't need to re-check that the input
-      // channel is still the same on every iteration of the loop.
-      switch (inputChannelLayout) {
-      case ChannelLayout::Interleaved:
-        for (unsigned int i = 0; i < numChannels; i++) {
-          // We're de-interleaving the data here, so we can't use std::copy.
-          for (unsigned int j = blockStart; j < blockEnd; j++) {
-            ioBufferChannelPointers[i][j] =
-                static_cast<float *>(inputInfo.ptr)[j * numChannels + i];
+        auto ioBlock = juce::dsp::AudioBlock<float>(
+            ioBuffer.getArrayOfWritePointers(), ioBuffer.getNumChannels(),
+            blockStart, blockSize);
+        juce::dsp::ProcessContextReplacing<float> context(ioBlock);
+
+        int outputSamples = plugin->process(context);
+        pluginSamplesReceived += outputSamples;
+
+        int missingSamples = blockSize - outputSamples;
+        if (missingSamples > 0 && pluginSamplesReceived > 0) {
+          // This can only happen if the plugin we're using is returning us more
+          // than one chunk of audio that's not completely full, which can
+          // happen sometimes. In this case, we would end up with gaps in the
+          // audio output:
+          //               empty  empty  full   part
+          //              [______|______|AAAAAA|__BBBB]
+          //   end of most recently rendered block-->-^
+          // We need to consolidate those gaps by moving them forward in time.
+          // To do so, we take the section from the earliest known output to the
+          // start of this block, and right-align it to the left side of the
+          // current block's content:
+          //               empty  empty  part   full
+          //              [______|______|__AAAA|AABBBB]
+          //   end of most recently rendered block-->-^
+          for (int c = 0; c < ioBuffer.getNumChannels(); c++) {
+            // Only move the samples received before this latest block was
+            // rendered, as audio is right-aligned within blocks by convention.
+            int samplesToMove = pluginSamplesReceived - outputSamples;
+            float *outputStart =
+                ioBuffer.getWritePointer(c) + totalOutputLatencySamples;
+            float *expectedOutputEnd =
+                ioBuffer.getWritePointer(c) + blockEnd - outputSamples;
+            float *expectedOutputStart = expectedOutputEnd - samplesToMove;
+
+            std::memmove((char *)expectedOutputStart, (char *)outputStart,
+                         sizeof(float) * samplesToMove);
           }
         }
-        break;
-      case ChannelLayout::NotInterleaved:
-        for (unsigned int i = 0; i < numChannels; i++) {
-          const float *channelBuffer =
-              static_cast<float *>(inputInfo.ptr) + (i * numSamples);
-          std::copy(channelBuffer + blockStart, channelBuffer + blockEnd,
-                    ioBufferChannelPointers[i] + blockStart);
+
+        lastSampleInBuffer =
+            std::max(lastSampleInBuffer, (int)(blockStart + outputSamples));
+        startOfOutputInBuffer += missingSamples;
+        totalOutputLatencySamples += missingSamples;
+
+        if (missingSamples && reset) {
+          // Resize the IO buffer to give us a bit more room
+          // on the end, so we can continue to write delayed output.
+          // Only do this if reset=True was passed, as we can use that
+          // as a proxy for the user's intent to call `process` again.
+          intendedOutputBufferSize += missingSamples;
+          
+          if (intendedOutputBufferSize > ioBuffer.getNumSamples()) {
+            ioBuffer.setSize(ioBuffer.getNumChannels(),
+                             intendedOutputBufferSize,
+                             /* keepExistingContent= */ true,
+                             /* clearExtraSpace= */ true);
+          }
         }
       }
-
-      auto ioBlock = juce::dsp::AudioBlock<float>(
-          ioBufferChannelPointers.data(), numChannels, blockStart, blockSize);
-      juce::dsp::ProcessContextReplacing<float> context(ioBlock);
-
-      // Now all of the pointers in context are pointing to valid input data,
-      // so let's run the plugins.
-      for (auto *plugin : plugins) {
-        if (plugin == nullptr)
-          continue;
-        plugin->process(context);
-      }
     }
+
+    // Trim the output buffer down to size; this operation should be free.
+    jassert(intendedOutputBufferSize <= ioBuffer.getNumSamples());
+    ioBuffer.setSize(ioBuffer.getNumChannels(),
+                     intendedOutputBufferSize,
+                     /* keepExistingContent= */ true,
+                     /* clearExtraSpace= */ true,
+                     /* avoidReallocating= */ true);
   }
 
-  switch (inputChannelLayout) {
-  case ChannelLayout::Interleaved:
-    return outputArray.attr("transpose")();
-  case ChannelLayout::NotInterleaved:
-  default:
-    return outputArray;
-  }
+  return copyJuceBufferIntoPyArray(ioBuffer, inputChannelLayout,
+                                   totalOutputLatencySamples,
+                                   inputArray.request().ndim);
 };
 } // namespace Pedalboard
