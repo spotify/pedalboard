@@ -62,11 +62,11 @@ public:
    * This function will only be called after prepare(), so it can take into
    * account variables like the current sample rate, maximum block size, and
    * other plugin parameters.
-   * 
+   *
    * Returning a value from getLatencyHint() that is larger than necessary will
-   * allocate that many extra samples during processing, increasing memory usage.
-   * Returning a value that is too small will cause memory to be reallocated
-   * during rendering, impacting rendering speed.
+   * allocate that many extra samples during processing, increasing memory
+   * usage. Returning a value that is too small will cause memory to be
+   * reallocated during rendering, impacting rendering speed.
    */
   virtual int getLatencyHint() { return 0; }
 

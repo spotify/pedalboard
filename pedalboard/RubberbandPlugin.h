@@ -50,142 +50,86 @@ public:
 
   int process(
       const juce::dsp::ProcessContextReplacing<float> &context) override final {
-    if (!rbPtr) {
-      throw std::runtime_error("Rubber Band plugin failed to instantiate.");
-    }
+    if (rbPtr) {
+      auto inBlock = context.getInputBlock();
+      auto outBlock = context.getOutputBlock();
 
-    auto ioBlock = context.getOutputBlock();
-    auto numChannels = ioBlock.getNumChannels();
+      auto len = inBlock.getNumSamples();
+      auto numChannels = inBlock.getNumChannels();
 
-    if (numChannels > MAX_CHANNEL_COUNT) {
-      throw std::runtime_error(
-          "Pitch shifting or time stretching plugins support a maximum of " +
-          std::to_string(MAX_CHANNEL_COUNT) + " channels.");
-    }
+      jassert(len == outBlock.getNumSamples());
+      jassert(numChannels == outBlock.getNumChannels());
 
-    float *ioChannels[MAX_CHANNEL_COUNT] = {};
-
-    // for (size_t i = 0; i < numChannels; i++) {
-    //   ioChannels[i] = ioBlock.getChannelPointer(i);
-    // }
-
-    // Push all of the input samples we have into RubberBand:
-    // rbPtr->process(ioChannels, ioBlock.getNumSamples(), false);
-    // printf("Pushed %d samples into Rubber Band.\n", ioBlock.getNumSamples());
-    // int availableSamples = rbPtr->available();
-
-    int samplesProcessed = 0;
-    int samplesWritten = 0;
-    while (samplesProcessed < ioBlock.getNumSamples() || rbPtr->available()) {
-      int samplesRequired = rbPtr->getSamplesRequired();
-      int inputChunkLength = std::min(
-          (int)(ioBlock.getNumSamples() - samplesProcessed), samplesRequired);
+      const float **inChannels =
+          (const float **)alloca(numChannels * sizeof(float *));
+      float **outChannels = (float **)alloca(numChannels * sizeof(float *));
 
       for (size_t i = 0; i < numChannels; i++) {
-        ioChannels[i] = ioBlock.getChannelPointer(i) + samplesProcessed;
+        inChannels[i] = inBlock.getChannelPointer(i);
+        outChannels[i] = outBlock.getChannelPointer(i);
       }
 
-      rbPtr->process(ioChannels, inputChunkLength, false);
-      samplesProcessed += inputChunkLength;
-
-      int samplesAvailable = rbPtr->available();
-      int freeSpace = ioBlock.getNumSamples() - samplesWritten;
-      int outputChunkLength = std::min(freeSpace, samplesAvailable);
-
-      // Avoid overwriting input that hasn't yet been passed to Rubber Band:
-      if (samplesWritten + outputChunkLength > samplesProcessed) {
-        outputChunkLength = samplesProcessed - samplesWritten;
-      }
-
-      for (size_t i = 0; i < numChannels; i++) {
-        ioChannels[i] = ioBlock.getChannelPointer(i) + samplesWritten;
-      }
-      samplesWritten += rbPtr->retrieve(ioChannels, outputChunkLength);
-      if (samplesWritten == ioBlock.getNumSamples())
-        break;
+      // Rubberband expects all channel data with one float array per channel
+      return processSamples(inChannels, outChannels, len, numChannels);
     }
-
-    if (samplesWritten > 0 && samplesWritten < ioBlock.getNumSamples()) {
-      // Right-align the output samples in the buffer:
-      int offset = ioBlock.getNumSamples() - samplesWritten;
-      for (size_t i = 0; i < numChannels; i++) {
-        float *channelBufferSource = ioBlock.getChannelPointer(i);
-        float *channelBufferDestination = channelBufferSource + offset;
-        std::memmove((char *)channelBufferDestination,
-                     (char *)channelBufferSource,
-                     sizeof(float) * samplesWritten);
-      }
-    }
-
-    return samplesWritten;
-
-    // Don't produce any output for this input if RubberBand isn't ready.
-    // We can do this here because RubberBand buffers audio internally;
-    // this might not be a safe technique to use with other plugins, as
-    // their output sample buffers may overflow if passed more than
-    // maximumBlockSize.
-
-    // if (rbPtr->available() < (int) ioBlock.getNumSamples() + getLatency()) {
-    //   printf("Need %d samples, but Rubber Band only had %d samples
-    //   available.\n", ioBlock.getNumSamples() + getLatency(),
-    //   rbPtr->available()); return 0;
-    // } else {
-    //   // Pull the next chunk of audio data out of RubberBand:
-    //   int returned = rbPtr->retrieve(ioChannels, ioBlock.getNumSamples());
-    //   printf("Sent %d samples into Rubber Band, and took %d samples back
-    //   out.\n", ioBlock.getNumSamples(), returned); return returned;
-    // }
-
-    // // ...but only actually ask Rubberband for at most the number of samples
-    // we
-    // // can handle:
-    // int samplesToPull = ioBlock.getNumSamples();
-    // if (samplesToPull > availableSamples)
-    //   samplesToPull = availableSamples;
-
-    // // If we don't have enough samples to fill a full buffer,
-    // // right-align the samples that we do have (i..e: start with silence).
-    // int missingSamples = ioBlock.getNumSamples() - availableSamples;
-    // if (missingSamples > 0) {
-    //   for (size_t c = 0; c < numChannels; c++) {
-    //     // Clear the start of the buffer so that we start
-    //     // the buffer with silence:
-    //     std::fill_n(ioChannels[c], missingSamples, 0.0);
-
-    //     // Move the output buffer pointer forward so that
-    //     // RubberBandStretcher::retrieve(...) places its
-    //     // output at the end of the buffer:
-    //     ioChannels[c] += missingSamples;
-    //   }
-    // }
-
-    // // Pull the next audio data out of Rubberband:
-    // int pulled = rbPtr->retrieve(ioChannels, samplesToPull);
-    // printf("Pulled %d samples out of Rubber Band (%d were available).\n",
-    // pulled, availableSamples); return pulled;
+    return 0;
   }
 
   void reset() override final {
     if (rbPtr) {
       rbPtr->reset();
     }
-    initialSamplesRequired = 0;
   }
 
+private:
+  int processSamples(const float *const *inBlock, float **outBlock,
+                     size_t samples, size_t numChannels) {
+    // Push all of the input samples into RubberBand:
+    rbPtr->process(inBlock, samples, false);
+
+    // Figure out how many samples RubberBand is ready to give to us:
+    int availableSamples = rbPtr->available();
+
+    // ...but only actually ask Rubberband for at most the number of samples we
+    // can handle:
+    int samplesToPull = samples;
+    if (samplesToPull > availableSamples)
+      samplesToPull = availableSamples;
+
+    // If we don't have enough samples to fill a full buffer,
+    // right-align the samples that we do have (i..e: start with silence).
+    int missingSamples = samples - availableSamples;
+    if (missingSamples > 0) {
+      for (size_t c = 0; c < numChannels; c++) {
+        // Clear the start of the buffer so that we start
+        // the buffer with silence:
+        std::fill_n(outBlock[c], missingSamples, 0.0);
+
+        // Move the output buffer pointer forward so that
+        // RubberBandStretcher::retrieve(...) places its
+        // output at the end of the buffer:
+        outBlock[c] += missingSamples;
+      }
+    }
+
+    // Pull the next audio data out of Rubberband:
+    return rbPtr->retrieve(outBlock, samplesToPull);
+  }
+
+protected:
   virtual int getLatencyHint() override {
     if (!rbPtr)
       return 0;
 
     initialSamplesRequired =
         std::max(initialSamplesRequired,
-                 (int)(rbPtr->getSamplesRequired() + rbPtr->getLatency() + lastSpec.maximumBlockSize));
+                 (int)(rbPtr->getSamplesRequired() + rbPtr->getLatency() +
+                       lastSpec.maximumBlockSize));
 
     return initialSamplesRequired;
   }
 
-protected:
   std::unique_ptr<RubberBandStretcher> rbPtr;
   int initialSamplesRequired = 0;
-  static constexpr int MAX_CHANNEL_COUNT = 8;
 };
 }; // namespace Pedalboard

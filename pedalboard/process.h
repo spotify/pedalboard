@@ -283,7 +283,7 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
                        /* keepExistingContent= */ true,
                        /* clearExtraSpace= */ true);
     }
-    
+
     // Actually run the plugins over the ioBuffer, in small chunks, to minimize
     // memory usage:
     int startOfOutputInBuffer = 0;
@@ -353,7 +353,7 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
           // Only do this if reset=True was passed, as we can use that
           // as a proxy for the user's intent to call `process` again.
           intendedOutputBufferSize += missingSamples;
-          
+
           if (intendedOutputBufferSize > ioBuffer.getNumSamples()) {
             ioBuffer.setSize(ioBuffer.getNumChannels(),
                              intendedOutputBufferSize,
@@ -366,8 +366,7 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
 
     // Trim the output buffer down to size; this operation should be free.
     jassert(intendedOutputBufferSize <= ioBuffer.getNumSamples());
-    ioBuffer.setSize(ioBuffer.getNumChannels(),
-                     intendedOutputBufferSize,
+    ioBuffer.setSize(ioBuffer.getNumChannels(), intendedOutputBufferSize,
                      /* keepExistingContent= */ true,
                      /* clearExtraSpace= */ true,
                      /* avoidReallocating= */ true);

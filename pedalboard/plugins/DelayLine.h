@@ -43,9 +43,7 @@ public:
                     std::max(0, (int)(samplesProvided - getDSP().getDelay())));
   }
 
-  virtual int getLatencyHint() override {
-    return getDSP().getDelay();
-  }
+  virtual int getLatencyHint() override { return getDSP().getDelay(); }
 
 private:
   int samplesProvided = 0;
