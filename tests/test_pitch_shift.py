@@ -17,10 +17,10 @@
 
 import pytest
 import numpy as np
-from pedalboard import PitchShift
+from pedalboard import Pedalboard, PitchShift
 
 
-@pytest.mark.parametrize("scale", [0.5, 1.0, 2.0])
+@pytest.mark.parametrize("scale", [1 / 2, 1.0, 2.0])
 @pytest.mark.parametrize("fundamental_hz", [440, 880])
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
 def test_pitch_shift(scale, fundamental_hz, sample_rate):
@@ -31,3 +31,34 @@ def test_pitch_shift(scale, fundamental_hz, sample_rate):
     output = plugin.process(sine_wave, sample_rate)
 
     assert np.all(np.isfinite(output))
+
+
+@pytest.mark.parametrize("scale", [0.01, 65.0])
+def test_pitch_shift_extremes_throws_errors(scale):
+    with pytest.raises(ValueError):
+        PitchShift(scale)
+
+
+@pytest.mark.parametrize("scale", [1 / 64, 1 / 8, 1 / 2, 2, 8, 64])
+@pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
+@pytest.mark.parametrize("buffer_size", [32, 512, 8192])
+def test_pitch_shift_extremes(scale, sample_rate, buffer_size):
+    noise = np.random.rand(int(5.0 * sample_rate))
+    plugin = PitchShift(scale)
+    output = plugin.process(noise, sample_rate, buffer_size=buffer_size)
+    assert np.all(np.isfinite(output))
+
+
+@pytest.mark.parametrize("scale", [1.0])
+@pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
+@pytest.mark.parametrize("buffer_size", [512, 8192])
+def test_pitch_shift_latency_compensation(scale, sample_rate, buffer_size):
+    num_seconds = 10.0
+    fundamental_hz = 440.0
+    samples = np.arange(num_seconds * sample_rate)
+    sine_wave = np.sin(2 * np.pi * fundamental_hz * samples / sample_rate)
+    plugin = Pedalboard([PitchShift(scale), PitchShift(1 / scale)])
+    output = plugin.process(sine_wave, sample_rate, buffer_size=buffer_size)
+    np.testing.assert_allclose(
+        sine_wave[sample_rate:-sample_rate], output[sample_rate:-sample_rate], rtol=0.01, atol=0.01
+    )
