@@ -296,11 +296,11 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
       int pluginSamplesReceived = 0;
 
       for (unsigned int blockStart = startOfOutputInBuffer;
-           blockStart < (unsigned int)ioBuffer.getNumSamples();
+           blockStart < (unsigned int)intendedOutputBufferSize;
            blockStart += bufferSize) {
         unsigned int blockEnd =
             std::min(blockStart + bufferSize,
-                     static_cast<unsigned int>(ioBuffer.getNumSamples()));
+                     static_cast<unsigned int>(intendedOutputBufferSize));
         unsigned int blockSize = blockEnd - blockStart;
 
         auto ioBlock = juce::dsp::AudioBlock<float>(
@@ -354,6 +354,7 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
           // as a proxy for the user's intent to call `process` again.
           intendedOutputBufferSize += missingSamples;
 
+          // If we need to reallocate, then we reallocate.
           if (intendedOutputBufferSize > ioBuffer.getNumSamples()) {
             ioBuffer.setSize(ioBuffer.getNumChannels(),
                              intendedOutputBufferSize,
@@ -364,7 +365,7 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
       }
     }
 
-    // Trim the output buffer down to size; this operation should be free.
+    // Trim the output buffer down to size; this operation should be allocation-free.
     jassert(intendedOutputBufferSize <= ioBuffer.getNumSamples());
     ioBuffer.setSize(ioBuffer.getNumChannels(), intendedOutputBufferSize,
                      /* keepExistingContent= */ true,
