@@ -31,7 +31,10 @@ class Pedalboard(collections.abc.MutableSequence):
     A container for a chain of plugins, to use for processing audio.
     """
 
-    def __init__(self, plugins: List[Optional[Plugin]], sample_rate: Optional[float] = None):
+    def __init__(self, plugins: List[Optional[Plugin]] = None, sample_rate: Optional[float] = None):
+        if not plugins:
+            plugins = []
+
         for plugin in plugins:
             if plugin is not None:
                 if not isinstance(plugin, Plugin):

@@ -203,6 +203,124 @@ py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> juceBuffer,
   return outputArray;
 }
 
+inline int process(juce::AudioBuffer<float> &ioBuffer,
+                   juce::dsp::ProcessSpec spec,
+                   const std::vector<Plugin *> &plugins,
+                   bool isProbablyLastProcessCall) {
+  int totalOutputLatencySamples = 0;
+  int expectedOutputLatency = 0;
+
+  for (auto *plugin : plugins) {
+    if (plugin == nullptr)
+      continue;
+    expectedOutputLatency += plugin->getLatencyHint();
+  }
+
+  int intendedOutputBufferSize = ioBuffer.getNumSamples();
+
+  if (expectedOutputLatency > 0 && isProbablyLastProcessCall) {
+    // This is a hint - it's possible that the plugin(s) latency values
+    // will change and we'll have to reallocate again later on.
+    ioBuffer.setSize(ioBuffer.getNumChannels(),
+                     ioBuffer.getNumSamples() + expectedOutputLatency,
+                     /* keepExistingContent= */ true,
+                     /* clearExtraSpace= */ true);
+  }
+
+  // Actually run the plugins over the ioBuffer, in small chunks, to minimize
+  // memory usage:
+  int startOfOutputInBuffer = 0;
+  int lastSampleInBuffer = 0;
+
+  for (auto *plugin : plugins) {
+    if (plugin == nullptr)
+      continue;
+
+    int pluginSamplesReceived = 0;
+
+    for (unsigned int blockStart = startOfOutputInBuffer;
+         blockStart < (unsigned int)intendedOutputBufferSize;
+         blockStart += spec.maximumBlockSize) {
+      unsigned int blockEnd =
+          std::min(blockStart + spec.maximumBlockSize,
+                   static_cast<unsigned int>(intendedOutputBufferSize));
+      unsigned int blockSize = blockEnd - blockStart;
+
+      auto ioBlock = juce::dsp::AudioBlock<float>(
+          ioBuffer.getArrayOfWritePointers(), ioBuffer.getNumChannels(),
+          blockStart, blockSize);
+      juce::dsp::ProcessContextReplacing<float> context(ioBlock);
+
+      int outputSamples = plugin->process(context);
+      if (outputSamples < 0) {
+        throw std::runtime_error(
+            "A plugin returned a negative number of output samples! "
+            "This is an internal Pedalboard error and should be reported.");
+      }
+      pluginSamplesReceived += outputSamples;
+
+      int missingSamples = blockSize - outputSamples;
+      if (missingSamples > 0 && pluginSamplesReceived > 0) {
+        // This can only happen if the plugin we're using is returning us more
+        // than one chunk of audio that's not completely full, which can
+        // happen sometimes. In this case, we would end up with gaps in the
+        // audio output:
+        //               empty  empty  full   part
+        //              [______|______|AAAAAA|__BBBB]
+        //   end of most recently rendered block-->-^
+        // We need to consolidate those gaps by moving them forward in time.
+        // To do so, we take the section from the earliest known output to the
+        // start of this block, and right-align it to the left side of the
+        // current block's content:
+        //               empty  empty  part   full
+        //              [______|______|__AAAA|AABBBB]
+        //   end of most recently rendered block-->-^
+        for (int c = 0; c < ioBuffer.getNumChannels(); c++) {
+          // Only move the samples received before this latest block was
+          // rendered, as audio is right-aligned within blocks by convention.
+          int samplesToMove = pluginSamplesReceived - outputSamples;
+          float *outputStart =
+              ioBuffer.getWritePointer(c) + totalOutputLatencySamples;
+          float *expectedOutputEnd =
+              ioBuffer.getWritePointer(c) + blockEnd - outputSamples;
+          float *expectedOutputStart = expectedOutputEnd - samplesToMove;
+
+          std::memmove((char *)expectedOutputStart, (char *)outputStart,
+                       sizeof(float) * samplesToMove);
+        }
+      }
+
+      lastSampleInBuffer =
+          std::max(lastSampleInBuffer, (int)(blockStart + outputSamples));
+      startOfOutputInBuffer += missingSamples;
+      totalOutputLatencySamples += missingSamples;
+
+      if (missingSamples && isProbablyLastProcessCall) {
+        // Resize the IO buffer to give us a bit more room
+        // on the end, so we can continue to write delayed output.
+        // Only do this if we think this is the last time process is called.
+        intendedOutputBufferSize += missingSamples;
+
+        // If we need to reallocate, then we reallocate.
+        if (intendedOutputBufferSize > ioBuffer.getNumSamples()) {
+          ioBuffer.setSize(ioBuffer.getNumChannels(), intendedOutputBufferSize,
+                           /* keepExistingContent= */ true,
+                           /* clearExtraSpace= */ true);
+        }
+      }
+    }
+  }
+
+  // Trim the output buffer down to size; this operation should be
+  // allocation-free.
+  jassert(intendedOutputBufferSize <= ioBuffer.getNumSamples());
+  ioBuffer.setSize(ioBuffer.getNumChannels(), intendedOutputBufferSize,
+                   /* keepExistingContent= */ true,
+                   /* clearExtraSpace= */ true,
+                   /* avoidReallocating= */ true);
+  return intendedOutputBufferSize - totalOutputLatencySamples;
+}
+
 /**
  * Process a given audio buffer through a list of
  * Pedalboard plugins at a given sample rate.
@@ -215,7 +333,7 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
                unsigned int bufferSize, bool reset) {
   const ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
   juce::AudioBuffer<float> ioBuffer = copyPyArrayIntoJuceBuffer(inputArray);
-  int totalOutputLatencySamples = 0;
+  int totalOutputLatencySamples;
 
   {
     py::gil_scoped_release release;
@@ -274,123 +392,19 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
     spec.maximumBlockSize = static_cast<juce::uint32>(bufferSize);
     spec.numChannels = static_cast<juce::uint32>(ioBuffer.getNumChannels());
 
-    int expectedOutputLatency = 0;
-
     for (auto *plugin : plugins) {
       if (plugin == nullptr)
         continue;
       plugin->prepare(spec);
-      expectedOutputLatency += plugin->getLatencyHint();
     }
 
-    int intendedOutputBufferSize = ioBuffer.getNumSamples();
-
-    if (expectedOutputLatency > 0) {
-      // This is a hint - it's possible that the plugin(s) latency values
-      // will change and we'll have to reallocate again later on.
-      ioBuffer.setSize(ioBuffer.getNumChannels(),
-                       ioBuffer.getNumSamples() + expectedOutputLatency,
-                       /* keepExistingContent= */ true,
-                       /* clearExtraSpace= */ true);
-    }
-
-    // Actually run the plugins over the ioBuffer, in small chunks, to minimize
-    // memory usage:
-    int startOfOutputInBuffer = 0;
-    int lastSampleInBuffer = 0;
-
-    for (auto *plugin : plugins) {
-      if (plugin == nullptr)
-        continue;
-
-      int pluginSamplesReceived = 0;
-
-      for (unsigned int blockStart = startOfOutputInBuffer;
-           blockStart < (unsigned int)intendedOutputBufferSize;
-           blockStart += bufferSize) {
-        unsigned int blockEnd =
-            std::min(blockStart + bufferSize,
-                     static_cast<unsigned int>(intendedOutputBufferSize));
-        unsigned int blockSize = blockEnd - blockStart;
-
-        auto ioBlock = juce::dsp::AudioBlock<float>(
-            ioBuffer.getArrayOfWritePointers(), ioBuffer.getNumChannels(),
-            blockStart, blockSize);
-        juce::dsp::ProcessContextReplacing<float> context(ioBlock);
-
-        int outputSamples = plugin->process(context);
-        if (outputSamples < 0) {
-          throw std::runtime_error(
-              "A plugin returned a negative number of output samples! "
-              "This is an internal Pedalboard error and should be reported.");
-        }
-        pluginSamplesReceived += outputSamples;
-
-        int missingSamples = blockSize - outputSamples;
-        if (missingSamples > 0 && pluginSamplesReceived > 0) {
-          // This can only happen if the plugin we're using is returning us more
-          // than one chunk of audio that's not completely full, which can
-          // happen sometimes. In this case, we would end up with gaps in the
-          // audio output:
-          //               empty  empty  full   part
-          //              [______|______|AAAAAA|__BBBB]
-          //   end of most recently rendered block-->-^
-          // We need to consolidate those gaps by moving them forward in time.
-          // To do so, we take the section from the earliest known output to the
-          // start of this block, and right-align it to the left side of the
-          // current block's content:
-          //               empty  empty  part   full
-          //              [______|______|__AAAA|AABBBB]
-          //   end of most recently rendered block-->-^
-          for (int c = 0; c < ioBuffer.getNumChannels(); c++) {
-            // Only move the samples received before this latest block was
-            // rendered, as audio is right-aligned within blocks by convention.
-            int samplesToMove = pluginSamplesReceived - outputSamples;
-            float *outputStart =
-                ioBuffer.getWritePointer(c) + totalOutputLatencySamples;
-            float *expectedOutputEnd =
-                ioBuffer.getWritePointer(c) + blockEnd - outputSamples;
-            float *expectedOutputStart = expectedOutputEnd - samplesToMove;
-
-            std::memmove((char *)expectedOutputStart, (char *)outputStart,
-                         sizeof(float) * samplesToMove);
-          }
-        }
-
-        lastSampleInBuffer =
-            std::max(lastSampleInBuffer, (int)(blockStart + outputSamples));
-        startOfOutputInBuffer += missingSamples;
-        totalOutputLatencySamples += missingSamples;
-
-        if (missingSamples && reset) {
-          // Resize the IO buffer to give us a bit more room
-          // on the end, so we can continue to write delayed output.
-          // Only do this if reset=True was passed, as we can use that
-          // as a proxy for the user's intent to call `process` again.
-          intendedOutputBufferSize += missingSamples;
-
-          // If we need to reallocate, then we reallocate.
-          if (intendedOutputBufferSize > ioBuffer.getNumSamples()) {
-            ioBuffer.setSize(ioBuffer.getNumChannels(),
-                             intendedOutputBufferSize,
-                             /* keepExistingContent= */ true,
-                             /* clearExtraSpace= */ true);
-          }
-        }
-      }
-    }
-
-    // Trim the output buffer down to size; this operation should be
-    // allocation-free.
-    jassert(intendedOutputBufferSize <= ioBuffer.getNumSamples());
-    ioBuffer.setSize(ioBuffer.getNumChannels(), intendedOutputBufferSize,
-                     /* keepExistingContent= */ true,
-                     /* clearExtraSpace= */ true,
-                     /* avoidReallocating= */ true);
+    // Actually run the process method of all plugins.
+    int samplesReturned = process(ioBuffer, spec, plugins, reset);
+    totalOutputLatencySamples = ioBuffer.getNumSamples() - samplesReturned;
   }
 
   return copyJuceBufferIntoPyArray(ioBuffer, inputChannelLayout,
                                    totalOutputLatencySamples,
                                    inputArray.request().ndim);
-};
+}
 } // namespace Pedalboard

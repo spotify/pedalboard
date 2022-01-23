@@ -29,9 +29,11 @@ namespace py = pybind11;
 
 #include "ExternalPlugin.h"
 #include "JucePlugin.h"
+#include "MixPlugin.h"
 #include "Plugin.h"
 #include "process.h"
 
+#include "ChainPlugin.h"
 #include "plugins/AddLatency.h"
 #include "plugins/Chorus.h"
 #include "plugins/Compressor.h"
@@ -136,6 +138,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
               py::arg("reset") = true);
   plugin.attr("__call__") = plugin.attr("process");
 
+  init_chain(m);
   init_chorus(m);
   init_compressor(m);
   init_convolution(m);
@@ -148,6 +151,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_limiter(m);
   init_lowpass(m);
   init_mp3_compressor(m);
+  init_mix(m);
   init_noisegate(m);
   init_phaser(m);
   init_pitch_shift(m);
