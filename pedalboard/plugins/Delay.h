@@ -54,7 +54,7 @@ public:
       this->lastSpec = spec;
     }
 
-    this->getDSP().setDelay((int)(getDelaySeconds() * spec.sampleRate));
+    this->getDSP().setDelay((int)(delaySeconds * spec.sampleRate));
   }
 
   virtual void reset() override { this->getDSP().reset(); }
@@ -65,7 +65,13 @@ public:
     SampleType dryVolume = 1.0f - getMix();
     SampleType wetVolume = getMix();
 
-    this->getDSP().setDelay((int)(getDelaySeconds() * this->lastSpec.sampleRate));
+    if (delaySeconds == 0.0f) {
+      // Special case where DelayLine doesn't do anything for us.
+      // Regardless of the mix or feedback parameters, the input will sound identical.
+      return context.getInputBlock().getNumSamples();
+    }
+
+    this->getDSP().setDelay((int)(delaySeconds * this->lastSpec.sampleRate));
 
     // Pass samples through the delay line with feedback:
     for (size_t c = 0; c < context.getInputBlock().getNumChannels(); c++) {
