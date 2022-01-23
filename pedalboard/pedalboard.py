@@ -14,16 +14,85 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import collections
 import platform
 import weakref
 from functools import update_wrapper
 from contextlib import contextmanager
-from typing import List, Optional, Dict, Union, Tuple, Iterable
+from typing import List, Optional, Dict, Union, Tuple, Set, Iterable, Union
 
 import numpy as np
 
 from pedalboard_native import Plugin, process, _AudioProcessorParameter
+from pedalboard_native.utils import Mix, Chain
+
+
+# A concrete type for all ways to define a Pedalboard with zero or more plugins:
+PedalboardDefinition = Union[
+    # The standard Pedalboard is a list of plugins,
+    # although nested lists will be unpacked.
+    List[Union[Plugin, 'PedalboardDefinition']],
+    # Tuples can be used in place of lists when necessary,
+    # if putting a chain inside of a mix plugin.
+    Tuple[Union[Plugin, 'PedalboardDefinition']],
+    # Pedalboards can be nested, and the contained
+    # pedalboard's plugins will be treated as a list:
+    'Pedalboard',
+    # Passing a set of plugins will result in them being processed in parallel
+    # (i.e: they will all accept the same input and their outputs will be mixed)
+    Set[Union[Plugin, 'PedalboardDefinition']],
+]
+
+
+def _coalesce_plugin_definitions(
+    _input: Optional[PedalboardDefinition], level: int = 0
+) -> List[Plugin]:
+    """
+    Given a PedalboardDefinition, return a concrete list of plugins that can be executed.
+    Basically: remove the syntactic sugar and add the appropriate Mix() and Chain() plugins.
+    """
+    if isinstance(_input, Plugin):
+        return _input
+    elif hasattr(_input, "plugins"):
+        return _coalesce_plugin_definitions(_input.plugins, level + 1)
+    elif isinstance(_input, List) or isinstance(_input, Tuple):
+        plugins = [
+            _coalesce_plugin_definitions(element, level + 1)
+            for element in _input
+            if element is not None
+        ]
+        if level > 0:
+            return Chain(plugins)
+        else:
+            return plugins
+    elif isinstance(_input, Set):
+        return Mix(
+            [
+                _coalesce_plugin_definitions(element, level + 1)
+                for element in _input
+                if element is not None
+            ]
+        )
+    else:
+        raise TypeError(
+            "Pedalboard(...) expected a list (or set) of plugins (or lists or sets of plugins),"
+            " but found an element of type: {}".format(type(_input))
+        )
+
+
+def _flatten_all_plugins(_input: Optional[PedalboardDefinition]) -> List[Plugin]:
+    """
+    Given a PedalboardDefinition, return a concrete list of plugins that can be executed.
+    Basically: remove the syntactic sugar and add the appropriate Mix() and Chain() plugins.
+    """
+    if hasattr(_input, "plugins"):
+        return _input.plugins
+    elif isinstance(_input, Plugin):
+        return [_input]
+    elif isinstance(_input, List) or isinstance(_input, List) or isinstance(_input, Tuple):
+        return sum([_flatten_all_plugins(element) for element in _input if element is not None], [])
+    return []
 
 
 class Pedalboard(collections.abc.MutableSequence):
@@ -31,25 +100,20 @@ class Pedalboard(collections.abc.MutableSequence):
     A container for a chain of plugins, to use for processing audio.
     """
 
-    def __init__(self, plugins: List[Optional[Plugin]] = None, sample_rate: Optional[float] = None):
-        if not plugins:
-            plugins = []
-
-        for plugin in plugins:
-            if plugin is not None:
-                if not isinstance(plugin, Plugin):
-                    raise TypeError(
-                        "An object of type {} cannot be included in a {}.".format(
-                            type(plugin), self.__class__.__name__
-                        )
-                    )
-                if plugins.count(plugin) > 1:
-                    raise ValueError(
-                        "The same plugin object ({}) was included multiple times in a {}. Please"
-                        " create unique instances if the same effect is required multiple times in"
-                        " series.".format(plugin, self.__class__.__name__)
-                    )
-        self.plugins = plugins
+    def __init__(
+        self, plugins: Optional[PedalboardDefinition] = None, sample_rate: Optional[float] = None
+    ):
+        all_plugins = _flatten_all_plugins(plugins)
+        for plugin in all_plugins:
+            if plugin is not None and all_plugins.count(plugin) > 1:
+                raise ValueError(
+                    "The same plugin object ({}) was included multiple times in a {}. Please"
+                    " create unique instances if the same effect is required multiple times."
+                    .format(plugin, self.__class__.__name__)
+                )
+        self.plugins = _coalesce_plugin_definitions(plugins)
+        if not isinstance(self.plugins, list):
+            self.plugins = [self.plugins]
 
         if sample_rate is not None and not isinstance(sample_rate, (int, float)):
             raise TypeError("sample_rate must be None, an integer, or a floating-point number.")

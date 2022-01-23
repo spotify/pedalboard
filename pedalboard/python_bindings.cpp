@@ -29,12 +29,11 @@ namespace py = pybind11;
 
 #include "ExternalPlugin.h"
 #include "JucePlugin.h"
-#include "MixPlugin.h"
 #include "Plugin.h"
 #include "process.h"
 
-#include "ChainPlugin.h"
 #include "plugins/AddLatency.h"
+#include "plugins/Chain.h"
 #include "plugins/Chorus.h"
 #include "plugins/Compressor.h"
 #include "plugins/Convolution.h"
@@ -46,7 +45,7 @@ namespace py = pybind11;
 #include "plugins/LadderFilter.h"
 #include "plugins/Limiter.h"
 #include "plugins/LowpassFilter.h"
-#include "plugins/MP3Compressor.h"
+#include "plugins/Mix.h"
 #include "plugins/NoiseGate.h"
 #include "plugins/Phaser.h"
 #include "plugins/PitchShift.h"
@@ -138,7 +137,6 @@ PYBIND11_MODULE(pedalboard_native, m) {
               py::arg("reset") = true);
   plugin.attr("__call__") = plugin.attr("process");
 
-  init_chain(m);
   init_chorus(m);
   init_compressor(m);
   init_convolution(m);
@@ -151,13 +149,17 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_limiter(m);
   init_lowpass(m);
   init_mp3_compressor(m);
-  init_mix(m);
   init_noisegate(m);
   init_phaser(m);
   init_pitch_shift(m);
   init_reverb(m);
 
   init_external_plugins(m);
+
+  // Plugins that don't perform any audio effects, but that add other utilities:
+  py::module utils = m.def_submodule("utils");
+  init_mix(utils);
+  init_chain(utils);
 
   // Internal plugins for testing, debugging, etc:
   py::module internal = m.def_submodule("_internal");

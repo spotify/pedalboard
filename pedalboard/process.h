@@ -321,6 +321,15 @@ inline int process(juce::AudioBuffer<float> &ioBuffer,
   return intendedOutputBufferSize - totalOutputLatencySamples;
 }
 
+void flattenPluginTree(Plugin *plugin, std::vector<Plugin *> &output) {
+  if (std::find(output.begin(), output.end(), plugin) == output.end())
+    output.push_back(plugin);
+
+  for (auto *nestedPlugin : plugin->getNestedPlugins()) {
+    flattenPluginTree(nestedPlugin, output);
+  }
+}
+
 /**
  * Process a given audio buffer through a list of
  * Pedalboard plugins at a given sample rate.
@@ -356,11 +365,7 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
     for (auto *plugin : plugins) {
       if (plugin == nullptr)
         continue;
-
-      if (std::find(uniquePluginsSortedByPointer.begin(),
-                    uniquePluginsSortedByPointer.end(),
-                    plugin) == uniquePluginsSortedByPointer.end())
-        uniquePluginsSortedByPointer.push_back(plugin);
+      flattenPluginTree(plugin, uniquePluginsSortedByPointer);
     }
 
     if (uniquePluginsSortedByPointer.size() < countOfPluginsIgnoringNull) {
