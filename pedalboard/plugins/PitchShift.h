@@ -35,7 +35,7 @@ private:
   // Allow pitch shifting by up to 6 octaves up or down:
   static constexpr int MIN_SEMITONES = -6 * 12;
   static constexpr int MAX_SEMITONES = 6 * 12;
-  
+
   double getScaleFactor() { return pow(2, (getSemitones() / 12)); }
 
 public:
