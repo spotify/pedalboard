@@ -162,7 +162,8 @@ py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> juceBuffer,
       outputArray = py::array_t<T>({numChannels, outputSampleCount});
       break;
     default:
-      throw std::runtime_error("Internal error: got unexpected channel layout.");
+      throw std::runtime_error(
+          "Internal error: got unexpected channel layout.");
     }
   } else {
     outputArray = py::array_t<T>(outputSampleCount);
