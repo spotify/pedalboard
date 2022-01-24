@@ -134,6 +134,9 @@ copyPyArrayIntoJuceBuffer(const py::array_t<T, py::array::c_style> inputArray) {
       ioBuffer.copyFrom(
           i, 0, static_cast<T *>(inputInfo.ptr) + (numSamples * i), numSamples);
     }
+    break;
+  default:
+    throw std::runtime_error("Internal error: got unexpected channel layout.");
   }
 
   return ioBuffer;
@@ -158,6 +161,8 @@ py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> juceBuffer,
     case ChannelLayout::NotInterleaved:
       outputArray = py::array_t<T>({numChannels, outputSampleCount});
       break;
+    default:
+      throw std::runtime_error("Internal error: got unexpected channel layout.");
     }
   } else {
     outputArray = py::array_t<T>(outputSampleCount);
@@ -188,6 +193,8 @@ py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> juceBuffer,
                 &outputBasePointer[outputSampleCount * i]);
     }
     break;
+  default:
+    throw std::runtime_error("Internal error: got unexpected channel layout.");
   }
 
   return outputArray;
