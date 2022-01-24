@@ -61,7 +61,7 @@ public:
 };
 
 inline void init_pitch_shift(py::module &m) {
-  py::class_<PitchShift, Plugin>(
+  py::class_<PitchShift, Plugin, std::shared_ptr<PitchShift>>(
       m, "PitchShift", "Shift pitch without affecting audio duration.")
       .def(py::init([](double scale) {
              auto plugin = std::make_unique<PitchShift>();

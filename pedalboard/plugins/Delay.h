@@ -100,7 +100,7 @@ private:
 };
 
 inline void init_delay(py::module &m) {
-  py::class_<Delay<float>, Plugin>(
+  py::class_<Delay<float>, Plugin, std::shared_ptr<Delay<float>>>(
       m, "Delay",
       "A digital delay plugin with controllable delay time, feedback "
       "percentage, and dry/wet mix.")

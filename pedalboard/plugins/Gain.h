@@ -29,7 +29,7 @@ class Gain : public JucePlugin<juce::dsp::Gain<SampleType>> {
 };
 
 inline void init_gain(py::module &m) {
-  py::class_<Gain<float>, Plugin>(
+  py::class_<Gain<float>, Plugin, std::shared_ptr<Gain<float>>>(
       m, "Gain",
       "Increase or decrease the volume of a signal by applying a gain value "
       "(in decibels). No distortion or other effects are applied.")

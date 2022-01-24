@@ -20,16 +20,17 @@
 #include "../JuceHeader.h"
 #include <mutex>
 
-#include "../Plugin.h"
+#include "../PluginContainer.h"
 #include "../process.h"
 
 namespace Pedalboard {
 /**
  * A class that allows nesting a list of plugins within another.
  */
-class Chain : public Plugin {
+class Chain : public PluginContainer {
 public:
-  Chain(std::vector<Plugin *> plugins) : plugins(plugins) {}
+  Chain(std::vector<std::shared_ptr<Plugin>> plugins)
+      : PluginContainer(plugins) {}
   virtual ~Chain(){};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {
@@ -65,34 +66,30 @@ public:
       hint += plugin->getLatencyHint();
     return hint;
   }
-
-  virtual std::vector<Plugin *> getNestedPlugins() const override { return plugins; }
-
-protected:
-  std::vector<Plugin *> plugins;
 };
 
 inline void init_chain(py::module &m) {
-  py::class_<Chain, Plugin>(m, "Chain",
-                            "Run zero or more plugins as a plugin. Useful when "
-                            "used with the Mix plugin.")
-      .def(py::init([](std::vector<Plugin *> plugins) {
+  py::class_<Chain, PluginContainer, std::shared_ptr<Chain>>(
+      m, "Chain",
+      "Run zero or more plugins as a plugin. Useful when "
+      "used with the Mix plugin.")
+      .def(py::init([](std::vector<std::shared_ptr<Plugin>> plugins) {
              return new Chain(plugins);
            }),
-           py::arg("plugins"), py::keep_alive<1, 2>())
+           py::arg("plugins"))
       .def("__repr__",
-           [](const Chain &plugin) {
+           [](Chain &plugin) {
              std::ostringstream ss;
-             ss << "<pedalboard.Chain with " << plugin.getNestedPlugins().size()
+             ss << "<pedalboard.Chain with " << plugin.getPlugins().size()
                 << " plugin";
-             if (plugin.getNestedPlugins().size() != 1) {
+             if (plugin.getPlugins().size() != 1) {
                ss << "s";
              }
              ss << ": [";
-             for (int i = 0; i < plugin.getNestedPlugins().size(); i++) {
-               py::object nestedPlugin = py::cast(plugin.getNestedPlugins()[i]);
+             for (int i = 0; i < plugin.getPlugins().size(); i++) {
+               py::object nestedPlugin = py::cast(plugin.getPlugins()[i]);
                ss << nestedPlugin.attr("__repr__")();
-               if (i < plugin.getNestedPlugins().size() - 1) {
+               if (i < plugin.getPlugins().size() - 1) {
                  ss << ", ";
                }
              }
@@ -100,7 +97,38 @@ inline void init_chain(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property_readonly("plugins", &Chain::getNestedPlugins);
+      // If calling process() directly on Chain, pass the plugins immediately to
+      // process() itself, as that will result in slightly faster performance.
+      .def(
+          "process",
+          [](std::shared_ptr<Chain> self,
+             const py::array_t<float, py::array::c_style> inputArray,
+             double sampleRate, unsigned int bufferSize, bool reset) {
+            return process(inputArray, sampleRate, self->getPlugins(), bufferSize, reset);
+          },
+          "Run a 32-bit floating point audio buffer through this plugin."
+          "(Note: if calling this multiple times with multiple plugins, "
+          "consider using pedalboard.process(...) instead.)",
+          py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
+
+      .def(
+          "process",
+          [](std::shared_ptr<Chain> self,
+             const py::array_t<double, py::array::c_style> inputArray,
+             double sampleRate, unsigned int bufferSize, bool reset) {
+            const py::array_t<float, py::array::c_style> float32InputArray =
+                inputArray.attr("astype")("float32");
+            return process(float32InputArray, sampleRate, self->getPlugins(), bufferSize,
+                           reset);
+          },
+          "Run a 64-bit floating point audio buffer through this plugin."
+          "(Note: if calling this multiple times with multiple plugins, "
+          "consider using pedalboard.process(...) instead.) The buffer "
+          "will be converted to 32-bit for processing.",
+          py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+          py::arg("reset") = true);
 }
 
 } // namespace Pedalboard

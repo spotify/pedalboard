@@ -20,6 +20,8 @@
 #include "JuceHeader.h"
 #include <mutex>
 
+static constexpr int DEFAULT_BUFFER_SIZE = 8192;
+
 namespace Pedalboard {
 /**
  * A base class for all Pedalboard plugins, JUCE-derived or external.
@@ -69,12 +71,6 @@ public:
    * reallocated during rendering, impacting rendering speed.
    */
   virtual int getLatencyHint() { return 0; }
-
-  /*
-   * Some plugins can host/contain other plugins (i.e.: Mix, Chain).
-   * This method can be used to traverse the plugin tree when necessary.
-   */
-  virtual std::vector<Plugin *> getNestedPlugins() const { return {}; }
 
   // A mutex to gate access to this plugin, as its internals may not be
   // thread-safe. Note: use std::lock or std::scoped_lock when locking multiple

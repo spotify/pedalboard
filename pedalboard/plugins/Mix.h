@@ -20,17 +20,17 @@
 #include "../JuceHeader.h"
 #include <mutex>
 
-#include "../Plugin.h"
+#include "../PluginContainer.h"
 
 namespace Pedalboard {
 /**
  * A class that allows parallel processing of zero or more separate plugin
  * chains.
  */
-class Mix : public Plugin {
+class Mix : public PluginContainer {
 public:
-  Mix(std::vector<Plugin *> plugins)
-      : plugins(plugins), pluginBuffers(plugins.size()),
+  Mix(std::vector<std::shared_ptr<Plugin>> plugins)
+      : PluginContainer(plugins), pluginBuffers(plugins.size()),
         samplesAvailablePerPlugin(plugins.size()) {}
   virtual ~Mix(){};
 
@@ -51,7 +51,7 @@ public:
     auto ioBlock = context.getOutputBlock();
 
     for (int i = 0; i < plugins.size(); i++) {
-      Plugin *plugin = plugins[i];
+      std::shared_ptr<Plugin> plugin = plugins[i];
       juce::AudioBuffer<float> &buffer = pluginBuffers[i];
 
       int startInBuffer = samplesAvailablePerPlugin[i];
@@ -66,7 +66,7 @@ public:
       context.getInputBlock().copyTo(buffer, 0, samplesAvailablePerPlugin[i]);
 
       float **channelPointers =
-        (float **)alloca(ioBlock.getNumChannels() * sizeof(float *));
+          (float **)alloca(ioBlock.getNumChannels() * sizeof(float *));
       for (int c = 0; c < buffer.getNumChannels(); c++) {
         channelPointers[c] = buffer.getWritePointer(c, startInBuffer);
       }
@@ -125,7 +125,7 @@ public:
 
           // Shift the remaining samples to the start of the buffer:
           std::memmove(channelBuffer, channelBuffer + samplesToDelete,
-                      sizeof(float) * samplesRemaining);
+                       sizeof(float) * samplesRemaining);
         }
         samplesAvailablePerPlugin[i] -= samplesToDelete;
       }
@@ -148,44 +148,38 @@ public:
     return maxHint;
   }
 
-  virtual std::vector<Plugin *> getNestedPlugins() const override {
-    return plugins;
-  }
-
 protected:
   std::vector<juce::AudioBuffer<float>> pluginBuffers;
-  std::vector<Plugin *> plugins;
   std::vector<int> samplesAvailablePerPlugin;
 };
 
 inline void init_mix(py::module &m) {
-  py::class_<Mix, Plugin>(
+  py::class_<Mix, PluginContainer, std::shared_ptr<Mix>>(
       m, "Mix",
       "A utility plugin that allows running other plugins in parallel. All "
       "plugins provided will be mixed equally.")
-      .def(py::init(
-               [](std::vector<Plugin *> plugins) { return new Mix(plugins); }),
-           py::arg("plugins"), py::keep_alive<1, 2>())
-      .def("__repr__",
-           [](const Mix &plugin) {
-             std::ostringstream ss;
-             ss << "<pedalboard.Mix with " << plugin.getNestedPlugins().size()
-                << " plugin";
-             if (plugin.getNestedPlugins().size() != 1) {
-               ss << "s";
-             }
-             ss << ": [";
-             for (int i = 0; i < plugin.getNestedPlugins().size(); i++) {
-               py::object nestedPlugin = py::cast(plugin.getNestedPlugins()[i]);
-               ss << nestedPlugin.attr("__repr__")();
-               if (i < plugin.getNestedPlugins().size() - 1) {
-                 ss << ", ";
-               }
-             }
-             ss << "] at " << &plugin;
-             ss << ">";
-             return ss.str();
-           })
-      .def_property_readonly("plugins", &Mix::getNestedPlugins);
+      .def(py::init([](std::vector<std::shared_ptr<Plugin>> plugins) {
+             return new Mix(plugins);
+           }),
+           py::arg("plugins"))
+      .def("__repr__", [](Mix &plugin) {
+        std::ostringstream ss;
+        ss << "<pedalboard.Mix with " << plugin.getPlugins().size()
+           << " plugin";
+        if (plugin.getPlugins().size() != 1) {
+          ss << "s";
+        }
+        ss << ": [";
+        for (int i = 0; i < plugin.getPlugins().size(); i++) {
+          py::object nestedPlugin = py::cast(plugin.getPlugins()[i]);
+          ss << nestedPlugin.attr("__repr__")();
+          if (i < plugin.getPlugins().size() - 1) {
+            ss << ", ";
+          }
+        }
+        ss << "] at " << &plugin;
+        ss << ">";
+        return ss.str();
+      });
 }
 } // namespace Pedalboard

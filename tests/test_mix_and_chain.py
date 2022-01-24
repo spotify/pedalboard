@@ -17,7 +17,17 @@
 
 import pytest
 import numpy as np
-from pedalboard import Pedalboard, Compressor, Delay, Distortion, Gain, Mix, Chain, PitchShift, Reverb
+from pedalboard import (
+    Pedalboard,
+    Compressor,
+    Delay,
+    Distortion,
+    Gain,
+    Mix,
+    Chain,
+    PitchShift,
+    Reverb,
+)
 from pedalboard_native._internal import AddLatency
 
 
@@ -36,8 +46,8 @@ def test_chain_syntactic_sugar():
     assert pb[0].gain_db == 6
 
     assert isinstance(pb[1], Chain)
-    assert pb[1].plugins[0].gain_db == -6
-    assert pb[1].plugins[1].gain_db == 1
+    assert pb[1][0].gain_db == -6
+    assert pb[1][1].gain_db == 1
 
     assert isinstance(pb[2], Gain)
     assert pb[2].gain_db == -1
@@ -57,7 +67,7 @@ def test_mix_syntactic_sugar():
     assert pb[0].gain_db == 6
 
     assert isinstance(pb[1], Mix)
-    assert set([plugin.gain_db for plugin in pb[1].plugins]) == set([-6, -6])
+    assert set([plugin.gain_db for plugin in pb[1]]) == set([-6, -6])
 
     assert isinstance(pb[2], Gain)
     assert pb[2].gain_db == -6
@@ -191,16 +201,66 @@ def test_readme_example_does_not_crash(sample_rate, buffer_size):
     original_plus_delayed_harmonies(noise, sample_rate=sample_rate, buffer_size=buffer_size)
 
     # or mix and match in more complex ways:
-    original_plus_delayed_harmonies = Pedalboard([
-        # Put a compressor at the front of the chain:
-        Compressor(),
-        # Split the chain and mix three different effects equally:
-        {
-            (passthrough, Distortion(drive_db=36)),
-            (delay_and_pitch_shift, Reverb(room_size=1)),
-            delay_longer_and_more_pitch_shift
-        },
-        # Add a reverb on the final mix:
-        Reverb()
-    ])
+    original_plus_delayed_harmonies = Pedalboard(
+        [
+            # Put a compressor at the front of the chain:
+            Compressor(),
+            # Split the chain and mix three different effects equally:
+            {
+                (passthrough, Distortion(drive_db=36)),
+                (delay_and_pitch_shift, Reverb(room_size=1)),
+                delay_longer_and_more_pitch_shift,
+            },
+            # Add a reverb on the final mix:
+            Reverb(),
+        ]
+    )
+    original_plus_delayed_harmonies(noise, sample_rate=sample_rate, buffer_size=buffer_size)
+
+
+@pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
+@pytest.mark.parametrize("buffer_size", [128, 8192, 65536])
+def test_pedalboard_is_a_plugin(sample_rate, buffer_size):
+    noise = np.random.rand(int(NUM_SECONDS * sample_rate))
+
+    passthrough = Gain(gain_db=0)
+
+    delay_and_pitch_shift = Chain(
+        [
+            Delay(delay_seconds=0.25, mix=1.0),
+            PitchShift(semitones=7),
+            Gain(gain_db=-3),
+        ]
+    )
+
+    delay_longer_and_more_pitch_shift = Chain(
+        [
+            Delay(delay_seconds=0.25, mix=1.0),
+            PitchShift(semitones=12),
+            Gain(gain_db=-6),
+        ]
+    )
+
+    original_plus_delayed_harmonies = Pedalboard(
+        [Mix([passthrough, delay_and_pitch_shift, delay_longer_and_more_pitch_shift])]
+    )
+    original_plus_delayed_harmonies(noise, sample_rate=sample_rate, buffer_size=buffer_size)
+
+    # or mix and match in more complex ways:
+    original_plus_delayed_harmonies = Pedalboard(
+        [
+            # Put a compressor at the front of the chain:
+            Compressor(),
+            # Split the chain and mix three different effects equally:
+            Mix(
+                [
+                    Chain([passthrough, Distortion(drive_db=36)]),
+                    Chain([delay_and_pitch_shift, Reverb(room_size=1)]),
+                    delay_longer_and_more_pitch_shift,
+                ]
+            ),
+            # Add a reverb on the final mix:
+            Reverb(),
+        ]
+    )
     original_plus_delayed_harmonies(noise, sample_rate=sample_rate, buffer_size=buffer_size)

@@ -37,7 +37,7 @@ enum class ChannelLayout {
 template <typename SampleType>
 py::array_t<float>
 process(const py::array_t<SampleType, py::array::c_style> inputArray,
-        double sampleRate, const std::vector<Plugin *> &plugins,
+        double sampleRate, const std::vector<std::shared_ptr<Plugin>> plugins,
         unsigned int bufferSize, bool reset) {
   const py::array_t<float, py::array::c_style> float32InputArray =
       inputArray.attr("astype")("float32");
@@ -50,9 +50,9 @@ process(const py::array_t<SampleType, py::array::c_style> inputArray,
 template <typename SampleType>
 py::array_t<float>
 processSingle(const py::array_t<SampleType, py::array::c_style> inputArray,
-              double sampleRate, Plugin &plugin, unsigned int bufferSize,
-              bool reset) {
-  std::vector<Plugin *> plugins{&plugin};
+              double sampleRate, std::shared_ptr<Plugin> plugin,
+              unsigned int bufferSize, bool reset) {
+  std::vector<std::shared_ptr<Plugin>> plugins{plugin};
   return process<SampleType>(inputArray, sampleRate, plugins, bufferSize,
                              reset);
 }
@@ -205,13 +205,13 @@ py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> juceBuffer,
 
 inline int process(juce::AudioBuffer<float> &ioBuffer,
                    juce::dsp::ProcessSpec spec,
-                   const std::vector<Plugin *> &plugins,
+                   const std::vector<std::shared_ptr<Plugin>> &plugins,
                    bool isProbablyLastProcessCall) {
   int totalOutputLatencySamples = 0;
   int expectedOutputLatency = 0;
 
-  for (auto *plugin : plugins) {
-    if (plugin == nullptr)
+  for (auto plugin : plugins) {
+    if (!plugin)
       continue;
     expectedOutputLatency += plugin->getLatencyHint();
   }
@@ -232,8 +232,8 @@ inline int process(juce::AudioBuffer<float> &ioBuffer,
   int startOfOutputInBuffer = 0;
   int lastSampleInBuffer = 0;
 
-  for (auto *plugin : plugins) {
-    if (plugin == nullptr)
+  for (auto plugin : plugins) {
+    if (!plugin)
       continue;
 
     int pluginSamplesReceived = 0;
@@ -321,15 +321,6 @@ inline int process(juce::AudioBuffer<float> &ioBuffer,
   return intendedOutputBufferSize - totalOutputLatencySamples;
 }
 
-void flattenPluginTree(Plugin *plugin, std::vector<Plugin *> &output) {
-  if (std::find(output.begin(), output.end(), plugin) == output.end())
-    output.push_back(plugin);
-
-  for (auto *nestedPlugin : plugin->getNestedPlugins()) {
-    flattenPluginTree(nestedPlugin, output);
-  }
-}
-
 /**
  * Process a given audio buffer through a list of
  * Pedalboard plugins at a given sample rate.
@@ -338,7 +329,7 @@ void flattenPluginTree(Plugin *plugin, std::vector<Plugin *> &output) {
 template <>
 py::array_t<float>
 process<float>(const py::array_t<float, py::array::c_style> inputArray,
-               double sampleRate, const std::vector<Plugin *> &plugins,
+               double sampleRate, std::vector<std::shared_ptr<Plugin>> plugins,
                unsigned int bufferSize, bool reset) {
   const ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
   juce::AudioBuffer<float> ioBuffer = copyPyArrayIntoJuceBuffer(inputArray);
@@ -349,44 +340,49 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
 
     bufferSize = std::min(bufferSize, (unsigned int)ioBuffer.getNumSamples());
 
-    unsigned int countOfPluginsIgnoringNull = 0;
-    for (auto *plugin : plugins) {
-      if (plugin == nullptr)
-        continue;
-      countOfPluginsIgnoringNull++;
-    }
-
     // We'd pass multiple arguments to scoped_lock here, but we don't know how
     // many plugins have been passed at compile time - so instead, we do our own
     // deadlock-avoiding multiple-lock algorithm here. By locking each plugin
     // only in order of its pointers, we're guaranteed to avoid deadlocks with
     // other threads that may be running this same code on the same plugins.
-    std::vector<Plugin *> uniquePluginsSortedByPointer;
-    for (auto *plugin : plugins) {
-      if (plugin == nullptr)
+    std::vector<std::shared_ptr<Plugin>> allPlugins;
+    for (auto plugin : plugins) {
+      if (!plugin)
         continue;
-      flattenPluginTree(plugin, uniquePluginsSortedByPointer);
+      allPlugins.push_back(plugin);
+      if (auto pluginContainer =
+              dynamic_cast<PluginContainer *>(plugin.get())) {
+        auto children = pluginContainer->getAllPlugins();
+        allPlugins.insert(allPlugins.end(), children.begin(), children.end());
+      }
     }
 
-    if (uniquePluginsSortedByPointer.size() < countOfPluginsIgnoringNull) {
+    std::sort(allPlugins.begin(), allPlugins.end(),
+              [](const std::shared_ptr<Plugin> lhs,
+                 const std::shared_ptr<Plugin> rhs) {
+                return lhs.get() < rhs.get();
+              });
+
+    bool containsDuplicates =
+        std::adjacent_find(allPlugins.begin(), allPlugins.end()) !=
+        allPlugins.end();
+
+    if (containsDuplicates) {
       throw std::runtime_error(
           "The same plugin instance is being used multiple times in the same "
-          "chain of plugins, which would cause undefined results.");
+          "chain of plugins, which would cause undefined results. Please "
+          "ensure that no duplicate plugins are present before calling.");
     }
 
-    std::sort(uniquePluginsSortedByPointer.begin(),
-              uniquePluginsSortedByPointer.end(),
-              [](const Plugin *lhs, const Plugin *rhs) { return lhs < rhs; });
-
     std::vector<std::unique_ptr<std::scoped_lock<std::mutex>>> pluginLocks;
-    for (auto *plugin : uniquePluginsSortedByPointer) {
+    for (auto plugin : allPlugins) {
       pluginLocks.push_back(
           std::make_unique<std::scoped_lock<std::mutex>>(plugin->mutex));
     }
 
     if (reset) {
-      for (auto *plugin : plugins) {
-        if (plugin == nullptr)
+      for (auto plugin : plugins) {
+        if (!plugin)
           continue;
         plugin->reset();
       }
@@ -397,8 +393,8 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
     spec.maximumBlockSize = static_cast<juce::uint32>(bufferSize);
     spec.numChannels = static_cast<juce::uint32>(ioBuffer.getNumChannels());
 
-    for (auto *plugin : plugins) {
-      if (plugin == nullptr)
+    for (auto plugin : plugins) {
+      if (!plugin)
         continue;
       plugin->prepare(spec);
     }

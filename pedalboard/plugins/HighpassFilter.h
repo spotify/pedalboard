@@ -41,7 +41,7 @@ private:
 };
 
 inline void init_highpass(py::module &m) {
-  py::class_<HighpassFilter<float>, Plugin>(
+  py::class_<HighpassFilter<float>, Plugin, std::shared_ptr<HighpassFilter<float>>>(
       m, "HighpassFilter",
       "Apply a first-order high-pass filter with a roll-off of 6dB/octave. "
       "The cutoff frequency will be attenuated by -3dB (i.e.: 0.707x as "
