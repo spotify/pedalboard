@@ -28,86 +28,16 @@ from pedalboard_native import Plugin, process, _AudioProcessorParameter
 from pedalboard_native.utils import Mix, Chain
 
 
-# A concrete type for all ways to define a Pedalboard with zero or more plugins:
-PedalboardDefinition = Union[
-    # The standard Pedalboard is a list of plugins,
-    # although nested lists will be unpacked.
-    List[Union[Plugin, 'PedalboardDefinition']],
-    # Tuples can be used in place of lists when necessary,
-    # if putting a chain inside of a mix plugin.
-    Tuple[Union[Plugin, 'PedalboardDefinition']],
-    # Pedalboards can be nested, and the contained
-    # pedalboard's plugins will be treated as a list:
-    'Pedalboard',
-    # Passing a set of plugins will result in them being processed in parallel
-    # (i.e: they will all accept the same input and their outputs will be mixed)
-    Set[Union[Plugin, 'PedalboardDefinition']],
-]
-
-
-def _coalesce_plugin_definitions(
-    _input: Optional[PedalboardDefinition], level: int = 0
-) -> List[Plugin]:
-    """
-    Given a PedalboardDefinition, return a concrete list of plugins that can be executed.
-    Basically: remove the syntactic sugar and add the appropriate Mix() and Chain() plugins.
-    """
-    if isinstance(_input, Plugin):
-        return _input
-    elif hasattr(_input, "plugins"):
-        return _coalesce_plugin_definitions(_input.plugins, level + 1)
-    elif isinstance(_input, List) or isinstance(_input, Tuple):
-        plugins = [
-            _coalesce_plugin_definitions(element, level + 1)
-            for element in _input
-            if element is not None
-        ]
-        if level > 0:
-            return Chain(plugins)
-        else:
-            return plugins
-    elif isinstance(_input, Set):
-        return Mix(
-            [
-                _coalesce_plugin_definitions(element, level + 1)
-                for element in _input
-                if element is not None
-            ]
-        )
-    else:
-        raise TypeError(
-            "Pedalboard(...) expected a list (or set) of plugins (or lists or sets of plugins),"
-            " but found an element of type: {}".format(type(_input))
-        )
-
-
-def _flatten_all_plugins(_input: Optional[PedalboardDefinition]) -> List[Plugin]:
-    """
-    Given a PedalboardDefinition, return a concrete list of plugins that can be executed.
-    Basically: remove the syntactic sugar and add the appropriate Mix() and Chain() plugins.
-    """
-    if hasattr(_input, "plugins"):
-        return _input.plugins
-    elif isinstance(_input, Plugin):
-        return [_input]
-    elif isinstance(_input, List) or isinstance(_input, List) or isinstance(_input, Tuple):
-        return sum([_flatten_all_plugins(element) for element in _input if element is not None], [])
-    return []
-
-
 class Pedalboard(Chain):
     """
     A container for a chain of plugins, to use for processing audio.
     """
 
-    def __init__(self, plugins: Optional[PedalboardDefinition] = None):
-        plugins = _coalesce_plugin_definitions(plugins)
-        if not isinstance(plugins, list):
-            plugins = [plugins]
-        super().__init__(plugins)
+    def __init__(self, plugins: Optional[List[Plugin]] = None):
+        super().__init__(plugins or [])
 
     def __repr__(self) -> str:
-        return "<{} plugins={}>".format(self.__class__.__name__, list(self))
+        return "<{} with {} plugins: {}>".format(self.__class__.__name__, len(self), list(self))
 
 
 FLOAT_SUFFIXES_TO_IGNORE = set(["x", "%", "*", ",", ".", "hz"])

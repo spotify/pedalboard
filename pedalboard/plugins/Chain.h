@@ -77,6 +77,7 @@ inline void init_chain(py::module &m) {
              return new Chain(plugins);
            }),
            py::arg("plugins"))
+      .def(py::init([]() { return new Chain({}); }))
       .def("__repr__",
            [](Chain &plugin) {
              std::ostringstream ss;

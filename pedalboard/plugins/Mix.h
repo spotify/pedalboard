@@ -162,6 +162,7 @@ inline void init_mix(py::module &m) {
              return new Mix(plugins);
            }),
            py::arg("plugins"))
+      .def(py::init([]() { return new Mix({}); }))
       .def("__repr__", [](Mix &plugin) {
         std::ostringstream ss;
         ss << "<pedalboard.Mix with " << plugin.getPlugins().size()

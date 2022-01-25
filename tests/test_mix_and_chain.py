@@ -34,12 +34,11 @@ from pedalboard_native._internal import AddLatency
 NUM_SECONDS = 4
 
 
-def test_chain_syntactic_sugar():
+def test_nested_chain():
     sr = 44100
     _input = np.random.rand(int(NUM_SECONDS * sr), 2).astype(np.float32)
 
-    # Nested chains should work fine when passed as lists:
-    pb = Pedalboard([Gain(6), [Gain(-6), Gain(1)], Gain(-1)])
+    pb = Pedalboard([Gain(6), Chain([Gain(-6), Gain(1)]), Gain(-1)])
     output = pb(_input, sr)
 
     assert isinstance(pb[0], Gain)
@@ -55,12 +54,16 @@ def test_chain_syntactic_sugar():
     np.testing.assert_allclose(_input, output, rtol=0.01)
 
 
-def test_mix_syntactic_sugar():
+def test_nested_list_raises_error():
+    with pytest.raises(TypeError):
+        Pedalboard([Gain(6), [Gain(-6), Gain(1)], Gain(-1)])
+
+
+def test_nested_mix():
     sr = 44100
     _input = np.random.rand(int(NUM_SECONDS * sr), 2).astype(np.float32)
 
-    # Nested mixes should work fine when passed as sets:
-    pb = Pedalboard([Gain(6), {Gain(-6), Gain(-6)}, Gain(-6)])
+    pb = Pedalboard([Gain(6), Mix([Gain(-6), Gain(-6)]), Gain(-6)])
     output = pb(_input, sr)
 
     assert isinstance(pb[0], Gain)
@@ -83,10 +86,10 @@ def test_deep_nesting():
         [
             # This parallel chain should boost by 6dB, but due to
             # there being 2 outputs, the result will be +12dB.
-            {tuple([Gain(1) for _ in range(6)]), tuple([Gain(1) for _ in range(6)])},
+            Mix([Chain([Gain(1) for _ in range(6)]), Chain([Gain(1) for _ in range(6)])]),
             # This parallel chain should cut by -24dB, but due to
             # there being 2 outputs, the result will be -18dB.
-            {tuple([Gain(-1) for _ in range(24)]), tuple([Gain(-1) for _ in range(24)])},
+            Mix([Chain([Gain(-1) for _ in range(24)]), Chain([Gain(-1) for _ in range(24)])]),
         ]
     )
     output = pb(_input, sr)
@@ -101,10 +104,15 @@ def test_nesting_pedalboards():
         [
             # This parallel chain should boost by 6dB, but due to
             # there being 2 outputs, the result will be +12dB.
-            {Pedalboard([Gain(1) for _ in range(6)]), Pedalboard([Gain(1) for _ in range(6)])},
+            Mix([Pedalboard([Gain(1) for _ in range(6)]), Pedalboard([Gain(1) for _ in range(6)])]),
             # This parallel chain should cut by -24dB, but due to
             # there being 2 outputs, the result will be -18dB.
-            {Pedalboard([Gain(-1) for _ in range(24)]), Pedalboard([Gain(-1) for _ in range(24)])},
+            Mix(
+                [
+                    Pedalboard([Gain(-1) for _ in range(24)]),
+                    Pedalboard([Gain(-1) for _ in range(24)]),
+                ]
+            ),
         ]
     )
     output = pb(_input, sr)
@@ -119,10 +127,10 @@ def test_chain_latency_compensation():
         [
             # This parallel chain should boost by 6dB, but due to
             # there being 2 outputs, the result will be +12dB.
-            {tuple([Gain(1) for _ in range(6)]), tuple([Gain(1) for _ in range(6)])},
+            Mix([Chain([Gain(1) for _ in range(6)]), Chain([Gain(1) for _ in range(6)])]),
             # This parallel chain should cut by -24dB, but due to
             # there being 2 outputs, the result will be -18dB.
-            {tuple([Gain(-1) for _ in range(24)]), tuple([Gain(-1) for _ in range(24)])},
+            Mix([Chain([Gain(-1) for _ in range(24)]), Chain([Gain(-1) for _ in range(24)])]),
         ]
     )
     output = pb(_input, sr)
@@ -137,10 +145,12 @@ def test_mix_latency_compensation(sample_rate, buffer_size, latency_a_seconds, l
     noise = np.random.rand(int(NUM_SECONDS * sample_rate))
     pb = Pedalboard(
         [
-            {
-                AddLatency(int(latency_a_seconds * sample_rate)),
-                AddLatency(int(latency_b_seconds * sample_rate)),
-            },
+            Mix(
+                [
+                    AddLatency(int(latency_a_seconds * sample_rate)),
+                    AddLatency(int(latency_b_seconds * sample_rate)),
+                ]
+            ),
         ]
     )
     output = pb(noise, sample_rate, buffer_size=buffer_size)
@@ -157,14 +167,14 @@ def test_chain_latency_compensation(sample_rate, buffer_size, latency_a_seconds,
     noise = np.random.rand(int(NUM_SECONDS * sample_rate))
     pb = Pedalboard(
         [
-            [
+            Chain([
                 AddLatency(int(latency_a_seconds * sample_rate)),
                 AddLatency(int(latency_b_seconds * sample_rate)),
-            ],
-            [
+            ]),
+            Chain([
                 AddLatency(int(latency_a_seconds * sample_rate)),
                 AddLatency(int(latency_b_seconds * sample_rate)),
-            ],
+            ]),
         ]
     )
     output = pb(noise, sample_rate, buffer_size=buffer_size)
@@ -195,7 +205,7 @@ def test_readme_example_does_not_crash(sample_rate, buffer_size):
     )
 
     original_plus_delayed_harmonies = Pedalboard(
-        {passthrough, delay_and_pitch_shift, delay_longer_and_more_pitch_shift}
+        Mix([passthrough, delay_and_pitch_shift, delay_longer_and_more_pitch_shift])
     )
     # TODO: Allow passing a Pedalboard into Mix (which will require Pedalboard to be a subclass of Plugin)
     original_plus_delayed_harmonies(noise, sample_rate=sample_rate, buffer_size=buffer_size)
@@ -206,11 +216,11 @@ def test_readme_example_does_not_crash(sample_rate, buffer_size):
             # Put a compressor at the front of the chain:
             Compressor(),
             # Split the chain and mix three different effects equally:
-            {
-                (passthrough, Distortion(drive_db=36)),
-                (delay_and_pitch_shift, Reverb(room_size=1)),
+            Mix([
+                Pedalboard([passthrough, Distortion(drive_db=36)]),
+                Pedalboard([delay_and_pitch_shift, Reverb(room_size=1)]),
                 delay_longer_and_more_pitch_shift,
-            },
+            ]),
             # Add a reverb on the final mix:
             Reverb(),
         ]
@@ -264,3 +274,14 @@ def test_pedalboard_is_a_plugin(sample_rate, buffer_size):
         ]
     )
     original_plus_delayed_harmonies(noise, sample_rate=sample_rate, buffer_size=buffer_size)
+
+
+@pytest.mark.parametrize("cls", [Mix, Chain, Pedalboard])
+def test_empty_list_is_valid_constructor_arg(cls):
+    assert len(cls([])) == 0
+
+
+
+@pytest.mark.parametrize("cls", [Mix, Chain, Pedalboard])
+def test_no_arg_constructor(cls):
+    assert len(cls()) == 0
