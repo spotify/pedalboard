@@ -19,7 +19,8 @@
 
 namespace Pedalboard {
 template <typename SampleType>
-class Delay : public JucePlugin<juce::dsp::DelayLine<SampleType, juce::dsp::DelayLineInterpolationTypes::None>> {
+class Delay : public JucePlugin<juce::dsp::DelayLine<
+                  SampleType, juce::dsp::DelayLineInterpolationTypes::None>> {
 public:
   SampleType getDelaySeconds() const { return delaySeconds; }
   void setDelaySeconds(const SampleType value) {
@@ -67,7 +68,8 @@ public:
 
     if (delaySeconds == 0.0f) {
       // Special case where DelayLine doesn't do anything for us.
-      // Regardless of the mix or feedback parameters, the input will sound identical.
+      // Regardless of the mix or feedback parameters, the input will sound
+      // identical.
       return context.getInputBlock().getNumSamples();
     }
 
@@ -81,8 +83,8 @@ public:
 
       for (size_t i = 0; i < context.getInputBlock().getNumSamples(); i++) {
         SampleType delayOutput = this->getDSP().popSample(c);
-        this->getDSP().pushSample(c,
-                            channelBuffer[i] + (getFeedback() * delayOutput));
+        this->getDSP().pushSample(c, channelBuffer[i] +
+                                         (getFeedback() * delayOutput));
         channelBuffer[i] =
             (channelBuffer[i] * dryVolume) + (wetVolume * delayOutput);
       }

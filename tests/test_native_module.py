@@ -105,10 +105,9 @@ def test_delay():
     dry_volume = 1.0 - mix
     wet_volume = mix
 
-    delayed_line = np.concatenate([
-        np.zeros(int(delay_seconds * sr)),
-        full_scale_noise
-    ])[:len(result)]
+    delayed_line = np.concatenate([np.zeros(int(delay_seconds * sr)), full_scale_noise])[
+        : len(result)
+    ]
     expected = (dry_volume * full_scale_noise) + (wet_volume * delayed_line)
 
     np.testing.assert_equal(result.shape, expected.shape)
