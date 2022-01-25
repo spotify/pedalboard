@@ -226,6 +226,31 @@ public:
     }
   }
 
+  struct PresetVisitor: juce::ExtensionsVisitor{
+      std::string presetFile;
+      bool result;
+      PresetVisitor(std::string file){
+          presetFile = file;
+      }
+      void visitVST3Client (const juce::ExtensionsVisitor::VST3Client& client) override{
+          result = false;
+          juce::File fl(presetFile);
+          juce::MemoryBlock mb;
+
+          if (fl.loadFileAsData(mb)){
+              result =  client.setPreset(mb);
+          }
+      }
+  };
+
+
+  bool loadPresetData(std::string stateFile) {
+      PresetVisitor visitor {stateFile};
+      pluginInstance->getExtensions(visitor);
+      return visitor.result;
+  }
+
+
   void reinstantiatePlugin() {
     // If we have an existing plugin, save its state and reload its state later:
     juce::MemoryBlock savedState;
@@ -793,6 +818,10 @@ inline void init_external_plugins(py::module &m) {
              ss << ">";
              return ss.str();
            })
+      .def("load_preset",
+          &ExternalPlugin<juce::VST3PluginFormat>::loadPresetData,
+          "Load a VST3 preset file .vstprest format "
+          "return false if fails")
       .def_property_readonly_static(
           "installed_plugins",
           [](py::object /* cls */) { return findInstalledVSTPluginPaths(); },
