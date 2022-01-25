@@ -58,12 +58,13 @@ public:
     }
   }
 
-  void process(
-      const juce::dsp::ProcessContextReplacing<float> &context) override final {
+  int process(
+      const juce::dsp::ProcessContextReplacing<float> &context) override {
     dspBlock.process(context);
+    return context.getOutputBlock().getNumSamples();
   }
 
-  void reset() override final { dspBlock.reset(); }
+  void reset() override { dspBlock.reset(); }
 
   DSPType &getDSP() { return dspBlock; };
 

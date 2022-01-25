@@ -35,6 +35,7 @@ namespace py = pybind11;
 #include "plugins/Chorus.h"
 #include "plugins/Compressor.h"
 #include "plugins/Convolution.h"
+#include "plugins/DelayLine.h"
 #include "plugins/Distortion.h"
 #include "plugins/Gain.h"
 #include "plugins/HighpassFilter.h"
@@ -147,4 +148,8 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_reverb(m);
 
   init_external_plugins(m);
+
+  // Internal plugins for testing, debugging, etc:
+  py::module internal = m.def_submodule("_internal");
+  init_delay_line(internal);
 };

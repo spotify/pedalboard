@@ -33,6 +33,7 @@ from pedalboard.pedalboard import (
 import pytest
 import pedalboard
 import numpy as np
+from typing import Optional
 
 
 TEST_PLUGIN_BASE_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), "plugins")
@@ -142,6 +143,16 @@ if os.environ.get("ENABLE_TESTING_WITH_LOCAL_PLUGINS", False):
                 AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT.append(plugin_path)
             except Exception:
                 pass
+
+
+def plugin_named(*substrings: str) -> Optional[str]:
+    """
+    Return the first plugin filename that contains all of the
+    provided substrings from the list of available test plugins.
+    """
+    for plugin_filename in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT:
+        if all([s in plugin_filename for s in substrings]):
+            return plugin_filename
 
 
 def max_volume_of(x: np.ndarray) -> float:
@@ -589,3 +600,24 @@ def test_wrapped_bool_requires_bool():
 )
 def test_parameter_name_normalization(_input: str, expected: str):
     assert normalize_python_parameter_name(_input) == expected
+
+
+@pytest.mark.skipif(not plugin_named("CHOWTapeModel"), reason="Missing CHOWTapeModel plugin.")
+@pytest.mark.parametrize("buffer_size", [128, 8192, 65536])
+@pytest.mark.parametrize("oversampling", [1, 2, 4, 8, 16])
+def test_external_plugin_latency_compensation(buffer_size: int, oversampling: int):
+    """
+    This test loads CHOWTapeModel (which has non-zero latency due
+    to an internal oversampler), puts it into Bypass mode, then
+    ensures that the input matches the output exactly.
+    """
+    num_seconds = 10.0
+    sample_rate = 48000
+    noise = np.random.rand(int(num_seconds * sample_rate))
+
+    plugin = load_test_plugin(plugin_named("CHOWTapeModel"), disable_caching=True)
+    plugin.bypass = True
+    plugin.oversampling = oversampling
+
+    output = plugin.process(noise, sample_rate, buffer_size=buffer_size)
+    np.testing.assert_allclose(output, noise, atol=0.05)

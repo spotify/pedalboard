@@ -23,20 +23,29 @@ namespace py = pybind11;
 #include "../RubberbandPlugin.h"
 
 namespace Pedalboard {
-class PitchShift : public RubberbandPlugin
 /*
 Modifies pitch of an audio without affecting duration
 */
+class PitchShift : public RubberbandPlugin
+
 {
 private:
   double _scaleFactor = 1.0;
 
+  // Allow pitch shifting by up to 6 octaves up or down:
+  static constexpr float MIN_SCALE_FACTOR = 0.015625;
+  static constexpr float MAX_SCALE_FACTOR = 64.0;
+
 public:
   void setScaleFactor(double scale) {
-    if (scale <= 0) {
-      throw std::range_error("Pitch scale must be a value greater than 0.0.");
+    if (scale < MIN_SCALE_FACTOR || scale > MAX_SCALE_FACTOR) {
+      throw std::range_error("Scale factor must be a value between " +
+                             std::to_string(MIN_SCALE_FACTOR) + " and " +
+                             std::to_string(MAX_SCALE_FACTOR) + ".");
     }
+
     _scaleFactor = scale;
+
     if (rbPtr)
       rbPtr->setPitchScale(_scaleFactor);
   }
@@ -44,20 +53,8 @@ public:
   double getScaleFactor() { return _scaleFactor; }
 
   void prepare(const juce::dsp::ProcessSpec &spec) override final {
-    bool specChanged = lastSpec.sampleRate != spec.sampleRate ||
-                       lastSpec.maximumBlockSize < spec.maximumBlockSize ||
-                       spec.numChannels != lastSpec.numChannels;
-
-    if (!rbPtr || specChanged) {
-      auto stretcherOptions = RubberBandStretcher::OptionProcessRealTime |
-                              RubberBandStretcher::OptionThreadingNever;
-      rbPtr = std::make_unique<RubberBandStretcher>(
-          spec.sampleRate, spec.numChannels, stretcherOptions);
-      rbPtr->setMaxProcessSize(spec.maximumBlockSize);
-      rbPtr->setPitchScale(_scaleFactor);
-      rbPtr->reset();
-      lastSpec = spec;
-    }
+    RubberbandPlugin::prepare(spec);
+    rbPtr->setPitchScale(_scaleFactor);
   }
 };
 

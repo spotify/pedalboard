@@ -514,6 +514,7 @@ public:
 
       // Force prepare() to be called again later by invalidating lastSpec:
       lastSpec.maximumBlockSize = 0;
+      samplesProvided = 0;
     }
   }
 
@@ -543,8 +544,8 @@ public:
     }
   }
 
-  void
-  process(const juce::dsp::ProcessContextReplacing<float> &context) override {
+  int process(
+      const juce::dsp::ProcessContextReplacing<float> &context) override {
 
     if (pluginInstance) {
       juce::MidiBuffer emptyMidiBuffer;
@@ -614,7 +615,17 @@ public:
                                            pluginBufferChannelCount,
                                            outputBlock.getNumSamples());
       pluginInstance->processBlock(audioBuffer, emptyMidiBuffer);
+      samplesProvided += outputBlock.getNumSamples();
+
+      // To compensate for any latency added by the plugin,
+      // only tell Pedalboard to use the last _n_ samples.
+      long usableSamplesProduced =
+          samplesProvided - pluginInstance->getLatencySamples();
+      return static_cast<int>(
+          std::min(usableSamplesProduced, (long)outputBlock.getNumSamples()));
     }
+
+    return 0;
   }
 
   std::vector<juce::AudioProcessorParameter *> getParameters() const {
@@ -634,6 +645,12 @@ public:
     return nullptr;
   }
 
+  virtual int getLatencyHint() override {
+    if (!pluginInstance)
+      return 0;
+    return pluginInstance->getLatencySamples();
+  }
+
 private:
   constexpr static int ExternalLoadSampleRate = 44100,
                        ExternalLoadMaximumBlockSize = 8192;
@@ -641,6 +658,8 @@ private:
   juce::PluginDescription foundPluginDescription;
   juce::AudioPluginFormatManager pluginFormatManager;
   std::unique_ptr<juce::AudioPluginInstance> pluginInstance;
+
+  long samplesProvided = 0;
 
   ExternalPluginReloadType reloadType = ExternalPluginReloadType::Unknown;
 };

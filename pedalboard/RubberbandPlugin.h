@@ -1,18 +1,54 @@
+/*
+ * pedalboard
+ * Copyright 2022 Spotify AB
+ *
+ * Licensed under the GNU Public License, Version 3.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.gnu.org/licenses/gpl-3.0.html
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "../vendors/rubberband/rubberband/RubberBandStretcher.h"
 #include "Plugin.h"
 
 using namespace RubberBand;
 
 namespace Pedalboard {
-class RubberbandPlugin : public Plugin
+
 /*
-Base class for rubberband plugins.
-*/
-{
+ * Base class for all Rubber Band-derived plugins.
+ */
+class RubberbandPlugin : public Plugin {
 public:
   virtual ~RubberbandPlugin(){};
 
-  void process(
+  virtual void prepare(const juce::dsp::ProcessSpec &spec) override {
+    bool specChanged = lastSpec.sampleRate != spec.sampleRate ||
+                       lastSpec.maximumBlockSize < spec.maximumBlockSize ||
+                       spec.numChannels != lastSpec.numChannels;
+
+    if (!rbPtr || specChanged) {
+      auto stretcherOptions = RubberBandStretcher::OptionProcessRealTime |
+                              RubberBandStretcher::OptionThreadingNever |
+                              RubberBandStretcher::OptionChannelsTogether |
+                              RubberBandStretcher::OptionPitchHighQuality;
+      rbPtr = std::make_unique<RubberBandStretcher>(
+          spec.sampleRate, spec.numChannels, stretcherOptions);
+      rbPtr->setMaxProcessSize(spec.maximumBlockSize);
+
+      lastSpec = spec;
+      reset();
+    }
+  }
+
+  int process(
       const juce::dsp::ProcessContextReplacing<float> &context) override final {
     if (rbPtr) {
       auto inBlock = context.getInputBlock();
@@ -34,8 +70,9 @@ public:
       }
 
       // Rubberband expects all channel data with one float array per channel
-      processSamples(inChannels, outChannels, len, numChannels);
+      return processSamples(inChannels, outChannels, len, numChannels);
     }
+    return 0;
   }
 
   void reset() override final {
@@ -45,8 +82,8 @@ public:
   }
 
 private:
-  void processSamples(const float *const *inBlock, float **outBlock,
-                      size_t samples, size_t numChannels) {
+  int processSamples(const float *const *inBlock, float **outBlock,
+                     size_t samples, size_t numChannels) {
     // Push all of the input samples into RubberBand:
     rbPtr->process(inBlock, samples, false);
 
@@ -76,10 +113,23 @@ private:
     }
 
     // Pull the next audio data out of Rubberband:
-    rbPtr->retrieve(outBlock, samplesToPull);
+    return rbPtr->retrieve(outBlock, samplesToPull);
   }
 
 protected:
+  virtual int getLatencyHint() override {
+    if (!rbPtr)
+      return 0;
+
+    initialSamplesRequired =
+        std::max(initialSamplesRequired,
+                 (int)(rbPtr->getSamplesRequired() + rbPtr->getLatency() +
+                       lastSpec.maximumBlockSize));
+
+    return initialSamplesRequired;
+  }
+
   std::unique_ptr<RubberBandStretcher> rbPtr;
+  int initialSamplesRequired = 0;
 };
 }; // namespace Pedalboard
