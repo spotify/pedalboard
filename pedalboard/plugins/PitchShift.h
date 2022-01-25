@@ -30,48 +30,46 @@ class PitchShift : public RubberbandPlugin
 
 {
 private:
-  double _scaleFactor = 1.0;
+  double _semitones = 0.0;
 
   // Allow pitch shifting by up to 6 octaves up or down:
-  static constexpr float MIN_SCALE_FACTOR = 0.015625;
-  static constexpr float MAX_SCALE_FACTOR = 64.0;
+  static constexpr int MIN_SEMITONES = -6 * 12;
+  static constexpr int MAX_SEMITONES = 6 * 12;
+
+  double getScaleFactor() { return pow(2, (getSemitones() / 12)); }
 
 public:
-  void setScaleFactor(double scale) {
-    if (scale < MIN_SCALE_FACTOR || scale > MAX_SCALE_FACTOR) {
-      throw std::range_error("Scale factor must be a value between " +
-                             std::to_string(MIN_SCALE_FACTOR) + " and " +
-                             std::to_string(MAX_SCALE_FACTOR) + ".");
+  void setSemitones(double semitones) {
+    if (semitones < MIN_SEMITONES || semitones > MAX_SEMITONES) {
+      throw std::range_error("Semitones of pitch must be a value between " +
+                             std::to_string(MIN_SEMITONES) + "st and " +
+                             std::to_string(MAX_SEMITONES) + "st.");
     }
 
-    _scaleFactor = scale;
+    _semitones = semitones;
 
     if (rbPtr)
-      rbPtr->setPitchScale(_scaleFactor);
+      rbPtr->setPitchScale(getScaleFactor());
   }
 
-  double getScaleFactor() { return _scaleFactor; }
+  double getSemitones() { return _semitones; }
 
   void prepare(const juce::dsp::ProcessSpec &spec) override final {
     RubberbandPlugin::prepare(spec);
-    rbPtr->setPitchScale(_scaleFactor);
+    rbPtr->setPitchScale(getScaleFactor());
   }
 };
 
 inline void init_pitch_shift(py::module &m) {
   py::class_<PitchShift, Plugin>(
-      m, "PitchShift",
-      "Shift pitch without affecting audio duration. Shifted audio may start "
-      "with a short duration of silence, depending on the scale factor used. "
-      "The rate of the audio will be multiplied by scale_factor (i.e.: 2x "
-      "means one octave up, 0.5x means one octave down).")
+      m, "PitchShift", "Shift pitch without affecting audio duration.")
       .def(py::init([](double scale) {
              auto plugin = new PitchShift();
-             plugin->setScaleFactor(scale);
+             plugin->setSemitones(scale);
              return plugin;
            }),
-           py::arg("scale_factor") = 1.0)
-      .def_property("scale_factor", &PitchShift::getScaleFactor,
-                    &PitchShift::setScaleFactor);
+           py::arg("semitones") = 0.0)
+      .def_property("semitones", &PitchShift::getSemitones,
+                    &PitchShift::setSemitones);
 }
 }; // namespace Pedalboard
