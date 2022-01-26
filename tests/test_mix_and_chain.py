@@ -119,24 +119,6 @@ def test_nesting_pedalboards():
     np.testing.assert_allclose(_input * 0.5, output, rtol=0.01)
 
 
-def test_chain_latency_compensation():
-    sr = 44100
-    _input = np.random.rand(int(NUM_SECONDS * sr), 2).astype(np.float32)
-
-    pb = Pedalboard(
-        [
-            # This parallel chain should boost by 6dB, but due to
-            # there being 2 outputs, the result will be +12dB.
-            Mix([Chain([Gain(1) for _ in range(6)]), Chain([Gain(1) for _ in range(6)])]),
-            # This parallel chain should cut by -24dB, but due to
-            # there being 2 outputs, the result will be -18dB.
-            Mix([Chain([Gain(-1) for _ in range(24)]), Chain([Gain(-1) for _ in range(24)])]),
-        ]
-    )
-    output = pb(_input, sr)
-    np.testing.assert_allclose(_input * 0.5, output, rtol=0.01)
-
-
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
 @pytest.mark.parametrize("buffer_size", [128, 8192, 22050, 65536])
 @pytest.mark.parametrize("latency_a_seconds", [0.25, 1, NUM_SECONDS / 2])
@@ -211,7 +193,6 @@ def test_readme_example_does_not_crash(sample_rate, buffer_size):
     original_plus_delayed_harmonies = Pedalboard(
         Mix([passthrough, delay_and_pitch_shift, delay_longer_and_more_pitch_shift])
     )
-    # TODO: Allow passing a Pedalboard into Mix (which will require Pedalboard to be a subclass of Plugin)
     original_plus_delayed_harmonies(noise, sample_rate=sample_rate, buffer_size=buffer_size)
 
     # or mix and match in more complex ways:
@@ -251,7 +232,7 @@ def test_pedalboard_is_a_plugin(sample_rate, buffer_size):
 
     delay_longer_and_more_pitch_shift = Chain(
         [
-            Delay(delay_seconds=0.25, mix=1.0),
+            Delay(delay_seconds=0.5, mix=1.0),
             PitchShift(semitones=12),
             Gain(gain_db=-6),
         ]

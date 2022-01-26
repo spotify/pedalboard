@@ -183,9 +183,7 @@ as much as you like:
 
 ```python
 import soundfile as sf
-from pedalboard import \
-  Pedalboard, Compressor, Delay, Distortion, \
-  Gain, PitchShift, Reverb, Mix
+from pedalboard import Pedalboard, Compressor, Delay, Distortion, Gain, PitchShift, Reverb, Mix
 
 passthrough = Gain(gain_db=0)
 
@@ -196,7 +194,7 @@ delay_and_pitch_shift = Pedalboard([
 ])
 
 delay_longer_and_more_pitch_shift = Pedalboard([
-  Delay(delay_seconds=0.25, mix=1.0),
+  Delay(delay_seconds=0.5, mix=1.0),
   PitchShift(semitones=12),
   Gain(gain_db=-6),
 ])
