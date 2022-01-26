@@ -39,6 +39,7 @@ namespace py = pybind11;
 #include "plugins/Distortion.h"
 #include "plugins/Gain.h"
 #include "plugins/HighpassFilter.h"
+#include "plugins/Invert.h"
 #include "plugins/LadderFilter.h"
 #include "plugins/Limiter.h"
 #include "plugins/LowpassFilter.h"
@@ -139,6 +140,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_distortion(m);
   init_gain(m);
   init_highpass(m);
+  init_invert(m);
   init_ladderfilter(m);
   init_limiter(m);
   init_lowpass(m);
