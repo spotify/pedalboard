@@ -18,99 +18,151 @@
 import os
 import platform
 from subprocess import check_output
-from pybind11.setup_helpers import Pybind11Extension
+from pybind11.setup_helpers import Pybind11Extension, build_ext
 from pathlib import Path
 from distutils.core import setup
 from distutils.unixccompiler import UnixCCompiler
 
 DEBUG = bool(int(os.environ.get('DEBUG', 0)))
 
-JUCE_CPPFLAGS = [
-    "-DJUCE_DISPLAY_SPLASH_SCREEN=1",
-    "-DJUCE_USE_DARK_SPLASH_SCREEN=1",
-    "-DJUCE_MODULE_AVAILABLE_juce_audio_basics=1",
-    "-DJUCE_MODULE_AVAILABLE_juce_audio_formats=1",
-    "-DJUCE_MODULE_AVAILABLE_juce_audio_processors=1",
-    "-DJUCE_MODULE_AVAILABLE_juce_core=1",
-    "-DJUCE_MODULE_AVAILABLE_juce_data_structures=1",
-    "-DJUCE_MODULE_AVAILABLE_juce_dsp=1",
-    "-DJUCE_MODULE_AVAILABLE_juce_events=1",
-    "-DJUCE_MODULE_AVAILABLE_juce_graphics=1",
-    "-DJUCE_MODULE_AVAILABLE_juce_gui_basics=1",
-    "-DJUCE_MODULE_AVAILABLE_juce_gui_extra=1",
-    "-DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1",
-    "-DJUCE_STRICT_REFCOUNTEDPOINTER=1",
-    "-DJUCE_STANDALONE_APPLICATION=1",
-    "-DJUCER_LINUX_MAKE_6D53C8B4=1",
-    "-DJUCE_APP_VERSION=1.0.0",
-    "-DJUCE_APP_VERSION_HEX=0x10000",
-    "-DUSE_BQRESAMPLER=1",
-    "-DNO_THREADING=1",  # for RubberBand, whose threading we have disabled
+# C or C++ flags:
+ALL_COMPILER_FLAGS = [
     '-Wall',
 ]
+ALL_INCLUDES = []
+ALL_LINK_ARGS = []
+ALL_CPPFLAGS = []
+ALL_LIBRARIES = []
+ALL_SOURCE_PATHS = []
 
+# Add JUCE-related flags:
+ALL_CPPFLAGS.extend(
+    [
+        "-DJUCE_DISPLAY_SPLASH_SCREEN=1",
+        "-DJUCE_USE_DARK_SPLASH_SCREEN=1",
+        "-DJUCE_MODULE_AVAILABLE_juce_audio_basics=1",
+        "-DJUCE_MODULE_AVAILABLE_juce_audio_formats=1",
+        "-DJUCE_MODULE_AVAILABLE_juce_audio_processors=1",
+        "-DJUCE_MODULE_AVAILABLE_juce_core=1",
+        "-DJUCE_MODULE_AVAILABLE_juce_data_structures=1",
+        "-DJUCE_MODULE_AVAILABLE_juce_dsp=1",
+        "-DJUCE_MODULE_AVAILABLE_juce_events=1",
+        "-DJUCE_MODULE_AVAILABLE_juce_graphics=1",
+        "-DJUCE_MODULE_AVAILABLE_juce_gui_basics=1",
+        "-DJUCE_MODULE_AVAILABLE_juce_gui_extra=1",
+        "-DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1",
+        "-DJUCE_STRICT_REFCOUNTEDPOINTER=1",
+        "-DJUCE_STANDALONE_APPLICATION=1",
+        "-DJUCER_LINUX_MAKE_6D53C8B4=1",
+        "-DJUCE_APP_VERSION=1.0.0",
+        "-DJUCE_APP_VERSION_HEX=0x10000",
+        # Consoleapp flags:
+        "-DJucePlugin_Build_VST=0",
+        "-DJucePlugin_Build_VST3=0",
+        "-DJucePlugin_Build_AU=0",
+        "-DJucePlugin_Build_AUv3=0",
+        "-DJucePlugin_Build_RTAS=0",
+        "-DJucePlugin_Build_AAX=0",
+        "-DJucePlugin_Build_Standalone=0",
+        "-DJucePlugin_Build_Unity=0",
+        # "-DJUCE_PLUGINHOST_VST=1", # Include for VST2 support, not licensed by Steinberg
+        "-DJUCE_PLUGINHOST_VST3=1",
+        # "-DJUCE_PLUGINHOST_LADSPA=1", # Include for LADSPA plugin support, Linux only.
+        "-DJUCE_DISABLE_JUCE_VERSION_PRINTING=1",
+        "-DJUCE_WEB_BROWSER=0",
+        "-DJUCE_USE_CURL=0",
+        # "-DJUCE_USE_FREETYPE=0",
+    ]
+)
+ALL_INCLUDES.extend(['JUCE/modules/', 'JUCE/modules/juce_audio_processors/format_types/VST3_SDK/'])
+
+# Rubber Band library:
+ALL_CPPFLAGS.extend(
+    [
+        "-DUSE_BQRESAMPLER=1",
+        "-DNO_THREADING=1",
+        "-D_HAS_STD_BYTE=0",
+        "-DNOMINMAX",
+    ]
+)
+ALL_SOURCE_PATHS += list(Path("vendors/rubberband/single").glob("*.cpp"))
+
+# LAME/mpglib:
+# (man, this code is portable)
+ALL_COMPILER_FLAGS.extend(
+    [
+        "-DSIZEOF_DOUBLE=8",
+        "-DSIZEOF_FLOAT=4",
+        "-DSIZEOF_INT=4",
+        "-DSIZEOF_LONG=4",
+        "-DSIZEOF_LONG_DOUBLE=12",
+        "-DSIZEOF_SHORT=2",
+        "-DSIZEOF_UNSIGNED_INT=4",
+        "-DSIZEOF_UNSIGNED_LONG=4",
+        "-DSIZEOF_UNSIGNED_SHORT=2",
+        "-DSTDC_HEADERS",
+        "-DHAVE_ERRNO_H",
+        "-DHAVE_FCNTL_H",
+        "-DHAVE_LIMITS_H",
+        "-DPROTOTYPES=1",
+        "-DHAVE_STRCHR",
+        "-DHAVE_MEMCPY",
+        "-Dieee754_float32_t=float",
+        "-DHAVE_MPGLIB",
+    ]
+)
+ALL_SOURCE_PATHS += list(Path("vendors/lame/libmp3lame").glob("*.c"))
+ALL_SOURCE_PATHS += list(Path("vendors/lame/mpglib").glob("*.c"))
+ALL_INCLUDES += [
+    'vendors/lame/include/',
+    'vendors/lame/libmp3lame/',
+    'vendors/lame/',
+]
+
+
+# Add platform-specific flags:
 if platform.system() == "Darwin":
-    JUCE_CPPFLAGS.append("-DMACOS=1")
-    JUCE_CPPFLAGS.append("-DHAVE_VDSP=1")
+    ALL_CPPFLAGS.append("-DMACOS=1")
+    ALL_CPPFLAGS.append("-DHAVE_VDSP=1")
 elif platform.system() == "Linux":
-    JUCE_CPPFLAGS.append("-DLINUX=1")
+    ALL_CPPFLAGS.append("-DLINUX=1")
 elif platform.system() == "Windows":
-    JUCE_CPPFLAGS.append("-DWINDOWS=1")
-    JUCE_CPPFLAGS.append("-D_HAS_STD_BYTE=0")
-    JUCE_CPPFLAGS.append("-DNOMINMAX")
+    ALL_CPPFLAGS.append("-DWINDOWS=1")
 else:
     raise NotImplementedError(
         "Not sure how to build JUCE on platform: {}!".format(platform.system())
     )
 
 
-JUCE_CPPFLAGS_CONSOLEAPP = [
-    "-DJucePlugin_Build_VST=0",
-    "-DJucePlugin_Build_VST3=0",
-    "-DJucePlugin_Build_AU=0",
-    "-DJucePlugin_Build_AUv3=0",
-    "-DJucePlugin_Build_RTAS=0",
-    "-DJucePlugin_Build_AAX=0",
-    "-DJucePlugin_Build_Standalone=0",
-    "-DJucePlugin_Build_Unity=0",
-    # "-DJUCE_PLUGINHOST_VST=1", # Include for VST2 support, not licensed by Steinberg
-    "-DJUCE_PLUGINHOST_VST3=1",
-    # "-DJUCE_PLUGINHOST_LADSPA=1", # Include for LADSPA plugin support, Linux only.
-    "-DJUCE_DISABLE_JUCE_VERSION_PRINTING=1",
-    "-DJUCE_WEB_BROWSER=0",
-    "-DJUCE_USE_CURL=0",
-    # "-DJUCE_USE_FREETYPE=0",
-]
-
-LINK_ARGS = []
-
-JUCE_INCLUDES = ['JUCE/modules/', 'JUCE/modules/juce_audio_processors/format_types/VST3_SDK/']
-
 if DEBUG:
-    JUCE_CPPFLAGS += ["-DDEBUG=1", "-D_DEBUG=1"]
-    JUCE_CPPFLAGS += ['-O0', '-g']
+    ALL_CPPFLAGS += ["-DDEBUG=1", "-D_DEBUG=1"]
+    ALL_CPPFLAGS += ['-O0', '-g']
     if bool(int(os.environ.get('USE_ASAN', 0))):
-        JUCE_CPPFLAGS += ['-fsanitize=address', '-fno-omit-frame-pointer']
-        LINK_ARGS += ['-fsanitize=address']
+        ALL_CPPFLAGS += ['-fsanitize=address', '-fno-omit-frame-pointer']
+        ALL_LINK_ARGS += ['-fsanitize=address']
         if platform.system() == "Linux":
-            LINK_ARGS += ['-shared-libasan']
+            ALL_LINK_ARGS += ['-shared-libasan']
     elif bool(int(os.environ.get('USE_TSAN', 0))):
-        JUCE_CPPFLAGS += ['-fsanitize=thread']
-        LINK_ARGS += ['-fsanitize=thread']
+        ALL_CPPFLAGS += ['-fsanitize=thread']
+        ALL_LINK_ARGS += ['-fsanitize=thread']
     elif bool(int(os.environ.get('USE_MSAN', 0))):
-        JUCE_CPPFLAGS += ['-fsanitize=memory', '-fsanitize-memory-track-origins']
-        LINK_ARGS += ['-fsanitize=memory']
+        ALL_CPPFLAGS += ['-fsanitize=memory', '-fsanitize-memory-track-origins']
+        ALL_LINK_ARGS += ['-fsanitize=memory']
 else:
-    JUCE_CPPFLAGS += ['/Ox' if platform.system() == "Windows" else '-O3']
+    ALL_CPPFLAGS += ['/Ox' if platform.system() == "Windows" else '-O3']
 
 
 # Regardless of platform, allow our compiler to compile .mm files as Objective-C (required on MacOS)
 UnixCCompiler.src_extensions.append(".mm")
 UnixCCompiler.language_map[".mm"] = "objc++"
 
-LIBS = []
-sources = list(Path("pedalboard").glob("**/*.cpp"))
-sources += list(Path("vendors/rubberband/single").glob("*.cpp"))
+# Add all Pedalboard C++ sources:
+ALL_SOURCE_PATHS += list(Path("pedalboard").glob("**/*.cpp"))
+
+# Rubber Band pitch shifter/time stretcher
+
+
+# LAME MP3 encoder:
 
 if platform.system() == "Darwin":
     MACOS_FRAMEWORKS = [
@@ -130,9 +182,9 @@ if platform.system() == "Darwin":
     # On MacOS, we link against some Objective-C system libraries, so we search
     # for Objective-C++ files instead of C++ files.
     for f in MACOS_FRAMEWORKS:
-        LINK_ARGS += ['-framework', f]
-    JUCE_CPPFLAGS_CONSOLEAPP += ["-DJUCE_PLUGINHOST_AU=1"]
-    JUCE_CPPFLAGS.append('-xobjective-c++')
+        ALL_LINK_ARGS += ['-framework', f]
+    ALL_CPPFLAGS.append("-DJUCE_PLUGINHOST_AU=1")
+    ALL_CPPFLAGS.append('-xobjective-c++')
 
     # Replace .cpp sources with matching .mm sources on macOS to force the
     # compiler to use Apple's Objective-C and Objective-C++ code.
@@ -141,15 +193,15 @@ if platform.system() == "Darwin":
             iter(
                 [
                     cpp_source
-                    for cpp_source in sources
+                    for cpp_source in ALL_SOURCE_PATHS
                     if os.path.splitext(objc_source.name)[0] == os.path.splitext(cpp_source.name)[0]
                 ]
             ),
             None,
         )
         if matching_cpp_source:
-            sources[sources.index(matching_cpp_source)] = objc_source
-    PEDALBOARD_SOURCES = [str(p.resolve()) for p in sources]
+            ALL_SOURCE_PATHS[ALL_SOURCE_PATHS.index(matching_cpp_source)] = objc_source
+    ALL_RESOLVED_SOURCE_PATHS = [str(p.resolve()) for p in ALL_SOURCE_PATHS]
 elif platform.system() == "Linux":
     for package in ['freetype2']:
         flags = (
@@ -159,14 +211,14 @@ elif platform.system() == "Linux":
             .split(' ')
         )
         include_paths = [flag[2:] for flag in flags]
-        JUCE_INCLUDES += include_paths
-    LINK_ARGS += ['-lfreetype']
+        ALL_INCLUDES += include_paths
+    ALL_LINK_ARGS += ['-lfreetype']
 
-    PEDALBOARD_SOURCES = [str(p.resolve()) for p in sources]
+    ALL_RESOLVED_SOURCE_PATHS = [str(p.resolve()) for p in ALL_SOURCE_PATHS]
 elif platform.system() == "Windows":
-    JUCE_CPPFLAGS += ['-DJUCE_DLL_BUILD=1']
+    ALL_CPPFLAGS += ['-DJUCE_DLL_BUILD=1']
     # https://forum.juce.com/t/statically-linked-exe-in-win-10-not-working/25574/3
-    LIBS.extend(
+    ALL_LIBRARIES.extend(
         [
             "kernel32",
             "user32",
@@ -182,19 +234,46 @@ elif platform.system() == "Windows":
             "odbccp32",
         ]
     )
-    PEDALBOARD_SOURCES = [str(p.resolve()) for p in sources]
+    ALL_RESOLVED_SOURCE_PATHS = [str(p.resolve()) for p in ALL_SOURCE_PATHS]
 else:
     raise NotImplementedError(
         "Not sure how to build JUCE on platform: {}!".format(platform.system())
     )
 
+
+class C_CxxCompiler(UnixCCompiler):
+    def _compile(self, obj, src, ext, cc_args, extra_postargs, pp_opts):
+        _cc_args = cc_args
+
+        if ext in ('.cpp', '.cxx', '.cc', '.mm'):
+            _cc_args = cc_args + ALL_CPPFLAGS
+        elif ext in ('.c'):
+            # We're compiling C code, remove the -std= arg:
+            extra_postargs = [arg for arg in extra_postargs if '-std=' not in arg]
+
+        UnixCCompiler._compile(self, obj, src, ext, _cc_args, extra_postargs, pp_opts)
+
+
+class BuildC_CxxExtensions(build_ext):
+    def build_extensions(self, *args, **kwargs):
+        if self.compiler.compiler_type == 'unix':
+            # Replace the compiler
+            old_compiler = self.compiler
+            self.compiler = C_CxxCompiler()
+
+            # Copy its attributes
+            for attr, value in old_compiler.__dict__.items():
+                setattr(self.compiler, attr, value)
+        build_ext.build_extensions(self, *args, **kwargs)
+
+
 pedalboard_cpp = Pybind11Extension(
     'pedalboard_native',
-    sources=PEDALBOARD_SOURCES,
-    include_dirs=JUCE_INCLUDES,
-    extra_compile_args=JUCE_CPPFLAGS + JUCE_CPPFLAGS_CONSOLEAPP,
-    extra_link_args=LINK_ARGS,
-    libraries=LIBS,
+    sources=ALL_RESOLVED_SOURCE_PATHS,
+    include_dirs=ALL_INCLUDES,
+    extra_compile_args=ALL_COMPILER_FLAGS,
+    extra_link_args=ALL_LINK_ARGS,
+    libraries=ALL_LIBRARIES,
     language="c++",
     cxx_std=17,
 )
@@ -239,4 +318,5 @@ setup(
     ext_modules=[pedalboard_cpp],
     install_requires=['numpy'],
     packages=['pedalboard'],
+    cmdclass={"build_ext": BuildC_CxxExtensions},
 )

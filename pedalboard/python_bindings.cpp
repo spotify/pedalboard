@@ -43,6 +43,7 @@ namespace py = pybind11;
 #include "plugins/LadderFilter.h"
 #include "plugins/Limiter.h"
 #include "plugins/LowpassFilter.h"
+#include "plugins/MP3Compressor.h"
 #include "plugins/NoiseGate.h"
 #include "plugins/Phaser.h"
 #include "plugins/PitchShift.h"
@@ -144,6 +145,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_ladderfilter(m);
   init_limiter(m);
   init_lowpass(m);
+  init_mp3_compressor(m);
   init_noisegate(m);
   init_phaser(m);
   init_pitch_shift(m);

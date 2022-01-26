@@ -4,3 +4,6 @@
 [submodule "pedalboard/vendors/rubberband"]
 	path = vendors/rubberband
 	url = https://github.com/BreakfastQuay/Rubberband.git
+[submodule "vendors/lame"]
+	path = vendors/lame
+	url = https://github.com/lameproject/lame.git
