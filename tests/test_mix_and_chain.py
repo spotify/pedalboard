@@ -167,14 +167,18 @@ def test_chain_latency_compensation(sample_rate, buffer_size, latency_a_seconds,
     noise = np.random.rand(int(NUM_SECONDS * sample_rate))
     pb = Pedalboard(
         [
-            Chain([
-                AddLatency(int(latency_a_seconds * sample_rate)),
-                AddLatency(int(latency_b_seconds * sample_rate)),
-            ]),
-            Chain([
-                AddLatency(int(latency_a_seconds * sample_rate)),
-                AddLatency(int(latency_b_seconds * sample_rate)),
-            ]),
+            Chain(
+                [
+                    AddLatency(int(latency_a_seconds * sample_rate)),
+                    AddLatency(int(latency_b_seconds * sample_rate)),
+                ]
+            ),
+            Chain(
+                [
+                    AddLatency(int(latency_a_seconds * sample_rate)),
+                    AddLatency(int(latency_b_seconds * sample_rate)),
+                ]
+            ),
         ]
     )
     output = pb(noise, sample_rate, buffer_size=buffer_size)
@@ -216,11 +220,13 @@ def test_readme_example_does_not_crash(sample_rate, buffer_size):
             # Put a compressor at the front of the chain:
             Compressor(),
             # Split the chain and mix three different effects equally:
-            Mix([
-                Pedalboard([passthrough, Distortion(drive_db=36)]),
-                Pedalboard([delay_and_pitch_shift, Reverb(room_size=1)]),
-                delay_longer_and_more_pitch_shift,
-            ]),
+            Mix(
+                [
+                    Pedalboard([passthrough, Distortion(drive_db=36)]),
+                    Pedalboard([delay_and_pitch_shift, Reverb(room_size=1)]),
+                    delay_longer_and_more_pitch_shift,
+                ]
+            ),
             # Add a reverb on the final mix:
             Reverb(),
         ]
@@ -279,7 +285,6 @@ def test_pedalboard_is_a_plugin(sample_rate, buffer_size):
 @pytest.mark.parametrize("cls", [Mix, Chain, Pedalboard])
 def test_empty_list_is_valid_constructor_arg(cls):
     assert len(cls([])) == 0
-
 
 
 @pytest.mark.parametrize("cls", [Mix, Chain, Pedalboard])

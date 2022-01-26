@@ -14,18 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import collections
 import platform
 import weakref
 from functools import update_wrapper
 from contextlib import contextmanager
-from typing import List, Optional, Dict, Union, Tuple, Set, Iterable, Union
+from typing import List, Optional, Dict, Tuple, Iterable, Union
 
-import numpy as np
-
-from pedalboard_native import Plugin, process, _AudioProcessorParameter
-from pedalboard_native.utils import Mix, Chain
+from pedalboard_native import Plugin, _AudioProcessorParameter
+from pedalboard_native.utils import Chain
 
 
 class Pedalboard(Chain):

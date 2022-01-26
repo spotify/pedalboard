@@ -46,7 +46,6 @@ def test_fail_on_invalid_buffer_size():
 
 
 def test_repr():
-    sr = 44100
     gain = Gain(-6)
     value = repr(Pedalboard([gain]))
     # Allow flexibility; all we care about is that these values exist in the repr.
@@ -56,7 +55,6 @@ def test_repr():
 
 
 def test_is_list_like():
-    sr = 44100
     gain = Gain(-6)
 
     assert len(Pedalboard([gain])) == 1
