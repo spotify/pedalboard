@@ -33,7 +33,12 @@ class Pedalboard(Chain):
         super().__init__(plugins or [])
 
     def __repr__(self) -> str:
-        return "<{} with {} plugins: {}>".format(self.__class__.__name__, len(self), list(self))
+        return "<{} with {} plugin{}: {}>".format(
+            self.__class__.__name__,
+            len(self),
+            "" if len(self) == 1 else "s",
+            list(self),
+        )
 
 
 FLOAT_SUFFIXES_TO_IGNORE = set(["x", "%", "*", ",", ".", "hz"])

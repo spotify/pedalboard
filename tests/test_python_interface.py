@@ -50,8 +50,16 @@ def test_repr():
     value = repr(Pedalboard([gain]))
     # Allow flexibility; all we care about is that these values exist in the repr.
     assert "Pedalboard" in value
-    assert "plugins=" in value
+    assert " 1 " in value
     assert repr(gain) in value
+
+    gain2 = Gain(-6)
+    value = repr(Pedalboard([gain, gain2]))
+    # Allow flexibility; all we care about is that these values exist in the repr.
+    assert "Pedalboard" in value
+    assert " 2 " in value
+    assert repr(gain) in value
+    assert repr(gain2) in value
 
 
 def test_is_list_like():
