@@ -41,7 +41,8 @@ private:
 };
 
 inline void init_lowpass(py::module &m) {
-  py::class_<LowpassFilter<float>, Plugin, std::shared_ptr<LowpassFilter<float>>>(
+  py::class_<LowpassFilter<float>, Plugin,
+             std::shared_ptr<LowpassFilter<float>>>(
       m, "LowpassFilter",
       "Apply a first-order low-pass filter with a roll-off of 6dB/octave. "
       "The cutoff frequency will be attenuated by -3dB (i.e.: 0.707x as "

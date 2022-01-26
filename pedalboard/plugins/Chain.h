@@ -105,7 +105,8 @@ inline void init_chain(py::module &m) {
           [](std::shared_ptr<Chain> self,
              const py::array_t<float, py::array::c_style> inputArray,
              double sampleRate, unsigned int bufferSize, bool reset) {
-            return process(inputArray, sampleRate, self->getPlugins(), bufferSize, reset);
+            return process(inputArray, sampleRate, self->getPlugins(),
+                           bufferSize, reset);
           },
           "Run a 32-bit floating point audio buffer through this plugin."
           "(Note: if calling this multiple times with multiple plugins, "
@@ -120,8 +121,8 @@ inline void init_chain(py::module &m) {
              double sampleRate, unsigned int bufferSize, bool reset) {
             const py::array_t<float, py::array::c_style> float32InputArray =
                 inputArray.attr("astype")("float32");
-            return process(float32InputArray, sampleRate, self->getPlugins(), bufferSize,
-                           reset);
+            return process(float32InputArray, sampleRate, self->getPlugins(),
+                           bufferSize, reset);
           },
           "Run a 64-bit floating point audio buffer through this plugin."
           "(Note: if calling this multiple times with multiple plugins, "
