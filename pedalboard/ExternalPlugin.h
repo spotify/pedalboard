@@ -620,7 +620,7 @@ public:
       // To compensate for any latency added by the plugin,
       // only tell Pedalboard to use the last _n_ samples.
       long usableSamplesProduced =
-          samplesProvided - pluginInstance->getLatencySamples();
+          std::max(0L, samplesProvided - pluginInstance->getLatencySamples());
       return static_cast<int>(
           std::min(usableSamplesProduced, (long)outputBlock.getNumSamples()));
     }
