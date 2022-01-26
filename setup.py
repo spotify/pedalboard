@@ -31,6 +31,7 @@ ALL_COMPILER_FLAGS = [
 ]
 ALL_INCLUDES = []
 ALL_LINK_ARGS = []
+ALL_CFLAGS = []
 ALL_CPPFLAGS = []
 ALL_LIBRARIES = []
 ALL_SOURCE_PATHS = []
@@ -89,37 +90,7 @@ ALL_SOURCE_PATHS += list(Path("vendors/rubberband/single").glob("*.cpp"))
 
 # LAME/mpglib:
 # (man, this code is portable)
-ALL_COMPILER_FLAGS.extend(
-    [
-        "-DSIZEOF_DOUBLE=8",
-        "-DSIZEOF_FLOAT=4",
-        "-DSIZEOF_INT=4",
-        "-DSIZEOF_LONG=4",
-        "-DSIZEOF_LONG_DOUBLE=12",
-        "-DSIZEOF_SHORT=2",
-        "-DSIZEOF_UNSIGNED_INT=4",
-        "-DSIZEOF_UNSIGNED_LONG=4",
-        "-DSIZEOF_UNSIGNED_SHORT=2",
-        "-DSTDC_HEADERS",
-        "-DHAVE_ERRNO_H",
-        "-DHAVE_FCNTL_H",
-        "-DHAVE_LIMITS_H",
-        "-DPROTOTYPES=1",
-        "-DHAVE_STRCHR",
-        "-DHAVE_MEMCPY",
-        "-DHAVE_MPGLIB",
-        # Some data types are defined in config.h, which we don't include:
-        "-Dieee754_float32_t=float",
-        "-Duint8_t=u_int8_t",
-        "-Duint16_t=u_int16_t",
-        "-Duint32_t=u_int32_t",
-        "-Duint64_t=u_int64_t",
-        "-Dint8_t=char",
-        "-Dint16_t=short",
-        "-Dint32_t=int",
-        "-Dint64_t=(long long)",
-    ]
-)
+ALL_CFLAGS.extend(["-includevendors/lame_config.h", "-DHAVE_MPGLIB"])
 ALL_SOURCE_PATHS += list(Path("vendors/lame/libmp3lame").glob("*.c"))
 ALL_SOURCE_PATHS += list(Path("vendors/lame/mpglib").glob("*.c"))
 ALL_INCLUDES += [
@@ -255,6 +226,7 @@ def patch_compile(original_compile):
         elif ext in ('.c',):
             # We're compiling C code, remove the -std= arg:
             extra_postargs = [arg for arg in extra_postargs if 'std=' not in arg]
+            _cc_args = cc_args + ALL_CFLAGS
 
         return original_compile(obj, src, ext, _cc_args, extra_postargs, *args, **kwargs)
 
