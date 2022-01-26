@@ -99,7 +99,7 @@ public:
     bool specChanged = lastSpec.sampleRate != spec.sampleRate ||
                        lastSpec.maximumBlockSize < spec.maximumBlockSize ||
                        lastSpec.numChannels != spec.numChannels;
-    if (!lame || specChanged) {
+    if (!encoder || specChanged) {
       reset();
 
       lame_set_errorf(encoder.getContext(), lame_throw_error_handler);

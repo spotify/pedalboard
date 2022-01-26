@@ -159,11 +159,6 @@ UnixCCompiler.language_map[".mm"] = "objc++"
 # Add all Pedalboard C++ sources:
 ALL_SOURCE_PATHS += list(Path("pedalboard").glob("**/*.cpp"))
 
-# Rubber Band pitch shifter/time stretcher
-
-
-# LAME MP3 encoder:
-
 if platform.system() == "Darwin":
     MACOS_FRAMEWORKS = [
         'Accelerate',
