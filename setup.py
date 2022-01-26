@@ -110,8 +110,14 @@ ALL_COMPILER_FLAGS.extend(
         "-DHAVE_MPGLIB",
         # Some data types are defined in config.h, which we don't include:
         "-Dieee754_float32_t=float",
-        "-Duint32_t=u_int32_t",
-        "-Duint16_t=u_int16_t",
+        "-Duint8_t=unsigned char",
+        "-Duint16_t=unsigned short",
+        "-Duint32_t=unsigned int",
+        "-Duint64_t=unsigned long long",
+        "-Dint8_t=signed char",
+        "-Dint16_t=signed short",
+        "-Dint32_t=signed int",
+        "-Dint64_t=signed long long",
     ]
 )
 ALL_SOURCE_PATHS += list(Path("vendors/lame/libmp3lame").glob("*.c"))
@@ -241,6 +247,7 @@ else:
 
 def patch_compile(original_compile):
     def new_compile(obj, src, ext, cc_args, extra_postargs, *args, **kwargs):
+        print(f"\n\nIn new_compile with obj={obj}, src={src}, ext={ext}, cc_args={cc_args}, extra_postargs={extra_postargs}")
         _cc_args = cc_args
 
         if ext in ('.cpp', '.cxx', '.cc', '.mm'):
