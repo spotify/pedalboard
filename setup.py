@@ -107,8 +107,11 @@ ALL_COMPILER_FLAGS.extend(
         "-DPROTOTYPES=1",
         "-DHAVE_STRCHR",
         "-DHAVE_MEMCPY",
-        "-Dieee754_float32_t=float",
         "-DHAVE_MPGLIB",
+        # Some data types are defined in config.h, which we don't include:
+        "-Dieee754_float32_t=float",
+        "-Duint32_t=u_int32_t",
+        "-Duint16_t=u_int16_t",
     ]
 )
 ALL_SOURCE_PATHS += list(Path("vendors/lame/libmp3lame").glob("*.c"))
@@ -236,29 +239,28 @@ else:
     )
 
 
-class C_CxxCompiler(UnixCCompiler):
-    def _compile(self, obj, src, ext, cc_args, extra_postargs, pp_opts):
+def patch_compile(original_compile):
+    def new_compile(obj, src, ext, cc_args, extra_postargs, *args, **kwargs):
         _cc_args = cc_args
 
         if ext in ('.cpp', '.cxx', '.cc', '.mm'):
             _cc_args = cc_args + ALL_CPPFLAGS
-        elif ext in ('.c'):
+        elif ext in ('.c',):
             # We're compiling C code, remove the -std= arg:
-            extra_postargs = [arg for arg in extra_postargs if '-std=' not in arg]
+            extra_postargs = [arg for arg in extra_postargs if 'std=' not in arg]
 
-        UnixCCompiler._compile(self, obj, src, ext, _cc_args, extra_postargs, pp_opts)
+        return original_compile(obj, src, ext, _cc_args, extra_postargs, *args, **kwargs)
+
+    return new_compile
 
 
 class BuildC_CxxExtensions(build_ext):
-    def build_extensions(self, *args, **kwargs):
-        if self.compiler.compiler_type == 'unix':
-            # Replace the compiler
-            old_compiler = self.compiler
-            self.compiler = C_CxxCompiler()
+    """
+    Add custom logic for injecting different arguments when compiling C vs C++ files.
+    """
 
-            # Copy its attributes
-            for attr, value in old_compiler.__dict__.items():
-                setattr(self.compiler, attr, value)
+    def build_extensions(self, *args, **kwargs):
+        self.compiler._compile = patch_compile(self.compiler._compile)
         build_ext.build_extensions(self, *args, **kwargs)
 
 
