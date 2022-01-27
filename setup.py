@@ -93,6 +93,9 @@ LAME_FLAGS = ["-DHAVE_MPGLIB"]
 LAME_CONFIG_FILE = str(Path("vendors/lame_config.h").resolve())
 if platform.system() == "Windows":
     LAME_FLAGS.append(f"/FI{LAME_CONFIG_FILE}")
+    # Enable native assembly instructions via NASM for x86
+    # If we enable Windows-on-ARM builds, this should be disabled.
+    LAME_FLAGS.append(f"-DHAVE_NASM")
 else:
     LAME_FLAGS.append(f"-include{LAME_CONFIG_FILE}")
 ALL_CFLAGS.extend(LAME_FLAGS)
