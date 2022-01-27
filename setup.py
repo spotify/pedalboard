@@ -26,7 +26,7 @@ from distutils.unixccompiler import UnixCCompiler
 DEBUG = bool(int(os.environ.get('DEBUG', 0)))
 
 # C or C++ flags:
-ALL_COMPILER_FLAGS = [
+BASE_CPP_FLAGS = [
     '-Wall',
 ]
 ALL_INCLUDES = []
@@ -89,8 +89,13 @@ ALL_CPPFLAGS.extend(
 ALL_SOURCE_PATHS += list(Path("vendors/rubberband/single").glob("*.cpp"))
 
 # LAME/mpglib:
-# (man, this code is portable)
-ALL_CFLAGS.extend(["-includevendors/lame_config.h", "-DHAVE_MPGLIB"])
+LAME_FLAGS = ["-DHAVE_MPGLIB"]
+LAME_CONFIG_FILE = str(Path("vendors/lame_config.h").resolve())
+if platform.system() == "Windows":
+    LAME_FLAGS.append(f"/FI{LAME_CONFIG_FILE}")
+else:
+    LAME_FLAGS.append(f"-include{LAME_CONFIG_FILE}")
+ALL_CFLAGS.extend(LAME_FLAGS)
 ALL_SOURCE_PATHS += list(Path("vendors/lame/libmp3lame").glob("*.c"))
 ALL_SOURCE_PATHS += list(Path("vendors/lame/mpglib").glob("*.c"))
 ALL_INCLUDES += [
@@ -217,8 +222,10 @@ else:
 
 
 def patch_compile(original_compile):
+    """
+    On GCC/Clang, we want to pass different arguments when compiling C files vs C++ files.
+    """
     def new_compile(obj, src, ext, cc_args, extra_postargs, *args, **kwargs):
-        print(f"\n\nIn new_compile with obj={obj}, src={src}, ext={ext}, cc_args={cc_args}, extra_postargs={extra_postargs}")
         _cc_args = cc_args
 
         if ext in ('.cpp', '.cxx', '.cc', '.mm'):
@@ -243,11 +250,18 @@ class BuildC_CxxExtensions(build_ext):
         build_ext.build_extensions(self, *args, **kwargs)
 
 
+if platform.system() == "Windows":
+    # The MSVCCompiler extension doesn't support per-file command line arguments,
+    # so let's merge all of the flags into one list here.
+    BASE_CPP_FLAGS.extend(ALL_CPPFLAGS)
+    BASE_CPP_FLAGS.extend(ALL_CFLAGS)
+
+
 pedalboard_cpp = Pybind11Extension(
     'pedalboard_native',
     sources=ALL_RESOLVED_SOURCE_PATHS,
     include_dirs=ALL_INCLUDES,
-    extra_compile_args=ALL_COMPILER_FLAGS,
+    extra_compile_args=BASE_CPP_FLAGS,
     extra_link_args=ALL_LINK_ARGS,
     libraries=ALL_LIBRARIES,
     language="c++",

@@ -16,7 +16,11 @@
  */
 
 #include "../Plugin.h"
+
+extern "C" {
 #include <lame.h>
+}
+
 
 namespace Pedalboard {
 
@@ -71,14 +75,6 @@ private:
   hip_t hip;
 };
 
-void lame_throw_error_handler(const char *format, va_list ap) {
-  int errorLength = 512;
-  char errorBuffer[errorLength + 1];
-  snprintf(errorBuffer, errorLength, format, ap);
-  throw std::runtime_error("MP3 encoder threw an error: " +
-                           std::string(errorBuffer));
-}
-
 class MP3Compressor : public Plugin {
 public:
   virtual ~MP3Compressor(){};
@@ -101,8 +97,6 @@ public:
                        lastSpec.numChannels != spec.numChannels;
     if (!encoder || specChanged) {
       reset();
-
-      lame_set_errorf(encoder.getContext(), lame_throw_error_handler);
 
       if (lame_set_in_samplerate(encoder.getContext(), spec.sampleRate) != 0) {
         throw std::runtime_error(
