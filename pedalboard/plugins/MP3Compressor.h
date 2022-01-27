@@ -155,7 +155,7 @@ public:
       const juce::dsp::ProcessContextReplacing<float> &context) override final {
 
     auto ioBlock = context.getOutputBlock();
-    for (int i = 0; i < ioBlock.getNumSamples();
+    for (size_t i = 0; i < ioBlock.getNumSamples();
          i += MAX_MP3_FRAME_SIZE_SAMPLES) {
       jassert(ioBlock.getNumChannels() == 2);
 
@@ -191,7 +191,7 @@ public:
     }
 
     int samplesToOutput = std::min(ioBlock.getNumSamples(),
-                                   (unsigned long)outputBufferLastSample);
+                                   (size_t)outputBufferLastSample);
     samplesProduced += samplesToOutput;
     int offsetInOutputBuffer = 0;
     if (samplesToOutput < ioBlock.getNumSamples()) {
@@ -253,8 +253,8 @@ private:
   EncoderWrapper encoder;
   DecoderWrapper decoder;
 
-  static constexpr unsigned long MAX_MP3_FRAME_SIZE_BYTES = 4096;
-  static constexpr unsigned long MAX_MP3_FRAME_SIZE_SAMPLES = 1152;
+  static constexpr size_t MAX_MP3_FRAME_SIZE_BYTES = 8192;
+  static constexpr size_t MAX_MP3_FRAME_SIZE_SAMPLES = 1152;
 
   // This should really be an AudioBuffer<short>, but JUCE doesn't offer that.
   // TODO: This should be numChannels to support more than mono and stereo
