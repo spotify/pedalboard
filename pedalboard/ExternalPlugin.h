@@ -226,19 +226,21 @@ public:
     }
   }
 
-  struct PresetVisitor: juce::ExtensionsVisitor{
-      std::string presetFile;
-      bool result;
-      PresetVisitor(std::string file){
-          presetFile = file;
-      }
-      void visitVST3Client (const juce::ExtensionsVisitor::VST3Client& client) override{
-          result = false;
-          juce::File fl(presetFile);
-          juce::MemoryBlock mb;
+  struct PresetVisitor : public juce::ExtensionsVisitor {
+      const std::string presetFilePath;
+      
+      PresetVisitor(const std::string presetFilePath): presetFilePath(presetFilePath) { }
+      
+      void visitVST3Client(const juce::ExtensionsVisitor::VST3Client& client) override {
+          juce::File presetFile(presetFilePath);
+          juce::MemoryBlock presetData;
 
-          if (fl.loadFileAsData(mb)){
-              result =  client.setPreset(mb);
+          if (!presetFile.loadFileAsData(presetData)) {
+            throw std::runtime_error("Failed to read preset file: " + presetFilePath);
+          }
+
+          if (!client.setPreset(presetData)) {
+            throw std::runtime_error("Plugin returned an error when loading data from preset file: " + presetFilePath);
           }
       }
   };
