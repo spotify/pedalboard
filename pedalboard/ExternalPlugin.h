@@ -246,10 +246,9 @@ public:
   };
 
 
-  bool loadPresetData(std::string stateFile) {
-      PresetVisitor visitor {stateFile};
+  void loadPresetData(std::string presetFilePath) {
+      PresetVisitor visitor {presetFilePath};
       pluginInstance->getExtensions(visitor);
-      return visitor.result;
   }
 
 
