@@ -822,8 +822,7 @@ inline void init_external_plugins(py::module &m) {
            })
       .def("load_preset",
           &ExternalPlugin<juce::VST3PluginFormat>::loadPresetData,
-          "Load a VST3 preset file .vstprest format "
-          "return false if fails")
+          "Load a VST3 preset file in .vstpreset format.", py::arg("preset_file_path"))
       .def_property_readonly_static(
           "installed_plugins",
           [](py::object /* cls */) { return findInstalledVSTPluginPaths(); },
