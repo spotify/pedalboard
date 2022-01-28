@@ -75,7 +75,7 @@ detectChannelLayout(const py::array_t<T, py::array::c_style> inputArray) {
           "Unable to determine channel layout from shape!");
     }
   } else {
-    throw std::runtime_error("Number of input dimensions must be 1 or 2.");
+    throw std::runtime_error("Number of input dimensions must be 1 or 2 (got " + std::to_string(inputInfo.ndim) + ").");
   }
 }
 
@@ -104,7 +104,7 @@ copyPyArrayIntoJuceBuffer(const py::array_t<T, py::array::c_style> inputArray) {
       throw std::runtime_error("Unable to determine shape of audio input!");
     }
   } else {
-    throw std::runtime_error("Number of input dimensions must be 1 or 2.");
+    throw std::runtime_error("Number of input dimensions must be 1 or 2 (got " + std::to_string(inputInfo.ndim) + ").");
   }
 
   if (numChannels == 0) {

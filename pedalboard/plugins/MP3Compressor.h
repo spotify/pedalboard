@@ -200,6 +200,8 @@ public:
   
       // Constants copied from the LAME documentation:
       mp3Buffer.ensureSize((int) (1.25 * MAX_LAME_MP3_BUFFER_SIZE_SAMPLES) + 7200);
+
+      // TODO: Find a tighter bound for this output buffer.
       outputBuffer.setSize(32768 + spec.maximumBlockSize * 2);
 
       // Feed in some silence at the start so that LAME buffers up enough samples
@@ -221,6 +223,10 @@ public:
         mp3Buffer.getSize());
 
       delete[] silence;
+
+      if (numBytesEncoded != 0) {
+        throw std::runtime_error("Failed to prime MP3 encoder!");
+      }
 
       encoderInStreamLatency += samplesToAdd;
       lastSpec = spec;
