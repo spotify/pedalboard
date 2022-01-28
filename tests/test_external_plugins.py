@@ -630,7 +630,7 @@ def test_parameter_name_normalization(_input: str, expected: str):
 
 
 @pytest.mark.skipif(not plugin_named("CHOWTapeModel"), reason="Missing CHOWTapeModel plugin.")
-@pytest.mark.parametrize("buffer_size", [128, 8192, 65536])
+@pytest.mark.parametrize("buffer_size", [16, 128, 8192, 65536])
 @pytest.mark.parametrize("oversampling", [1, 2, 4, 8, 16])
 def test_external_plugin_latency_compensation(buffer_size: int, oversampling: int):
     """
