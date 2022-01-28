@@ -21,12 +21,12 @@ namespace Pedalboard {
 
 /**
  * A dummy plugin that buffers audio data internally, used to test Pedalboard's
- * automatic delay compensation.
+ * automatic latency compensation.
  */
-class DelayLine : public JucePlugin<juce::dsp::DelayLine<
-                      float, juce::dsp::DelayLineInterpolationTypes::None>> {
+class AddLatency : public JucePlugin<juce::dsp::DelayLine<
+                       float, juce::dsp::DelayLineInterpolationTypes::None>> {
 public:
-  virtual ~DelayLine(){};
+  virtual ~AddLatency(){};
 
   virtual void reset() override {
     getDSP().reset();
@@ -49,18 +49,18 @@ private:
   int samplesProvided = 0;
 };
 
-inline void init_delay_line(py::module &m) {
-  py::class_<DelayLine, Plugin>(
-      m, "DelayLine",
+inline void init_add_latency(py::module &m) {
+  py::class_<AddLatency, Plugin>(
+      m, "AddLatency",
       "A dummy plugin that delays input audio for the given number of samples "
       "before passing it back to the output. Used internally to test "
       "Pedalboard's automatic latency compensation. Probably not useful as a "
       "real effect.")
       .def(py::init([](int samples) {
-             auto dl = new DelayLine();
-             dl->getDSP().setMaximumDelayInSamples(samples);
-             dl->getDSP().setDelay(samples);
-             return dl;
+             auto al = new AddLatency();
+             al->getDSP().setMaximumDelayInSamples(samples);
+             al->getDSP().setDelay(samples);
+             return al;
            }),
            py::arg("samples") = 44100);
 }
