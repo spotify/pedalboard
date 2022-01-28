@@ -319,9 +319,8 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
         int outputSamples = plugin->process(context);
         if (outputSamples < 0) {
           throw std::runtime_error(
-            "A plugin returned a negative number of output samples! "
-            "This is an internal Pedalboard error and should be reported."
-          );
+              "A plugin returned a negative number of output samples! "
+              "This is an internal Pedalboard error and should be reported.");
         }
         pluginSamplesReceived += outputSamples;
 
