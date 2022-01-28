@@ -226,6 +226,35 @@ public:
     }
   }
 
+  struct PresetVisitor : public juce::ExtensionsVisitor {
+    const std::string presetFilePath;
+
+    PresetVisitor(const std::string presetFilePath)
+        : presetFilePath(presetFilePath) {}
+
+    void visitVST3Client(
+        const juce::ExtensionsVisitor::VST3Client &client) override {
+      juce::File presetFile(presetFilePath);
+      juce::MemoryBlock presetData;
+
+      if (!presetFile.loadFileAsData(presetData)) {
+        throw std::runtime_error("Failed to read preset file: " +
+                                 presetFilePath);
+      }
+
+      if (!client.setPreset(presetData)) {
+        throw std::runtime_error(
+            "Plugin returned an error when loading data from preset file: " +
+            presetFilePath);
+      }
+    }
+  };
+
+  void loadPresetData(std::string presetFilePath) {
+    PresetVisitor visitor{presetFilePath};
+    pluginInstance->getExtensions(visitor);
+  }
+
   void reinstantiatePlugin() {
     // If we have an existing plugin, save its state and reload its state later:
     juce::MemoryBlock savedState;
@@ -793,6 +822,10 @@ inline void init_external_plugins(py::module &m) {
              ss << ">";
              return ss.str();
            })
+      .def("load_preset",
+           &ExternalPlugin<juce::VST3PluginFormat>::loadPresetData,
+           "Load a VST3 preset file in .vstpreset format.",
+           py::arg("preset_file_path"))
       .def_property_readonly_static(
           "installed_plugins",
           [](py::object /* cls */) { return findInstalledVSTPluginPaths(); },
