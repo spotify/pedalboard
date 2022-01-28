@@ -93,7 +93,7 @@ LAME_FLAGS = ["-DHAVE_MPGLIB"]
 LAME_CONFIG_FILE = str(Path("vendors/lame_config.h").resolve())
 if platform.system() == "Windows":
     LAME_FLAGS.append(f"/FI{LAME_CONFIG_FILE}")
-    LAME_FLAGS.append(f"-DHAVE_XMMINTRIN_H")
+    LAME_FLAGS.append("-DHAVE_XMMINTRIN_H")
 else:
     LAME_FLAGS.append(f"-include{LAME_CONFIG_FILE}")
 ALL_CFLAGS.extend(LAME_FLAGS)
