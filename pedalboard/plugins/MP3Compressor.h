@@ -21,7 +21,6 @@ extern "C" {
 #include <lame.h>
 }
 
-
 namespace Pedalboard {
 
 /*
@@ -30,7 +29,7 @@ namespace Pedalboard {
  */
 class EncoderWrapper {
 public:
-  EncoderWrapper() { }
+  EncoderWrapper() {}
   ~EncoderWrapper() { reset(); }
 
   operator bool() const { return lame != nullptr; }
@@ -56,7 +55,7 @@ private:
  */
 class DecoderWrapper {
 public:
-  DecoderWrapper() { }
+  DecoderWrapper() {}
   ~DecoderWrapper() { reset(); }
   operator bool() const { return hip != nullptr; }
 
@@ -86,10 +85,12 @@ public:
   short *getWritePointerAtEnd(int channel) {
     return (short *)outputBuffers[channel].getData() + lastSample;
   }
-  
-  int copyToRightSideOf(juce::dsp::AudioBlock<float> outputBlock, int offsetInThisBuffer = 0) {
-    int samplesToOutput = std::min(outputBlock.getNumSamples(),
-                                   (size_t)std::max(0L, lastSample - offsetInThisBuffer));
+
+  int copyToRightSideOf(juce::dsp::AudioBlock<float> outputBlock,
+                        int offsetInThisBuffer = 0) {
+    int samplesToOutput =
+        std::min(outputBlock.getNumSamples(),
+                 (size_t)std::max(0L, lastSample - offsetInThisBuffer));
 
     if (samplesToOutput) {
       int offsetInOutputBuffer = 0;
@@ -100,17 +101,17 @@ public:
       for (int c = 0; c < outputBlock.getNumChannels(); c++) {
         juce::AudioDataConverters::convertInt16LEToFloat(
             (short *)outputBuffers[c].getData() + offsetInThisBuffer,
-            outputBlock.getChannelPointer(c) + offsetInOutputBuffer, samplesToOutput);
+            outputBlock.getChannelPointer(c) + offsetInOutputBuffer,
+            samplesToOutput);
       }
 
       // Move the remaining content in the output buffer to the left hand side:
-      int numSamplesRemaining =
-          std::max(0L, lastSample - samplesToOutput);
+      int numSamplesRemaining = std::max(0L, lastSample - samplesToOutput);
       if (numSamplesRemaining) {
         for (int c = 0; c < outputBlock.getNumChannels(); c++) {
           std::memmove((short *)outputBuffers[c].getData(),
-                      (short *)outputBuffers[c].getData() + samplesToOutput,
-                      numSamplesRemaining * sizeof(short));
+                       (short *)outputBuffers[c].getData() + samplesToOutput,
+                       numSamplesRemaining * sizeof(short));
         }
       }
       lastSample = numSamplesRemaining;
@@ -119,9 +120,7 @@ public:
     return samplesToOutput;
   }
 
-  void incrementSampleCountBy(int add) {
-    lastSample += add;
-  }
+  void incrementSampleCountBy(int add) { lastSample += add; }
 
   void setSize(int samples) {
     for (int i = 0; i < 2; i++) {
@@ -196,31 +195,31 @@ public:
 
       // Why + 528 + 1? Pulled directly from the libmp3lame code; not 100% sure.
       // Values have been confirmed empirically, however.
-      encoderInStreamLatency = lame_get_encoder_delay(encoder.getContext()) + 528 + 1;
-  
+      encoderInStreamLatency =
+          lame_get_encoder_delay(encoder.getContext()) + 528 + 1;
+
       // Constants copied from the LAME documentation:
-      mp3Buffer.ensureSize((int) (1.25 * MAX_LAME_MP3_BUFFER_SIZE_SAMPLES) + 7200);
+      mp3Buffer.ensureSize((int)(1.25 * MAX_LAME_MP3_BUFFER_SIZE_SAMPLES) +
+                           7200);
 
       // TODO: Find a tighter bound for this output buffer.
       outputBuffer.setSize(32768 + spec.maximumBlockSize * 2);
 
-      // Feed in some silence at the start so that LAME buffers up enough samples
-      // Without this, we underrun our output buffer at the end of the stream.
+      // Feed in some silence at the start so that LAME buffers up enough
+      // samples Without this, we underrun our output buffer at the end of the
+      // stream.
       int samplesToAdd = addedSilenceAtStart;
 
       float *silence = new float[samplesToAdd];
       // Note: this buffer will be discarded on the other end of LAME,
       // but in case there's any crossfade or leakage between frames,
       // we zero this out here.
-      for (int i = 0; i < samplesToAdd; i++) silence[i] = 0;
+      for (int i = 0; i < samplesToAdd; i++)
+        silence[i] = 0;
 
       int numBytesEncoded = lame_encode_buffer_ieee_float(
-        encoder.getContext(),
-        silence,
-        silence,
-        samplesToAdd,
-        (unsigned char *)mp3Buffer.getData(),
-        mp3Buffer.getSize());
+          encoder.getContext(), silence, silence, samplesToAdd,
+          (unsigned char *)mp3Buffer.getData(), mp3Buffer.getSize());
 
       delete[] silence;
 
@@ -237,35 +236,40 @@ public:
       const juce::dsp::ProcessContextReplacing<float> &context) override final {
     auto ioBlock = context.getOutputBlock();
 
-    for (int blockStart = 0; blockStart < ioBlock.getNumSamples(); blockStart += MAX_LAME_MP3_BUFFER_SIZE_SAMPLES) {
+    for (int blockStart = 0; blockStart < ioBlock.getNumSamples();
+         blockStart += MAX_LAME_MP3_BUFFER_SIZE_SAMPLES) {
       int blockEnd = blockStart + MAX_LAME_MP3_BUFFER_SIZE_SAMPLES;
-      if (blockEnd > ioBlock.getNumSamples()) blockEnd = ioBlock.getNumSamples();
+      if (blockEnd > ioBlock.getNumSamples())
+        blockEnd = ioBlock.getNumSamples();
 
       int blockSize = blockEnd - blockStart;
       int numBytesEncoded = lame_encode_buffer_ieee_float(
-        encoder.getContext(),
-        // If encoding in stereo, use both channels - otherwise, LAME
-        // ignores the second channel argument here.
-        ioBlock.getChannelPointer(0) + blockStart,
-        ioBlock.getChannelPointer(ioBlock.getNumChannels() - 1) + blockStart,
-        blockSize,
-        (unsigned char *)mp3Buffer.getData(),
-        mp3Buffer.getSize());
+          encoder.getContext(),
+          // If encoding in stereo, use both channels - otherwise, LAME
+          // ignores the second channel argument here.
+          ioBlock.getChannelPointer(0) + blockStart,
+          ioBlock.getChannelPointer(ioBlock.getNumChannels() - 1) + blockStart,
+          blockSize, (unsigned char *)mp3Buffer.getData(), mp3Buffer.getSize());
 
       samplesInEncodingBuffer += blockSize;
 
       if (numBytesEncoded == -1) {
-        throw std::runtime_error("Ran out of MP3 buffer space! Try using a smaller buffer_size.");
+        throw std::runtime_error(
+            "Ran out of MP3 buffer space! Try using a smaller buffer_size.");
       } else if (numBytesEncoded < 0) {
         throw std::runtime_error("MP3 encoder failed to encode with error " +
-                                  std::to_string(numBytesEncoded) + ".");
-      } else if (numBytesEncoded == 0 && lame_get_frameNum(encoder.getContext()) > 0) {
-        numBytesEncoded = lame_encode_flush_nogap(encoder.getContext(), (unsigned char *)mp3Buffer.getData(), mp3Buffer.getSize());
+                                 std::to_string(numBytesEncoded) + ".");
+      } else if (numBytesEncoded == 0 &&
+                 lame_get_frameNum(encoder.getContext()) > 0) {
+        numBytesEncoded = lame_encode_flush_nogap(
+            encoder.getContext(), (unsigned char *)mp3Buffer.getData(),
+            mp3Buffer.getSize());
       }
 
       // Decode frames from the buffer as soon as we get them:
       if (numBytesEncoded > 0) {
-        // When parsing the first frame, hip_decode will fail to return anything. Get around this here:
+        // When parsing the first frame, hip_decode will fail to return
+        // anything. Get around this here:
         int numDecodes = 1;
         if (isFirstFrame) {
           numDecodes = 2;
@@ -273,12 +277,10 @@ public:
 
         for (int i = 0; i < numDecodes; i++) {
           int samplesDecoded = hip_decode(
-              decoder.getContext(),
-              (unsigned char *)mp3Buffer.getData(),
-              numBytesEncoded,
-              outputBuffer.getWritePointerAtEnd(0),
+              decoder.getContext(), (unsigned char *)mp3Buffer.getData(),
+              numBytesEncoded, outputBuffer.getWritePointerAtEnd(0),
               outputBuffer.getWritePointerAtEnd(1));
-          
+
           outputBuffer.incrementSampleCountBy(samplesDecoded);
           samplesInEncodingBuffer -= samplesDecoded;
 
@@ -289,8 +291,11 @@ public:
 
     int samplesOutput = outputBuffer.copyToRightSideOf(ioBlock);
     samplesProduced += samplesOutput;
-    int samplesToReturn = std::min((long) samplesProduced - encodingLatency - encoderInStreamLatency, (long) ioBlock.getNumSamples());
-    if (samplesToReturn < 0) samplesToReturn = 0;
+    int samplesToReturn = std::min((long)samplesProduced - encodingLatency -
+                                       encoderInStreamLatency,
+                                   (long)ioBlock.getNumSamples());
+    if (samplesToReturn < 0)
+      samplesToReturn = 0;
     return samplesToReturn;
   }
 
@@ -343,9 +348,9 @@ private:
   long encodingLatency = 1152;
   long encoderInStreamLatency = 0;
 
-  // This is the number of samples we add at the start of the LAME stream to give
-  // us enough of a "head start" to avoid underflowing our MP3 buffer when the
-  // stream finishes.
+  // This is the number of samples we add at the start of the LAME stream to
+  // give us enough of a "head start" to avoid underflowing our MP3 buffer when
+  // the stream finishes.
   long addedSilenceAtStart = 1152;
 
   bool isFirstFrame = true;
