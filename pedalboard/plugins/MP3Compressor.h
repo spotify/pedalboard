@@ -223,7 +223,7 @@ public:
 
       delete[] silence;
 
-      if (numBytesEncoded != 0) {
+      if (numBytesEncoded < 0) {
         throw std::runtime_error("Failed to prime MP3 encoder!");
       }
 
