@@ -98,6 +98,7 @@ else:
     LAME_FLAGS.append(f"-include{LAME_CONFIG_FILE}")
 ALL_CFLAGS.extend(LAME_FLAGS)
 ALL_SOURCE_PATHS += list(Path("vendors/lame/libmp3lame").glob("*.c"))
+ALL_SOURCE_PATHS += list(Path("vendors/lame/libmp3lame/vector").glob("*.c"))
 ALL_SOURCE_PATHS += list(Path("vendors/lame/mpglib").glob("*.c"))
 ALL_INCLUDES += [
     'vendors/lame/include/',
