@@ -43,7 +43,9 @@ def test_mp3_compressor(vbr_quality: float, sample_rate: int, num_channels: int)
 @pytest.mark.parametrize("vbr_quality", [0.0, 0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9.5])
 @pytest.mark.parametrize("sample_rate", [44100, 48000])
 @pytest.mark.parametrize("num_channels", [1, 2])
-def test_mp3_compressor_invariant_to_buffer_size(vbr_quality: float, sample_rate: int, num_channels: int):
+def test_mp3_compressor_invariant_to_buffer_size(
+    vbr_quality: float, sample_rate: int, num_channels: int
+):
     num_seconds = 10.0
     fundamental_hz = 440
     samples = np.arange(num_seconds * sample_rate)
