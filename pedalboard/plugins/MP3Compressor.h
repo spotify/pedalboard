@@ -74,6 +74,10 @@ private:
   hip_t hip = nullptr;
 };
 
+/**
+ * A class analogous to juce::AudioBuffer, but supporting
+ * signed Int16 audio data (as provided by LAME).
+ */
 class Int16OutputBuffer {
 public:
   void reset() {
@@ -82,15 +86,20 @@ public:
     lastSample = 0;
   }
 
+  /**
+   * Given a channel, return a write pointer that can be
+   * used to write signed mono 16-bit integer audio.
+   */
   short *getWritePointerAtEnd(int channel) {
     return (short *)outputBuffers[channel].getData() + lastSample;
   }
 
-  int copyToRightSideOf(juce::dsp::AudioBlock<float> outputBlock,
-                        int offsetInThisBuffer = 0) {
-    int samplesToOutput =
-        std::min(outputBlock.getNumSamples(),
-                 (size_t)std::max(0L, lastSample - offsetInThisBuffer));
+  /*
+   * Copy the data in this buffer into the provided AudioBlock<float>.
+   * Returns the number of samples copied.
+   */
+  int copyToRightSideOf(juce::dsp::AudioBlock<float> outputBlock) {
+    int samplesToOutput = std::min(outputBlock.getNumSamples(), lastSample);
 
     if (samplesToOutput) {
       int offsetInOutputBuffer = 0;
@@ -100,27 +109,31 @@ public:
 
       for (int c = 0; c < outputBlock.getNumChannels(); c++) {
         juce::AudioDataConverters::convertInt16LEToFloat(
-            (short *)outputBuffers[c].getData() + offsetInThisBuffer,
+            (short *)outputBuffers[c].getData(),
             outputBlock.getChannelPointer(c) + offsetInOutputBuffer,
             samplesToOutput);
       }
 
       // Move the remaining content in the output buffer to the left hand side:
-      int numSamplesRemaining = std::max(0L, lastSample - samplesToOutput);
-      if (numSamplesRemaining) {
+      if (samplesToOutput < lastSample) {
+        unsigned long numSamplesRemaining = lastSample - samplesToOutput;
         for (int c = 0; c < outputBlock.getNumChannels(); c++) {
           std::memmove((short *)outputBuffers[c].getData(),
                        (short *)outputBuffers[c].getData() + samplesToOutput,
                        numSamplesRemaining * sizeof(short));
         }
+        lastSample = numSamplesRemaining;
+      } else {
+        lastSample = 0;
       }
-      lastSample = numSamplesRemaining;
     }
 
     return samplesToOutput;
   }
 
   void incrementSampleCountBy(int add) { lastSample += add; }
+
+  int getNumSamples() const { return lastSample; }
 
   void setSize(int samples) {
     for (int i = 0; i < 2; i++) {
@@ -131,7 +144,7 @@ public:
 
 private:
   juce::MemoryBlock outputBuffers[2];
-  long lastSample = 0;
+  unsigned long lastSample = 0;
 };
 
 class MP3Compressor : public Plugin {
@@ -140,8 +153,8 @@ public:
 
   void setVBRQuality(float newLevel) {
     if (newLevel < 0 || newLevel > 10) {
-      throw std::runtime_error("VBR quality must be greater than 0 and less "
-                               "than 10. (Higher numbers are lower quality.)");
+      throw std::domain_error("VBR quality must be greater than 0 and less "
+                              "than 10. (Higher numbers are lower quality.)");
     }
 
     vbrLevel = newLevel;
@@ -157,31 +170,30 @@ public:
     if (!encoder || specChanged) {
       reset();
 
-      if (lame_set_in_samplerate(encoder.getContext(), spec.sampleRate) != 0) {
-        throw std::runtime_error(
-            "MP3 encoder failed to set input sample rate.");
-      }
-
-      if (lame_set_out_samplerate(encoder.getContext(), spec.sampleRate) != 0) {
-        throw std::runtime_error(
-            "MP3 encoder failed to set output sample rate.");
+      if (lame_set_in_samplerate(encoder.getContext(), spec.sampleRate) != 0 ||
+          lame_set_out_samplerate(encoder.getContext(), spec.sampleRate) != 0) {
+        // TODO: It would be possible to add a resampler here to support
+        // arbitrary-sample-rate audio.
+        throw std::domain_error(
+            "MP3 only supports 32kHz, 44.1kHz, and 48kHz audio. (Was passed " +
+            juce::String(spec.sampleRate / 1000, 1).toStdString() +
+            "kHz audio.)");
       }
 
       if (lame_set_num_channels(encoder.getContext(), spec.numChannels) != 0) {
-        throw std::runtime_error(
-            "MP3 encoder failed to set number of channels.");
+        // TODO: It would be possible to run multiple independent mono encoders.
+        throw std::domain_error(
+            "MP3Compressor only supports mono or stereo audio. (Was passed " +
+            std::to_string(spec.numChannels) + "-channel audio.)");
       }
 
-      // TODO: handle when the output sample rate doesn't match one of the
-      // expected rates from encoder.
-
       if (lame_set_VBR(encoder.getContext(), vbr_default) != 0) {
-        throw std::runtime_error(
+        throw std::domain_error(
             "MP3 encoder failed to set variable bit rate flag.");
       }
 
       if (lame_set_VBR_quality(encoder.getContext(), vbrLevel) != 0) {
-        throw std::runtime_error(
+        throw std::domain_error(
             "MP3 encoder failed to set variable bit rate quality to " +
             std::to_string(vbrLevel) + "!");
       }
@@ -193,41 +205,47 @@ public:
             std::to_string(ret) + ")");
       }
 
-      // Why + 528 + 1? Pulled directly from the libmp3lame code; not 100% sure.
-      // Values have been confirmed empirically, however.
+      // Why + 528 + 1? Pulled directly from the libmp3lame code.
+      // An explanation supposedly exists in the old mp3encoder mailing list
+      // archive. These values have been confirmed empirically, however.
       encoderInStreamLatency =
           lame_get_encoder_delay(encoder.getContext()) + 528 + 1;
 
-      // Constants copied from the LAME documentation:
-      mp3Buffer.ensureSize((int)(1.25 * MAX_LAME_MP3_BUFFER_SIZE_SAMPLES) +
-                           7200);
+      // Why add this latency? Again, not 100% sure - this has just
+      // been empirically observed at all sample rates. Good thing we have
+      // tests.
+      if (lame_get_in_samplerate(encoder.getContext()) >= 32000) {
+        encoderInStreamLatency += 1152;
+      } else {
+        encoderInStreamLatency += 576;
+      }
 
-      // TODO: Find a tighter bound for this output buffer.
-      outputBuffer.setSize(32768 + spec.maximumBlockSize * 2);
+      // More constants copied from the LAME documentation, to ensure
+      // we never overrun the mp3 buffer:
+      mp3Buffer.ensureSize((1.25 * MAX_LAME_MP3_BUFFER_SIZE_SAMPLES) + 7200);
 
       // Feed in some silence at the start so that LAME buffers up enough
       // samples Without this, we underrun our output buffer at the end of the
       // stream.
-      int samplesToAdd = addedSilenceAtStart;
-
-      float *silence = new float[samplesToAdd];
-      // Note: this buffer will be discarded on the other end of LAME,
-      // but in case there's any crossfade or leakage between frames,
-      // we zero this out here.
-      for (int i = 0; i < samplesToAdd; i++)
-        silence[i] = 0;
-
-      int numBytesEncoded = lame_encode_buffer_ieee_float(
-          encoder.getContext(), silence, silence, samplesToAdd,
+      std::vector<short> silence(ADDED_SILENCE_SAMPLES_AT_START);
+      // Use the integer version rather than the float version for a bit of
+      // extra speed.
+      mp3BufferBytesFilled = lame_encode_buffer(
+          encoder.getContext(), silence.data(), silence.data(), silence.size(),
           (unsigned char *)mp3Buffer.getData(), mp3Buffer.getSize());
 
-      delete[] silence;
-
-      if (numBytesEncoded < 0) {
-        throw std::runtime_error("Failed to prime MP3 encoder!");
+      if (mp3BufferBytesFilled < 0) {
+        throw std::runtime_error(
+            "Failed to prime MP3 encoder! This is an internal Pedalboard error "
+            "and should be reported.");
       }
 
-      encoderInStreamLatency += samplesToAdd;
+      encoderInStreamLatency += silence.size();
+
+      // Allow us to buffer up to (expected latency + 1 block of audio)
+      // between the output of LAME and data returned back to Pedalboard.
+      outputBuffer.setSize(encoderInStreamLatency + spec.maximumBlockSize);
+
       lastSpec = spec;
     }
   }
@@ -236,6 +254,16 @@ public:
       const juce::dsp::ProcessContextReplacing<float> &context) override final {
     auto ioBlock = context.getOutputBlock();
 
+    if (mp3BufferBytesFilled > 0) {
+      int samplesDecoded =
+          hip_decode(decoder.getContext(), (unsigned char *)mp3Buffer.getData(),
+                     mp3BufferBytesFilled, outputBuffer.getWritePointerAtEnd(0),
+                     outputBuffer.getWritePointerAtEnd(1));
+
+      outputBuffer.incrementSampleCountBy(samplesDecoded);
+      mp3BufferBytesFilled = 0;
+    }
+
     for (int blockStart = 0; blockStart < ioBlock.getNumSamples();
          blockStart += MAX_LAME_MP3_BUFFER_SIZE_SAMPLES) {
       int blockEnd = blockStart + MAX_LAME_MP3_BUFFER_SIZE_SAMPLES;
@@ -243,7 +271,7 @@ public:
         blockEnd = ioBlock.getNumSamples();
 
       int blockSize = blockEnd - blockStart;
-      int numBytesEncoded = lame_encode_buffer_ieee_float(
+      mp3BufferBytesFilled = lame_encode_buffer_ieee_float(
           encoder.getContext(),
           // If encoding in stereo, use both channels - otherwise, LAME
           // ignores the second channel argument here.
@@ -251,49 +279,37 @@ public:
           ioBlock.getChannelPointer(ioBlock.getNumChannels() - 1) + blockStart,
           blockSize, (unsigned char *)mp3Buffer.getData(), mp3Buffer.getSize());
 
-      samplesInEncodingBuffer += blockSize;
-
-      if (numBytesEncoded == -1) {
+      if (mp3BufferBytesFilled == -1) {
         throw std::runtime_error(
-            "Ran out of MP3 buffer space! Try using a smaller buffer_size.");
-      } else if (numBytesEncoded < 0) {
+            "Ran out of MP3 buffer space! This is an internal Pedalboard error "
+            "and should be reported.");
+      } else if (mp3BufferBytesFilled < 0) {
         throw std::runtime_error("MP3 encoder failed to encode with error " +
-                                 std::to_string(numBytesEncoded) + ".");
-      } else if (numBytesEncoded == 0 &&
+                                 std::to_string(mp3BufferBytesFilled) + ".");
+      } else if (mp3BufferBytesFilled == 0 &&
                  lame_get_frameNum(encoder.getContext()) > 0) {
-        numBytesEncoded = lame_encode_flush_nogap(
+        mp3BufferBytesFilled = lame_encode_flush_nogap(
             encoder.getContext(), (unsigned char *)mp3Buffer.getData(),
             mp3Buffer.getSize());
       }
 
       // Decode frames from the buffer as soon as we get them:
-      if (numBytesEncoded > 0) {
-        // When parsing the first frame, hip_decode will fail to return
-        // anything. Get around this here:
-        int numDecodes = 1;
-        if (isFirstFrame) {
-          numDecodes = 2;
-        }
+      if (mp3BufferBytesFilled > 0) {
+        int samplesDecoded = hip_decode(
+            decoder.getContext(), (unsigned char *)mp3Buffer.getData(),
+            mp3BufferBytesFilled, outputBuffer.getWritePointerAtEnd(0),
+            outputBuffer.getWritePointerAtEnd(1));
+        mp3BufferBytesFilled = 0;
 
-        for (int i = 0; i < numDecodes; i++) {
-          int samplesDecoded = hip_decode(
-              decoder.getContext(), (unsigned char *)mp3Buffer.getData(),
-              numBytesEncoded, outputBuffer.getWritePointerAtEnd(0),
-              outputBuffer.getWritePointerAtEnd(1));
-
-          outputBuffer.incrementSampleCountBy(samplesDecoded);
-          samplesInEncodingBuffer -= samplesDecoded;
-
-          isFirstFrame = false;
-        }
+        outputBuffer.incrementSampleCountBy(samplesDecoded);
       }
     }
 
     int samplesOutput = outputBuffer.copyToRightSideOf(ioBlock);
     samplesProduced += samplesOutput;
-    int samplesToReturn = std::min((long)samplesProduced - encodingLatency -
-                                       encoderInStreamLatency,
-                                   (long)ioBlock.getNumSamples());
+    int samplesToReturn =
+        std::min((long)(samplesProduced - encoderInStreamLatency),
+                 (long)ioBlock.getNumSamples());
     if (samplesToReturn < 0)
       samplesToReturn = 0;
     return samplesToReturn;
@@ -305,22 +321,15 @@ public:
     outputBuffer.reset();
 
     mp3Buffer.fillWith(0);
+    mp3BufferBytesFilled = 0;
 
     samplesProduced = 0;
-    samplesInEncodingBuffer = 0;
-    encodingLatency = 1152;
     encoderInStreamLatency = 0;
-    isFirstFrame = true;
   }
 
 protected:
   virtual int getLatencyHint() override {
-    if (encodingLatency == 0) {
-      // If we haven't started encoding yet, over-estimate
-      // our latency bounds, as we'll almost always have a fairly large buffer.
-      return encoderInStreamLatency + MAX_MP3_FRAME_SIZE_SAMPLES;
-    }
-    return encoderInStreamLatency + encodingLatency;
+    return encoderInStreamLatency + MAX_MP3_FRAME_SIZE_SAMPLES;
   }
 
 private:
@@ -329,31 +338,24 @@ private:
   EncoderWrapper encoder;
   DecoderWrapper decoder;
 
-  /**
-   * The maximum number of samples to pass to LAME at once.
-   * Determines roughly how big our output MP3 buffer has to be.
-   */
+  // The maximum number of samples to pass to LAME at once.
+  // Determines roughly how big our output MP3 buffer has to be.
   static constexpr size_t MAX_LAME_MP3_BUFFER_SIZE_SAMPLES = 32;
   static constexpr size_t MAX_MP3_FRAME_SIZE_SAMPLES = 1152;
 
-  Int16OutputBuffer outputBuffer;
-  long samplesProduced = 0;
-  long samplesInEncodingBuffer = 0;
-
-  juce::MemoryBlock mp3Buffer;
-
-  // We have two latency numbers to consider here: the amount of latency between
-  // supplying samples to LAME and getting samples back, and then the amount of
-  // latency within the stream coming out of LAME itself.
-  long encodingLatency = 1152;
-  long encoderInStreamLatency = 0;
-
   // This is the number of samples we add at the start of the LAME stream to
   // give us enough of a "head start" to avoid underflowing our MP3 buffer when
-  // the stream finishes.
-  long addedSilenceAtStart = 1152;
+  // the stream finishes. This value, like many others, was determined
+  // empirically.
+  static constexpr long ADDED_SILENCE_SAMPLES_AT_START = 200;
 
-  bool isFirstFrame = true;
+  Int16OutputBuffer outputBuffer;
+  long samplesProduced = 0;
+  long encoderInStreamLatency = 0;
+
+  // A memory block to use to temporarily hold MP3 frames (encoded bytes).
+  juce::MemoryBlock mp3Buffer;
+  int mp3BufferBytesFilled = 0;
 };
 
 inline void init_mp3_compressor(py::module &m) {
