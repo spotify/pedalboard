@@ -107,6 +107,11 @@ ALL_INCLUDES += [
 ]
 
 
+# libgsm
+ALL_SOURCE_PATHS += list(Path("vendors/libgsm/src").glob("*.c"))
+ALL_INCLUDES += ['vendors/libgsm/inc']
+
+
 # Add platform-specific flags:
 if platform.system() == "Darwin":
     ALL_CPPFLAGS.append("-DMACOS=1")
