@@ -44,19 +44,26 @@ def generate_sine_at(
 @pytest.mark.parametrize("buffer_size", [1, 32, 160, 8192])
 @pytest.mark.parametrize("duration", [1.0, 3.0, 30.0])
 @pytest.mark.parametrize("num_channels", [1, 2])
-def test_gsm_compressor(fundamental_hz: float, sample_rate: float, buffer_size: int, duration: float, num_channels: int):
-    signal = generate_sine_at(sample_rate, fundamental_hz, duration, num_channels) * SINE_WAVE_VOLUME
+def test_gsm_compressor(
+    fundamental_hz: float, sample_rate: float, buffer_size: int, duration: float, num_channels: int
+):
+    signal = (
+        generate_sine_at(sample_rate, fundamental_hz, duration, num_channels) * SINE_WAVE_VOLUME
+    )
     compressed = GSMCompressor()(signal, sample_rate, buffer_size=buffer_size)
     np.testing.assert_allclose(signal, compressed, atol=GSM_ABSOLUTE_TOLERANCE)
 
 
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 32000, 32001, 44100, 48000])
-@pytest.mark.parametrize("num_channels", [1])#, 2])
+@pytest.mark.parametrize("num_channels", [1])  # , 2])
 def test_gsm_compressor_invariant_to_buffer_size(sample_rate: float, num_channels: int):
     fundamental_hz = 400.0
     duration = 3.0
     signal = generate_sine_at(sample_rate, fundamental_hz, duration, num_channels)
 
-    compressed = [GSMCompressor()(signal, sample_rate, buffer_size=buffer_size) for buffer_size in (1, 32, 8192)]
+    compressed = [
+        GSMCompressor()(signal, sample_rate, buffer_size=buffer_size)
+        for buffer_size in (1, 32, 8192)
+    ]
     for a, b in zip(compressed, compressed[1:]):
         np.testing.assert_allclose(a, b)
