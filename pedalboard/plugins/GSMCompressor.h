@@ -59,21 +59,25 @@ public:
     if (!encoder || specChanged) {
       reset();
 
-      if (spec.sampleRate != 8000) {
-        throw std::domain_error(
-            "GSM compression currently only works at 8kHz.");
-      }
+      resamplerRatio = spec.sampleRate / GSM_SAMPLE_RATE;
+      resampledBuffer.setSize(
+          spec.numChannels,
+          (spec.maximumBlockSize * GSM_SAMPLE_RATE / spec.sampleRate));
 
       if (spec.numChannels != 1) {
         throw std::domain_error(
             "GSM compression currently only works on mono signals.");
       }
 
-      if (spec.maximumBlockSize % GSM_FRAME_SIZE_SAMPLES != 0) {
-        throw std::domain_error("GSM compression currently requires a buffer "
-                                "size of a multiple of " +
-                                std::to_string(GSM_FRAME_SIZE_SAMPLES) + ".");
+      inputBlockSizeForGSM = (GSM_FRAME_SIZE_SAMPLES * resamplerRatio);
+      if (spec.maximumBlockSize % (inputBlockSizeForGSM) != 0) {
+        throw std::domain_error(
+            "GSM compression currently requires a buffer "
+            "size of a multiple of " +
+            std::to_string(inputBlockSizeForGSM) +
+            ", but got " + std::to_string(inputBlockSizeForGSM) + ".");
       }
+      printf("Maximum block size is %d, setting inputBlockSizeForGSM to %d samples at %f Hz.\n", spec.maximumBlockSize, inputBlockSizeForGSM, spec.sampleRate);
 
       if (!encoder.getContext()) {
         throw std::runtime_error("Failed to initialize GSM encoder.");
@@ -91,21 +95,26 @@ public:
     auto ioBlock = context.getOutputBlock();
 
     for (int blockStart = 0; blockStart < ioBlock.getNumSamples();
-         blockStart += GSM_FRAME_SIZE_SAMPLES) {
-      int blockEnd = blockStart + GSM_FRAME_SIZE_SAMPLES;
+         blockStart += inputBlockSizeForGSM) {
+      int blockEnd = blockStart + inputBlockSizeForGSM;
       if (blockEnd > ioBlock.getNumSamples())
         blockEnd = ioBlock.getNumSamples();
 
       int blockSize = blockEnd - blockStart;
+
+      // Resample the input audio down to 8kHz.
+      float *inputSamples = ioBlock.getChannelPointer(0) + blockStart;
+      float *tempSamples = resampledBuffer.getWritePointer(0);
+      int samplesUsed = nativeToGSMResampler.process(resamplerRatio, inputSamples, tempSamples,
+                                   GSM_FRAME_SIZE_SAMPLES);
 
       // Convert samples to signed 16-bit integer first,
       // then pass to the GSM Encoder, then immediately back
       // around to the GSM decoder.
       short frame[GSM_FRAME_SIZE_SAMPLES];
 
-      juce::AudioDataConverters::convertFloatToInt16LE(
-          ioBlock.getChannelPointer(0) + blockStart, frame,
-          GSM_FRAME_SIZE_SAMPLES);
+      juce::AudioDataConverters::convertFloatToInt16LE(tempSamples, frame,
+                                                       GSM_FRAME_SIZE_SAMPLES);
 
       gsm_frame encodedFrame;
 
@@ -114,9 +123,15 @@ public:
         throw std::runtime_error("GSM decoder could not decode frame!");
       }
 
-      juce::AudioDataConverters::convertInt16LEToFloat(
-          frame, ioBlock.getChannelPointer(0) + blockStart,
-          GSM_FRAME_SIZE_SAMPLES);
+      juce::AudioDataConverters::convertInt16LEToFloat(frame, tempSamples,
+                                                       GSM_FRAME_SIZE_SAMPLES);
+
+      // Resample back up to the native sample rate:
+      samplesUsed = gsmToNativeResampler.process(1.0 / resamplerRatio, tempSamples,
+                                   inputSamples, blockSize);
+      // if (samplesUsed != blockSize) {
+      //   throw std::runtime_error("An incorrect number of samples were returned after resampling for GSM. This is an internal Pedalboard error and should be reported.");
+      // }
     }
 
     return ioBlock.getNumSamples();
@@ -125,9 +140,9 @@ public:
   void reset() override final {
     encoder.reset();
     decoder.reset();
-
-    samplesProduced = 0;
-    encoderInStreamLatency = 0;
+    nativeToGSMResampler.reset();
+    gsmToNativeResampler.reset();
+    resampledBuffer.clear();
   }
 
 protected:
@@ -137,7 +152,14 @@ private:
   GSMWrapper encoder;
   GSMWrapper decoder;
 
+  int inputBlockSizeForGSM;
+  double resamplerRatio = 1.0;
+  juce::Interpolators::ZeroOrderHold nativeToGSMResampler;
+  juce::Interpolators::WindowedSinc gsmToNativeResampler;
+  juce::AudioBuffer<float> resampledBuffer;
+
   static constexpr size_t GSM_FRAME_SIZE_SAMPLES = 160;
+  static constexpr float GSM_SAMPLE_RATE = 8000;
 };
 
 inline void init_gsm_compressor(py::module &m) {
