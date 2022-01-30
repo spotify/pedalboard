@@ -12,6 +12,6 @@ interrogate
 numpy
 sox
 typing-extensions>=3.10.0.0
-tensorflow==2.8.0-rc0; python_version < '3.10' and platform.machine != 'arm64'
+tensorflow~=2.6.2; python_version < '3.10' and platform.machine != 'arm64'
 google-cloud-storage
 tqdm
