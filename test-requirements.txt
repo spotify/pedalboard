@@ -11,6 +11,6 @@ interrogate
 
 numpy
 sox
-tensorflow==2.5.0; python_version < '3.10' and platform.machine != 'arm64'
+tensorflow==2.6.0; python_version < '3.10' and platform.machine != 'arm64'
 google-cloud-storage
 tqdm
