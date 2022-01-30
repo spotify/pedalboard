@@ -87,9 +87,10 @@ public:
       resampledBuffer.setSize(1, maximumBlockSizeInGSMSampleRate +
                                      GSM_FRAME_SIZE_SAMPLES +
                                      (inStreamLatency / resamplerRatio));
-      outputBuffer.setSize(1, spec.maximumBlockSize +
-                                  gsmFrameSizeInNativeSampleRate +
-                                  inStreamLatency);
+      outputBuffer.setSize(1,
+                           spec.maximumBlockSize +
+                               gsmFrameSizeInNativeSampleRate +
+                               inStreamLatency);
 
       // Feed one GSM frame's worth of silence at the start so that we
       // can tolerate different buffer sizes without underrunning any buffers.
@@ -132,10 +133,6 @@ public:
       for (int i = 1; i < ioBlock.getNumChannels(); i++) {
         ioBlock.getSingleChannelBlock(i).copyFrom(firstChannel);
       }
-    }
-
-    if (samplesProduced > 0 && samplesOutput < ioBlock.getNumSamples()) {
-      throw std::runtime_error("Buffer underrun on the output!");
     }
 
     samplesProduced += samplesOutput;
@@ -276,27 +273,34 @@ public:
       float *outputBufferPointer =
           outputBuffer.getWritePointer(0) + samplesInOutputBuffer;
 
-      float floatFrame[GSM_FRAME_SIZE_SAMPLES];
-      juce::AudioDataConverters::convertInt16LEToFloat(frame, floatFrame,
-                                                       GSM_FRAME_SIZE_SAMPLES);
+      juce::AudioDataConverters::convertInt16LEToFloat(
+          frame, gsmOutputFrame + samplesInGsmOutputFrame,
+          GSM_FRAME_SIZE_SAMPLES);
+      samplesInGsmOutputFrame += GSM_FRAME_SIZE_SAMPLES;
 
-      // Resample back up to the native sample rate and store in outputBuffer:
-      int expectedOutputSamples = gsmFrameSizeInNativeSampleRate;
+      // Resample back up to the native sample rate and store in outputBuffer,
+      // using gsmOutputFrame as a temporary buffer to store up to 1 extra
+      // sample to compensate for rounding errors:
+      int expectedOutputSamples = samplesInGsmOutputFrame * resamplerRatio;
       int samplesConsumed = gsmToNativeResampler.process(
-          inverseResamplerRatio, floatFrame, outputBufferPointer,
+          inverseResamplerRatio, gsmOutputFrame, outputBufferPointer,
           expectedOutputSamples);
+      std::memmove((char *)gsmOutputFrame,
+                   (char *)(gsmOutputFrame + samplesConsumed),
+                   (samplesInGsmOutputFrame - samplesConsumed) * sizeof(float));
 
+      samplesInGsmOutputFrame -= samplesConsumed;
       samplesInOutputBuffer += expectedOutputSamples;
 
       // Now that we're done with this chunk of resampledBuffer, move its
       // contents to the left:
       int samplesRemainingInResampledBuffer =
-          samplesInResampledBuffer - samplesConsumed;
+          samplesInResampledBuffer - GSM_FRAME_SIZE_SAMPLES;
       std::memmove(
           (char *)resampledBuffer.getWritePointer(0),
-          (char *)(resampledBuffer.getWritePointer(0) + samplesConsumed),
+          (char *)(resampledBuffer.getWritePointer(0) + GSM_FRAME_SIZE_SAMPLES),
           samplesRemainingInResampledBuffer * sizeof(float));
-      samplesInResampledBuffer -= samplesConsumed;
+      samplesInResampledBuffer -= GSM_FRAME_SIZE_SAMPLES;
     }
   }
 
@@ -313,6 +317,7 @@ public:
     samplesInResampledBuffer = 0;
     samplesInOutputBuffer = 0;
     samplesInInputReservoir = 0;
+    samplesInGsmOutputFrame = 0;
 
     samplesProduced = 0;
     inStreamLatency = 0;
@@ -322,6 +327,9 @@ protected:
   virtual int getLatencyHint() override { return inStreamLatency; }
 
 private:
+  static constexpr size_t GSM_FRAME_SIZE_SAMPLES = 160;
+  static constexpr float GSM_SAMPLE_RATE = 8000;
+
   double resamplerRatio = 1.0;
   double inverseResamplerRatio = 1.0;
   float gsmFrameSizeInNativeSampleRate;
@@ -337,21 +345,22 @@ private:
   GSMWrapper decoder;
 
   juce::Interpolators::Lagrange gsmToNativeResampler;
+  float gsmOutputFrame[GSM_FRAME_SIZE_SAMPLES + 1];
+  int samplesInGsmOutputFrame = 0;
+
   juce::AudioBuffer<float> outputBuffer;
   int samplesInOutputBuffer = 0;
 
   int samplesProduced = 0;
   int inStreamLatency = 0;
-
-  static constexpr size_t GSM_FRAME_SIZE_SAMPLES = 160;
-  static constexpr float GSM_SAMPLE_RATE = 8000;
 };
 
 inline void init_gsm_compressor(py::module &m) {
   py::class_<GSMCompressor, Plugin>(
       m, "GSMCompressor",
       "Apply an GSM compressor to emulate the sound of a GSM (\"2G\") cellular "
-      "phone connection. This plugin internally resamples the input audio to 8kHz.")
+      "phone connection. This plugin internally resamples the input audio to "
+      "8kHz.")
       .def(py::init([]() { return new GSMCompressor(); }))
       .def("__repr__", [](const GSMCompressor &plugin) {
         std::ostringstream ss;
