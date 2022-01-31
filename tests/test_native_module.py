@@ -18,7 +18,7 @@
 import os
 import pytest
 import numpy as np
-from pedalboard import process, Delat, Distortion, Invert, Gain, Compressor, Convolution, Reverb
+from pedalboard import process, Delay, Distortion, Invert, Gain, Compressor, Convolution, Reverb
 
 IMPULSE_RESPONSE_PATH = os.path.join(os.path.dirname(__file__), "impulse_response.wav")
 
