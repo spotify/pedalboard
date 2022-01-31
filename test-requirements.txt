@@ -6,7 +6,7 @@ pybind11>=2.6.0
 setuptools>=42
 wheel
 flake8
-black==21.12b0
+black==21.7b0
 interrogate
 
 numpy
