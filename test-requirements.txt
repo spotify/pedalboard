@@ -6,12 +6,11 @@ pybind11>=2.6.0
 setuptools>=42
 wheel
 flake8
-black
+black==21.12b0
 interrogate
 
 numpy
 sox
-typing-extensions>=3.10.0.0
 tensorflow~=2.6.2; python_version < '3.10' and platform.machine != 'arm64'
 google-cloud-storage
 tqdm
