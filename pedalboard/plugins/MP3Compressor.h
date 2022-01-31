@@ -99,7 +99,7 @@ public:
    * Returns the number of samples copied.
    */
   int copyToRightSideOf(juce::dsp::AudioBlock<float> outputBlock) {
-    int samplesToOutput = std::min(outputBlock.getNumSamples(), lastSample);
+    int samplesToOutput = std::min((unsigned long) outputBlock.getNumSamples(), lastSample);
 
     if (samplesToOutput) {
       int offsetInOutputBuffer = 0;
