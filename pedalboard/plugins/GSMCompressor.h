@@ -87,10 +87,9 @@ public:
       resampledBuffer.setSize(1, maximumBlockSizeInGSMSampleRate +
                                      GSM_FRAME_SIZE_SAMPLES +
                                      (inStreamLatency / resamplerRatio));
-      outputBuffer.setSize(1,
-                           spec.maximumBlockSize +
-                               gsmFrameSizeInNativeSampleRate +
-                               inStreamLatency);
+      outputBuffer.setSize(1, spec.maximumBlockSize +
+                                  gsmFrameSizeInNativeSampleRate +
+                                  inStreamLatency);
 
       // Feed one GSM frame's worth of silence at the start so that we
       // can tolerate different buffer sizes without underrunning any buffers.
