@@ -18,7 +18,7 @@
 import os
 import pytest
 import numpy as np
-from pedalboard import process, Delay, Distortion, Gain, Compressor, Convolution, Reverb
+from pedalboard import process, Delay, Distortion, Invert, Gain, Compressor, Convolution, Reverb
 
 IMPULSE_RESPONSE_PATH = os.path.join(os.path.dirname(__file__), "impulse_response.wav")
 
@@ -89,6 +89,13 @@ def test_distortion(gain_db, shape, sr=44100):
     np.testing.assert_equal(result.shape, full_scale_noise.shape)
     gain_scale = np.power(10.0, 0.05 * gain_db)
     np.testing.assert_allclose(np.tanh(full_scale_noise * gain_scale), result, rtol=4e-7, atol=2e-7)
+
+
+@pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 44100), (2, 44100)])
+def test_invert(shape, sr=44100):
+    full_scale_noise = np.random.rand(*shape).astype(np.float32)
+    result = Invert()(full_scale_noise, sr)
+    np.testing.assert_allclose(full_scale_noise * -1, result, rtol=4e-7, atol=2e-7)
 
 
 def test_delay():
