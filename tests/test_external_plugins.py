@@ -37,6 +37,7 @@ from typing import Optional
 
 
 TEST_PLUGIN_BASE_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), "plugins")
+TEST_PRESET_BASE_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), "presets")
 
 AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT = [
     os.path.basename(filename)
@@ -187,6 +188,32 @@ def test_at_least_one_parameter(plugin_filename: str):
     """
 
     assert get_parameters(plugin_filename)
+
+
+@pytest.mark.parametrize(
+    "plugin_filename,plugin_preset",
+    [
+        (plugin, os.path.join(TEST_PRESET_BASE_PATH, plugin + ".vstpreset"))
+        for plugin in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
+        if os.path.isfile(os.path.join(TEST_PRESET_BASE_PATH, plugin + ".vstpreset"))
+    ],
+)
+def test_preset_parameters(plugin_filename: str, plugin_preset: str):
+    # plugin with default params.
+    plugin = load_test_plugin(plugin_filename)
+
+    default_params = {k: v.raw_value for k, v in plugin.parameters.items() if v.type == float}
+
+    # load preset file
+    plugin.load_preset(plugin_preset)
+
+    for name, default in default_params.items():
+        actual = getattr(plugin, name)
+        if math.isnan(actual):
+            continue
+        assert (
+            actual != default
+        ), f"Expected attribute {name} to be different from default ({default}), but was {actual}"
 
 
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
@@ -603,7 +630,7 @@ def test_parameter_name_normalization(_input: str, expected: str):
 
 
 @pytest.mark.skipif(not plugin_named("CHOWTapeModel"), reason="Missing CHOWTapeModel plugin.")
-@pytest.mark.parametrize("buffer_size", [128, 8192, 65536])
+@pytest.mark.parametrize("buffer_size", [16, 128, 8192, 65536])
 @pytest.mark.parametrize("oversampling", [1, 2, 4, 8, 16])
 def test_external_plugin_latency_compensation(buffer_size: int, oversampling: int):
     """

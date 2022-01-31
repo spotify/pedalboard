@@ -18,7 +18,7 @@
 import os
 import pytest
 import numpy as np
-from pedalboard import process, Distortion, Invert, Gain, Compressor, Convolution, Reverb
+from pedalboard import process, Delat, Distortion, Invert, Gain, Compressor, Convolution, Reverb
 
 IMPULSE_RESPONSE_PATH = os.path.join(os.path.dirname(__file__), "impulse_response.wav")
 
@@ -96,6 +96,29 @@ def test_invert(shape, sr=44100):
     full_scale_noise = np.random.rand(*shape).astype(np.float32)
     result = Invert()(full_scale_noise, sr)
     np.testing.assert_allclose(full_scale_noise * -1, result, rtol=4e-7, atol=2e-7)
+
+
+def test_delay():
+    delay_seconds = 2.5
+    feedback = 0.0
+    mix = 0.5
+    duration = 10.0
+    sr = 44100
+
+    full_scale_noise = np.random.rand(int(sr * duration)).astype(np.float32)
+    result = Delay(delay_seconds, feedback, mix)(full_scale_noise, sr)
+
+    # Manually do what a delay plugin would do:
+    dry_volume = 1.0 - mix
+    wet_volume = mix
+
+    delayed_line = np.concatenate([np.zeros(int(delay_seconds * sr)), full_scale_noise])[
+        : len(result)
+    ]
+    expected = (dry_volume * full_scale_noise) + (wet_volume * delayed_line)
+
+    np.testing.assert_equal(result.shape, expected.shape)
+    np.testing.assert_allclose(expected, result, rtol=4e-7, atol=2e-7)
 
 
 @pytest.mark.parametrize("reset", (True, False))

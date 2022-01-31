@@ -35,7 +35,7 @@ jobs:
           pip install wheel
           pip install -r test-requirements.txt
       - name: Lint Python code
-        run: flake8 . --count --ignore=W503,E203 --exclude .git,dist,doc,build --show-source --statistics --max-line-length 100
+        run: flake8 . --count --ignore=W503,E203 --exclude .git,dist,doc,build,vendors --show-source --statistics --max-line-length 100
       - name: Check Python formatting
         run: black pedalboard tests --line-length 100 --experimental-string-processing --diff --check
 

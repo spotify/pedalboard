@@ -32,10 +32,11 @@ namespace py = pybind11;
 #include "Plugin.h"
 #include "process.h"
 
+#include "plugins/AddLatency.h"
 #include "plugins/Chorus.h"
 #include "plugins/Compressor.h"
 #include "plugins/Convolution.h"
-#include "plugins/DelayLine.h"
+#include "plugins/Delay.h"
 #include "plugins/Distortion.h"
 #include "plugins/Gain.h"
 #include "plugins/HighpassFilter.h"
@@ -43,6 +44,7 @@ namespace py = pybind11;
 #include "plugins/LadderFilter.h"
 #include "plugins/Limiter.h"
 #include "plugins/LowpassFilter.h"
+#include "plugins/MP3Compressor.h"
 #include "plugins/NoiseGate.h"
 #include "plugins/Phaser.h"
 #include "plugins/PitchShift.h"
@@ -137,6 +139,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_chorus(m);
   init_compressor(m);
   init_convolution(m);
+  init_delay(m);
   init_distortion(m);
   init_gain(m);
   init_highpass(m);
@@ -144,6 +147,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_ladderfilter(m);
   init_limiter(m);
   init_lowpass(m);
+  init_mp3_compressor(m);
   init_noisegate(m);
   init_phaser(m);
   init_pitch_shift(m);
@@ -153,5 +157,5 @@ PYBIND11_MODULE(pedalboard_native, m) {
 
   // Internal plugins for testing, debugging, etc:
   py::module internal = m.def_submodule("_internal");
-  init_delay_line(internal);
+  init_add_latency(internal);
 };
