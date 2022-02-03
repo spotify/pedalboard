@@ -81,9 +81,7 @@ public:
     }
   }
 
-  RubberBandStretcher &getStretcher() {
-    return *rbPtr;
-  }
+  RubberBandStretcher &getStretcher() { return *rbPtr; }
 
   virtual int getLatencyHint() override {
     if (!rbPtr)
