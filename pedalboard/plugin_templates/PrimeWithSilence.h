@@ -161,7 +161,7 @@ inline void init_prime_with_silence_test_plugin(py::module &m) {
   py::class_<PrimeWithSilenceTestPlugin, Plugin>(m,
                                                  "PrimeWithSilenceTestPlugin")
       .def(py::init([](int expectedSilentSamples) {
-             auto plugin = new PrimeWithSilenceTestPlugin();
+             auto plugin = std::make_unique<PrimeWithSilenceTestPlugin>();
              plugin->setExpectedSilentSamples(expectedSilentSamples);
              return plugin;
            }),
