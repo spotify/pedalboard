@@ -81,6 +81,22 @@ public:
     }
   }
 
+  RubberBandStretcher &getStretcher() {
+    return *rbPtr;
+  }
+
+  virtual int getLatencyHint() override {
+    if (!rbPtr)
+      return 0;
+
+    initialSamplesRequired =
+        std::max(initialSamplesRequired,
+                 (int)(rbPtr->getSamplesRequired() + rbPtr->getLatency() +
+                       lastSpec.maximumBlockSize));
+
+    return initialSamplesRequired;
+  }
+
 private:
   int processSamples(const float *const *inBlock, float **outBlock,
                      size_t samples, size_t numChannels) {
@@ -117,18 +133,6 @@ private:
   }
 
 protected:
-  virtual int getLatencyHint() override {
-    if (!rbPtr)
-      return 0;
-
-    initialSamplesRequired =
-        std::max(initialSamplesRequired,
-                 (int)(rbPtr->getSamplesRequired() + rbPtr->getLatency() +
-                       lastSpec.maximumBlockSize));
-
-    return initialSamplesRequired;
-  }
-
   std::unique_ptr<RubberBandStretcher> rbPtr;
   int initialSamplesRequired = 0;
 };

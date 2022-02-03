@@ -305,13 +305,14 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
 
       int pluginSamplesReceived = 0;
 
+      unsigned int blockSize = bufferSize;
       for (unsigned int blockStart = startOfOutputInBuffer;
            blockStart < (unsigned int)intendedOutputBufferSize;
-           blockStart += bufferSize) {
+           blockStart += blockSize) {
         unsigned int blockEnd =
             std::min(blockStart + bufferSize,
                      static_cast<unsigned int>(intendedOutputBufferSize));
-        unsigned int blockSize = blockEnd - blockStart;
+        blockSize = blockEnd - blockStart;
 
         auto ioBlock = juce::dsp::AudioBlock<float>(
             ioBuffer.getArrayOfWritePointers(), ioBuffer.getNumChannels(),
