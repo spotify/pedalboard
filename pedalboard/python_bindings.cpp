@@ -47,6 +47,7 @@ namespace py = pybind11;
 #include "plugins/Limiter.h"
 #include "plugins/LowpassFilter.h"
 #include "plugins/Mix.h"
+#include "plugins/MP3Compressor.h"
 #include "plugins/NoiseGate.h"
 #include "plugins/Phaser.h"
 #include "plugins/PitchShift.h"

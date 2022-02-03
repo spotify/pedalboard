@@ -34,7 +34,7 @@ template <typename SampleType> class Invert : public Plugin {
 };
 
 inline void init_invert(py::module &m) {
-  py::class_<Invert<float>, Plugin>(
+  py::class_<Invert<float>, Plugin, std::shared_ptr<Invert<float>>>(
       m, "Invert",
       "Flip the polarity of the signal. This effect is not audible on its own.")
       .def(py::init([]() { return std::make_unique<Invert<float>>(); }))

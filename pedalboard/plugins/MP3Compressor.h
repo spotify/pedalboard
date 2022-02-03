@@ -360,7 +360,7 @@ private:
 };
 
 inline void init_mp3_compressor(py::module &m) {
-  py::class_<MP3Compressor, Plugin>(
+  py::class_<MP3Compressor, Plugin, std::shared_ptr<MP3Compressor>>(
       m, "MP3Compressor",
       "Apply an MP3 compressor to the audio to reduce its quality.")
       .def(py::init([](float vbr_quality) {
