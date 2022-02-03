@@ -37,7 +37,7 @@ inline void init_invert(py::module &m) {
   py::class_<Invert<float>, Plugin>(
       m, "Invert",
       "Flip the polarity of the signal. This effect is not audible on its own.")
-      .def(py::init([]() { return new Invert<float>(); }))
+      .def(py::init([]() { return std::make_unique<Invert<float>>(); }))
       .def("__repr__", [](const Invert<float> &plugin) {
         std::ostringstream ss;
         ss << "<pedalboard.Invert";

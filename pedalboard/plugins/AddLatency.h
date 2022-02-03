@@ -57,7 +57,7 @@ inline void init_add_latency(py::module &m) {
       "Pedalboard's automatic latency compensation. Probably not useful as a "
       "real effect.")
       .def(py::init([](int samples) {
-             auto al = new AddLatency();
+             auto al = std::make_unique<AddLatency>();
              al->getDSP().setMaximumDelayInSamples(samples);
              al->getDSP().setDelay(samples);
              return al;

@@ -49,7 +49,7 @@ inline void init_chorus(py::module &m) {
       "lot of feedback, and as a vibrato effect if the mix value is 1.")
       .def(py::init([](float rateHz, float depth, float centreDelayMs,
                        float feedback, float mix) {
-             auto plugin = new Chorus<float>();
+             auto plugin = std::make_unique<Chorus<float>>();
              plugin->setRate(rateHz);
              plugin->setDepth(depth);
              plugin->setCentreDelay(centreDelayMs);

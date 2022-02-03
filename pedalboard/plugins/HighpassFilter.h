@@ -47,7 +47,7 @@ inline void init_highpass(py::module &m) {
       "The cutoff frequency will be attenuated by -3dB (i.e.: 0.707x as "
       "loud).")
       .def(py::init([](float cutoff_frequency_hz) {
-             auto plugin = new HighpassFilter<float>();
+             auto plugin = std::make_unique<HighpassFilter<float>>();
              plugin->setCutoffFrequencyHz(cutoff_frequency_hz);
              return plugin;
            }),

@@ -64,7 +64,7 @@ inline void init_pitch_shift(py::module &m) {
   py::class_<PitchShift, Plugin>(
       m, "PitchShift", "Shift pitch without affecting audio duration.")
       .def(py::init([](double scale) {
-             auto plugin = new PitchShift();
+             auto plugin = std::make_unique<PitchShift>();
              plugin->setSemitones(scale);
              return plugin;
            }),

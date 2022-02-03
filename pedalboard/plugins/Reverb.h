@@ -84,7 +84,7 @@ inline void init_reverb(py::module &m) {
       "FreeVerb.")
       .def(py::init([](float roomSize, float damping, float wetLevel,
                        float dryLevel, float width, float freezeMode) {
-             auto plugin = new Reverb();
+             auto plugin = std::make_unique<Reverb>();
              plugin->setRoomSize(roomSize);
              plugin->setDamping(damping);
              plugin->setWetLevel(wetLevel);

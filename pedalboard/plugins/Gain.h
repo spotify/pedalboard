@@ -34,7 +34,7 @@ inline void init_gain(py::module &m) {
       "Increase or decrease the volume of a signal by applying a gain value "
       "(in decibels). No distortion or other effects are applied.")
       .def(py::init([](float gaindB) {
-             auto plugin = new Gain<float>();
+             auto plugin = std::make_unique<Gain<float>>();
              plugin->setGainDecibels(gaindB);
              return plugin;
            }),

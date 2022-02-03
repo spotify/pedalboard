@@ -81,7 +81,7 @@ inline void init_ladderfilter(py::module &m) {
   ladderFilter
       .def(py::init([](juce::dsp::LadderFilterMode mode, float cutoffHz,
                        float resonance, float drive) {
-             auto plugin = new LadderFilter<float>();
+             auto plugin = std::make_unique<LadderFilter<float>>();
              plugin->setMode(mode);
              plugin->setCutoffFrequencyHz(cutoffHz);
              plugin->setResonance(resonance);
