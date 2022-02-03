@@ -364,7 +364,7 @@ inline void init_mp3_compressor(py::module &m) {
       m, "MP3Compressor",
       "Apply an MP3 compressor to the audio to reduce its quality.")
       .def(py::init([](float vbr_quality) {
-             auto plugin = new MP3Compressor();
+             auto plugin = std::make_unique<MP3Compressor>();
              plugin->setVBRQuality(vbr_quality);
              return plugin;
            }),

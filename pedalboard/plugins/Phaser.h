@@ -43,7 +43,7 @@ inline void init_phaser(py::module &m) {
       "feedback control, and the centre frequency of the modulation.")
       .def(py::init([](float rateHz, float depth, float centreFrequency,
                        float feedback, float mix) {
-             auto plugin = new Phaser<float>();
+             auto plugin = std::make_unique<Phaser<float>>();
              plugin->setRate(rateHz);
              plugin->setDepth(depth);
              plugin->setCentreFrequency(centreFrequency);

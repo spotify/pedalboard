@@ -39,7 +39,7 @@ inline void init_noisegate(py::module &m) {
       "release time controls. Can be used as an expander if the ratio is low.")
       .def(py::init([](float thresholddB, float ratio, float attackMs,
                        float releaseMs) {
-             auto plugin = new NoiseGate<float>();
+             auto plugin = std::make_unique<NoiseGate<float>>();
              plugin->getDSP().setThreshold(thresholddB);
              plugin->getDSP().setRatio(ratio);
              plugin->getDSP().setAttack(attackMs);

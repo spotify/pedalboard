@@ -42,7 +42,7 @@ inline void init_compressor(py::module &m) {
       "volume of loud sounds.")
       .def(py::init([](float thresholddB, float ratio, float attackMs,
                        float releaseMs) {
-             auto plugin = new Compressor<float>();
+             auto plugin = std::make_unique<Compressor<float>>();
              plugin->setThreshold(thresholddB);
              plugin->setRatio(ratio);
              plugin->setAttack(attackMs);

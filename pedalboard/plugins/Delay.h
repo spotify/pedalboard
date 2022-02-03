@@ -105,7 +105,7 @@ inline void init_delay(py::module &m) {
       "A digital delay plugin with controllable delay time, feedback "
       "percentage, and dry/wet mix.")
       .def(py::init([](float delaySeconds, float feedback, float mix) {
-             auto delay = new Delay<float>();
+             auto delay = std::make_unique<Delay<float>>();
              delay->setDelaySeconds(delaySeconds);
              delay->setFeedback(feedback);
              delay->setMix(mix);
