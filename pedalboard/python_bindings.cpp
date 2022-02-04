@@ -32,6 +32,8 @@ namespace py = pybind11;
 #include "Plugin.h"
 #include "process.h"
 
+#include "plugin_templates/ResamplingPlugin.h"
+
 #include "plugins/AddLatency.h"
 #include "plugins/Chorus.h"
 #include "plugins/Compressor.h"
@@ -155,6 +157,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_noisegate(m);
   init_phaser(m);
   init_pitch_shift(m);
+  init_resampling_test_plugin(m);
   init_reverb(m);
 
   init_external_plugins(m);
