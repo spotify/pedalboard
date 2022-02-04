@@ -77,16 +77,16 @@ public:
 
       // Store the remainder of the input: any samples that weren't consumed in
       // one pushSamples() call but would be consumable in the next one.
-      inputReservoir.setSize(spec.numChannels, (int)std::ceil(resamplerRatio) +
+      inputReservoir.setSize(spec.numChannels, (int)std::ceil(resamplerRatio) + (int)std::ceil(inverseResamplerRatio) + 
                                     spec.maximumBlockSize);
 
       inStreamLatency = 0;
 
       // Add the resamplers' latencies so the output is properly aligned:
-      printf("nativeToTarget latency: %f, * %f = %f\n", nativeToTargetResamplers[0].getBaseLatency(), resamplerRatio, nativeToTargetResamplers[0].getBaseLatency() * resamplerRatio);
-      printf("targetToNative latency: %f, * %f = %f\n", targetToNativeResamplers[0].getBaseLatency(), inverseResamplerRatio, targetToNativeResamplers[0].getBaseLatency() * inverseResamplerRatio);
+      // printf("nativeToTarget latency: %f, * %f = %f\n", nativeToTargetResamplers[0].getBaseLatency(), resamplerRatio, nativeToTargetResamplers[0].getBaseLatency() * resamplerRatio);
+      // printf("targetToNative latency: %f, * %f = %f\n", targetToNativeResamplers[0].getBaseLatency(), inverseResamplerRatio, targetToNativeResamplers[0].getBaseLatency() * inverseResamplerRatio);
       inStreamLatency += std::round(nativeToTargetResamplers[0].getBaseLatency() * resamplerRatio + targetToNativeResamplers[0].getBaseLatency());
-      printf("total in-stream latency: %d\n", inStreamLatency);
+      // printf("total in-stream latency: %d\n", inStreamLatency);
 
       resampledBuffer.setSize(spec.numChannels, 30 * maximumBlockSizeInSampleRate + (inStreamLatency / resamplerRatio));
       outputBuffer.setSize(spec.numChannels, spec.maximumBlockSize * 3 + inStreamLatency);
@@ -98,7 +98,7 @@ public:
       const juce::dsp::ProcessContextReplacing<SampleType> &context) override final {
     auto ioBlock = context.getOutputBlock();
 
-    printf("[BUFFERS] [I] %d [R] C:%d P:%d [O] %d\n", ioBlock.getNumSamples(), cleanSamplesInResampledBuffer, processedSamplesInResampledBuffer, samplesInOutputBuffer);
+    // printf("[BUFFERS] [I] %d [R] C:%d P:%d [O] %d\n", ioBlock.getNumSamples(), cleanSamplesInResampledBuffer, processedSamplesInResampledBuffer, samplesInOutputBuffer);
 
     float expectedResampledSamples = ioBlock.getNumSamples() / resamplerRatio;
 
@@ -118,10 +118,10 @@ public:
       // resampler's input:
       expectedResampledSamples += (float)samplesInInputReservoir / resamplerRatio;
 
-      printf(
-        "Copying ioBlock[%d:%d] into inputReservoir[%d:%d]\n",
-        0, ioBlock.getNumSamples(), samplesInInputReservoir, samplesInInputReservoir + ioBlock.getNumSamples()
-      );
+      // printf(
+      //   "Copying ioBlock[%d:%d] into inputReservoir[%d:%d]\n",
+      //   0, ioBlock.getNumSamples(), samplesInInputReservoir, samplesInInputReservoir + ioBlock.getNumSamples()
+      // );
       for (int c = 0; c < ioBlock.getNumChannels(); c++) {  
         inputReservoir.copyFrom(c, samplesInInputReservoir, ioBlock.getChannelPointer(c),
                               ioBlock.getNumSamples());
@@ -131,7 +131,7 @@ public:
           resampledBufferPointer, expectedResampledSamples);
       }
 
-      printf("Ran nativeToTargetResamplers on inputReservoir[0:%d] -> resampledBuffer[%d:%d]\n", samplesUsed, processedSamplesInResampledBuffer + cleanSamplesInResampledBuffer, (int)(processedSamplesInResampledBuffer + cleanSamplesInResampledBuffer + expectedResampledSamples));
+      // printf("Ran nativeToTargetResamplers on inputReservoir[0:%d] -> resampledBuffer[%d:%d]\n", samplesUsed, processedSamplesInResampledBuffer + cleanSamplesInResampledBuffer, (int)(processedSamplesInResampledBuffer + cleanSamplesInResampledBuffer + expectedResampledSamples));
 
       if (samplesUsed < ioBlock.getNumSamples() + samplesInInputReservoir) {
         // Take the missing samples and put them at the start of the input
@@ -146,10 +146,10 @@ public:
         }
 
         samplesInInputReservoir = unusedInputSampleCount;
-        printf("Copied remaining %d samples into input reservoir\n", unusedInputSampleCount);
+        // printf("Copied remaining %d samples into input reservoir\n", unusedInputSampleCount);
       } else {
         samplesInInputReservoir = 0;
-        printf("Clearing input reservoir.\n");
+        // printf("Clearing input reservoir.\n");
       }
     } else {
       for (int c = 0; c < ioBlock.getNumChannels(); c++) {
@@ -159,7 +159,7 @@ public:
           resampledBufferPointer, (int)expectedResampledSamples);
       }
 
-      printf("Ran nativeToTargetResamplers on input[0:%d] -> resampledBuffer[%d:%d]\n", samplesUsed, processedSamplesInResampledBuffer + cleanSamplesInResampledBuffer, (int)(processedSamplesInResampledBuffer + cleanSamplesInResampledBuffer + expectedResampledSamples));
+      // printf("Ran nativeToTargetResamplers on input[0:%d] -> resampledBuffer[%d:%d]\n", samplesUsed, processedSamplesInResampledBuffer + cleanSamplesInResampledBuffer, (int)(processedSamplesInResampledBuffer + cleanSamplesInResampledBuffer + expectedResampledSamples));
       
       if (samplesUsed < ioBlock.getNumSamples()) {
         // Take the missing samples and put them at the start of the input
@@ -169,27 +169,40 @@ public:
           inputReservoir.copyFrom(c, 0, ioBlock.getChannelPointer(c) + samplesUsed,
                                   unusedInputSampleCount);
         }
-        printf("Copied remaining %d samples into input reservoir\n", unusedInputSampleCount);
+        // printf("Copied remaining %d samples into input reservoir\n", unusedInputSampleCount);
         samplesInInputReservoir = unusedInputSampleCount;
       }
     }
 
     cleanSamplesInResampledBuffer += (int)expectedResampledSamples;
 
-    printf("[BUFFERS] [I] %d [R] C:%d P:%d [O] %d\n", ioBlock.getNumSamples(), cleanSamplesInResampledBuffer, processedSamplesInResampledBuffer, samplesInOutputBuffer);
+    // printf("[BUFFERS] [I] %d [R] C:%d P:%d [O] %d\n", ioBlock.getNumSamples(), cleanSamplesInResampledBuffer, processedSamplesInResampledBuffer, samplesInOutputBuffer);
 
     // Pass resampledBuffer to the plugin:
     juce::dsp::AudioBlock<SampleType> resampledBlock(resampledBuffer);
-    printf("Processing resampledBuffer[%d:%d] (%d samples) to plugin\n", processedSamplesInResampledBuffer, processedSamplesInResampledBuffer + cleanSamplesInResampledBuffer, cleanSamplesInResampledBuffer);
+    // printf("Processing resampledBuffer[%d:%d] (%d samples) to plugin\n", processedSamplesInResampledBuffer, processedSamplesInResampledBuffer + cleanSamplesInResampledBuffer, cleanSamplesInResampledBuffer);
     juce::dsp::AudioBlock<SampleType> subBlock = resampledBlock.getSubBlock(processedSamplesInResampledBuffer, cleanSamplesInResampledBuffer);
-    // TODO: Check that samplesInResampledBuffer is not greater than the plugin's maximumBlockSize!
-    juce::dsp::ProcessContextReplacing<SampleType> subContext(subBlock);
-    int resampledSamplesOutput = plugin.process(subContext);
+    if (cleanSamplesInResampledBuffer) {
+      // TODO: Check that samplesInResampledBuffer is not greater than the plugin's maximumBlockSize!
+      juce::dsp::ProcessContextReplacing<SampleType> subContext(subBlock);
+      int resampledSamplesOutput = plugin.process(subContext);
 
-    cleanSamplesInResampledBuffer -= resampledSamplesOutput;
-    processedSamplesInResampledBuffer += resampledSamplesOutput;
+      if (resampledSamplesOutput < cleanSamplesInResampledBuffer) {
+        // Move processed samples to the left of the buffer:
+        int offset = cleanSamplesInResampledBuffer - resampledSamplesOutput;
+        // printf("Moving %d processed samples left by %d\n", resampledSamplesOutput, offset);
+        for (int c = 0; c < ioBlock.getNumChannels(); c++) {
+          // Move the contents of the resampled block to the left:
+          std::memmove((char *)resampledBuffer.getWritePointer(c) + processedSamplesInResampledBuffer,
+                      (char *)(resampledBuffer.getWritePointer(c) + processedSamplesInResampledBuffer + offset),
+                      (resampledSamplesOutput) * sizeof(SampleType));
+        }
+      }
+      cleanSamplesInResampledBuffer = 0;
+      processedSamplesInResampledBuffer += resampledSamplesOutput;
+    }
 
-    printf("[BUFFERS] [I] %d [R] C:%d P:%d [O] %d\n", ioBlock.getNumSamples(), cleanSamplesInResampledBuffer, processedSamplesInResampledBuffer, samplesInOutputBuffer);
+    // printf("[BUFFERS] [I] %d [R] C:%d P:%d [O] %d\n", ioBlock.getNumSamples(), cleanSamplesInResampledBuffer, processedSamplesInResampledBuffer, samplesInOutputBuffer);
 
     // Resample back to the intended sample rate:
     int expectedOutputSamples = processedSamplesInResampledBuffer * resamplerRatio;
@@ -214,15 +227,15 @@ public:
         inverseResamplerRatio, resampledBuffer.getReadPointer(c),
         outputBufferPointer, expectedOutputSamples);
     }
-    printf("Ran targetToNativeResampler on resampledBuffer[0:%d] -> outputBuffer[%d:%d]\n", samplesConsumed, samplesInOutputBuffer, samplesInOutputBuffer + expectedOutputSamples);
+    // printf("Ran targetToNativeResampler on resampledBuffer[0:%d] -> outputBuffer[%d:%d]\n", samplesConsumed, samplesInOutputBuffer, samplesInOutputBuffer + expectedOutputSamples);
 
     samplesInOutputBuffer += expectedOutputSamples;
 
-    printf("[BUFFERS] [I] %d [R] C:%d P:%d [O] %d\n", ioBlock.getNumSamples(), cleanSamplesInResampledBuffer, processedSamplesInResampledBuffer, samplesInOutputBuffer);
+    // printf("[BUFFERS] [I] %d [R] C:%d P:%d [O] %d\n", ioBlock.getNumSamples(), cleanSamplesInResampledBuffer, processedSamplesInResampledBuffer, samplesInOutputBuffer);
 
     int samplesRemainingInResampledBuffer = processedSamplesInResampledBuffer + cleanSamplesInResampledBuffer - samplesConsumed;
     if (samplesRemainingInResampledBuffer > 0) {
-      printf("Moving %d samples left by %d\n", samplesRemainingInResampledBuffer, samplesConsumed);
+      // printf("Moving %d samples left by %d\n", samplesRemainingInResampledBuffer, samplesConsumed);
       for (int c = 0; c < ioBlock.getNumChannels(); c++) {
         // Move the contents of the resampled block to the left:
         std::memmove((char *)resampledBuffer.getWritePointer(c),
@@ -235,12 +248,12 @@ public:
 
     // Copy from output buffer to output block:
     int samplesToOutput = std::min(ioBlock.getNumSamples(), (unsigned long) samplesInOutputBuffer);
-    printf("Copying %d samples from output buffer to ioBlock at %d (%d samples large)\n", samplesToOutput, ioBlock.getNumSamples() - samplesToOutput, ioBlock.getNumSamples());
+    // printf("Copying %d samples from output buffer to ioBlock at %d (%d samples large)\n", samplesToOutput, ioBlock.getNumSamples() - samplesToOutput, ioBlock.getNumSamples());
     ioBlock.copyFrom(outputBuffer, 0, ioBlock.getNumSamples() - samplesToOutput, samplesToOutput);
 
     int samplesRemainingInOutputBuffer = samplesInOutputBuffer - samplesToOutput;
     if (samplesRemainingInOutputBuffer > 0) {
-      printf("Moving %d samples left in output buffer by %d\n", samplesRemainingInOutputBuffer, samplesToOutput);
+      // printf("Moving %d samples left in output buffer by %d\n", samplesRemainingInOutputBuffer, samplesToOutput);
       for (int c = 0; c < ioBlock.getNumChannels(); c++) {
         // Move the contents of the resampled block to the left:
         std::memmove((char *)outputBuffer.getWritePointer(c),
@@ -250,7 +263,7 @@ public:
     }
     samplesInOutputBuffer -= samplesToOutput;
 
-    printf("[BUFFERS] [I] %d [R] C:%d P:%d [O] %d\n", ioBlock.getNumSamples(), cleanSamplesInResampledBuffer, processedSamplesInResampledBuffer, samplesInOutputBuffer);
+    // printf("[BUFFERS] [I] %d [R] C:%d P:%d [O] %d\n", ioBlock.getNumSamples(), cleanSamplesInResampledBuffer, processedSamplesInResampledBuffer, samplesInOutputBuffer);
 
     samplesProduced += samplesToOutput;
     int samplesToReturn = std::min((long)(samplesProduced - inStreamLatency),
@@ -258,7 +271,7 @@ public:
     if (samplesToReturn < 0)
       samplesToReturn = 0;
 
-    printf("Returning %d samples\n", samplesToReturn);
+    // printf("Returning %d samples\n", samplesToReturn);
     return samplesToReturn;
   }
 

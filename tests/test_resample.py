@@ -20,11 +20,11 @@ import numpy as np
 from pedalboard import Pedalboard, Resample
 
 
-@pytest.mark.parametrize("fundamental_hz", [440, 880])
-@pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
-@pytest.mark.parametrize("target_sample_rate", [22050, 44100, 48000, 8000])
+@pytest.mark.parametrize("fundamental_hz", [440])
+@pytest.mark.parametrize("sample_rate", [8000, 22050, 44100, 48000])
+@pytest.mark.parametrize("target_sample_rate", [8000, 22050, 44100, 48000])
 @pytest.mark.parametrize("buffer_size", [1, 32, 128, 8192, 96000])
-@pytest.mark.parametrize("duration", [0.5, 2.0, 3.14159])
+@pytest.mark.parametrize("duration", [0.5, 1.2345])
 @pytest.mark.parametrize("num_channels", [1, 2])
 def test_resample(fundamental_hz, sample_rate, target_sample_rate, buffer_size, duration, num_channels):
     samples = np.arange(duration * sample_rate)
