@@ -23,6 +23,80 @@
 
 namespace Pedalboard {
 
+#include <variant>
+
+/**
+ * The various levels of resampler quality available from JUCE.
+ * More could be added here, but these should cover the vast
+ * majority of use cases.
+ */
+enum class ResamplingQuality {
+  ZeroOrderHold = 0,
+  Linear = 1,
+  CatmullRom = 2,
+  Lagrange = 3,
+  WindowedSinc = 4,
+};
+
+/**
+ * A wrapper class that allows changing the quality of a resampler,
+ * as the JUCE GenericInterpolator implementations are each separate classes.
+ */
+class VariableQualityResampler {
+public:
+  void setQuality(const ResamplingQuality newQuality) {
+    switch (newQuality) {
+    case ResamplingQuality::ZeroOrderHold:
+      interpolator = juce::Interpolators::ZeroOrderHold();
+      break;
+    case ResamplingQuality::Linear:
+      interpolator = juce::Interpolators::Linear();
+      break;
+    case ResamplingQuality::CatmullRom:
+      interpolator = juce::Interpolators::CatmullRom();
+      break;
+    case ResamplingQuality::Lagrange:
+      interpolator = juce::Interpolators::Lagrange();
+      break;
+    case ResamplingQuality::WindowedSinc:
+      interpolator = juce::Interpolators::WindowedSinc();
+      break;
+    default:
+      throw std::domain_error("Unknown resampler quality received!");
+    }
+  }
+
+  ResamplingQuality getQuality() const {
+    return (ResamplingQuality)interpolator.index();
+  }
+
+  float getBaseLatency() const {
+    return std::visit([](auto &&i) -> float { return i.getBaseLatency(); },
+                      interpolator);
+  }
+
+  void reset() noexcept {
+    std::visit([](auto &&i) { return i.reset(); }, interpolator);
+  }
+
+  int process(double speedRatio, const float *inputSamples,
+              float *outputSamples, int numOutputSamplesToProduce) noexcept {
+    return std::visit(
+        [speedRatio, inputSamples, outputSamples,
+         numOutputSamplesToProduce](auto &&i) -> float {
+          return i.process(speedRatio, inputSamples, outputSamples,
+                           numOutputSamplesToProduce);
+        },
+        interpolator);
+  }
+
+private:
+  std::variant<juce::Interpolators::ZeroOrderHold, juce::Interpolators::Linear,
+               juce::Interpolators::CatmullRom, juce::Interpolators::Lagrange,
+               juce::Interpolators::WindowedSinc>
+      interpolator;
+};
+
 /**
  * A test plugin used to verify the behaviour of the ResamplingPlugin wrapper.
  */
@@ -61,6 +135,12 @@ public:
       nativeToTargetResamplers.resize(spec.numChannels);
       targetToNativeResamplers.resize(spec.numChannels);
 
+      // Set the quality on each resampler:
+      for (int i = 0; i < spec.numChannels; i++) {
+        nativeToTargetResamplers[i].setQuality(quality);
+        targetToNativeResamplers[i].setQuality(quality);
+      }
+
       resamplerRatio = spec.sampleRate / targetSampleRate;
       inverseResamplerRatio = targetSampleRate / spec.sampleRate;
       maximumBlockSizeInTargetSampleRate =
@@ -87,10 +167,12 @@ public:
           targetToNativeResamplers[0].getBaseLatency());
 
       resampledBuffer.setSize(spec.numChannels,
-                              maximumBlockSizeInTargetSampleRate +
+                              ((maximumBlockSizeInTargetSampleRate + 1) * 3) +
                                   (inStreamLatency / resamplerRatio));
-      outputBuffer.setSize(spec.numChannels,
-                           spec.maximumBlockSize * 3 + inStreamLatency);
+      outputBuffer.setSize(
+          spec.numChannels,
+          (int)std::ceil(resampledBuffer.getNumSamples() * resamplerRatio) +
+              spec.maximumBlockSize);
 
       lastSpec = spec;
     }
@@ -176,37 +258,36 @@ public:
     // Pass resampledBuffer to the plugin, in chunks:
     juce::dsp::AudioBlock<SampleType> resampledBlock(resampledBuffer);
 
-    if (cleanSamplesInResampledBuffer) {
-      // Only pass in the maximumBlockSize (in target sample rate) that the
-      // sub-plugin expects:
-      while (cleanSamplesInResampledBuffer > 0) {
-        int cleanSamplesThisBlock =
-            std::min((int)maximumBlockSizeInTargetSampleRate,
-                     cleanSamplesInResampledBuffer);
+    // Only pass in the maximumBlockSize (in target sample rate) that the
+    // sub-plugin expects:
+    while (cleanSamplesInResampledBuffer > 0) {
+      int cleanSamplesToProcess =
+          std::min((int)maximumBlockSizeInTargetSampleRate,
+                   cleanSamplesInResampledBuffer);
 
-        juce::dsp::AudioBlock<SampleType> subBlock = resampledBlock.getSubBlock(
-            processedSamplesInResampledBuffer, cleanSamplesThisBlock);
-        juce::dsp::ProcessContextReplacing<SampleType> subContext(subBlock);
+      juce::dsp::AudioBlock<SampleType> subBlock = resampledBlock.getSubBlock(
+          processedSamplesInResampledBuffer, cleanSamplesToProcess);
+      juce::dsp::ProcessContextReplacing<SampleType> subContext(subBlock);
 
-        int resampledSamplesOutput = plugin.process(subContext);
+      int resampledSamplesOutput = plugin.process(subContext);
 
-        if (resampledSamplesOutput < cleanSamplesThisBlock) {
-          // Move processed samples to the left of the buffer:
-          int offset = cleanSamplesThisBlock - resampledSamplesOutput;
+      if (resampledSamplesOutput < cleanSamplesToProcess) {
+        // Move all remaining samples to the left of the buffer:
+        int offset = cleanSamplesToProcess - resampledSamplesOutput;
 
-          for (size_t c = 0; c < ioBlock.getNumChannels(); c++) {
-            // Move the contents of the resampled block to the left:
-            std::memmove((char *)resampledBuffer.getWritePointer(c) +
-                             processedSamplesInResampledBuffer,
-                         (char *)(resampledBuffer.getWritePointer(c) +
-                                  processedSamplesInResampledBuffer + offset),
-                         (resampledSamplesOutput) * sizeof(SampleType));
-          }
+        for (size_t c = 0; c < ioBlock.getNumChannels(); c++) {
+          // Move the contents of the resampled block to the left:
+          std::memmove(
+              (char *)resampledBuffer.getWritePointer(c) +
+                  processedSamplesInResampledBuffer,
+              (char *)(resampledBuffer.getWritePointer(c) +
+                       processedSamplesInResampledBuffer + offset),
+              (resampledSamplesOutput + cleanSamplesInResampledBuffer) *
+                  sizeof(SampleType));
         }
-
-        processedSamplesInResampledBuffer += resampledSamplesOutput;
-        cleanSamplesInResampledBuffer -= resampledSamplesOutput;
       }
+      processedSamplesInResampledBuffer += resampledSamplesOutput;
+      cleanSamplesInResampledBuffer -= cleanSamplesToProcess;
     }
 
     // Resample back to the intended sample rate:
@@ -278,11 +359,19 @@ public:
     return samplesToReturn;
   }
 
-  void setTargetSampleRate(float newSampleRate) {
-    targetSampleRate = newSampleRate;
-  }
+  SampleType getTargetSampleRate() const { return targetSampleRate; }
+  void setTargetSampleRate(const SampleType value) {
+    if (value <= 0.0) {
+      throw std::range_error("Target sample rate must be greater than 0Hz.");
+    }
+    targetSampleRate = value;
+  };
 
-  float getTargetSampleRate() const { return targetSampleRate; }
+  ResamplingQuality getQuality() const { return quality; }
+  void setQuality(const ResamplingQuality value) {
+    quality = value;
+    reset();
+  };
 
   T &getNestedPlugin() { return plugin; }
 
@@ -310,7 +399,8 @@ public:
 
 private:
   T plugin;
-  float targetSampleRate = 44100.0f;
+  float targetSampleRate = 8000.0f;
+  ResamplingQuality quality = ResamplingQuality::WindowedSinc;
 
   double resamplerRatio = 1.0;
   double inverseResamplerRatio = 1.0;
@@ -318,11 +408,11 @@ private:
   juce::AudioBuffer<SampleType> inputReservoir;
   int samplesInInputReservoir = 0;
 
-  std::vector<juce::Interpolators::WindowedSinc> nativeToTargetResamplers;
+  std::vector<VariableQualityResampler> nativeToTargetResamplers;
   juce::AudioBuffer<SampleType> resampledBuffer;
   int cleanSamplesInResampledBuffer = 0;
   int processedSamplesInResampledBuffer = 0;
-  std::vector<juce::Interpolators::WindowedSinc> targetToNativeResamplers;
+  std::vector<VariableQualityResampler> targetToNativeResamplers;
 
   juce::AudioBuffer<SampleType> outputBuffer;
   int samplesInOutputBuffer = 0;
@@ -342,45 +432,124 @@ private:
   }
 };
 
-
 inline void init_resample(py::module &m) {
-  py::class_<Resample<Passthrough<float>, float>, Plugin>(m, "Resample")
-      .def(py::init([](float targetSampleRate) {
-             auto plugin = std::make_unique<Resample<Passthrough<float>, float>>();
-             plugin->setTargetSampleRate(targetSampleRate);
-             return plugin;
+  py::class_<Resample<Passthrough<float>, float>, Plugin> resample(
+      m, "Resample",
+      "A plugin that downsamples the input audio to the given sample rate, "
+      "then upsamples it again. Various quality settings will produce audible "
+      "distortion effects.");
+
+  py::enum_<ResamplingQuality>(resample, "Quality")
+      .value("ZeroOrderHold", ResamplingQuality::ZeroOrderHold,
+             "The lowest quality and fastest resampling method, with lots of "
+             "audible artifacts.")
+      .value("Linear", ResamplingQuality::Linear,
+             "A resampling method slightly less noisy than the simplest "
+             "method, but not by much.")
+      .value("CatmullRom", ResamplingQuality::CatmullRom,
+             "A moderately good-sounding resampling method which is fast to "
+             "run.")
+      .value("Lagrange", ResamplingQuality::Lagrange,
+             "A moderately good-sounding resampling method which is slow to "
+             "run.")
+      .value("WindowedSinc", ResamplingQuality::WindowedSinc,
+             "The highest quality and slowest resampling method, with no "
+             "audible artifacts.")
+      .export_values();
+
+  resample
+      .def(py::init([](float targetSampleRate, ResamplingQuality quality) {
+             auto resampler =
+                 std::make_unique<Resample<Passthrough<float>, float>>();
+             resampler->setTargetSampleRate(targetSampleRate);
+             resampler->setQuality(quality);
+             return resampler;
            }),
-           py::arg("target_sample_rate") = 8000.0)
-      .def("__repr__", [](const Resample<Passthrough<float>, float> &plugin) {
-        std::ostringstream ss;
-        ss << "<pedalboard.Resample";
-        ss << " target_sample_rate=" << plugin.getTargetSampleRate();
-        ss << " at " << &plugin;
-        ss << ">";
-        return ss.str();
-      });
+           py::arg("target_sample_rate") = 8000.0,
+           py::arg("quality") = ResamplingQuality::WindowedSinc)
+      .def("__repr__",
+           [](const Resample<Passthrough<float>, float> &plugin) {
+             std::ostringstream ss;
+             ss << "<pedalboard.Resample";
+             ss << " target_sample_rate=" << plugin.getTargetSampleRate();
+             ss << " quality=";
+             switch (plugin.getQuality()) {
+             case ResamplingQuality::ZeroOrderHold:
+               ss << "ZeroOrderHold";
+               break;
+             case ResamplingQuality::Linear:
+               ss << "Linear";
+               break;
+             case ResamplingQuality::CatmullRom:
+               ss << "CatmullRom";
+               break;
+             case ResamplingQuality::Lagrange:
+               ss << "Lagrange";
+               break;
+             case ResamplingQuality::WindowedSinc:
+               ss << "WindowedSinc";
+               break;
+             default:
+               ss << "unknown";
+               break;
+             }
+             ss << " at " << &plugin;
+             ss << ">";
+             return ss.str();
+           })
+      .def_property("target_sample_rate",
+                    &Resample<Passthrough<float>, float>::getTargetSampleRate,
+                    &Resample<Passthrough<float>, float>::setTargetSampleRate)
+      .def_property("quality", &Resample<Passthrough<float>, float>::getQuality,
+                    &Resample<Passthrough<float>, float>::setQuality);
 }
 
-
-
 /**
- * An internal test plugin that does nothing but add latency to the resampled signal.
+ * An internal test plugin that does nothing but add latency to the resampled
+ * signal.
  */
 inline void init_resample_with_latency(py::module &m) {
   py::class_<Resample<AddLatency, float>, Plugin>(m, "ResampleWithLatency")
-      .def(py::init([](float targetSampleRate, int internalLatency) {
+      .def(py::init([](float targetSampleRate, int internalLatency,
+                       ResamplingQuality quality) {
              auto plugin = std::make_unique<Resample<AddLatency, float>>();
              plugin->setTargetSampleRate(targetSampleRate);
-             plugin->getNestedPlugin().getDSP().setMaximumDelayInSamples(internalLatency);
+             plugin->getNestedPlugin().getDSP().setMaximumDelayInSamples(
+                 internalLatency);
              plugin->getNestedPlugin().getDSP().setDelay(internalLatency);
+             plugin->setQuality(quality);
              return plugin;
            }),
-           py::arg("target_sample_rate") = 8000.0, py::arg("internal_latency") = 1024)
+           py::arg("target_sample_rate") = 8000.0,
+           py::arg("internal_latency") = 1024,
+           py::arg("quality") = ResamplingQuality::WindowedSinc)
       .def("__repr__", [](Resample<AddLatency, float> &plugin) {
         std::ostringstream ss;
         ss << "<pedalboard.ResampleWithLatency";
         ss << " target_sample_rate=" << plugin.getTargetSampleRate();
-        ss << " internal_latency=" << plugin.getNestedPlugin().getDSP().getDelay();
+        ss << " internal_latency="
+           << plugin.getNestedPlugin().getDSP().getDelay();
+        ss << " quality=";
+        switch (plugin.getQuality()) {
+        case ResamplingQuality::ZeroOrderHold:
+          ss << "ZeroOrderHold";
+          break;
+        case ResamplingQuality::Linear:
+          ss << "Linear";
+          break;
+        case ResamplingQuality::CatmullRom:
+          ss << "CatmullRom";
+          break;
+        case ResamplingQuality::Lagrange:
+          ss << "Lagrange";
+          break;
+        case ResamplingQuality::WindowedSinc:
+          ss << "WindowedSinc";
+          break;
+        default:
+          ss << "unknown";
+          break;
+        }
         ss << " at " << &plugin;
         ss << ">";
         return ss.str();
