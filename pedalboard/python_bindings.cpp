@@ -32,7 +32,7 @@ namespace py = pybind11;
 #include "Plugin.h"
 #include "process.h"
 
-#include "plugin_templates/ResamplingPlugin.h"
+#include "plugin_templates/Resample.h"
 
 #include "plugins/AddLatency.h"
 #include "plugins/Chorus.h"
@@ -40,8 +40,8 @@ namespace py = pybind11;
 #include "plugins/Convolution.h"
 #include "plugins/Delay.h"
 #include "plugins/Distortion.h"
-#include "plugins/Gain.h"
 #include "plugins/GSMCompressor.h"
+#include "plugins/Gain.h"
 #include "plugins/HighpassFilter.h"
 #include "plugins/Invert.h"
 #include "plugins/LadderFilter.h"

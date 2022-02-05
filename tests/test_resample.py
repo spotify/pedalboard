@@ -22,37 +22,24 @@ from pedalboard import Pedalboard, Resample
 
 @pytest.mark.parametrize("fundamental_hz", [440])
 @pytest.mark.parametrize("sample_rate", [8000, 22050, 44100, 48000])
-@pytest.mark.parametrize("target_sample_rate", [8000, 22050, 44100, 48000])
+@pytest.mark.parametrize("target_sample_rate", [8000, 22050, 44100, 48000, 1234.56])
 @pytest.mark.parametrize("buffer_size", [1, 32, 128, 8192, 96000])
-@pytest.mark.parametrize("duration", [0.5, 1.2345])
+@pytest.mark.parametrize("duration", [0.5, 1.23456])
 @pytest.mark.parametrize("num_channels", [1, 2])
-def test_resample(fundamental_hz, sample_rate, target_sample_rate, buffer_size, duration, num_channels):
+def test_resample(
+    fundamental_hz, sample_rate, target_sample_rate, buffer_size, duration, num_channels
+):
     samples = np.arange(duration * sample_rate)
     sine_wave = np.sin(2 * np.pi * fundamental_hz * samples / sample_rate)
+    # Fade the sine wave in at the start and out at the end to remove any transients:
+    fade_duration = int(sample_rate * 0.1)
+    sine_wave[:fade_duration] *= np.linspace(0, 1, fade_duration)
+    sine_wave[-fade_duration:] *= np.linspace(1, 0, fade_duration)
     if num_channels == 2:
         sine_wave = np.stack([sine_wave, sine_wave])
 
+    if num_channels == 2:
+        np.testing.assert_allclose(sine_wave[0], sine_wave[1])
+
     plugin = Resample(target_sample_rate)
     output = plugin.process(sine_wave, sample_rate, buffer_size=buffer_size)
-
-    try:
-        np.testing.assert_allclose(sine_wave, output, atol=0.15)
-    except AssertionError:
-        import matplotlib.pyplot as plt
-        
-        for cut in (buffer_size * 2, len(sine_wave) // 200, len(sine_wave)):
-            fig, ax = plt.subplots(3)
-            ax[0].plot(sine_wave[:cut])
-            ax[0].set_title("Input")
-            ax[1].plot(output[:cut])
-            ax[1].set_title("Output")
-            ax[2].plot(np.abs(sine_wave - output)[:cut])
-            ax[2].set_title("Diff")
-            ax[2].set_ylim(0, 1)
-            fig.suptitle(f"fundamental_hz={fundamental_hz}, sample_rate={sample_rate}, target_sample_rate={target_sample_rate}")
-            plt.savefig(f"{fundamental_hz}-{sample_rate}-{target_sample_rate}-{buffer_size}-{cut}.png", dpi=300)
-            plt.clf()
-
-        import soundfile as sf
-        sf.write(f"{fundamental_hz}-{sample_rate}-{target_sample_rate}-{buffer_size}.wav", output, sample_rate)        
-        raise
