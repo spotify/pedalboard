@@ -63,15 +63,14 @@ public:
 
       resamplerRatio = spec.sampleRate / targetSampleRate;
       inverseResamplerRatio = targetSampleRate / spec.sampleRate;
+      maximumBlockSizeInTargetSampleRate =
+          std::ceil(spec.maximumBlockSize / resamplerRatio);
 
       const juce::dsp::ProcessSpec subSpec = {
           .numChannels = spec.numChannels,
           .sampleRate = targetSampleRate,
-          .maximumBlockSize = static_cast<unsigned int>(spec.maximumBlockSize *
-                                                        resamplerRatio)};
+          .maximumBlockSize = maximumBlockSizeInTargetSampleRate};
       plugin.prepare(subSpec);
-
-      int maximumBlockSizeInSampleRate = spec.maximumBlockSize / resamplerRatio;
 
       // Store the remainder of the input: any samples that weren't consumed in
       // one pushSamples() call but would be consumable in the next one.
@@ -88,7 +87,7 @@ public:
           targetToNativeResamplers[0].getBaseLatency());
 
       resampledBuffer.setSize(spec.numChannels,
-                              maximumBlockSizeInSampleRate +
+                              maximumBlockSizeInTargetSampleRate +
                                   (inStreamLatency / resamplerRatio));
       outputBuffer.setSize(spec.numChannels,
                            spec.maximumBlockSize * 3 + inStreamLatency);
@@ -114,14 +113,14 @@ public:
           std::to_string(expectedResampledSamples) + ".");
     }
 
-    int samplesUsed = 0;
+    unsigned long samplesUsed = 0;
     if (samplesInInputReservoir) {
       // Copy the input samples into the input reservoir and use that as the
       // resampler's input:
       expectedResampledSamples +=
           (float)samplesInInputReservoir / resamplerRatio;
 
-      for (int c = 0; c < ioBlock.getNumChannels(); c++) {
+      for (size_t c = 0; c < ioBlock.getNumChannels(); c++) {
         inputReservoir.copyFrom(c, samplesInInputReservoir,
                                 ioBlock.getChannelPointer(c),
                                 ioBlock.getNumSamples());
@@ -139,7 +138,7 @@ public:
         int unusedInputSampleCount =
             (ioBlock.getNumSamples() + samplesInInputReservoir) - samplesUsed;
 
-        for (int c = 0; c < ioBlock.getNumChannels(); c++) {
+        for (size_t c = 0; c < ioBlock.getNumChannels(); c++) {
           inputReservoir.copyFrom(
               c, 0, inputReservoir.getReadPointer(c) + samplesUsed,
               unusedInputSampleCount);
@@ -150,7 +149,7 @@ public:
         samplesInInputReservoir = 0;
       }
     } else {
-      for (int c = 0; c < ioBlock.getNumChannels(); c++) {
+      for (size_t c = 0; c < ioBlock.getNumChannels(); c++) {
         SampleType *resampledBufferPointer =
             resampledBuffer.getWritePointer(c) +
             processedSamplesInResampledBuffer + cleanSamplesInResampledBuffer;
@@ -163,7 +162,7 @@ public:
         // Take the missing samples and put them at the start of the input
         // reservoir for next time:
         int unusedInputSampleCount = ioBlock.getNumSamples() - samplesUsed;
-        for (int c = 0; c < ioBlock.getNumChannels(); c++) {
+        for (size_t c = 0; c < ioBlock.getNumChannels(); c++) {
           inputReservoir.copyFrom(c, 0,
                                   ioBlock.getChannelPointer(c) + samplesUsed,
                                   unusedInputSampleCount);
@@ -174,31 +173,40 @@ public:
 
     cleanSamplesInResampledBuffer += (int)expectedResampledSamples;
 
-    // Pass resampledBuffer to the plugin:
+    // Pass resampledBuffer to the plugin, in chunks:
     juce::dsp::AudioBlock<SampleType> resampledBlock(resampledBuffer);
-    juce::dsp::AudioBlock<SampleType> subBlock = resampledBlock.getSubBlock(
-        processedSamplesInResampledBuffer, cleanSamplesInResampledBuffer);
+
     if (cleanSamplesInResampledBuffer) {
-      // TODO: Check that samplesInResampledBuffer is not greater than the
-      // plugin's maximumBlockSize!
-      juce::dsp::ProcessContextReplacing<SampleType> subContext(subBlock);
-      int resampledSamplesOutput = plugin.process(subContext);
+      // Only pass in the maximumBlockSize (in target sample rate) that the
+      // sub-plugin expects:
+      while (cleanSamplesInResampledBuffer > 0) {
+        int cleanSamplesThisBlock =
+            std::min((int)maximumBlockSizeInTargetSampleRate,
+                     cleanSamplesInResampledBuffer);
 
-      if (resampledSamplesOutput < cleanSamplesInResampledBuffer) {
-        // Move processed samples to the left of the buffer:
-        int offset = cleanSamplesInResampledBuffer - resampledSamplesOutput;
+        juce::dsp::AudioBlock<SampleType> subBlock = resampledBlock.getSubBlock(
+            processedSamplesInResampledBuffer, cleanSamplesThisBlock);
+        juce::dsp::ProcessContextReplacing<SampleType> subContext(subBlock);
 
-        for (int c = 0; c < ioBlock.getNumChannels(); c++) {
-          // Move the contents of the resampled block to the left:
-          std::memmove((char *)resampledBuffer.getWritePointer(c) +
-                           processedSamplesInResampledBuffer,
-                       (char *)(resampledBuffer.getWritePointer(c) +
-                                processedSamplesInResampledBuffer + offset),
-                       (resampledSamplesOutput) * sizeof(SampleType));
+        int resampledSamplesOutput = plugin.process(subContext);
+
+        if (resampledSamplesOutput < cleanSamplesThisBlock) {
+          // Move processed samples to the left of the buffer:
+          int offset = cleanSamplesThisBlock - resampledSamplesOutput;
+
+          for (size_t c = 0; c < ioBlock.getNumChannels(); c++) {
+            // Move the contents of the resampled block to the left:
+            std::memmove((char *)resampledBuffer.getWritePointer(c) +
+                             processedSamplesInResampledBuffer,
+                         (char *)(resampledBuffer.getWritePointer(c) +
+                                  processedSamplesInResampledBuffer + offset),
+                         (resampledSamplesOutput) * sizeof(SampleType));
+          }
         }
+
+        processedSamplesInResampledBuffer += resampledSamplesOutput;
+        cleanSamplesInResampledBuffer -= resampledSamplesOutput;
       }
-      cleanSamplesInResampledBuffer = 0;
-      processedSamplesInResampledBuffer += resampledSamplesOutput;
     }
 
     // Resample back to the intended sample rate:
@@ -217,7 +225,7 @@ public:
           std::to_string(expectedOutputSamples) + ".");
     }
 
-    for (int c = 0; c < ioBlock.getNumChannels(); c++) {
+    for (size_t c = 0; c < ioBlock.getNumChannels(); c++) {
       float *outputBufferPointer =
           outputBuffer.getWritePointer(c) + samplesInOutputBuffer;
       samplesConsumed = targetToNativeResamplers[c].process(
@@ -231,7 +239,7 @@ public:
                                             cleanSamplesInResampledBuffer -
                                             samplesConsumed;
     if (samplesRemainingInResampledBuffer > 0) {
-      for (int c = 0; c < ioBlock.getNumChannels(); c++) {
+      for (size_t c = 0; c < ioBlock.getNumChannels(); c++) {
         // Move the contents of the resampled block to the left:
         std::memmove(
             (char *)resampledBuffer.getWritePointer(c),
@@ -251,7 +259,7 @@ public:
     int samplesRemainingInOutputBuffer =
         samplesInOutputBuffer - samplesToOutput;
     if (samplesRemainingInOutputBuffer > 0) {
-      for (int c = 0; c < ioBlock.getNumChannels(); c++) {
+      for (size_t c = 0; c < ioBlock.getNumChannels(); c++) {
         // Move the contents of the resampled block to the left:
         std::memmove(
             (char *)outputBuffer.getWritePointer(c),
@@ -293,9 +301,12 @@ public:
 
     samplesProduced = 0;
     inStreamLatency = 0;
+    maximumBlockSizeInTargetSampleRate = 0;
   }
 
-  virtual int getLatencyHint() override { return inStreamLatency; }
+  virtual int getLatencyHint() override {
+    return inStreamLatency + (plugin.getLatencyHint() * resamplerRatio);
+  }
 
 private:
   T plugin;
@@ -318,6 +329,7 @@ private:
 
   int samplesProduced = 0;
   int inStreamLatency = 0;
+  unsigned int maximumBlockSizeInTargetSampleRate = 0;
 
   int spaceAvailableInResampledBuffer() const {
     return resampledBuffer.getNumSamples() -
@@ -330,22 +342,45 @@ private:
   }
 };
 
-inline void init_resampling_test_plugin(py::module &m) {
-  py::class_<Resample<AddLatency, float>, Plugin>(m, "Resample")
-      .def(py::init([](float targetSampleRate) {
-             auto plugin = std::make_unique<Resample<AddLatency, float>>();
-             plugin->setTargetSampleRate(targetSampleRate);
 
-             // Set a delay on this test plugin:
-             plugin->getNestedPlugin().getDSP().setMaximumDelayInSamples(1024);
-             plugin->getNestedPlugin().getDSP().setDelay(1024);
+inline void init_resample(py::module &m) {
+  py::class_<Resample<Passthrough<float>, float>, Plugin>(m, "Resample")
+      .def(py::init([](float targetSampleRate) {
+             auto plugin = std::make_unique<Resample<Passthrough<float>, float>>();
+             plugin->setTargetSampleRate(targetSampleRate);
              return plugin;
            }),
            py::arg("target_sample_rate") = 8000.0)
-      .def("__repr__", [](const Resample<AddLatency, float> &plugin) {
+      .def("__repr__", [](const Resample<Passthrough<float>, float> &plugin) {
         std::ostringstream ss;
         ss << "<pedalboard.Resample";
         ss << " target_sample_rate=" << plugin.getTargetSampleRate();
+        ss << " at " << &plugin;
+        ss << ">";
+        return ss.str();
+      });
+}
+
+
+
+/**
+ * An internal test plugin that does nothing but add latency to the resampled signal.
+ */
+inline void init_resample_with_latency(py::module &m) {
+  py::class_<Resample<AddLatency, float>, Plugin>(m, "ResampleWithLatency")
+      .def(py::init([](float targetSampleRate, int internalLatency) {
+             auto plugin = std::make_unique<Resample<AddLatency, float>>();
+             plugin->setTargetSampleRate(targetSampleRate);
+             plugin->getNestedPlugin().getDSP().setMaximumDelayInSamples(internalLatency);
+             plugin->getNestedPlugin().getDSP().setDelay(internalLatency);
+             return plugin;
+           }),
+           py::arg("target_sample_rate") = 8000.0, py::arg("internal_latency") = 1024)
+      .def("__repr__", [](Resample<AddLatency, float> &plugin) {
+        std::ostringstream ss;
+        ss << "<pedalboard.ResampleWithLatency";
+        ss << " target_sample_rate=" << plugin.getTargetSampleRate();
+        ss << " internal_latency=" << plugin.getNestedPlugin().getDSP().getDelay();
         ss << " at " << &plugin;
         ss << ">";
         return ss.str();

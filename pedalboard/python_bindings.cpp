@@ -157,7 +157,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_noisegate(m);
   init_phaser(m);
   init_pitch_shift(m);
-  init_resampling_test_plugin(m);
+  init_resample(m);
   init_reverb(m);
 
   init_external_plugins(m);
@@ -166,4 +166,5 @@ PYBIND11_MODULE(pedalboard_native, m) {
   py::module internal = m.def_submodule("_internal");
   init_add_latency(internal);
   init_prime_with_silence_test_plugin(internal);
+  init_resample_with_latency(internal);
 };

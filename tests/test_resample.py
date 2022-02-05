@@ -18,6 +18,8 @@
 import pytest
 import numpy as np
 from pedalboard import Pedalboard, Resample
+from pedalboard_native._internal import ResampleWithLatency
+
 
 
 @pytest.mark.parametrize("fundamental_hz", [440])
@@ -26,8 +28,15 @@ from pedalboard import Pedalboard, Resample
 @pytest.mark.parametrize("buffer_size", [1, 32, 128, 8192, 96000])
 @pytest.mark.parametrize("duration", [0.5, 1.23456])
 @pytest.mark.parametrize("num_channels", [1, 2])
+@pytest.mark.parametrize("plugin_class", [Resample, ResampleWithLatency])
 def test_resample(
-    fundamental_hz, sample_rate, target_sample_rate, buffer_size, duration, num_channels
+    fundamental_hz: float,
+    sample_rate: float,
+    target_sample_rate: float,
+    buffer_size: int,
+    duration: float,
+    num_channels: int,
+    plugin_class,
 ):
     samples = np.arange(duration * sample_rate)
     sine_wave = np.sin(2 * np.pi * fundamental_hz * samples / sample_rate)
@@ -41,5 +50,5 @@ def test_resample(
     if num_channels == 2:
         np.testing.assert_allclose(sine_wave[0], sine_wave[1])
 
-    plugin = Resample(target_sample_rate)
+    plugin = plugin_class(target_sample_rate)
     output = plugin.process(sine_wave, sample_rate, buffer_size=buffer_size)
