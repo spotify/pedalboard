@@ -18,6 +18,7 @@
 import pytest
 import numpy as np
 from pedalboard import GSMCompressor, Resample
+from .utils import generate_sine_at
 
 # GSM is a _very_ lossy codec:
 GSM_ABSOLUTE_TOLERANCE = 0.75
@@ -26,26 +27,10 @@ GSM_ABSOLUTE_TOLERANCE = 0.75
 SINE_WAVE_VOLUME = 0.9
 
 
-def generate_sine_at(
-    sample_rate: float,
-    fundamental_hz: float = 440.0,
-    num_seconds: float = 3.0,
-    num_channels: int = 1,
-) -> np.ndarray:
-    samples = np.arange(num_seconds * sample_rate)
-    sine_wave = np.sin(2 * np.pi * fundamental_hz * samples / sample_rate)
-    # Fade the sine wave in at the start and out at the end to remove any transients:
-    fade_duration = int(sample_rate * 0.1)
-    sine_wave[:fade_duration] *= np.linspace(0, 1, fade_duration)
-    sine_wave[-fade_duration:] *= np.linspace(1, 0, fade_duration)
-    if num_channels == 2:
-        return np.stack([sine_wave, sine_wave])
-    return sine_wave
-
 
 @pytest.mark.parametrize("fundamental_hz", [440.0])
-@pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 32000, 32001, 44100, 48000])
-@pytest.mark.parametrize("buffer_size", [1, 32, 160, 8192])
+@pytest.mark.parametrize("sample_rate", [8000, 11025, 32001.2345, 44100, 48000])
+@pytest.mark.parametrize("buffer_size", [1, 32, 160, 1_000_000])
 @pytest.mark.parametrize("duration", [1.0])
 @pytest.mark.parametrize(
     "quality",
@@ -73,7 +58,7 @@ def test_gsm_compressor(
     np.testing.assert_allclose(signal, output, atol=GSM_ABSOLUTE_TOLERANCE)
 
 
-@pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 32000, 32001, 44100, 48000])
+@pytest.mark.parametrize("sample_rate", [8000, 44100])
 @pytest.mark.parametrize(
     "quality",
     [
@@ -96,7 +81,7 @@ def test_gsm_compressor_invariant_to_buffer_size(
 
     compressed = [
         GSMCompressor(quality=quality)(signal, sample_rate, buffer_size=buffer_size)
-        for buffer_size in (1, 32, 8192)
+        for buffer_size in (1, 32, 7000, 8192)
     ]
     for a, b in zip(compressed, compressed[1:]):
         np.testing.assert_allclose(a, b)

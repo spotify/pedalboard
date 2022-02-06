@@ -136,10 +136,11 @@ public:
       nativeToTargetResamplers.resize(spec.numChannels);
       targetToNativeResamplers.resize(spec.numChannels);
 
-      // Set the quality on each resampler:
       for (int i = 0; i < spec.numChannels; i++) {
         nativeToTargetResamplers[i].setQuality(quality);
+        nativeToTargetResamplers[i].reset();
         targetToNativeResamplers[i].setQuality(quality);
+        targetToNativeResamplers[i].reset();
       }
 
       resamplerRatio = spec.sampleRate / targetSampleRate;
@@ -221,12 +222,8 @@ public:
         int unusedInputSampleCount =
             (ioBlock.getNumSamples() + samplesInInputReservoir) - samplesUsed;
 
-        for (size_t c = 0; c < ioBlock.getNumChannels(); c++) {
-          inputReservoir.copyFrom(
-              c, 0, inputReservoir.getReadPointer(c) + samplesUsed,
-              unusedInputSampleCount);
-        }
-
+        juce::dsp::AudioBlock<SampleType> inputReservoirBlock(inputReservoir);
+        inputReservoirBlock.move(samplesUsed, 0, unusedInputSampleCount);
         samplesInInputReservoir = unusedInputSampleCount;
       } else {
         samplesInInputReservoir = 0;

@@ -83,61 +83,36 @@ public:
         juce::dsp::ProcessContextReplacing<SampleType> subContext(subBlock);
         int samplesOutputThisBlock = plugin.process(subContext);
 
-        if (samplesOutputThisBlock != blockSize) {
-          throw std::runtime_error(
-              "FixedBlockSize currently requires wrapped plugins to impart no "
-              "delay. This is an internal Pedalboard error and should be "
-              "reported.");
-        }
-
         if (samplesOutput > 0 && samplesOutputThisBlock < blockSize) {
-          throw std::runtime_error("Plugin that returns fixed-size blocks "
-                                   "returned too few samples!");
+          throw std::runtime_error("Plugin that using FixedBlockSize "
+                                   "returned too few samples! This is an internal Pedalboard error and should be reported.");
         }
         samplesOutput += samplesOutputThisBlock;
       }
 
       int remainderInSamples = ioBlock.getNumSamples() % blockSize;
       if (remainderInSamples > 0) {
-        if (samplesProcessed > 0) {
-          // We're at the end of our buffer, so pad with zeros.
+        // We're at the end of our buffer, so pad with zeros.
+        int offset = ioBlock.getNumSamples() - remainderInSamples;
 
-          int offset = ioBlock.getNumSamples() - remainderInSamples;
+        // Copy the remainder into inputBuffer:
+        juce::dsp::AudioBlock<SampleType> inputBlock(inputBuffer);
+        juce::dsp::AudioBlock<SampleType> subBlock =
+            inputBlock.getSubBlock(0, blockSize);
 
-          // Copy the remainder into inputBuffer:
-          juce::dsp::AudioBlock<SampleType> inputBlock(inputBuffer);
-          juce::dsp::AudioBlock<SampleType> subBlock =
-              inputBlock.getSubBlock(0, blockSize);
+        subBlock.clear();
+        subBlock.copyFrom(ioBlock.getSubBlock(offset, remainderInSamples));
 
-          subBlock.clear();
-          subBlock.copyFrom(ioBlock.getSubBlock(offset, remainderInSamples));
+        juce::dsp::ProcessContextReplacing<SampleType> subContext(subBlock);
+        int samplesOutputThisBlock = plugin.process(subContext);
 
-          juce::dsp::ProcessContextReplacing<SampleType> subContext(subBlock);
-          int samplesOutputThisBlock = plugin.process(subContext);
-          if (samplesOutputThisBlock != blockSize) {
-            throw std::runtime_error(
-                "FixedBlockSize currently requires wrapped plugins to impart "
-                "no delay. This is an internal Pedalboard error and should be "
-                "reported.");
-          }
+        // Copy the output back into ioBlock, right-aligned:
+        ioBlock
+            .getSubBlock(ioBlock.getNumSamples() - remainderInSamples,
+                          remainderInSamples)
+            .copyFrom(subBlock);
 
-          if (samplesOutput > 0 && samplesOutputThisBlock < blockSize) {
-            throw std::runtime_error(
-                "Plugin that returns fixed-size blocks returned too few "
-                "samples! This is an internal Pedalboard error and should be "
-                "reported.");
-          }
-
-          // Copy the output back into ioBlock, right-aligned:
-          ioBlock
-              .getSubBlock(ioBlock.getNumSamples() - remainderInSamples,
-                           remainderInSamples)
-              .copyFrom(subBlock);
-
-          samplesOutput += remainderInSamples;
-        } else {
-          jassertfalse;
-        }
+        samplesOutput += remainderInSamples;
       }
 
       samplesProcessed += samplesOutput;
@@ -145,13 +120,12 @@ public:
     } else {
       // We have to render three parts:
       // 1) Push as many samples as possible into inputBuffer
-      int samplesToAddToInputBuffer =
-          std::min((int)inputBuffer.getNumSamples() - (int)inputBufferSamples,
-                   (int)ioBlock.getNumSamples());
+      if (inputBuffer.getNumSamples() - inputBufferSamples < ioBlock.getNumSamples()) {
+        throw std::runtime_error("Input buffer overflow! This is an internal Pedalboard error and should be reported.");
+      }
 
-      ioBlock.copyTo(inputBuffer, 0, inputBufferSamples,
-                     samplesToAddToInputBuffer);
-      inputBufferSamples += samplesToAddToInputBuffer;
+      ioBlock.copyTo(inputBuffer, 0, inputBufferSamples, ioBlock.getNumSamples());
+      inputBufferSamples += ioBlock.getNumSamples();
 
       // 2) Copy the output from the previous render call into the ioBlock
       int samplesOutput = 0;
@@ -179,6 +153,7 @@ public:
 
       // 3) If the input buffer is large enough, process!
       int samplesProcessed = 0;
+      int inputSamplesConsumed = 0;
       juce::dsp::AudioBlock<SampleType> inputBlock(inputBuffer);
       for (int i = 0; i < inputBufferSamples; i += blockSize) {
         int samplesAvailable = std::min(blockSize, inputBufferSamples - i);
@@ -189,36 +164,28 @@ public:
             inputBlock.getSubBlock(i, blockSize);
         juce::dsp::ProcessContextReplacing<SampleType> subContext(subBlock);
         int samplesProcessedThisBlock = plugin.process(subContext);
-        if (samplesProcessedThisBlock != blockSize) {
-          throw std::runtime_error(
-              "FixedBlockSize currently requires wrapped plugins to impart no "
-              "delay. This is an internal Pedalboard error and should be "
-              "reported.");
-        }
+        inputSamplesConsumed += blockSize;
 
-        if (samplesProcessed > 0 && samplesProcessedThisBlock < blockSize) {
-          throw std::runtime_error(
-              "Plugin that returns fixed-size blocks returned too few samples! "
-              "This is an internal Pedalboard error and should be reported.");
+        if (samplesProcessedThisBlock > 0) {
+          // Move the output to the left side of the buffer:
+          inputBlock.move(i + blockSize - samplesProcessedThisBlock, samplesProcessed, samplesProcessedThisBlock);
         }
+        
         samplesProcessed += samplesProcessedThisBlock;
       }
 
       // Copy the newly-processed data into the output buffer:
+      if (outputBuffer.getNumSamples() < outputBufferSamples + samplesProcessed) {
+        throw std::runtime_error("Output buffer overflow! This is an internal Pedalboard error and should be reported.");
+      }
       inputBlock.copyTo(outputBuffer, 0, outputBufferSamples, samplesProcessed);
       outputBufferSamples += samplesProcessed;
 
-      if (!(outputBufferSamples <= outputBuffer.getNumSamples())) {
-        throw std::runtime_error("Output buffer overrun! This is an internal "
-                                 "Pedalboard error and should be reported.");
-      }
-
       // ... and move the remaining input data to the left of the input buffer:
-      inputBlock.move(samplesProcessed, 0,
-                      inputBufferSamples - samplesProcessed);
-      inputBufferSamples -= samplesProcessed;
+      inputBlock.move(inputSamplesConsumed, 0, inputBufferSamples - inputSamplesConsumed);
+      inputBufferSamples -= inputSamplesConsumed;
 
-      // ... and copy the remaining output buffer if we can:
+      // ... and try to output the remaining output buffer contents if we now have enough:
       if (samplesOutput == 0 && outputBufferSamples >= minimumSamplesToOutput) {
         ioBlock.copyFrom(outputBuffer, 0, 0, ioBlock.getNumSamples());
         outputBufferSamples -= ioBlock.getNumSamples();
@@ -293,8 +260,8 @@ public:
                                std::to_string(expectedBlockSize) + "!");
     }
     AddLatency::prepare(spec);
-    this->getDSP().setMaximumDelayInSamples(1024);
-    this->getDSP().setDelay(1024);
+    this->getDSP().setMaximumDelayInSamples(10);
+    this->getDSP().setDelay(10);
   }
 
   virtual int

@@ -18,38 +18,16 @@
 import pytest
 import numpy as np
 from pedalboard_native._internal import FixedSizeBlockTestPlugin
+from .utils import generate_sine_at
 
 
-@pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
-@pytest.mark.parametrize("buffer_size", [1, 16, 40, 128, 160, 8192, 8193])
-@pytest.mark.parametrize("fixed_buffer_size", [1, 16, 40, 128, 160, 8192, 8193])
+@pytest.mark.parametrize("sample_rate", [22050, 44100])
+@pytest.mark.parametrize("buffer_size", [1, 64, 65, 128, 8192, 8193])
+@pytest.mark.parametrize("fixed_buffer_size", [1, 64, 65, 128, 8192, 8193])
 @pytest.mark.parametrize("num_channels", [1, 2])
 def test_fixed_size_blocks_plugin(sample_rate, buffer_size, fixed_buffer_size, num_channels):
-    num_seconds = 5.0
-    noise = np.random.rand(int(num_seconds * sample_rate))
-    if num_channels == 2:
-        noise = np.stack([noise, noise])
+    signal = generate_sine_at(sample_rate, num_seconds=1.0, num_channels=num_channels)
+
     plugin = FixedSizeBlockTestPlugin(fixed_buffer_size)
-    output = plugin.process(noise, sample_rate, buffer_size=buffer_size)
-    try:
-        np.testing.assert_allclose(noise, output)
-    except AssertionError:
-        import matplotlib.pyplot as plt
-
-        if num_channels == 2:
-            noise = noise[0]
-            output = output[0]
-
-        for cut in (buffer_size * 2, len(noise) // 200, len(noise)):
-            fig, ax = plt.subplots(3)
-            ax[0].plot(noise[:cut])
-            ax[0].set_title("Input")
-            ax[1].plot(output[:cut])
-            ax[1].set_title("Output")
-            ax[2].plot(np.abs(noise - output)[:cut])
-            ax[2].set_title("Diff")
-            ax[2].set_ylim(0, 1)
-            plt.savefig(f"{sample_rate}-{buffer_size}-{cut}.png", dpi=300)
-            plt.clf()
-
-        raise
+    output = plugin.process(signal, sample_rate, buffer_size=buffer_size)
+    np.testing.assert_allclose(signal, output)
