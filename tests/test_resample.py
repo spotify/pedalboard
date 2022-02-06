@@ -31,8 +31,8 @@ TOLERANCE_PER_QUALITY = {
 
 
 @pytest.mark.parametrize("fundamental_hz", [440])
-@pytest.mark.parametrize("sample_rate", [8000, 22050, 44100, 48000])
-@pytest.mark.parametrize("target_sample_rate", [8000, 22050, 44100, 48000, 1234.56])
+@pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])
+@pytest.mark.parametrize("target_sample_rate", [8000, 11025, 22050, 44100, 48000, 1234.56])
 @pytest.mark.parametrize("buffer_size", [1, 32, 128, 8192, 96000])
 @pytest.mark.parametrize("duration", [0.5, 1.23456])
 @pytest.mark.parametrize("num_channels", [1, 2])
@@ -58,7 +58,41 @@ def test_resample(
     plugin = plugin_class(target_sample_rate)
     output = plugin.process(sine_wave, sample_rate, buffer_size=buffer_size)
 
-    np.testing.assert_allclose(sine_wave, output, atol=0.12)
+    np.testing.assert_allclose(sine_wave, output, atol=0.16)
+
+
+@pytest.mark.parametrize("fundamental_hz", [440])
+@pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])
+@pytest.mark.parametrize("target_sample_rate", [8000, 11025, 22050, 44100, 48000, 1234.56])
+@pytest.mark.parametrize("duration", [0.5, 1.23456])
+@pytest.mark.parametrize("num_channels", [1, 2])
+@pytest.mark.parametrize("plugin_class", [Resample, ResampleWithLatency])
+def test_resample_invariant_to_buffer_size(
+    fundamental_hz: float,
+    sample_rate: float,
+    target_sample_rate: float,
+    duration: float,
+    num_channels: int,
+    plugin_class,
+):
+    samples = np.arange(duration * sample_rate)
+    sine_wave = np.sin(2 * np.pi * fundamental_hz * samples / sample_rate)
+    # Fade the sine wave in at the start and out at the end to remove any transients:
+    fade_duration = int(sample_rate * 0.1)
+    sine_wave[:fade_duration] *= np.linspace(0, 1, fade_duration)
+    sine_wave[-fade_duration:] *= np.linspace(1, 0, fade_duration)
+    if num_channels == 2:
+        sine_wave = np.stack([sine_wave, sine_wave])
+
+    plugin = plugin_class(target_sample_rate)
+
+    buffer_sizes = [1, 32, 128, 8192, 96000]
+    outputs = [
+        plugin.process(sine_wave, sample_rate, buffer_size=buffer_size)
+        for buffer_size in buffer_sizes
+    ]
+
+    np.testing.assert_allclose(a, b, atol=1e-3)
 
 
 @pytest.mark.parametrize("fundamental_hz", [440])
@@ -165,3 +199,25 @@ def test_extreme_resampling(
     output = plugin.process(sine_wave, sample_rate, buffer_size=buffer_size)
 
     np.testing.assert_allclose(sine_wave, output, atol=TOLERANCE_PER_QUALITY[quality])
+
+
+@pytest.mark.parametrize("num_channels", [1, 2])
+def test_quality_can_change(
+    num_channels: int,
+    fundamental_hz: float = 440,
+    sample_rate: float = 8000,
+    buffer_size: int = 96000,
+    duration: float = 0.5,
+):
+    samples = np.arange(duration * sample_rate)
+    sine_wave = np.sin(2 * np.pi * fundamental_hz * samples / sample_rate)
+    if num_channels == 2:
+        sine_wave = np.stack([sine_wave, sine_wave])
+
+    plugin = Resample(sample_rate)
+    output1 = plugin.process(sine_wave, sample_rate, buffer_size=buffer_size)
+    np.testing.assert_allclose(sine_wave, output1, atol=0.35)
+
+    plugin.quality = Resample.Quality.ZeroOrderHold
+    output2 = plugin.process(sine_wave, sample_rate, buffer_size=buffer_size)
+    np.testing.assert_allclose(sine_wave, output2, atol=0.75)

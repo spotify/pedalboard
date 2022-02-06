@@ -120,7 +120,8 @@ public:
  * resampled audio and its sampleRate and maximumBlockSize parameters
  * are adjusted accordingly.
  */
-template <typename T = Passthrough<float>, typename SampleType = float>
+template <typename T = Passthrough<float>, typename SampleType = float,
+          int DefaultSampleRate = 8000>
 class Resample : public Plugin {
 public:
   virtual ~Resample(){};
@@ -129,7 +130,7 @@ public:
     bool specChanged = lastSpec.sampleRate != spec.sampleRate ||
                        lastSpec.maximumBlockSize < spec.maximumBlockSize ||
                        lastSpec.numChannels != spec.numChannels;
-    if (specChanged) {
+    if (specChanged || nativeToTargetResamplers.empty()) {
       reset();
 
       nativeToTargetResamplers.resize(spec.numChannels);
@@ -145,12 +146,6 @@ public:
       inverseResamplerRatio = targetSampleRate / spec.sampleRate;
       maximumBlockSizeInTargetSampleRate =
           std::ceil(spec.maximumBlockSize / resamplerRatio);
-
-      const juce::dsp::ProcessSpec subSpec = {
-          .numChannels = spec.numChannels,
-          .sampleRate = targetSampleRate,
-          .maximumBlockSize = maximumBlockSizeInTargetSampleRate};
-      plugin.prepare(subSpec);
 
       // Store the remainder of the input: any samples that weren't consumed in
       // one pushSamples() call but would be consumable in the next one.
@@ -176,6 +171,12 @@ public:
 
       lastSpec = spec;
     }
+
+    const juce::dsp::ProcessSpec subSpec = {
+        .numChannels = spec.numChannels,
+        .sampleRate = targetSampleRate,
+        .maximumBlockSize = maximumBlockSizeInTargetSampleRate};
+    plugin.prepare(subSpec);
   }
 
   int process(const juce::dsp::ProcessContextReplacing<SampleType> &context)
@@ -376,6 +377,8 @@ public:
   T &getNestedPlugin() { return plugin; }
 
   virtual void reset() override final {
+    plugin.reset();
+
     nativeToTargetResamplers.clear();
     targetToNativeResamplers.clear();
 
@@ -399,7 +402,7 @@ public:
 
 private:
   T plugin;
-  float targetSampleRate = 8000.0f;
+  float targetSampleRate = (float)DefaultSampleRate;
   ResamplingQuality quality = ResamplingQuality::WindowedSinc;
 
   double resamplerRatio = 1.0;
@@ -523,37 +526,43 @@ inline void init_resample_with_latency(py::module &m) {
            py::arg("target_sample_rate") = 8000.0,
            py::arg("internal_latency") = 1024,
            py::arg("quality") = ResamplingQuality::WindowedSinc)
-      .def("__repr__", [](Resample<AddLatency, float> &plugin) {
-        std::ostringstream ss;
-        ss << "<pedalboard.ResampleWithLatency";
-        ss << " target_sample_rate=" << plugin.getTargetSampleRate();
-        ss << " internal_latency="
-           << plugin.getNestedPlugin().getDSP().getDelay();
-        ss << " quality=";
-        switch (plugin.getQuality()) {
-        case ResamplingQuality::ZeroOrderHold:
-          ss << "ZeroOrderHold";
-          break;
-        case ResamplingQuality::Linear:
-          ss << "Linear";
-          break;
-        case ResamplingQuality::CatmullRom:
-          ss << "CatmullRom";
-          break;
-        case ResamplingQuality::Lagrange:
-          ss << "Lagrange";
-          break;
-        case ResamplingQuality::WindowedSinc:
-          ss << "WindowedSinc";
-          break;
-        default:
-          ss << "unknown";
-          break;
-        }
-        ss << " at " << &plugin;
-        ss << ">";
-        return ss.str();
-      });
+      .def("__repr__",
+           [](Resample<AddLatency, float> &plugin) {
+             std::ostringstream ss;
+             ss << "<pedalboard.ResampleWithLatency";
+             ss << " target_sample_rate=" << plugin.getTargetSampleRate();
+             ss << " internal_latency="
+                << plugin.getNestedPlugin().getDSP().getDelay();
+             ss << " quality=";
+             switch (plugin.getQuality()) {
+             case ResamplingQuality::ZeroOrderHold:
+               ss << "ZeroOrderHold";
+               break;
+             case ResamplingQuality::Linear:
+               ss << "Linear";
+               break;
+             case ResamplingQuality::CatmullRom:
+               ss << "CatmullRom";
+               break;
+             case ResamplingQuality::Lagrange:
+               ss << "Lagrange";
+               break;
+             case ResamplingQuality::WindowedSinc:
+               ss << "WindowedSinc";
+               break;
+             default:
+               ss << "unknown";
+               break;
+             }
+             ss << " at " << &plugin;
+             ss << ">";
+             return ss.str();
+           })
+      .def_property("target_sample_rate",
+                    &Resample<AddLatency, float>::getTargetSampleRate,
+                    &Resample<AddLatency, float>::setTargetSampleRate)
+      .def_property("quality", &Resample<AddLatency, float>::getQuality,
+                    &Resample<AddLatency, float>::setQuality);
 }
 
 } // namespace Pedalboard

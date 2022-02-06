@@ -33,6 +33,7 @@ namespace py = pybind11;
 #include "process.h"
 
 #include "plugin_templates/Resample.h"
+#include "plugin_templates/PrimeWithSilence.h"
 
 #include "plugins/AddLatency.h"
 #include "plugins/Chorus.h"
@@ -141,13 +142,18 @@ PYBIND11_MODULE(pedalboard_native, m) {
               py::arg("reset") = true);
   plugin.attr("__call__") = plugin.attr("process");
 
+  // Publicly accessible plugins:
   init_chorus(m);
   init_compressor(m);
   init_convolution(m);
   init_delay(m);
   init_distortion(m);
   init_gain(m);
+
+  // Init Resample before GSMCompressor, which uses Resample::Quality:
+  init_resample(m);
   init_gsm_compressor(m);
+
   init_highpass(m);
   init_invert(m);
   init_ladderfilter(m);
@@ -157,7 +163,6 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_noisegate(m);
   init_phaser(m);
   init_pitch_shift(m);
-  init_resample(m);
   init_reverb(m);
 
   init_external_plugins(m);
@@ -167,4 +172,6 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_add_latency(internal);
   init_prime_with_silence_test_plugin(internal);
   init_resample_with_latency(internal);
+  init_prime_with_silence_test_plugin(internal);
+  init_fixed_size_block_test_plugin(internal);
 };

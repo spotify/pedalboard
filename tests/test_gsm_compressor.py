@@ -17,7 +17,7 @@
 
 import pytest
 import numpy as np
-from pedalboard import GSMCompressor
+from pedalboard import GSMCompressor, Resample
 
 # GSM is a _very_ lossy codec:
 GSM_ABSOLUTE_TOLERANCE = 0.75
@@ -34,6 +34,10 @@ def generate_sine_at(
 ) -> np.ndarray:
     samples = np.arange(num_seconds * sample_rate)
     sine_wave = np.sin(2 * np.pi * fundamental_hz * samples / sample_rate)
+    # Fade the sine wave in at the start and out at the end to remove any transients:
+    fade_duration = int(sample_rate * 0.1)
+    sine_wave[:fade_duration] *= np.linspace(0, 1, fade_duration)
+    sine_wave[-fade_duration:] *= np.linspace(1, 0, fade_duration)
     if num_channels == 2:
         return np.stack([sine_wave, sine_wave])
     return sine_wave
@@ -42,27 +46,56 @@ def generate_sine_at(
 @pytest.mark.parametrize("fundamental_hz", [440.0])
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 32000, 32001, 44100, 48000])
 @pytest.mark.parametrize("buffer_size", [1, 32, 160, 8192])
-@pytest.mark.parametrize("duration", [1.0, 3.0, 30.0])
+@pytest.mark.parametrize("duration", [1.0])
+@pytest.mark.parametrize(
+    "quality",
+    [
+        Resample.Quality.ZeroOrderHold,
+        Resample.Quality.Linear,
+        Resample.Quality.Lagrange,
+        Resample.Quality.CatmullRom,
+        Resample.Quality.WindowedSinc,
+    ],
+)
 @pytest.mark.parametrize("num_channels", [1, 2])
 def test_gsm_compressor(
-    fundamental_hz: float, sample_rate: float, buffer_size: int, duration: float, num_channels: int
+    fundamental_hz: float,
+    sample_rate: float,
+    buffer_size: int,
+    duration: float,
+    quality: Resample.Quality,
+    num_channels: int,
 ):
     signal = (
         generate_sine_at(sample_rate, fundamental_hz, duration, num_channels) * SINE_WAVE_VOLUME
     )
-    compressed = GSMCompressor()(signal, sample_rate, buffer_size=buffer_size)
-    np.testing.assert_allclose(signal, compressed, atol=GSM_ABSOLUTE_TOLERANCE)
+    output = GSMCompressor(quality=quality)(signal, sample_rate, buffer_size=buffer_size)
+    np.testing.assert_allclose(signal, output, atol=GSM_ABSOLUTE_TOLERANCE)
 
 
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 32000, 32001, 44100, 48000])
-@pytest.mark.parametrize("num_channels", [1])  # , 2])
-def test_gsm_compressor_invariant_to_buffer_size(sample_rate: float, num_channels: int):
+@pytest.mark.parametrize(
+    "quality",
+    [
+        Resample.Quality.ZeroOrderHold,
+        Resample.Quality.Linear,
+        Resample.Quality.Lagrange,
+        Resample.Quality.CatmullRom,
+        Resample.Quality.WindowedSinc,
+    ],
+)
+@pytest.mark.parametrize("num_channels", [1, 2])
+def test_gsm_compressor_invariant_to_buffer_size(
+    sample_rate: float,
+    quality: Resample.Quality,
+    num_channels: int,
+):
     fundamental_hz = 400.0
     duration = 3.0
     signal = generate_sine_at(sample_rate, fundamental_hz, duration, num_channels)
 
     compressed = [
-        GSMCompressor()(signal, sample_rate, buffer_size=buffer_size)
+        GSMCompressor(quality=quality)(signal, sample_rate, buffer_size=buffer_size)
         for buffer_size in (1, 32, 8192)
     ]
     for a, b in zip(compressed, compressed[1:]):
