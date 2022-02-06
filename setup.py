@@ -106,9 +106,8 @@ ALL_INCLUDES += [
     'vendors/lame/',
 ]
 
-
 # libgsm
-ALL_SOURCE_PATHS += list(Path("vendors/libgsm/src").glob("*.c"))
+ALL_SOURCE_PATHS += [p for p in Path("vendors/libgsm/src").glob("*.c") if 'toast' not in p.name]
 ALL_INCLUDES += ['vendors/libgsm/inc']
 
 
@@ -232,6 +231,7 @@ def patch_compile(original_compile):
     """
     On GCC/Clang, we want to pass different arguments when compiling C files vs C++ files.
     """
+
     def new_compile(obj, src, ext, cc_args, extra_postargs, *args, **kwargs):
         _cc_args = cc_args
 
