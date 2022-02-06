@@ -59,4 +59,4 @@ def test_pitch_shift_latency_compensation(semitones, fundamental_hz, sample_rate
     sine_wave = np.sin(2 * np.pi * fundamental_hz * samples / sample_rate)
     plugin = Pedalboard([PitchShift(semitones), PitchShift(-semitones)])
     output = plugin.process(sine_wave, sample_rate, buffer_size=buffer_size)
-    np.testing.assert_allclose(sine_wave, output, rtol=0.01, atol=0.01)
+    np.testing.assert_allclose(sine_wave, output, atol=1e-6)
