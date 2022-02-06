@@ -34,6 +34,7 @@ namespace py = pybind11;
 
 #include "plugin_templates/Resample.h"
 #include "plugin_templates/PrimeWithSilence.h"
+#include "plugin_templates/FixedBlockSize.h"
 
 #include "plugins/AddLatency.h"
 #include "plugins/Chorus.h"
@@ -53,8 +54,6 @@ namespace py = pybind11;
 #include "plugins/Phaser.h"
 #include "plugins/PitchShift.h"
 #include "plugins/Reverb.h"
-
-#include "plugin_templates/PrimeWithSilence.h"
 
 using namespace Pedalboard;
 
