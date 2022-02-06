@@ -84,8 +84,10 @@ public:
         int samplesOutputThisBlock = plugin.process(subContext);
 
         if (samplesOutput > 0 && samplesOutputThisBlock < blockSize) {
-          throw std::runtime_error("Plugin that using FixedBlockSize "
-                                   "returned too few samples! This is an internal Pedalboard error and should be reported.");
+          throw std::runtime_error(
+              "Plugin that using FixedBlockSize "
+              "returned too few samples! This is an internal Pedalboard error "
+              "and should be reported.");
         }
         samplesOutput += samplesOutputThisBlock;
       }
@@ -109,7 +111,7 @@ public:
         // Copy the output back into ioBlock, right-aligned:
         ioBlock
             .getSubBlock(ioBlock.getNumSamples() - remainderInSamples,
-                          remainderInSamples)
+                         remainderInSamples)
             .copyFrom(subBlock);
 
         samplesOutput += remainderInSamples;
@@ -120,21 +122,20 @@ public:
     } else {
       // We have to render three parts:
       // 1) Push as many samples as possible into inputBuffer
-      if (inputBuffer.getNumSamples() - inputBufferSamples < ioBlock.getNumSamples()) {
-        throw std::runtime_error("Input buffer overflow! This is an internal Pedalboard error and should be reported.");
+      if (inputBuffer.getNumSamples() - inputBufferSamples <
+          ioBlock.getNumSamples()) {
+        throw std::runtime_error("Input buffer overflow! This is an internal "
+                                 "Pedalboard error and should be reported.");
       }
 
-      ioBlock.copyTo(inputBuffer, 0, inputBufferSamples, ioBlock.getNumSamples());
+      ioBlock.copyTo(inputBuffer, 0, inputBufferSamples,
+                     ioBlock.getNumSamples());
       inputBufferSamples += ioBlock.getNumSamples();
 
       // 2) Copy the output from the previous render call into the ioBlock
       int samplesOutput = 0;
 
-      int minimumSamplesToOutput = ioBlock.getNumSamples();
-      if (ioBlock.getNumSamples() == lastSpec.maximumBlockSize) {
-        minimumSamplesToOutput += inStreamLatency;
-      }
-      if (outputBufferSamples >= minimumSamplesToOutput) {
+      if (outputBufferSamples >= ioBlock.getNumSamples()) {
         ioBlock.copyFrom(outputBuffer, 0, 0, ioBlock.getNumSamples());
         outputBufferSamples -= ioBlock.getNumSamples();
 
@@ -168,25 +169,31 @@ public:
 
         if (samplesProcessedThisBlock > 0) {
           // Move the output to the left side of the buffer:
-          inputBlock.move(i + blockSize - samplesProcessedThisBlock, samplesProcessed, samplesProcessedThisBlock);
+          inputBlock.move(i + blockSize - samplesProcessedThisBlock,
+                          samplesProcessed, samplesProcessedThisBlock);
         }
-        
+
         samplesProcessed += samplesProcessedThisBlock;
       }
 
       // Copy the newly-processed data into the output buffer:
-      if (outputBuffer.getNumSamples() < outputBufferSamples + samplesProcessed) {
-        throw std::runtime_error("Output buffer overflow! This is an internal Pedalboard error and should be reported.");
+      if (outputBuffer.getNumSamples() <
+          outputBufferSamples + samplesProcessed) {
+        throw std::runtime_error("Output buffer overflow! This is an internal "
+                                 "Pedalboard error and should be reported.");
       }
       inputBlock.copyTo(outputBuffer, 0, outputBufferSamples, samplesProcessed);
       outputBufferSamples += samplesProcessed;
 
       // ... and move the remaining input data to the left of the input buffer:
-      inputBlock.move(inputSamplesConsumed, 0, inputBufferSamples - inputSamplesConsumed);
+      inputBlock.move(inputSamplesConsumed, 0,
+                      inputBufferSamples - inputSamplesConsumed);
       inputBufferSamples -= inputSamplesConsumed;
 
-      // ... and try to output the remaining output buffer contents if we now have enough:
-      if (samplesOutput == 0 && outputBufferSamples >= minimumSamplesToOutput) {
+      // ... and try to output the remaining output buffer contents if we now
+      // have enough:
+      if (samplesOutput == 0 &&
+          outputBufferSamples >= ioBlock.getNumSamples()) {
         ioBlock.copyFrom(outputBuffer, 0, 0, ioBlock.getNumSamples());
         outputBufferSamples -= ioBlock.getNumSamples();
 

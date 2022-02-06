@@ -41,7 +41,7 @@ namespace py = pybind11;
 #include "plugins/Convolution.h"
 #include "plugins/Delay.h"
 #include "plugins/Distortion.h"
-#include "plugins/GSMCompressor.h"
+#include "plugins/GSMFullRateCompressor.h"
 #include "plugins/Gain.h"
 #include "plugins/HighpassFilter.h"
 #include "plugins/Invert.h"
@@ -150,9 +150,9 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_distortion(m);
   init_gain(m);
 
-  // Init Resample before GSMCompressor, which uses Resample::Quality:
+  // Init Resample before GSMFullRateCompressor, which uses Resample::Quality:
   init_resample(m);
-  init_gsm_compressor(m);
+  init_gsm_full_rate_compressor(m);
 
   init_highpass(m);
   init_invert(m);
@@ -172,6 +172,5 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_add_latency(internal);
   init_prime_with_silence_test_plugin(internal);
   init_resample_with_latency(internal);
-  init_prime_with_silence_test_plugin(internal);
   init_fixed_size_block_test_plugin(internal);
 };

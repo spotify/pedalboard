@@ -53,9 +53,9 @@ private:
   gsm _gsm = nullptr;
 };
 
-class GSMCompressorInternal : public Plugin {
+class GSMFullRateCompressorInternal : public Plugin {
 public:
-  virtual ~GSMCompressorInternal(){};
+  virtual ~GSMFullRateCompressorInternal(){};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) override {
     bool specChanged = lastSpec.sampleRate != spec.sampleRate ||
@@ -130,39 +130,48 @@ private:
   GSMWrapper decoder;
 };
 
-using GSMCompressor = ForceMono<
-    Resample<PrimeWithSilence<
-                 FixedBlockSize<GSMCompressorInternal,
-                                GSMCompressorInternal::GSM_FRAME_SIZE_SAMPLES>,
-                 float, 1600>,
-             float, GSMCompressorInternal::GSM_SAMPLE_RATE>>;
+/**
+ * Use the GSMFullRateCompressorInternal plugin, but:
+ *  - ensure that it only ever sees fixed-size blocks of 160 samples
+ *  - prime the input with a single block of silence
+ *  - resample whatever input sample rate is provided down to 8kHz
+ *  - only provide mono input to the plugin, and copy the mono signal
+ *    back to stereo if necessary
+ */
+using GSMFullRateCompressor = ForceMono<Resample<
+    PrimeWithSilence<
+        FixedBlockSize<GSMFullRateCompressorInternal,
+                       GSMFullRateCompressorInternal::GSM_FRAME_SIZE_SAMPLES>,
+        float, GSMFullRateCompressorInternal::GSM_FRAME_SIZE_SAMPLES>,
+    float, GSMFullRateCompressorInternal::GSM_SAMPLE_RATE>>;
 
-inline void init_gsm_compressor(py::module &m) {
-  py::class_<GSMCompressor, Plugin>(
-      m, "GSMCompressor",
-      "Apply an GSM compressor to emulate the sound of a GSM (\"2G\") cellular "
+inline void init_gsm_full_rate_compressor(py::module &m) {
+  py::class_<GSMFullRateCompressor, Plugin>(
+      m, "GSMFullRateCompressor",
+      "Apply an GSM Full Rate compressor to emulate the sound of a GSM Full "
+      "Rate (\"2G\") cellular "
       "phone connection. This plugin internally resamples the input audio to "
       "8kHz.")
       .def(py::init([](ResamplingQuality quality) {
-             auto plugin = std::make_unique<GSMCompressor>();
+             auto plugin = std::make_unique<GSMFullRateCompressor>();
              plugin->getNestedPlugin().setQuality(quality);
              return plugin;
            }),
            py::arg("quality") = ResamplingQuality::WindowedSinc)
       .def("__repr__",
-           [](const GSMCompressor &plugin) {
+           [](const GSMFullRateCompressor &plugin) {
              std::ostringstream ss;
-             ss << "<pedalboard.GSMCompressor";
+             ss << "<pedalboard.GSMFullRateCompressor";
              ss << " at " << &plugin;
              ss << ">";
              return ss.str();
            })
       .def_property(
           "quality",
-          [](GSMCompressor &plugin) {
+          [](GSMFullRateCompressor &plugin) {
             return plugin.getNestedPlugin().getQuality();
           },
-          [](GSMCompressor &plugin, ResamplingQuality quality) {
+          [](GSMFullRateCompressor &plugin, ResamplingQuality quality) {
             return plugin.getNestedPlugin().setQuality(quality);
           });
 }

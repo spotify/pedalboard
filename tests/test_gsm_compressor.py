@@ -17,7 +17,7 @@
 
 import pytest
 import numpy as np
-from pedalboard import GSMCompressor, Resample
+from pedalboard import GSMFullRateCompressor, Resample
 from .utils import generate_sine_at
 
 # GSM is a _very_ lossy codec:
@@ -25,7 +25,6 @@ GSM_ABSOLUTE_TOLERANCE = 0.75
 
 # Passing in a full-scale sine wave seems to often make GSM clip:
 SINE_WAVE_VOLUME = 0.9
-
 
 
 @pytest.mark.parametrize("fundamental_hz", [440.0])
@@ -54,7 +53,7 @@ def test_gsm_compressor(
     signal = (
         generate_sine_at(sample_rate, fundamental_hz, duration, num_channels) * SINE_WAVE_VOLUME
     )
-    output = GSMCompressor(quality=quality)(signal, sample_rate, buffer_size=buffer_size)
+    output = GSMFullRateCompressor(quality=quality)(signal, sample_rate, buffer_size=buffer_size)
     np.testing.assert_allclose(signal, output, atol=GSM_ABSOLUTE_TOLERANCE)
 
 
@@ -80,7 +79,7 @@ def test_gsm_compressor_invariant_to_buffer_size(
     signal = generate_sine_at(sample_rate, fundamental_hz, duration, num_channels)
 
     compressed = [
-        GSMCompressor(quality=quality)(signal, sample_rate, buffer_size=buffer_size)
+        GSMFullRateCompressor(quality=quality)(signal, sample_rate, buffer_size=buffer_size)
         for buffer_size in (1, 32, 7000, 8192)
     ]
     for a, b in zip(compressed, compressed[1:]):
