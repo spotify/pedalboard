@@ -29,6 +29,7 @@ Internally at Spotify, `pedalboard` is used for [data augmentation](https://en.w
    - `LowpassFilter`
    - `Phaser`
    - `PitchShift` (provided by Chris Cannam's [Rubber Band Library](https://github.com/breakfastquay/rubberband))
+   - `Resample`
    - `Reverb`
  - Supports VST3® plugins on macOS, Windows, and Linux (`pedalboard.load_plugin`)
  - Supports Audio Units on macOS
