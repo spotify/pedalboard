@@ -21,14 +21,14 @@
 namespace py = pybind11;
 
 #include "../RubberbandPlugin.h"
+#include "../plugin_templates/PrimeWithSilence.h"
 
 namespace Pedalboard {
-/*
-Modifies pitch of an audio without affecting duration
-*/
-class PitchShift : public RubberbandPlugin
 
-{
+/*
+ * Modifies pitch of an audio without affecting duration.
+ */
+class PitchShift : public PrimeWithSilence<RubberbandPlugin> {
 private:
   double _semitones = 0.0;
 
@@ -47,16 +47,14 @@ public:
     }
 
     _semitones = semitones;
-
-    if (rbPtr)
-      rbPtr->setPitchScale(getScaleFactor());
   }
 
   double getSemitones() { return _semitones; }
 
   void prepare(const juce::dsp::ProcessSpec &spec) override final {
-    RubberbandPlugin::prepare(spec);
-    rbPtr->setPitchScale(getScaleFactor());
+    setSilenceLengthSamples(spec.sampleRate);
+    PrimeWithSilence<RubberbandPlugin>::prepare(spec);
+    getNestedPlugin().getStretcher().setPitchScale(getScaleFactor());
   }
 };
 
