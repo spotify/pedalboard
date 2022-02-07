@@ -107,11 +107,8 @@ public:
 using ForceMonoTestPlugin = ForceMono<ExpectsMono>;
 
 inline void init_force_mono_test_plugin(py::module &m) {
-  py::class_<ForceMonoTestPlugin, Plugin>(m,
-                                                 "ForceMonoTestPlugin")
-      .def(py::init([]() {
-             return std::make_unique<ForceMonoTestPlugin>();
-           }))
+  py::class_<ForceMonoTestPlugin, Plugin>(m, "ForceMonoTestPlugin")
+      .def(py::init([]() { return std::make_unique<ForceMonoTestPlugin>(); }))
       .def("__repr__", [](const ForceMonoTestPlugin &plugin) {
         std::ostringstream ss;
         ss << "<pedalboard.ForceMonoTestPlugin";
