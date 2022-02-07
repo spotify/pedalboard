@@ -81,4 +81,44 @@ private:
   T plugin;
 };
 
+/**
+ * A test plugin used to verify the behaviour of the ForceMono wrapper.
+ */
+class ExpectsMono : public AddLatency {
+public:
+  virtual ~ExpectsMono(){};
+
+  virtual void prepare(const juce::dsp::ProcessSpec &spec) {
+    if (spec.numChannels != 1) {
+      throw std::runtime_error("Expected mono input!");
+    }
+    AddLatency::prepare(spec);
+  }
+
+  virtual int
+  process(const juce::dsp::ProcessContextReplacing<float> &context) {
+    if (context.getInputBlock().getNumChannels() != 1) {
+      throw std::runtime_error("Expected mono input!");
+    }
+    return AddLatency::process(context);
+  }
+};
+
+using ForceMonoTestPlugin = ForceMono<ExpectsMono>;
+
+inline void init_force_mono_test_plugin(py::module &m) {
+  py::class_<ForceMonoTestPlugin, Plugin>(m,
+                                                 "ForceMonoTestPlugin")
+      .def(py::init([]() {
+             return std::make_unique<ForceMonoTestPlugin>();
+           }))
+      .def("__repr__", [](const ForceMonoTestPlugin &plugin) {
+        std::ostringstream ss;
+        ss << "<pedalboard.ForceMonoTestPlugin";
+        ss << " at " << &plugin;
+        ss << ">";
+        return ss.str();
+      });
+}
+
 } // namespace Pedalboard
