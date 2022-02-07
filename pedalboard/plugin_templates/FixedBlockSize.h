@@ -73,8 +73,8 @@ public:
       // by the fixed block size, so we need no buffers!
       int samplesOutput = 0;
       for (int i = 0; i < ioBlock.getNumSamples(); i += blockSize) {
-        unsigned long samplesAvailable =
-            std::min((unsigned long)blockSize, ioBlock.getNumSamples() - i);
+        int samplesAvailable =
+            std::min((int)blockSize, (int)ioBlock.getNumSamples() - i);
         if (samplesAvailable < blockSize)
           break;
 
