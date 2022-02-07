@@ -21,6 +21,8 @@
 #include "../Plugin.h"
 #include <mutex>
 
+#include "../plugins/AddLatency.h"
+
 namespace Pedalboard {
 
 /**
