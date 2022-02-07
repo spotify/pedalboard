@@ -173,10 +173,10 @@ public:
       lastSpec = spec;
     }
 
-    const juce::dsp::ProcessSpec subSpec = {
-        .numChannels = spec.numChannels,
-        .sampleRate = targetSampleRate,
-        .maximumBlockSize = maximumBlockSizeInTargetSampleRate};
+    juce::dsp::ProcessSpec subSpec;
+    subSpec.numChannels = spec.numChannels;
+    subSpec.sampleRate = targetSampleRate;
+    subSpec.maximumBlockSize = maximumBlockSizeInTargetSampleRate;
     plugin.prepare(subSpec);
   }
 
@@ -331,7 +331,7 @@ public:
 
     // Copy from output buffer to output block:
     int samplesToOutput =
-        std::min(ioBlock.getNumSamples(), (unsigned long)samplesInOutputBuffer);
+        std::min((int) ioBlock.getNumSamples(), (int) samplesInOutputBuffer);
     ioBlock.copyFrom(outputBuffer, 0, ioBlock.getNumSamples() - samplesToOutput,
                      samplesToOutput);
 
