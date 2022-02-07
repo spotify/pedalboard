@@ -32,8 +32,8 @@ namespace py = pybind11;
 #include "Plugin.h"
 #include "process.h"
 
-#include "plugin_templates/PrimeWithSilence.h"
 #include "plugin_templates/ForceMono.h"
+#include "plugin_templates/PrimeWithSilence.h"
 
 #include "plugins/AddLatency.h"
 #include "plugins/Chorus.h"
