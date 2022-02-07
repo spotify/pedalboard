@@ -331,7 +331,7 @@ public:
 
     // Copy from output buffer to output block:
     int samplesToOutput =
-        std::min((int) ioBlock.getNumSamples(), (int) samplesInOutputBuffer);
+        std::min((int)ioBlock.getNumSamples(), (int)samplesInOutputBuffer);
     ioBlock.copyFrom(outputBuffer, 0, ioBlock.getNumSamples() - samplesToOutput,
                      samplesToOutput);
 
