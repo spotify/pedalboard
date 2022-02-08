@@ -33,6 +33,10 @@ namespace py = pybind11;
 #include "PluginContainer.h"
 #include "process.h"
 
+#include "plugin_templates/FixedBlockSize.h"
+#include "plugin_templates/ForceMono.h"
+#include "plugin_templates/PrimeWithSilence.h"
+
 #include "plugins/AddLatency.h"
 #include "plugins/Chain.h"
 #include "plugins/Chorus.h"
@@ -52,8 +56,6 @@ namespace py = pybind11;
 #include "plugins/Phaser.h"
 #include "plugins/PitchShift.h"
 #include "plugins/Reverb.h"
-
-#include "plugin_templates/PrimeWithSilence.h"
 
 using namespace Pedalboard;
 
@@ -169,4 +171,6 @@ PYBIND11_MODULE(pedalboard_native, m) {
   py::module internal = m.def_submodule("_internal");
   init_add_latency(internal);
   init_prime_with_silence_test_plugin(internal);
+  init_fixed_size_block_test_plugin(internal);
+  init_force_mono_test_plugin(internal);
 };
