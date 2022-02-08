@@ -32,6 +32,7 @@ namespace py = pybind11;
 #include "Plugin.h"
 #include "process.h"
 
+#include "plugin_templates/FixedBlockSize.h"
 #include "plugin_templates/ForceMono.h"
 #include "plugin_templates/PrimeWithSilence.h"
 
@@ -162,5 +163,6 @@ PYBIND11_MODULE(pedalboard_native, m) {
   py::module internal = m.def_submodule("_internal");
   init_add_latency(internal);
   init_prime_with_silence_test_plugin(internal);
+  init_fixed_size_block_test_plugin(internal);
   init_force_mono_test_plugin(internal);
 };
