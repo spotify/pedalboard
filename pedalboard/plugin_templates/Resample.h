@@ -173,10 +173,10 @@ public:
       lastSpec = spec;
     }
 
-    const juce::dsp::ProcessSpec subSpec = {
-        .numChannels = spec.numChannels,
-        .sampleRate = targetSampleRate,
-        .maximumBlockSize = maximumBlockSizeInTargetSampleRate};
+    juce::dsp::ProcessSpec subSpec;
+    subSpec.numChannels = spec.numChannels;
+    subSpec.sampleRate = targetSampleRate;
+    subSpec.maximumBlockSize = maximumBlockSizeInTargetSampleRate;
     plugin.prepare(subSpec);
   }
 
@@ -331,7 +331,7 @@ public:
 
     // Copy from output buffer to output block:
     int samplesToOutput =
-        std::min(ioBlock.getNumSamples(), (unsigned long)samplesInOutputBuffer);
+        std::min((int)ioBlock.getNumSamples(), (int)samplesInOutputBuffer);
     ioBlock.copyFrom(outputBuffer, 0, ioBlock.getNumSamples() - samplesToOutput,
                      samplesToOutput);
 
@@ -436,8 +436,8 @@ inline void init_resample(py::module &m) {
   py::class_<Resample<Passthrough<float>, float>, Plugin> resample(
       m, "Resample",
       "A plugin that downsamples the input audio to the given sample rate, "
-      "then upsamples it again. Various quality settings will produce audible "
-      "distortion effects.");
+      "then upsamples it back to the original sample rate. Various quality "
+      "settings will produce audible distortion and aliasing effects.");
 
   py::enum_<ResamplingQuality>(resample, "Quality")
       .value("ZeroOrderHold", ResamplingQuality::ZeroOrderHold,
@@ -459,11 +459,11 @@ inline void init_resample(py::module &m) {
 
   resample
       .def(py::init([](float targetSampleRate, ResamplingQuality quality) {
-             auto resampler =
+             auto resample =
                  std::make_unique<Resample<Passthrough<float>, float>>();
-             resampler->setTargetSampleRate(targetSampleRate);
-             resampler->setQuality(quality);
-             return resampler;
+             resample->setTargetSampleRate(targetSampleRate);
+             resample->setQuality(quality);
+             return resample;
            }),
            py::arg("target_sample_rate") = 8000.0,
            py::arg("quality") = ResamplingQuality::WindowedSinc)

@@ -17,7 +17,7 @@
 
 import pytest
 import numpy as np
-from pedalboard import Pedalboard, Resample
+from pedalboard import Resample
 from pedalboard_native._internal import ResampleWithLatency
 from .utils import generate_sine_at
 
@@ -54,7 +54,6 @@ def test_resample(
     plugin = plugin_class(target_sample_rate, quality=quality)
     output = plugin.process(sine_wave, sample_rate, buffer_size=buffer_size)
     np.testing.assert_allclose(sine_wave, output, atol=TOLERANCE_PER_QUALITY[quality])
-    
 
 
 @pytest.mark.parametrize("fundamental_hz", [440])
