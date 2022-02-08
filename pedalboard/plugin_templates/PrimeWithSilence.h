@@ -28,7 +28,8 @@ namespace Pedalboard {
  * A dummy plugin that buffers audio data internally, used to test Pedalboard's
  * automatic latency compensation.
  */
-template <typename T, typename SampleType = float>
+template <typename T, typename SampleType = float,
+          int DefaultSilenceLengthSamples = 0>
 class PrimeWithSilence
     : public JucePlugin<juce::dsp::DelayLine<
           SampleType, juce::dsp::DelayLineInterpolationTypes::None>> {
@@ -39,6 +40,8 @@ public:
     JucePlugin<juce::dsp::DelayLine<
         SampleType,
         juce::dsp::DelayLineInterpolationTypes::None>>::prepare(spec);
+    this->getDSP().setMaximumDelayInSamples(silenceLengthSamples);
+    this->getDSP().setDelay(silenceLengthSamples);
     plugin.prepare(spec);
   }
 
@@ -82,7 +85,7 @@ public:
 private:
   T plugin;
   int samplesOutput = 0;
-  int silenceLengthSamples = 0;
+  int silenceLengthSamples = DefaultSilenceLengthSamples;
 };
 
 /**
