@@ -35,6 +35,7 @@ namespace py = pybind11;
 #include "plugin_templates/FixedBlockSize.h"
 #include "plugin_templates/ForceMono.h"
 #include "plugin_templates/PrimeWithSilence.h"
+#include "plugin_templates/Resample.h"
 
 #include "plugins/AddLatency.h"
 #include "plugins/Chorus.h"
@@ -140,6 +141,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
               py::arg("reset") = true);
   plugin.attr("__call__") = plugin.attr("process");
 
+  // Publicly accessible plugins:
   init_chorus(m);
   init_compressor(m);
   init_convolution(m);
@@ -155,6 +157,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_noisegate(m);
   init_phaser(m);
   init_pitch_shift(m);
+  init_resample(m);
   init_reverb(m);
 
   init_external_plugins(m);
@@ -163,6 +166,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   py::module internal = m.def_submodule("_internal");
   init_add_latency(internal);
   init_prime_with_silence_test_plugin(internal);
+  init_resample_with_latency(internal);
   init_fixed_size_block_test_plugin(internal);
   init_force_mono_test_plugin(internal);
 };
