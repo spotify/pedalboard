@@ -17,21 +17,13 @@ Internally at Spotify, `pedalboard` is used for [data augmentation](https://en.w
 
 ## Features 
 
- - Built-in support for a number of basic audio transformations: 
-   - `Convolution`
-   - `Compressor`
-   - `Chorus`
-   - `Distortion`
-   - `Gain`
-   - `HighpassFilter`
-   - `LadderFilter`
-   - `Limiter`
-   - `LowpassFilter`
-   - `Phaser`
-   - `PitchShift` (provided by Chris Cannam's [Rubber Band Library](https://github.com/breakfastquay/rubberband))
-   - `Reverb`
- - Built-in lossy compression algorithms:
-   - `GSMCompressor`, an implementation of the GSM ("2G") lossy voice compression codec
+ - Built-in support for a number of basic audio transformations, including:
+   - Guitar-style effects: `Chorus`, `Distortion`, `Phaser`
+   - Loudness and dynamic range effects: `Compressor`, `Gain`, `Limiter`
+   - Equalizers and filters: `HighpassFilter`, `LadderFilter`, `LowpassFilter`
+   - Spatial effects: `Convolution`, `Delay`, `Reverb`
+   - Pitch effects: `PitchShift`
+   - Lossy compression: `GSMFullRateCompressor`, `MP3Compressor`
  - Supports VST3® plugins on macOS, Windows, and Linux (`pedalboard.load_plugin`)
  - Supports Audio Units on macOS
  - Strong thread-safety, memory usage, and speed guarantees
@@ -244,6 +236,6 @@ Not yet, either - although the underlying framework (JUCE) supports passing MIDI
  - The [VST3 SDK](https://github.com/steinbergmedia/vst3sdk), bundled with JUCE, is owned by [Steinberg® Media Technologies GmbH](https://www.steinberg.net/en/home.html) and licensed under the GPLv3.
  - The `PitchShift` plugin uses [the Rubber Band Library](https://github.com/breakfastquay/rubberband), which is [dual-licensed under a commercial license](https://breakfastquay.com/technology/license.html) and the GPLv2 (or newer).
  - The `MP3Compressor` plugin uses [`libmp3lame` from the LAME project](https://lame.sourceforge.io/), which is [licensed under the LGPLv2](https://github.com/lameproject/lame/blob/master/README) and [upgraded to the GPLv3 for inclusion in this project (as permitted by the LGPLv2)](https://www.gnu.org/licenses/gpl-faq.html#AllCompatibility).
- - The `GSMCompressor` plugin uses [`libgsm`](http://quut.com/gsm/), which is [licensed under the ISC license](https://github.com/timothytylee/libgsm/blob/master/COPYRIGHT) and [compatible with the GPLv3](https://www.gnu.org/licenses/license-list.en.html#ISC).
+ - The `GSMFullRateCompressor` plugin uses [`libgsm`](http://quut.com/gsm/), which is [licensed under the ISC license](https://github.com/timothytylee/libgsm/blob/master/COPYRIGHT) and [compatible with the GPLv3](https://www.gnu.org/licenses/license-list.en.html#ISC).
 
 _VST is a registered trademark of Steinberg Media Technologies GmbH._
