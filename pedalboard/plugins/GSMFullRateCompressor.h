@@ -146,7 +146,8 @@ using GSMFullRateCompressor = ForceMono<Resample<
     float, GSMFullRateCompressorInternal::GSM_SAMPLE_RATE>>;
 
 inline void init_gsm_full_rate_compressor(py::module &m) {
-  py::class_<GSMFullRateCompressor, Plugin>(
+  py::class_<GSMFullRateCompressor, Plugin,
+             std::shared_ptr<GSMFullRateCompressor>>(
       m, "GSMFullRateCompressor",
       "Apply an GSM Full Rate compressor to emulate the sound of a GSM Full "
       "Rate (\"2G\") cellular "
