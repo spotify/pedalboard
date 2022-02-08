@@ -36,6 +36,7 @@ namespace py = pybind11;
 #include "plugin_templates/FixedBlockSize.h"
 #include "plugin_templates/ForceMono.h"
 #include "plugin_templates/PrimeWithSilence.h"
+#include "plugin_templates/Resample.h"
 
 #include "plugins/AddLatency.h"
 #include "plugins/Chain.h"
@@ -44,6 +45,7 @@ namespace py = pybind11;
 #include "plugins/Convolution.h"
 #include "plugins/Delay.h"
 #include "plugins/Distortion.h"
+#include "plugins/GSMFullRateCompressor.h"
 #include "plugins/Gain.h"
 #include "plugins/HighpassFilter.h"
 #include "plugins/Invert.h"
@@ -143,12 +145,18 @@ PYBIND11_MODULE(pedalboard_native, m) {
 
   init_plugin_container(m);
 
+  // Publicly accessible plugins:
   init_chorus(m);
   init_compressor(m);
   init_convolution(m);
   init_delay(m);
   init_distortion(m);
   init_gain(m);
+
+  // Init Resample before GSMFullRateCompressor, which uses Resample::Quality:
+  init_resample(m);
+  init_gsm_full_rate_compressor(m);
+
   init_highpass(m);
   init_invert(m);
   init_ladderfilter(m);
@@ -171,6 +179,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   py::module internal = m.def_submodule("_internal");
   init_add_latency(internal);
   init_prime_with_silence_test_plugin(internal);
+  init_resample_with_latency(internal);
   init_fixed_size_block_test_plugin(internal);
   init_force_mono_test_plugin(internal);
 };
