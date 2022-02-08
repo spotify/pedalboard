@@ -16,7 +16,7 @@
  */
 
 #include "../Plugin.h"
-#include "../plugin_templates/FixedBlockSizePlugin.h"
+#include "../plugin_templates/FixedBlockSize.h"
 #include "../plugin_templates/ForceMono.h"
 #include "../plugin_templates/PrimeWithSilence.h"
 #include "../plugin_templates/Resample.h"
