@@ -238,13 +238,14 @@ inline int process(juce::AudioBuffer<float> &ioBuffer,
 
     int pluginSamplesReceived = 0;
 
+    unsigned int blockSize = spec.maximumBlockSize;
     for (unsigned int blockStart = startOfOutputInBuffer;
          blockStart < (unsigned int)intendedOutputBufferSize;
-         blockStart += spec.maximumBlockSize) {
+         blockStart += blockSize) {
       unsigned int blockEnd =
           std::min(blockStart + spec.maximumBlockSize,
                    static_cast<unsigned int>(intendedOutputBufferSize));
-      unsigned int blockSize = blockEnd - blockStart;
+      blockSize = blockEnd - blockStart;
 
       auto ioBlock = juce::dsp::AudioBlock<float>(
           ioBuffer.getArrayOfWritePointers(), ioBuffer.getNumChannels(),
@@ -260,6 +261,12 @@ inline int process(juce::AudioBuffer<float> &ioBuffer,
       pluginSamplesReceived += outputSamples;
 
       int missingSamples = blockSize - outputSamples;
+      if (missingSamples < 0) {
+        throw std::runtime_error(
+            "A plugin returned more samples than were asked for! "
+            "This is an internal Pedalboard error and should be reported.");
+      }
+
       if (missingSamples > 0 && pluginSamplesReceived > 0) {
         // This can only happen if the plugin we're using is returning us more
         // than one chunk of audio that's not completely full, which can

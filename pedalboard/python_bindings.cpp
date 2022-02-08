@@ -53,6 +53,8 @@ namespace py = pybind11;
 #include "plugins/PitchShift.h"
 #include "plugins/Reverb.h"
 
+#include "plugin_templates/PrimeWithSilence.h"
+
 using namespace Pedalboard;
 
 PYBIND11_MODULE(pedalboard_native, m) {
@@ -166,4 +168,5 @@ PYBIND11_MODULE(pedalboard_native, m) {
   // Internal plugins for testing, debugging, etc:
   py::module internal = m.def_submodule("_internal");
   init_add_latency(internal);
+  init_prime_with_silence_test_plugin(internal);
 };
