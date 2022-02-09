@@ -39,7 +39,7 @@ namespace py = pybind11;
 #include "plugin_templates/Resample.h"
 
 #include "plugins/AddLatency.h"
-#include "plugins/Bitcrusher.h"
+#include "plugins/Bitcrush.h"
 #include "plugins/Chain.h"
 #include "plugins/Chorus.h"
 #include "plugins/Compressor.h"
@@ -147,7 +147,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_plugin_container(m);
 
   // Publicly accessible plugins:
-  init_bitcrusher(m);
+  init_bitcrush(m);
   init_chorus(m);
   init_compressor(m);
   init_convolution(m);

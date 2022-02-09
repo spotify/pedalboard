@@ -24,7 +24,7 @@ Internally at Spotify, `pedalboard` is used for [data augmentation](https://en.w
    - Spatial effects: `Convolution`, `Delay`, `Reverb`
    - Pitch effects: `PitchShift`
    - Lossy compression: `GSMFullRateCompressor`, `MP3Compressor`
-   - Quality reduction: `Resample`
+   - Quality reduction: `Resample`, `Bitcrush`
  - Supports VST3® plugins on macOS, Windows, and Linux (`pedalboard.load_plugin`)
  - Supports Audio Units on macOS
  - Strong thread-safety, memory usage, and speed guarantees

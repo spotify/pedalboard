@@ -19,7 +19,7 @@
 #include <cmath>
 
 namespace Pedalboard {
-template <typename SampleType> class Bitcrusher : public Plugin {
+template <typename SampleType> class Bitcrush : public Plugin {
 public:
   SampleType getBitDepth() const { return bitDepth; }
   void setBitDepth(const SampleType value) {
@@ -73,27 +73,27 @@ private:
   static constexpr int INNER_LOOP_DIMENSION = 16;
 };
 
-inline void init_bitcrusher(py::module &m) {
-  py::class_<Bitcrusher<float>, Plugin, std::shared_ptr<Bitcrusher<float>>>(
-      m, "Bitcrusher",
+inline void init_bitcrush(py::module &m) {
+  py::class_<Bitcrush<float>, Plugin, std::shared_ptr<Bitcrush<float>>>(
+      m, "Bitcrush",
       "A plugin that reduces the signal to a given bit depth, giving the audio "
       "a lo-fi, digitized sound. Floating-point bit depths are supported.")
       .def(py::init([](float bitDepth) {
-             auto bitcrusher = std::make_unique<Bitcrusher<float>>();
-             bitcrusher->setBitDepth(bitDepth);
-             return bitcrusher;
+             auto bitcrush = std::make_unique<Bitcrush<float>>();
+             bitcrush->setBitDepth(bitDepth);
+             return bitcrush;
            }),
            py::arg("bit_depth") = 8)
       .def("__repr__",
-           [](const Bitcrusher<float> &plugin) {
+           [](const Bitcrush<float> &plugin) {
              std::ostringstream ss;
-             ss << "<pedalboard.Bitcrusher";
+             ss << "<pedalboard.Bitcrush";
              ss << " bit_depth=" << plugin.getBitDepth();
              ss << " at " << &plugin;
              ss << ">";
              return ss.str();
            })
-      .def_property("bit_depth", &Bitcrusher<float>::getBitDepth,
-                    &Bitcrusher<float>::setBitDepth);
+      .def_property("bit_depth", &Bitcrush<float>::getBitDepth,
+                    &Bitcrush<float>::setBitDepth);
 }
 }; // namespace Pedalboard

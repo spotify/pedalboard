@@ -17,7 +17,7 @@
 
 import pytest
 import numpy as np
-from pedalboard import Pedalboard, Bitcrusher
+from pedalboard import Pedalboard, Bitcrush
 from .utils import generate_sine_at
 
 
@@ -25,10 +25,10 @@ from .utils import generate_sine_at
 @pytest.mark.parametrize("fundamental_hz", [440, 880])
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
 @pytest.mark.parametrize("num_channels", [1, 2])
-def test_bitcrusher(bit_depth: float, fundamental_hz: float, sample_rate: float, num_channels: int):
+def test_bitcrush(bit_depth: float, fundamental_hz: float, sample_rate: float, num_channels: int):
     sine_wave = generate_sine_at(sample_rate, fundamental_hz, num_seconds=0.1, num_channels=num_channels)
 
-    plugin = Bitcrusher(bit_depth)
+    plugin = Bitcrush(bit_depth)
     output = plugin.process(sine_wave, sample_rate)
 
     assert np.all(np.isfinite(output))
