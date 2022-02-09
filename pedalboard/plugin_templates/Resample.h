@@ -71,23 +71,78 @@ public:
   }
 
   float getBaseLatency() const {
-    return std::visit([](auto &&i) -> float { return i.getBaseLatency(); },
-                      interpolator);
+    // Unfortunately, std::visit cannot be used here due to macOS version
+    // issues: https://stackoverflow.com/q/52310835/679081
+    if (auto *i =
+            std::get_if<juce::Interpolators::ZeroOrderHold>(&interpolator)) {
+      return i->getBaseLatency();
+    } else if (auto *i =
+                   std::get_if<juce::Interpolators::Linear>(&interpolator)) {
+      return i->getBaseLatency();
+    } else if (auto *i = std::get_if<juce::Interpolators::CatmullRom>(
+                   &interpolator)) {
+      return i->getBaseLatency();
+    } else if (auto *i =
+                   std::get_if<juce::Interpolators::Lagrange>(&interpolator)) {
+      return i->getBaseLatency();
+    } else if (auto *i = std::get_if<juce::Interpolators::WindowedSinc>(
+                   &interpolator)) {
+      return i->getBaseLatency();
+    } else {
+      throw std::runtime_error("Unknown resampler quality!");
+    }
   }
 
   void reset() noexcept {
-    std::visit([](auto &&i) { return i.reset(); }, interpolator);
+    // Unfortunately, std::visit cannot be used here due to macOS version
+    // issues: https://stackoverflow.com/q/52310835/679081
+    if (auto *i =
+            std::get_if<juce::Interpolators::ZeroOrderHold>(&interpolator)) {
+      i->reset();
+    } else if (auto *i =
+                   std::get_if<juce::Interpolators::Linear>(&interpolator)) {
+      i->reset();
+    } else if (auto *i = std::get_if<juce::Interpolators::CatmullRom>(
+                   &interpolator)) {
+      i->reset();
+    } else if (auto *i =
+                   std::get_if<juce::Interpolators::Lagrange>(&interpolator)) {
+      i->reset();
+    } else if (auto *i = std::get_if<juce::Interpolators::WindowedSinc>(
+                   &interpolator)) {
+      i->reset();
+    } else {
+      throw std::runtime_error("Unknown resampler quality!");
+    }
   }
 
   int process(double speedRatio, const float *inputSamples,
               float *outputSamples, int numOutputSamplesToProduce) noexcept {
-    return std::visit(
-        [speedRatio, inputSamples, outputSamples,
-         numOutputSamplesToProduce](auto &&i) -> float {
-          return i.process(speedRatio, inputSamples, outputSamples,
-                           numOutputSamplesToProduce);
-        },
-        interpolator);
+    // Unfortunately, std::visit cannot be used here due to macOS version
+    // issues: https://stackoverflow.com/q/52310835/679081
+    if (auto *i =
+            std::get_if<juce::Interpolators::ZeroOrderHold>(&interpolator)) {
+      return i->process(speedRatio, inputSamples, outputSamples,
+                        numOutputSamplesToProduce);
+    } else if (auto *i =
+                   std::get_if<juce::Interpolators::Linear>(&interpolator)) {
+      return i->process(speedRatio, inputSamples, outputSamples,
+                        numOutputSamplesToProduce);
+    } else if (auto *i = std::get_if<juce::Interpolators::CatmullRom>(
+                   &interpolator)) {
+      return i->process(speedRatio, inputSamples, outputSamples,
+                        numOutputSamplesToProduce);
+    } else if (auto *i =
+                   std::get_if<juce::Interpolators::Lagrange>(&interpolator)) {
+      return i->process(speedRatio, inputSamples, outputSamples,
+                        numOutputSamplesToProduce);
+    } else if (auto *i = std::get_if<juce::Interpolators::WindowedSinc>(
+                   &interpolator)) {
+      return i->process(speedRatio, inputSamples, outputSamples,
+                        numOutputSamplesToProduce);
+    } else {
+      throw std::runtime_error("Unknown resampler quality!");
+    }
   }
 
 private:
