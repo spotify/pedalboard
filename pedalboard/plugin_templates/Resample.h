@@ -433,11 +433,13 @@ private:
 };
 
 inline void init_resample(py::module &m) {
-  py::class_<Resample<Passthrough<float>, float>, Plugin> resample(
-      m, "Resample",
-      "A plugin that downsamples the input audio to the given sample rate, "
-      "then upsamples it back to the original sample rate. Various quality "
-      "settings will produce audible distortion and aliasing effects.");
+  py::class_<Resample<Passthrough<float>, float>, Plugin,
+             std::shared_ptr<Resample<Passthrough<float>, float>>>
+      resample(
+          m, "Resample",
+          "A plugin that downsamples the input audio to the given sample rate, "
+          "then upsamples it back to the original sample rate. Various quality "
+          "settings will produce audible distortion and aliasing effects.");
 
   py::enum_<ResamplingQuality>(resample, "Quality")
       .value("ZeroOrderHold", ResamplingQuality::ZeroOrderHold,
@@ -509,7 +511,9 @@ inline void init_resample(py::module &m) {
  * signal.
  */
 inline void init_resample_with_latency(py::module &m) {
-  py::class_<Resample<AddLatency, float>, Plugin>(m, "ResampleWithLatency")
+  py::class_<Resample<AddLatency, float>, Plugin,
+             std::shared_ptr<Resample<AddLatency, float>>>(
+      m, "ResampleWithLatency")
       .def(py::init([](float targetSampleRate, int internalLatency,
                        ResamplingQuality quality) {
              auto plugin = std::make_unique<Resample<AddLatency, float>>();

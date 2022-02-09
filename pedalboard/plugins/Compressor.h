@@ -36,7 +36,7 @@ class Compressor : public JucePlugin<juce::dsp::Compressor<SampleType>> {
 };
 
 inline void init_compressor(py::module &m) {
-  py::class_<Compressor<float>, Plugin>(
+  py::class_<Compressor<float>, Plugin, std::shared_ptr<Compressor<float>>>(
       m, "Compressor",
       "A dynamic range compressor, used to amplify quiet sounds and reduce the "
       "volume of loud sounds.")

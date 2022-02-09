@@ -161,8 +161,9 @@ private:
 };
 
 inline void init_prime_with_silence_test_plugin(py::module &m) {
-  py::class_<PrimeWithSilenceTestPlugin, Plugin>(m,
-                                                 "PrimeWithSilenceTestPlugin")
+  py::class_<PrimeWithSilenceTestPlugin, Plugin,
+             std::shared_ptr<PrimeWithSilenceTestPlugin>>(
+      m, "PrimeWithSilenceTestPlugin")
       .def(py::init([](int expectedSilentSamples) {
              auto plugin = std::make_unique<PrimeWithSilenceTestPlugin>();
              plugin->setExpectedSilentSamples(expectedSilentSamples);

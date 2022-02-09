@@ -53,7 +53,7 @@ private:
 };
 
 inline void init_add_latency(py::module &m) {
-  py::class_<AddLatency, Plugin>(
+  py::class_<AddLatency, Plugin, std::shared_ptr<AddLatency>>(
       m, "AddLatency",
       "A dummy plugin that delays input audio for the given number of samples "
       "before passing it back to the output. Used internally to test "

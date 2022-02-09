@@ -14,130 +14,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import collections
 import platform
 import weakref
 from functools import update_wrapper
 from contextlib import contextmanager
-from typing import List, Optional, Dict, Union, Tuple, Iterable
+from typing import List, Optional, Dict, Tuple, Iterable, Union
 
-import numpy as np
+from pedalboard_native import Plugin, _AudioProcessorParameter
+from pedalboard_native.utils import Chain
 
-from pedalboard_native import Plugin, process, _AudioProcessorParameter
 
-
-class Pedalboard(collections.abc.MutableSequence):
+class Pedalboard(Chain):
     """
     A container for a chain of plugins, to use for processing audio.
     """
 
-    def __init__(self, plugins: List[Optional[Plugin]], sample_rate: Optional[float] = None):
-        for plugin in plugins:
-            if plugin is not None:
-                if not isinstance(plugin, Plugin):
-                    raise TypeError(
-                        "An object of type {} cannot be included in a {}.".format(
-                            type(plugin), self.__class__.__name__
-                        )
-                    )
-                if plugins.count(plugin) > 1:
-                    raise ValueError(
-                        "The same plugin object ({}) was included multiple times in a {}. Please"
-                        " create unique instances if the same effect is required multiple times in"
-                        " series.".format(plugin, self.__class__.__name__)
-                    )
-        self.plugins = plugins
-
-        if sample_rate is not None and not isinstance(sample_rate, (int, float)):
-            raise TypeError("sample_rate must be None, an integer, or a floating-point number.")
-        self.sample_rate = sample_rate
+    def __init__(self, plugins: Optional[List[Plugin]] = None):
+        super().__init__(plugins or [])
 
     def __repr__(self) -> str:
-        return "<{} plugins={} sample_rate={}>".format(
-            self.__class__.__name__, repr(self.plugins), repr(self.sample_rate)
+        return "<{} with {} plugin{}: {}>".format(
+            self.__class__.__name__,
+            len(self),
+            "" if len(self) == 1 else "s",
+            list(self),
         )
-
-    def __len__(self) -> int:
-        return len(self.plugins)
-
-    def __delitem__(self, index: int) -> None:
-        self.plugins.__delitem__(index)
-
-    def insert(self, index: int, value: Optional[Plugin]) -> None:
-        if value is not None:
-            if not isinstance(value, Plugin):
-                raise TypeError(
-                    "An object of type {} cannot be inserted into a {}.".format(
-                        type(value), self.__class__.__name__
-                    )
-                )
-            if value in self.plugins:
-                raise ValueError(
-                    "The provided plugin object ({}) already exists in this {}. Please"
-                    " create unique instances if the same effect is required multiple times in"
-                    " series.".format(value, self.__class__.__name__)
-                )
-        self.plugins.insert(index, value)
-
-    def __setitem__(self, index: int, value: Optional[Plugin]) -> None:
-        if value is not None:
-            if not isinstance(value, Plugin):
-                raise TypeError(
-                    "An object of type {} cannot be added into a {}.".format(
-                        type(value), self.__class__.__name__
-                    )
-                )
-            if self.plugins.count(value) == 1 and self.plugins.index(value) != index:
-                raise ValueError(
-                    "The provided plugin object ({}) already exists in this {} at index {}. Please"
-                    " create unique instances if the same effect is required multiple times in"
-                    " series.".format(value, self.__class__.__name__, self.plugins.index(value))
-                )
-        self.plugins.__setitem__(index, value)
-
-    def __getitem__(self, index: int) -> Optional[Plugin]:
-        return self.plugins.__getitem__(index)
-
-    def reset(self):
-        """
-        Clear any internal state (e.g.: reverb tails) kept by all of the plugins in this
-        Pedalboard. The values of plugin parameters will remain unchanged. For most plugins,
-        this is a fast operation; for some, this will cause a full re-instantiation of the plugin.
-        """
-        for plugin in self.plugins:
-            plugin.reset()
-
-    def process(
-        self,
-        audio: np.ndarray,
-        sample_rate: Optional[float] = None,
-        buffer_size: Optional[int] = None,
-        reset: bool = True,
-    ) -> np.ndarray:
-        if sample_rate is not None and not isinstance(sample_rate, (int, float)):
-            raise TypeError("sample_rate must be None, an integer, or a floating-point number.")
-        if buffer_size is not None:
-            if not isinstance(buffer_size, (int, float)):
-                raise TypeError("buffer_size must be None, an integer, or a floating-point number.")
-            buffer_size = int(buffer_size)
-
-        effective_sample_rate = sample_rate or self.sample_rate
-        if effective_sample_rate is None:
-            raise ValueError(
-                (
-                    "No sample rate available. `sample_rate` must be provided to either the {}"
-                    " constructor or as an argument to `process`."
-                ).format(self.__class__.__name__)
-            )
-
-        # pyBind11 makes a copy of self.plugins when passing it into process.
-        kwargs = {"sample_rate": effective_sample_rate, "plugins": self.plugins, "reset": reset}
-        if buffer_size:
-            kwargs["buffer_size"] = buffer_size
-        return process(audio, **kwargs)
-
-    # Alias process to __call__, so that people can call Pedalboards like functions.
-    __call__ = process
 
 
 FLOAT_SUFFIXES_TO_IGNORE = set(["x", "%", "*", ",", ".", "hz"])

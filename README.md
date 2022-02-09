@@ -85,25 +85,35 @@ to the next in an undesired fashion, try:
 
 ## Examples
 
-A very basic example of how to use `pedalboard`'s built-in plugins:
+### Quick Start
 
 ```python
 import soundfile as sf
-from pedalboard import (
-    Pedalboard,
-    Convolution,
-    Compressor,
-    Chorus,
-    Gain,
-    Reverb,
-    Limiter,
-    LadderFilter,
-    Phaser,
-)
+from pedalboard import Pedalboard, Chorus, Reverb
 
+# Read in an audio file:
 audio, sample_rate = sf.read('some-file.wav')
 
 # Make a Pedalboard object, containing multiple plugins:
+board = Pedalboard([Chorus(), Reverb(room_size=0.25)])
+
+# Run the audio through this pedalboard!
+effected = board(audio, s)
+
+# Write the audio back as a wav file:
+sf.write('./processed-output.wav', effected, sample_rate)
+```
+
+### Making a guitar-style pedalboard
+
+```python
+import soundfile as sf
+# Don't do import *! (It just makes this example smaller)
+from pedalboard import *
+
+audio, sample_rate = sf.read('./guitar-input.wav')
+
+# Make a pretty interesting sounding guitar pedalboard:
 board = Pedalboard([
     Compressor(threshold_db=-50, ratio=25),
     Gain(gain_db=30),
@@ -112,46 +122,38 @@ board = Pedalboard([
     Phaser(),
     Convolution("./guitar_amp.wav", 1.0),
     Reverb(room_size=0.25),
-], sample_rate=sample_rate)
+])
 
 # Pedalboard objects behave like lists, so you can add plugins:
 board.append(Compressor(threshold_db=-25, ratio=10))
 board.append(Gain(gain_db=10))
 board.append(Limiter())
 
+# ... or change parameters easily:
+board[0].threshold_db = -40
+
 # Run the audio through this pedalboard!
-effected = board(audio)
+effected = board(audio, sample_rate)
 
 # Write the audio back as a wav file:
-with sf.SoundFile('./processed-output-stereo.wav', 'w', samplerate=sample_rate, channels=len(effected.shape)) as f:
-    f.write(effected)
-
+sf.write('./guitar-output.wav', effected, sample_rate)
 ```
 
-### Loading a VST3® plugin and manipulating its parameters
+### Using VST3® or Audio Unit plugins
 
 ```python
 import soundfile as sf
 from pedalboard import Pedalboard, Reverb, load_plugin
 
-# Load a VST3 package from a known path on disk:
+# Load a VST3 or Audio Unit plugin from a known path on disk:
 vst = load_plugin("./VSTs/RoughRider3.vst3")
 
 print(vst.parameters.keys())
 # dict_keys([
-#   'sc_hpf_hz',
-#   'input_lvl_db',
-#   'sensitivity_db',
-#   'ratio',
-#   'attack_ms',
-#   'release_ms',
-#   'makeup_db',
-#   'mix',
-#   'output_lvl_db',
-#   'sc_active',
-#   'full_bandwidth',
-#   'bypass',
-#   'program',
+#   'sc_hpf_hz', 'input_lvl_db', 'sensitivity_db',
+#   'ratio', 'attack_ms', 'release_ms', 'makeup_db',
+#   'mix', 'output_lvl_db', 'sc_active',
+#   'full_bandwidth', 'bypass', 'program',
 # ])
 
 # Set the "ratio" parameter to 15
@@ -159,12 +161,51 @@ vst.ratio = 15
 
 # Use this VST to process some audio:
 audio, sample_rate = sf.read('some-file.wav')
-effected = vst(audio, sample_rate=sample_rate)
+effected = vst(audio, sample_rate)
 
 # ...or put this VST into a chain with other plugins:
-board = Pedalboard([vst, Reverb()], sample_rate=sample_rate)
+board = Pedalboard([vst, Reverb()])
 # ...and run that pedalboard with the same VST instance!
-effected = board(audio)
+effected = board(audio, sample_rate)
+```
+
+### Creating parallel effects chains
+
+This example creates a delayed pitch-shift effect by running
+multiple Pedalboards in parallel on the same audio. `Pedalboard`
+objects are themselves `Plugin` objects, so you can nest them
+as much as you like:
+
+```python
+import soundfile as sf
+from pedalboard import Pedalboard, Compressor, Delay, Distortion, Gain, PitchShift, Reverb, Mix
+
+passthrough = Gain(gain_db=0)
+
+delay_and_pitch_shift = Pedalboard([
+  Delay(delay_seconds=0.25, mix=1.0),
+  PitchShift(semitones=7),
+  Gain(gain_db=-3),
+])
+
+delay_longer_and_more_pitch_shift = Pedalboard([
+  Delay(delay_seconds=0.5, mix=1.0),
+  PitchShift(semitones=12),
+  Gain(gain_db=-6),
+])
+
+board = Pedalboard([
+  # Put a compressor at the front of the chain:
+  Compressor(),
+  # Run all of these pedalboards simultaneously with the Mix plugin:
+  Mix([
+    passthrough,
+    delay_and_pitch_shift,
+    delay_longer_and_more_pitch_shift,
+  ]),
+  # Add a reverb on the final mix:
+  Reverb()
+])
 ```
 
 For more examples, see:

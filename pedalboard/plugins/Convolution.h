@@ -78,7 +78,8 @@ private:
 };
 
 inline void init_convolution(py::module &m) {
-  py::class_<JucePlugin<ConvolutionWithMix>, Plugin>(
+  py::class_<JucePlugin<ConvolutionWithMix>, Plugin,
+             std::shared_ptr<JucePlugin<ConvolutionWithMix>>>(
       m, "Convolution",
       "An audio convolution, suitable for things like speaker simulation or "
       "reverb modeling.")

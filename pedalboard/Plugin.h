@@ -20,6 +20,8 @@
 #include "JuceHeader.h"
 #include <mutex>
 
+static constexpr int DEFAULT_BUFFER_SIZE = 8192;
+
 namespace Pedalboard {
 /**
  * A base class for all Pedalboard plugins, JUCE-derived or external.

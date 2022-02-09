@@ -801,7 +801,8 @@ inline void init_external_plugins(py::module &m) {
           "Returns the current value of the parameter as a string.");
 
 #if JUCE_PLUGINHOST_VST3 && (JUCE_MAC || JUCE_WINDOWS || JUCE_LINUX)
-  py::class_<ExternalPlugin<juce::VST3PluginFormat>, Plugin>(
+  py::class_<ExternalPlugin<juce::VST3PluginFormat>, Plugin,
+             std::shared_ptr<ExternalPlugin<juce::VST3PluginFormat>>>(
       m, "_VST3Plugin",
       "A wrapper around any Steinberg® VST3 audio effect plugin. Note that "
       "plugins must already support the operating system currently in use "
@@ -842,7 +843,8 @@ inline void init_external_plugins(py::module &m) {
 #endif
 
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
-  py::class_<ExternalPlugin<juce::AudioUnitPluginFormat>, Plugin>(
+  py::class_<ExternalPlugin<juce::AudioUnitPluginFormat>, Plugin,
+             std::shared_ptr<ExternalPlugin<juce::AudioUnitPluginFormat>>>(
       m, "_AudioUnitPlugin",
       "A wrapper around any Apple Audio Unit audio effect plugin. Only "
       "available on macOS.",

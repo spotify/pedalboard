@@ -48,7 +48,7 @@ private:
 };
 
 inline void init_distortion(py::module &m) {
-  py::class_<Distortion<float>, Plugin>(
+  py::class_<Distortion<float>, Plugin, std::shared_ptr<Distortion<float>>>(
       m, "Distortion", "Apply soft distortion with a tanh waveshaper.")
       .def(py::init([](float drive_db) {
              auto plugin = std::make_unique<Distortion<float>>();

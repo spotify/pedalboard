@@ -32,12 +32,12 @@ def test_can_be_called_in_tensorflow_data_pipeline():
     import tensorflow as tf
 
     sr = 48000
-    plugins = pedalboard.Pedalboard([pedalboard.Gain(), pedalboard.Reverb()], sample_rate=sr)
+    plugins = pedalboard.Pedalboard([pedalboard.Gain(), pedalboard.Reverb()])
 
     noise = np.random.rand(sr)
 
     ds = tf.data.Dataset.from_tensor_slices([noise]).map(
-        lambda audio: tf.numpy_function(plugins.process, [audio], tf.float32)
+        lambda audio: tf.numpy_function(plugins.process, [audio, sr], tf.float32)
     )
 
     model = tf.keras.models.Sequential(
@@ -47,4 +47,4 @@ def test_can_be_called_in_tensorflow_data_pipeline():
     model.compile(loss="mse")
     model.fit(ds.map(lambda effected: (effected, 1)).batch(1), epochs=10)
 
-    assert np.allclose(plugins.process(noise), np.array([tensor.numpy() for tensor in ds]))
+    assert np.allclose(plugins(noise, sr), np.array([tensor.numpy() for tensor in ds]))

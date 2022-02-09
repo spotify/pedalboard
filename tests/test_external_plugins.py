@@ -586,17 +586,17 @@ def test_explicit_reset(plugin_filename: str):
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_explicit_reset_in_pedalboard(plugin_filename: str):
     sr = 44100
-    board = pedalboard.Pedalboard([load_test_plugin(plugin_filename, disable_caching=True)], sr)
+    board = pedalboard.Pedalboard([load_test_plugin(plugin_filename, disable_caching=True)])
     noise = np.random.rand(sr, 2)
 
     assert max_volume_of(noise) > 0.95
     silence = np.zeros_like(noise)
     assert max_volume_of(silence) == 0.0
 
-    assert max_volume_of(board(silence, reset=False)) < 0.00001
-    assert max_volume_of(board(noise, reset=False)) > 0.00001
+    assert max_volume_of(board(silence, reset=False, sample_rate=sr)) < 0.00001
+    assert max_volume_of(board(noise, reset=False, sample_rate=sr)) > 0.00001
     board.reset()
-    assert max_volume_of(board(silence, reset=False)) < 0.00001
+    assert max_volume_of(board(silence, reset=False, sample_rate=sr)) < 0.00001
 
 
 @pytest.mark.parametrize("value", (True, False))

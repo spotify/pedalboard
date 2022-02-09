@@ -42,19 +42,19 @@ def test_multiple_threads_using_same_plugin_instances(num_concurrent_chains: int
         # we take locks (if we didn't have logic for it) would be
         # the pathologically worst-case.
         plugins.reverse()
-        pedalboards.append(pedalboard.Pedalboard(list(plugins), sample_rate=sr))
+        pedalboards.append(pedalboard.Pedalboard(list(plugins)))
 
     for _ in range(0, num_concurrent_chains // 2):
         # Shuffle the list of plugins so that the order in which
         # we pass plugins into the method is non-deterministic:
         random.shuffle(plugins)
-        pedalboards.append(pedalboard.Pedalboard(list(plugins), sample_rate=sr))
+        pedalboards.append(pedalboard.Pedalboard(list(plugins)))
 
     futures = []
     with ThreadPoolExecutor(max_workers=num_concurrent_chains) as e:
         noise = np.random.rand(1, sr)
         for pb in pedalboards:
-            futures.append(e.submit(pb.process, np.copy(noise)))
+            futures.append(e.submit(pb.process, np.copy(noise), sample_rate=sr))
 
         # This will throw an exception if we exceed the timeout:
         processed = [future.result(timeout=2 * num_concurrent_chains) for future in futures]

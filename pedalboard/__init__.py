@@ -16,6 +16,7 @@
 
 
 from pedalboard_native import *  # noqa: F403, F401
+from pedalboard_native.utils import *  # noqa: F403, F401
 from .pedalboard import Pedalboard, AVAILABLE_PLUGIN_CLASSES, load_plugin  # noqa: F401
 from .version import __version__  # noqa: F401
 

@@ -34,7 +34,7 @@ class Phaser : public JucePlugin<juce::dsp::Phaser<SampleType>> {
 
 inline void init_phaser(py::module &m) {
 
-  py::class_<Phaser<float>, Plugin>(
+  py::class_<Phaser<float>, Plugin, std::shared_ptr<Phaser<float>>>(
       m, "Phaser",
       "A 6 stage phaser that modulates first order all-pass filters to create "
       "sweeping notches in the magnitude frequency response. This audio effect "

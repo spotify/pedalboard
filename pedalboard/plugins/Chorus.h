@@ -37,7 +37,7 @@ class Chorus : public JucePlugin<juce::dsp::Chorus<SampleType>> {
 };
 
 inline void init_chorus(py::module &m) {
-  py::class_<Chorus<float>, Plugin>(
+  py::class_<Chorus<float>, Plugin, std::shared_ptr<Chorus<float>>>(
       m, "Chorus",
       "A basic chorus effect. This audio effect can be controlled via the "
       "speed and depth of the LFO controlling the frequency response, a mix "

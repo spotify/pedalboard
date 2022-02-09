@@ -304,7 +304,9 @@ private:
 };
 
 inline void init_fixed_size_block_test_plugin(py::module &m) {
-  py::class_<FixedSizeBlockTestPlugin, Plugin>(m, "FixedSizeBlockTestPlugin")
+  py::class_<FixedSizeBlockTestPlugin, Plugin,
+             std::shared_ptr<FixedSizeBlockTestPlugin>>(
+      m, "FixedSizeBlockTestPlugin")
       .def(py::init([](int expectedBlockSize) {
              auto plugin = new FixedSizeBlockTestPlugin();
              plugin->setExpectedBlockSize(expectedBlockSize);

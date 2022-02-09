@@ -24,7 +24,7 @@ from pedalboard import Pedalboard, Gain
 def test_no_transforms(shape, sr=44100):
     _input = np.random.rand(*shape).astype(np.float32)
 
-    output = Pedalboard([], sr).process(_input)
+    output = Pedalboard([]).process(_input, sr)
 
     assert _input.shape == output.shape
     assert np.allclose(_input, output, rtol=0.0001)
@@ -32,12 +32,10 @@ def test_no_transforms(shape, sr=44100):
 
 def test_fail_on_invalid_plugin():
     with pytest.raises(TypeError):
-        Pedalboard(["I want a reverb please"], 44100)
+        Pedalboard(["I want a reverb please"])
 
 
 def test_fail_on_invalid_sample_rate():
-    with pytest.raises(TypeError):
-        Pedalboard([], "fourty four one hundred")
     with pytest.raises(TypeError):
         Pedalboard([]).process([], "fourty four one hundred")
 
@@ -48,25 +46,29 @@ def test_fail_on_invalid_buffer_size():
 
 
 def test_repr():
-    sr = 44100
     gain = Gain(-6)
-    value = repr(Pedalboard([gain], sr))
+    value = repr(Pedalboard([gain]))
     # Allow flexibility; all we care about is that these values exist in the repr.
     assert "Pedalboard" in value
-    assert str(sr) in value
-    assert "plugins=" in value
+    assert " 1 " in value
     assert repr(gain) in value
-    assert "sample_rate=" in value
+
+    gain2 = Gain(-6)
+    value = repr(Pedalboard([gain, gain2]))
+    # Allow flexibility; all we care about is that these values exist in the repr.
+    assert "Pedalboard" in value
+    assert " 2 " in value
+    assert repr(gain) in value
+    assert repr(gain2) in value
 
 
 def test_is_list_like():
-    sr = 44100
     gain = Gain(-6)
 
-    assert len(Pedalboard([gain], sr)) == 1
-    assert len(Pedalboard([gain, Gain(-6)], sr)) == 2
+    assert len(Pedalboard([gain])) == 1
+    assert len(Pedalboard([gain, Gain(-6)])) == 2
 
-    pb = Pedalboard([gain], sr)
+    pb = Pedalboard([gain])
     assert len(pb) == 1
 
     # Allow adding elements, like a list:
@@ -89,19 +91,3 @@ def test_is_list_like():
 
     with pytest.raises(TypeError):
         pb[0] = "not a plugin"
-
-
-def test_process_validates_sample_rate():
-    sr = 44100
-    full_scale_noise = np.random.rand(sr, 1).astype(np.float32)
-
-    # Sample rate can be provided in the constructor:
-    pb = Pedalboard([Gain(-6)], sr).process(full_scale_noise)
-
-    # ...or in the `process` call:
-    pb = Pedalboard([Gain(-6)]).process(full_scale_noise, sr)
-
-    # But if not passed in either, an exception will be raised:
-    pb = Pedalboard([Gain(-6)])
-    with pytest.raises(ValueError):
-        pb.process(full_scale_noise)
