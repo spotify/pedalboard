@@ -84,8 +84,8 @@ public:
     this->getDSP().coefficients =
         juce::dsp::IIR::Coefficients<SampleType>::makeHighShelf(
             spec.sampleRate,
-            clampCutoffFrequency(this->cutoffFrequencyHz, spec.sampleRate), this->Q,
-            this->gainFactor);
+            clampCutoffFrequency(this->cutoffFrequencyHz, spec.sampleRate),
+            this->Q, this->gainFactor);
   }
 };
 
@@ -98,8 +98,8 @@ public:
     this->getDSP().coefficients =
         juce::dsp::IIR::Coefficients<SampleType>::makeLowShelf(
             spec.sampleRate,
-            clampCutoffFrequency(this->cutoffFrequencyHz, spec.sampleRate), this->Q,
-            this->gainFactor);
+            clampCutoffFrequency(this->cutoffFrequencyHz, spec.sampleRate),
+            this->Q, this->gainFactor);
   }
 };
 
@@ -111,8 +111,8 @@ public:
     this->getDSP().coefficients =
         juce::dsp::IIR::Coefficients<SampleType>::makePeakFilter(
             spec.sampleRate,
-            clampCutoffFrequency(this->cutoffFrequencyHz, spec.sampleRate), this->Q,
-            this->gainFactor);
+            clampCutoffFrequency(this->cutoffFrequencyHz, spec.sampleRate),
+            this->Q, this->gainFactor);
   }
 };
 
@@ -126,8 +126,8 @@ inline void init_iir_filters(py::module &m) {
       .def(py::init([](float cutoffFrequencyHz, float gaindB, float Q) {
              auto plugin = std::make_unique<HighShelfFilter<float>>();
              plugin->setCutoffFrequencyHz(cutoffFrequencyHz);
-             plugin->setQ(Q);
              plugin->setGainDecibels(gaindB);
+             plugin->setQ(Q);
              return plugin;
            }),
            py::arg("cutoff_frequency_hz") = 440, py::arg("gain_db") = 0.0,
@@ -137,8 +137,8 @@ inline void init_iir_filters(py::module &m) {
              std::ostringstream ss;
              ss << "<pedalboard.HighShelfFilter";
              ss << " cutoff_frequency_hz=" << plugin.getCutoffFrequencyHz();
-             ss << " q=" << plugin.getQ();
              ss << " gain_db=" << plugin.getGainDecibels();
+             ss << " q=" << plugin.getQ();
              ss << " at " << &plugin;
              ss << ">";
              return ss.str();
@@ -146,10 +146,10 @@ inline void init_iir_filters(py::module &m) {
       .def_property("cutoff_frequency_hz",
                     &HighShelfFilter<float>::getCutoffFrequencyHz,
                     &HighShelfFilter<float>::setCutoffFrequencyHz)
-      .def_property("q", &HighShelfFilter<float>::getQ,
-                    &HighShelfFilter<float>::setQ)
       .def_property("gain_db", &HighShelfFilter<float>::getGainDecibels,
-                    &HighShelfFilter<float>::setGainDecibels);
+                    &HighShelfFilter<float>::setGainDecibels)
+      .def_property("q", &HighShelfFilter<float>::getQ,
+                    &HighShelfFilter<float>::setQ);
 
   py::class_<LowShelfFilter<float>, Plugin,
              std::shared_ptr<LowShelfFilter<float>>>(
@@ -160,8 +160,8 @@ inline void init_iir_filters(py::module &m) {
       .def(py::init([](float cutoffFrequencyHz, float gaindB, float Q) {
              auto plugin = std::make_unique<LowShelfFilter<float>>();
              plugin->setCutoffFrequencyHz(cutoffFrequencyHz);
-             plugin->setQ(Q);
              plugin->setGainDecibels(gaindB);
+             plugin->setQ(Q);
              return plugin;
            }),
            py::arg("cutoff_frequency_hz") = 440, py::arg("gain_db") = 0.0,
@@ -171,8 +171,8 @@ inline void init_iir_filters(py::module &m) {
              std::ostringstream ss;
              ss << "<pedalboard.LowShelfFilter";
              ss << " cutoff_frequency_hz=" << plugin.getCutoffFrequencyHz();
-             ss << " q=" << plugin.getQ();
              ss << " gain_db=" << plugin.getGainDecibels();
+             ss << " q=" << plugin.getQ();
              ss << " at " << &plugin;
              ss << ">";
              return ss.str();
@@ -180,10 +180,10 @@ inline void init_iir_filters(py::module &m) {
       .def_property("cutoff_frequency_hz",
                     &LowShelfFilter<float>::getCutoffFrequencyHz,
                     &LowShelfFilter<float>::setCutoffFrequencyHz)
-      .def_property("q", &LowShelfFilter<float>::getQ,
-                    &LowShelfFilter<float>::setQ)
       .def_property("gain_db", &LowShelfFilter<float>::getGainDecibels,
-                    &LowShelfFilter<float>::setGainDecibels);
+                    &LowShelfFilter<float>::setGainDecibels)
+      .def_property("q", &LowShelfFilter<float>::getQ,
+                    &LowShelfFilter<float>::setQ);
 
   py::class_<PeakFilter<float>, Plugin, std::shared_ptr<PeakFilter<float>>>(
       m, "PeakFilter",
@@ -193,8 +193,8 @@ inline void init_iir_filters(py::module &m) {
       .def(py::init([](float cutoffFrequencyHz, float gaindB, float Q) {
              auto plugin = std::make_unique<PeakFilter<float>>();
              plugin->setCutoffFrequencyHz(cutoffFrequencyHz);
-             plugin->setQ(Q);
              plugin->setGainDecibels(gaindB);
+             plugin->setQ(Q);
              return plugin;
            }),
            py::arg("cutoff_frequency_hz") = 440, py::arg("gain_db") = 0.0,
@@ -204,8 +204,8 @@ inline void init_iir_filters(py::module &m) {
              std::ostringstream ss;
              ss << "<pedalboard.PeakFilter";
              ss << " cutoff_frequency_hz=" << plugin.getCutoffFrequencyHz();
-             ss << " q=" << plugin.getQ();
              ss << " gain_db=" << plugin.getGainDecibels();
+             ss << " q=" << plugin.getQ();
              ss << " at " << &plugin;
              ss << ">";
              return ss.str();
@@ -213,8 +213,8 @@ inline void init_iir_filters(py::module &m) {
       .def_property("cutoff_frequency_hz",
                     &PeakFilter<float>::getCutoffFrequencyHz,
                     &PeakFilter<float>::setCutoffFrequencyHz)
-      .def_property("q", &PeakFilter<float>::getQ, &PeakFilter<float>::setQ)
       .def_property("gain_db", &PeakFilter<float>::getGainDecibels,
-                    &PeakFilter<float>::setGainDecibels);
+                    &PeakFilter<float>::setGainDecibels)
+      .def_property("q", &PeakFilter<float>::getQ, &PeakFilter<float>::setQ);
 }
 }; // namespace Pedalboard
