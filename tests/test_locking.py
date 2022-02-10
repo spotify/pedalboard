@@ -24,18 +24,17 @@ import numpy as np
 import pedalboard
 
 
-@pytest.mark.parametrize("num_concurrent_chains", [2, 10, 20])
-def test_multiple_threads_using_same_plugin_instances(num_concurrent_chains: int):
+@pytest.mark.parametrize("num_concurrent_chains", [2, 10])
+@pytest.mark.parametrize("num_unique_plugins", [2, 10])
+def test_multiple_threads_using_same_plugin_instances(
+    num_concurrent_chains: int, num_unique_plugins: int
+):
     """
     Instantiate a large number of stateful plugins, then run audio through them
     in randomly chosen orders, ensuring that the results are the same each time.
     """
     sr = 48000
-    plugins = sum(
-        [[pedalboard.Reverb()] for _ in range(100)],
-        [],
-    )
-
+    plugins = [pedalboard.Reverb() for _ in range(num_unique_plugins)]
     pedalboards = []
     for _ in range(0, num_concurrent_chains // 2):
         # Reverse the list of plugins so that the order in which
@@ -54,7 +53,7 @@ def test_multiple_threads_using_same_plugin_instances(num_concurrent_chains: int
     with ThreadPoolExecutor(max_workers=num_concurrent_chains) as e:
         noise = np.random.rand(1, sr)
         for pb in pedalboards:
-            futures.append(e.submit(pb.process, np.copy(noise), sample_rate=sr))
+            futures.append(e.submit(pb.process, noise, sample_rate=sr))
 
         # This will throw an exception if we exceed the timeout:
         processed = [future.result(timeout=2 * num_concurrent_chains) for future in futures]
