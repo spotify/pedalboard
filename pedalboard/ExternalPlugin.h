@@ -289,6 +289,8 @@ public:
                                      loadError.toStdString());
       }
 
+      pluginInstance->enableAllBuses();
+
       auto mainInputBus = pluginInstance->getBus(true, 0);
       auto mainOutputBus = pluginInstance->getBus(false, 0);
 
@@ -361,8 +363,6 @@ public:
     if (numChannels == 0)
       return;
 
-    pluginInstance->disableNonMainBuses();
-
     auto mainInputBus = pluginInstance->getBus(true, 0);
     auto mainOutputBus = pluginInstance->getBus(false, 0);
 
@@ -373,14 +373,16 @@ public:
           "and not an audio effect processor.");
     }
 
-    // Disable all other input buses to avoid crashing:
+    // Try to disable all non-main input buses if possible:
     for (int i = 1; i < pluginInstance->getBusCount(true); i++) {
-      pluginInstance->getBus(true, i)->enable(false);
+      auto *bus = pluginInstance->getBus(true, i);
+      if (bus->isNumberOfChannelsSupported(0)) bus->enable(false);
     }
 
-    // ...and all other output buses too:
+    // ...and all non-main output buses too:
     for (int i = 1; i < pluginInstance->getBusCount(false); i++) {
-      pluginInstance->getBus(false, i)->enable(false);
+      auto *bus = pluginInstance->getBus(false, i);
+      if (bus->isNumberOfChannelsSupported(0)) bus->enable(false);
     }
 
     if (mainInputBus->getNumberOfChannels() == numChannels &&
@@ -610,18 +612,7 @@ public:
             "number of channels passed in.)");
       }
 
-      size_t pluginBufferChannelCount = 0;
-      // Iterate through all input busses and add their input channels to our
-      // buffer:
-      for (size_t i = 0;
-           i < static_cast<size_t>(pluginInstance->getBusCount(true)); i++) {
-        if (pluginInstance->getBus(true, i)->isEnabled()) {
-          pluginBufferChannelCount +=
-              pluginInstance->getBus(true, i)->getNumberOfChannels();
-        }
-      }
-
-      std::vector<float *> channelPointers(pluginBufferChannelCount);
+      std::vector<float *> channelPointers(pluginInstance->getTotalNumInputChannels());
 
       for (size_t i = 0; i < outputBlock.getNumChannels(); i++) {
         channelPointers[i] = outputBlock.getChannelPointer(i);
@@ -632,7 +623,7 @@ public:
       // freed via RAII.
       std::vector<std::vector<float>> dummyChannels;
       for (size_t i = outputBlock.getNumChannels();
-           i < pluginBufferChannelCount; i++) {
+           i < channelPointers.size(); i++) {
         std::vector<float> dummyChannel(outputBlock.getNumSamples());
         channelPointers[i] = dummyChannel.data();
         dummyChannels.push_back(dummyChannel);
@@ -641,8 +632,9 @@ public:
       // Create an audio buffer that doesn't actually allocate anything, but
       // just points to the data in the ProcessContext.
       juce::AudioBuffer<float> audioBuffer(channelPointers.data(),
-                                           pluginBufferChannelCount,
+                                           channelPointers.size(),
                                            outputBlock.getNumSamples());
+
       pluginInstance->processBlock(audioBuffer, emptyMidiBuffer);
       samplesProvided += outputBlock.getNumSamples();
 
