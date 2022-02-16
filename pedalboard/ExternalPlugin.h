@@ -376,13 +376,15 @@ public:
     // Try to disable all non-main input buses if possible:
     for (int i = 1; i < pluginInstance->getBusCount(true); i++) {
       auto *bus = pluginInstance->getBus(true, i);
-      if (bus->isNumberOfChannelsSupported(0)) bus->enable(false);
+      if (bus->isNumberOfChannelsSupported(0))
+        bus->enable(false);
     }
 
     // ...and all non-main output buses too:
     for (int i = 1; i < pluginInstance->getBusCount(false); i++) {
       auto *bus = pluginInstance->getBus(false, i);
-      if (bus->isNumberOfChannelsSupported(0)) bus->enable(false);
+      if (bus->isNumberOfChannelsSupported(0))
+        bus->enable(false);
     }
 
     if (mainInputBus->getNumberOfChannels() == numChannels &&
@@ -612,7 +614,8 @@ public:
             "number of channels passed in.)");
       }
 
-      std::vector<float *> channelPointers(pluginInstance->getTotalNumInputChannels());
+      std::vector<float *> channelPointers(
+          pluginInstance->getTotalNumInputChannels());
 
       for (size_t i = 0; i < outputBlock.getNumChannels(); i++) {
         channelPointers[i] = outputBlock.getChannelPointer(i);
@@ -622,8 +625,8 @@ public:
       // plugin that we don't use. Use vector here to ensure the memory is
       // freed via RAII.
       std::vector<std::vector<float>> dummyChannels;
-      for (size_t i = outputBlock.getNumChannels();
-           i < channelPointers.size(); i++) {
+      for (size_t i = outputBlock.getNumChannels(); i < channelPointers.size();
+           i++) {
         std::vector<float> dummyChannel(outputBlock.getNumSamples());
         channelPointers[i] = dummyChannel.data();
         dummyChannels.push_back(dummyChannel);
