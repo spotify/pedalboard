@@ -48,25 +48,16 @@ namespace py = pybind11;
 #include "plugins/Distortion.h"
 #include "plugins/GSMFullRateCompressor.h"
 #include "plugins/Gain.h"
+#include "plugins/HighShelfFilter.h"
 #include "plugins/HighpassFilter.h"
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
+#include "plugins/IIRFilters.h"
+#include "plugins/Invert.h"
 #include "plugins/LadderFilter.h"
 #include "plugins/Limiter.h"
+#include "plugins/LowShelfFilter.h"
 #include "plugins/LowpassFilter.h"
-#include "plugins/IIRFilters.h"
->>>>>>> Consolidate IIR filters into one file to share code.
-#include "plugins/Invert.h"
 #include "plugins/MP3Compressor.h"
 #include "plugins/Mix.h"
-=======
-#include "plugins/HighShelfFilter.h"
-#include "plugins/LadderFilter.h"
-#include "plugins/Limiter.h"
-#include "plugins/LowpassFilter.h"
-#include "plugins/LowShelfFilter.h"
->>>>>>>  On branch add-dsp-filters
 #include "plugins/NoiseGate.h"
 #include "plugins/Phaser.h"
 #include "plugins/PitchShift.h"

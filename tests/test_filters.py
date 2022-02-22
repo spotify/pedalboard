@@ -22,7 +22,7 @@ from .utils import generate_sine_at
 
 
 def rms(x: np.ndarray) -> float:
-    return np.sqrt(np.mean(x**2))
+    return np.sqrt(np.mean(x ** 2))
 
 
 def normalized(x: np.ndarray) -> np.ndarray:
