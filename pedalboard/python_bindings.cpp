@@ -49,6 +49,7 @@ namespace py = pybind11;
 #include "plugins/GSMFullRateCompressor.h"
 #include "plugins/Gain.h"
 #include "plugins/HighpassFilter.h"
+#include "plugins/IIRFilters.h"
 #include "plugins/Invert.h"
 #include "plugins/LadderFilter.h"
 #include "plugins/Limiter.h"
@@ -160,6 +161,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_gsm_full_rate_compressor(m);
 
   init_highpass(m);
+  init_iir_filters(m);
   init_invert(m);
   init_ladderfilter(m);
   init_limiter(m);
