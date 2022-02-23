@@ -9,4 +9,4 @@
 	url = https://github.com/lameproject/lame.git
 [submodule "vendors/libgsm"]
 	path = vendors/libgsm
-	url = git@github.com:timothytylee/libgsm.git
+	url = https://github.com/timothytylee/libgsm.git
