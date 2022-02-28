@@ -98,7 +98,7 @@ audio, sample_rate = sf.read('some-file.wav')
 board = Pedalboard([Chorus(), Reverb(room_size=0.25)])
 
 # Run the audio through this pedalboard!
-effected = board(audio, s)
+effected = board(audio, sample_rate)
 
 # Write the audio back as a wav file:
 sf.write('./processed-output.wav', effected, sample_rate)
