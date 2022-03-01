@@ -110,6 +110,85 @@ private:
 };
 #endif
 
+//==============================================================================
+/**
+    A desktop window containing a plugin's GUI.
+*/
+class PluginWindow : public juce::DocumentWindow {
+public:
+  PluginWindow(juce::AudioProcessor &processor)
+      : DocumentWindow("Pedalboard",
+                       juce::LookAndFeel::getDefaultLookAndFeel().findColour(
+                           juce::ResizableWindow::backgroundColourId),
+                       juce::DocumentWindow::minimiseButton |
+                           juce::DocumentWindow::closeButton), processor(processor) {
+    setSize(400, 300);
+
+    if (processor.hasEditor()) {
+      if (auto *editor = processor.createEditorIfNeeded()) {
+        setContentOwned(editor, true);
+        setResizable(editor->isResizable(), false);
+      } else {
+        throw std::runtime_error("Failed to create plugin editor UI.");
+      }
+    } else {
+      throw std::runtime_error("Plugin has no available editor UI.");
+    }
+
+    setUsingNativeTitleBar(true);
+  }
+
+  void closeButtonPressed() override {
+    setVisible(false);
+    clearContentComponent();
+  }
+
+  void show() {
+    setVisible(true);
+    toFront(true);
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+
+    juce::Process::makeForegroundProcess();
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+
+    // Run in a tight loop so that we don't have to call ->stopDispatchLoop(),
+    // which causes the MessageManager to become unusable in the future.
+    while (isVisible()) {
+      if (PyErr_CheckSignals() != 0) {
+        closeButtonPressed();
+        throw py::error_already_set();
+      }
+
+      {
+        // Release the GIL to allow other Python threads to run in the
+        // background while we the UI is running:
+        py::gil_scoped_release release;
+        juce::MessageManager::getInstance()->runDispatchLoopUntil(100);
+      }
+    }
+  }
+
+  ~PluginWindow() override {
+    clearContentComponent();
+
+    // Pump the dispatch loop to allow this window to close:
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+
+    // Some plugins keep their editor open:
+    if (auto *editor = processor.getActiveEditor()) {
+      delete editor;
+    }
+
+    // Pump the dispatch loop again to allow this window to close:
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+  }
+
+private:
+  juce::AudioProcessor &processor;
+
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginWindow)
+};
+
 enum class ExternalPluginReloadType {
   /**
    * Unknown: we need to determine the reload type.
@@ -675,6 +754,23 @@ public:
     return pluginInstance->getLatencySamples();
   }
 
+  void showEditor() {
+    if (!pluginInstance) {
+      throw std::runtime_error(
+          "Editor cannot be shown - plugin not loaded. This is an internal "
+          "Pedalboard error and should be reported.");
+    }
+
+    if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+      throw std::runtime_error("Plugin UI windows can only be shown from the main thread.");
+    }
+
+    {
+      PluginWindow window(*pluginInstance);
+      window.show();
+    }
+  }
+
 private:
   constexpr static int ExternalLoadSampleRate = 44100,
                        ExternalLoadMaximumBlockSize = 8192;
@@ -834,7 +930,13 @@ inline void init_external_plugins(py::module &m) {
           py::return_value_policy::reference_internal)
       .def("_get_parameter",
            &ExternalPlugin<juce::VST3PluginFormat>::getParameter,
-           py::return_value_policy::reference_internal);
+           py::return_value_policy::reference_internal)
+      .def(
+          "show_editor",
+          &ExternalPlugin<juce::VST3PluginFormat>::showEditor,
+          "Show the UI of this plugin as a native window. This method will "
+          "block until the window is closed or a KeyboardInterrupt is "
+          "received.");
 #endif
 
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
@@ -873,7 +975,13 @@ inline void init_external_plugins(py::module &m) {
           py::return_value_policy::reference_internal)
       .def("_get_parameter",
            &ExternalPlugin<juce::AudioUnitPluginFormat>::getParameter,
-           py::return_value_policy::reference_internal);
+           py::return_value_policy::reference_internal)
+      .def(
+          "show_editor",
+          &ExternalPlugin<juce::AudioUnitPluginFormat>::showEditor,
+          "Show the UI of this plugin as a native window. This method will "
+          "block until the window is closed or a KeyboardInterrupt is "
+          "received.");
 #endif
 }
 

@@ -73,6 +73,7 @@ ALL_CPPFLAGS.extend(
         "-DJUCE_WEB_BROWSER=0",
         "-DJUCE_USE_CURL=0",
         # "-DJUCE_USE_FREETYPE=0",
+        "-DJUCE_MODAL_LOOPS_PERMITTED=1",
     ]
 )
 ALL_INCLUDES.extend(['JUCE/modules/', 'JUCE/modules/juce_audio_processors/format_types/VST3_SDK/'])
