@@ -110,10 +110,6 @@ private:
 };
 #endif
 
-//==============================================================================
-/**
-    A desktop window containing a plugin's GUI.
-*/
 class StandalonePluginWindow : public juce::DocumentWindow {
 public:
   StandalonePluginWindow(juce::AudioProcessor &processor)
@@ -121,7 +117,8 @@ public:
                        juce::LookAndFeel::getDefaultLookAndFeel().findColour(
                            juce::ResizableWindow::backgroundColourId),
                        juce::DocumentWindow::minimiseButton |
-                           juce::DocumentWindow::closeButton), processor(processor) {
+                           juce::DocumentWindow::closeButton),
+        processor(processor) {
     setUsingNativeTitleBar(true);
 
     if (processor.hasEditor()) {
@@ -177,13 +174,9 @@ public:
     }
   }
 
-  void closeButtonPressed() override {
-    setVisible(false);
-  }
+  void closeButtonPressed() override { setVisible(false); }
 
-  ~StandalonePluginWindow() override {
-    clearContentComponent();
-  }
+  ~StandalonePluginWindow() override { clearContentComponent(); }
 
   void show() {
     setVisible(true);
@@ -770,7 +763,8 @@ public:
     }
 
     if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
-      throw std::runtime_error("Plugin UI windows can only be shown from the main thread.");
+      throw std::runtime_error(
+          "Plugin UI windows can only be shown from the main thread.");
     }
 
     StandalonePluginWindow::openWindowAndWait(*pluginInstance);
@@ -936,12 +930,10 @@ inline void init_external_plugins(py::module &m) {
       .def("_get_parameter",
            &ExternalPlugin<juce::VST3PluginFormat>::getParameter,
            py::return_value_policy::reference_internal)
-      .def(
-          "show_editor",
-          &ExternalPlugin<juce::VST3PluginFormat>::showEditor,
-          "Show the UI of this plugin as a native window. This method will "
-          "block until the window is closed or a KeyboardInterrupt is "
-          "received.");
+      .def("show_editor", &ExternalPlugin<juce::VST3PluginFormat>::showEditor,
+           "Show the UI of this plugin as a native window. This method will "
+           "block until the window is closed or a KeyboardInterrupt is "
+           "received.");
 #endif
 
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
@@ -981,12 +973,11 @@ inline void init_external_plugins(py::module &m) {
       .def("_get_parameter",
            &ExternalPlugin<juce::AudioUnitPluginFormat>::getParameter,
            py::return_value_policy::reference_internal)
-      .def(
-          "show_editor",
-          &ExternalPlugin<juce::AudioUnitPluginFormat>::showEditor,
-          "Show the UI of this plugin as a native window. This method will "
-          "block until the window is closed or a KeyboardInterrupt is "
-          "received.");
+      .def("show_editor",
+           &ExternalPlugin<juce::AudioUnitPluginFormat>::showEditor,
+           "Show the UI of this plugin as a native window. This method will "
+           "block until the window is closed or a KeyboardInterrupt is "
+           "received.");
 #endif
 }
 
