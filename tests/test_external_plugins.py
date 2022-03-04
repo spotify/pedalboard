@@ -18,10 +18,12 @@
 import os
 import time
 import math
+import psutil
 import atexit
 import random
 import shutil
 import platform
+import subprocess
 from glob import glob
 from pathlib import Path
 
@@ -648,3 +650,22 @@ def test_external_plugin_latency_compensation(buffer_size: int, oversampling: in
 
     output = plugin.process(noise, sample_rate, buffer_size=buffer_size)
     np.testing.assert_allclose(output, noise, atol=0.05)
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_show_editor(plugin_filename: str):
+    # Run this test in a subprocess, as otherwise we'd block this thread:
+    full_plugin_filename = os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_filename)
+    try:
+        subprocess.check_call(
+            [
+                psutil.Process(os.getpid()).exe(),
+                "-c",
+                "import pedalboard;"
+                f" pedalboard.load_plugin(\"{full_plugin_filename}\").show_editor()",
+            ],
+            timeout=5,
+        )
+    except subprocess.TimeoutExpired:
+        # This is good: the UI was shown, no issues.
+        pass
