@@ -114,15 +114,15 @@ private:
 /**
     A desktop window containing a plugin's GUI.
 */
-class PluginWindow : public juce::DocumentWindow {
+class StandalonePluginWindow : public juce::DocumentWindow {
 public:
-  PluginWindow(juce::AudioProcessor &processor)
+  StandalonePluginWindow(juce::AudioProcessor &processor)
       : DocumentWindow("Pedalboard",
                        juce::LookAndFeel::getDefaultLookAndFeel().findColour(
                            juce::ResizableWindow::backgroundColourId),
                        juce::DocumentWindow::minimiseButton |
                            juce::DocumentWindow::closeButton), processor(processor) {
-    setSize(400, 300);
+    setUsingNativeTitleBar(true);
 
     if (processor.hasEditor()) {
       if (auto *editor = processor.createEditorIfNeeded()) {
@@ -134,59 +134,67 @@ public:
     } else {
       throw std::runtime_error("Plugin has no available editor UI.");
     }
+  }
 
-    setUsingNativeTitleBar(true);
+  /**
+   * Open a native window to show a given AudioProcessor's editor UI,
+   * pumping the juce::MessageManager run loop as necessary to service
+   * UI events.
+   */
+  static void openWindowAndWait(juce::AudioProcessor &processor) {
+    bool shouldThrowErrorAlreadySet = false;
+
+    JUCE_AUTORELEASEPOOL {
+      StandalonePluginWindow window(processor);
+      window.show();
+
+      // Run in a tight loop so that we don't have to call ->stopDispatchLoop(),
+      // which causes the MessageManager to become unusable in the future.
+      // The window can be closed by sending a KeyboardInterrupt or closing
+      // the window in the UI.
+      while (window.isVisible()) {
+        if (PyErr_CheckSignals() != 0) {
+          window.closeButtonPressed();
+          shouldThrowErrorAlreadySet = true;
+          break;
+        }
+
+        {
+          // Release the GIL to allow other Python threads to run in the
+          // background while we the UI is running:
+          py::gil_scoped_release release;
+          juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+        }
+      }
+    }
+
+    // Once the Autorelease pool has been drained, pump the dispatch loop one
+    // more time to process any window close events:
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+
+    if (shouldThrowErrorAlreadySet) {
+      throw py::error_already_set();
+    }
   }
 
   void closeButtonPressed() override {
     setVisible(false);
+  }
+
+  ~StandalonePluginWindow() override {
     clearContentComponent();
   }
 
   void show() {
     setVisible(true);
     toFront(true);
-    juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
-
     juce::Process::makeForegroundProcess();
-    juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
-
-    // Run in a tight loop so that we don't have to call ->stopDispatchLoop(),
-    // which causes the MessageManager to become unusable in the future.
-    while (isVisible()) {
-      if (PyErr_CheckSignals() != 0) {
-        closeButtonPressed();
-        throw py::error_already_set();
-      }
-
-      {
-        // Release the GIL to allow other Python threads to run in the
-        // background while we the UI is running:
-        py::gil_scoped_release release;
-        juce::MessageManager::getInstance()->runDispatchLoopUntil(100);
-      }
-    }
-  }
-
-  ~PluginWindow() override {
-    clearContentComponent();
-
-    // Pump the dispatch loop to allow this window to close:
-    juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
-
-    // Some plugins keep their editor open:
-    if (auto *editor = processor.getActiveEditor()) {
-      delete editor;
-    }
-
-    // Pump the dispatch loop again to allow this window to close:
-    juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
   }
 
 private:
   juce::AudioProcessor &processor;
 
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginWindow)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StandalonePluginWindow)
 };
 
 enum class ExternalPluginReloadType {
@@ -765,10 +773,7 @@ public:
       throw std::runtime_error("Plugin UI windows can only be shown from the main thread.");
     }
 
-    {
-      PluginWindow window(*pluginInstance);
-      window.show();
-    }
+    StandalonePluginWindow::openWindowAndWait(*pluginInstance);
   }
 
 private:
