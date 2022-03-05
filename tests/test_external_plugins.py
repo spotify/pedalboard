@@ -657,15 +657,21 @@ def test_show_editor(plugin_filename: str):
     # Run this test in a subprocess, as otherwise we'd block this thread:
     full_plugin_filename = os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_filename)
     try:
-        subprocess.check_call(
+        subprocess.check_output(
             [
                 psutil.Process(os.getpid()).exe(),
                 "-c",
                 "import pedalboard;"
-                f" pedalboard.load_plugin(\"{full_plugin_filename}\").show_editor()",
+                f'pedalboard.load_plugin(r"{full_plugin_filename}").show_editor();',
             ],
             timeout=5,
+            stderr=subprocess.STDOUT,
         )
+    except subprocess.CalledProcessError as e:
+        if b"no visual display devices available" in e.output:
+            pass
+        else:
+            raise
     except subprocess.TimeoutExpired:
         # This is good: the UI was shown, no issues.
         pass

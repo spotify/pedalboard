@@ -762,6 +762,11 @@ public:
           "Pedalboard error and should be reported.");
     }
 
+    if (!juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()) {
+      throw std::runtime_error(
+          "Editor cannot be shown - no visual display devices available.");
+    }
+
     if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
       throw std::runtime_error(
           "Plugin UI windows can only be shown from the main thread.");
