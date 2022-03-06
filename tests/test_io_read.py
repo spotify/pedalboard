@@ -33,6 +33,14 @@ FILENAMES_AND_SAMPLERATES = [
     if any(filename.endswith(extension) for extension in pedalboard.io.AudioFile.supported_formats)
 ]
 
+UNSUPPORTED_FILENAMES = [
+    filename
+    for filename in sum(TEST_AUDIO_FILES.values(), [])
+    if not any(
+        filename.endswith(extension) for extension in pedalboard.io.AudioFile.supported_formats
+    )
+]
+
 
 @pytest.mark.parametrize("extension", [".mp3", ".wav", ".ogg", ".flac"])
 def test_basic_formats_available_on_all_platforms(extension: str):
@@ -80,3 +88,9 @@ def test_fails_gracefully():
     with pytest.raises(ValueError):
         with pedalboard.io.AudioFile(__file__) as f:
             pass
+
+
+@pytest.mark.parametrize("audio_filename", UNSUPPORTED_FILENAMES)
+def test_fails_on_unsupported_format(audio_filename: str):
+    with pytest.raises(ValueError):
+        pedalboard.io.AudioFile(audio_filename)
