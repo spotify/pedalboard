@@ -82,12 +82,12 @@ public:
     {
       py::gil_scoped_release release;
 
-      float *readPointers[numChannels];
+      float **channelPointers = (float **)alloca(numChannels * sizeof(float *));
       for (int c = 0; c < numChannels; c++) {
-        readPointers[c] = ((float *)outputInfo.ptr) + (numSamples * c);
+        channelPointers[c] = ((float *)outputInfo.ptr) + (numSamples * c);
       }
 
-      reader->read(readPointers, numChannels, currentPosition, numSamples);
+      reader->read(channelPointers, numChannels, currentPosition, numSamples);
     }
 
     currentPosition += numSamples;
@@ -99,9 +99,9 @@ public:
     if (!reader)
       throw std::runtime_error("I/O operation on a closed file.");
     if (targetPosition > reader->lengthInSamples)
-      throw std::domain_error("Seek out of bounds");
+      throw std::domain_error("Cannot seek beyond end of file (" + std::to_string(reader->lengthInSamples) + " frames).");
     if (targetPosition < 0)
-      throw std::domain_error("Seek out of bounds");
+      throw std::domain_error("Cannot seek before start of file.");
     currentPosition = targetPosition;
   }
 
@@ -115,6 +115,18 @@ public:
   void close() {
     const juce::ScopedLock scopedLock(objectLock);
     reader.reset();
+  }
+
+  bool isClosed() {
+    const juce::ScopedLock scopedLock(objectLock);
+    return reader == nullptr;
+  }
+
+  bool isSeekable() {
+    const juce::ScopedLock scopedLock(objectLock);
+
+    // At the moment, AudioFile instances are always seekable, as they're backed by files.
+    return !isClosed();
   }
 
   std::shared_ptr<AudioFile> enter() { return shared_from_this(); }
@@ -135,16 +147,22 @@ private:
 inline void init_audiofile(py::module &m) {
   py::class_<AudioFile, std::shared_ptr<AudioFile>>(
       m, "AudioFile",
-      "An audio file reader interface, with native support for "
-      "for Ogg Vorbis, MP3, WAV, FLAC, and AIFF files on all operating "
-      "systems. On some platforms, the output")
+      "An audio file reader interface, with native support for for Ogg Vorbis, "
+      "MP3, WAV, FLAC, and AIFF files on all operating systems. On some "
+      "platforms, other formats may also be supported. (Use "
+      "AudioFile.supported_formats to see which formats are supported on the "
+      "current platform.)")
       .def(py::init([](std::string filename) {
              return std::make_unique<AudioFile>(filename);
            }),
            py::arg("filename"))
       .def("read", &AudioFile::read, py::arg("num_frames") = 0,
            "Read the given number of frames (samples in each channel) from the "
-           "audio file at the current position.")
+           "audio file at the current position. Audio samples are returned in "
+           "the shape (channels, samples); i.e.: a stereo audio file will have "
+           "shape (2, <length>).")
+      .def("seekable", &AudioFile::isSeekable,
+           "Returns True if the file is currently open and calls to seek() will work.")
       .def("seek", &AudioFile::seek, py::arg("position"),
            "Seek the file to the provided location in frames.")
       .def("tell", &AudioFile::tell,
@@ -153,6 +171,8 @@ inline void init_audiofile(py::module &m) {
            "Close the file, rendering this object unusable.")
       .def("__enter__", &AudioFile::enter)
       .def("__exit__", &AudioFile::exit)
+      .def_property_readonly("closed", &AudioFile::isClosed,
+                             "If the file has been closed, this property will be True.")
       .def_property_readonly("samplerate", &AudioFile::getSampleRate,
                              "Fetch the sample rate of the file in samples "
                              "(per channel) per second (Hz).")
@@ -183,12 +203,10 @@ inline void init_audiofile(py::module &m) {
             }
 
             std::sort(output.begin(), output.end(),
-              [](const std::string lhs,
-                 const std::string rhs) {
-                return lhs < rhs;
-              });
+                      [](const std::string lhs, const std::string rhs) {
+                        return lhs < rhs;
+                      });
 
-            
             return output;
           });
 }
