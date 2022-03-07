@@ -18,8 +18,8 @@ def generate_sine_at(
         fade_duration = int(sample_rate * 0.1)
         sine_wave[:fade_duration] *= np.linspace(0, 1, fade_duration)
         sine_wave[-fade_duration:] *= np.linspace(1, 0, fade_duration)
-        if num_channels == 2:
-            TEST_SINE_WAVE_CACHE[cache_key] = np.stack([sine_wave, sine_wave])
+        if num_channels != 1:
+            TEST_SINE_WAVE_CACHE[cache_key] = np.stack([sine_wave] * num_channels)
         else:
             TEST_SINE_WAVE_CACHE[cache_key] = sine_wave
     return TEST_SINE_WAVE_CACHE[cache_key]

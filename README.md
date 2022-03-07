@@ -27,11 +27,16 @@ Internally at Spotify, `pedalboard` is used for [data augmentation](https://en.w
    - Quality reduction: `Resample`, `Bitcrush`
  - Supports VST3® plugins on macOS, Windows, and Linux (`pedalboard.load_plugin`)
  - Supports Audio Units on macOS
+ - Built-in audio I/O utilities (`pedalboard.io.AudioFile`)
+   - Support for reading AIFF, FLAC, MP3, OGG, and WAV files on all platforms with no dependencies
+   - Support for writing AIFF, FLAC, OGG, and WAV on all platforms with no dependencies
+   - Additional support for reading AAC, AC3, WMA, and other formats depending on platform
  - Strong thread-safety, memory usage, and speed guarantees
    - Releases Python's Global Interpreter Lock (GIL) to allow use of multiple CPU cores
      - No need to use `multiprocessing`!
    - Even when only using one thread:
      - Processes audio up to **300x** faster than [pySoX](https://github.com/rabitt/pysox) for single transforms, and 2-5x faster<sup>[1](https://github.com/iCorv/pedalboard_with_tfdata)</sup> than [SoxBindings](https://github.com/pseeth/soxbindings)
+     - Reads audio files up to **20x** faster than [`librosa.load`](https://librosa.org/doc/main/generated/librosa.load.html)
  - Tested compatibility with TensorFlow - can be used in `tf.data` pipelines!
 
 ## Installation
@@ -88,30 +93,35 @@ to the next in an undesired fashion, try:
 ### Quick Start
 
 ```python
-import soundfile as sf
 from pedalboard import Pedalboard, Chorus, Reverb
+from pedalboard.io import AudioFile
 
-# Read in an audio file:
-audio, sample_rate = sf.read('some-file.wav')
+# Read in a whole audio file:
+with AudioFile('some-file.wav', 'r') as f:
+  audio = f.read(f.frames)
+  samplerate = f.samplerate
 
 # Make a Pedalboard object, containing multiple plugins:
 board = Pedalboard([Chorus(), Reverb(room_size=0.25)])
 
 # Run the audio through this pedalboard!
-effected = board(audio, sample_rate)
+effected = board(audio, samplerate)
 
 # Write the audio back as a wav file:
-sf.write('./processed-output.wav', effected, sample_rate)
+with AudioFile('processed-output.wav', 'w', samplerate) as f:
+  f.write(effected)
 ```
 
 ### Making a guitar-style pedalboard
 
 ```python
-import soundfile as sf
 # Don't do import *! (It just makes this example smaller)
 from pedalboard import *
+from pedalboard.io import AudioFile
 
-audio, sample_rate = sf.read('./guitar-input.wav')
+with AudioFile('guitar-input.wav', 'r') as f:
+  audio = f.read(f.frames)
+  samplerate = f.samplerate
 
 # Make a pretty interesting sounding guitar pedalboard:
 board = Pedalboard([
@@ -133,17 +143,18 @@ board.append(Limiter())
 board[0].threshold_db = -40
 
 # Run the audio through this pedalboard!
-effected = board(audio, sample_rate)
+effected = board(audio, samplerate)
 
 # Write the audio back as a wav file:
-sf.write('./guitar-output.wav', effected, sample_rate)
+with AudioFile('processed-output.wav', 'w', samplerate) as f:
+  f.write(effected)
 ```
 
 ### Using VST3® or Audio Unit plugins
 
 ```python
-import soundfile as sf
 from pedalboard import Pedalboard, Reverb, load_plugin
+from pedalboard.io import AudioFile
 
 # Load a VST3 or Audio Unit plugin from a known path on disk:
 vst = load_plugin("./VSTs/RoughRider3.vst3")
@@ -160,13 +171,15 @@ print(vst.parameters.keys())
 vst.ratio = 15
 
 # Use this VST to process some audio:
-audio, sample_rate = sf.read('some-file.wav')
-effected = vst(audio, sample_rate)
+with AudioFile('some-file.wav', 'r') as f:
+  audio = f.read(f.frames)
+  samplerate = f.samplerate
+effected = vst(audio, samplerate)
 
 # ...or put this VST into a chain with other plugins:
 board = Pedalboard([vst, Reverb()])
 # ...and run that pedalboard with the same VST instance!
-effected = board(audio, sample_rate)
+effected = board(audio, samplerate)
 ```
 
 ### Creating parallel effects chains
@@ -177,7 +190,6 @@ objects are themselves `Plugin` objects, so you can nest them
 as much as you like:
 
 ```python
-import soundfile as sf
 from pedalboard import Pedalboard, Compressor, Delay, Distortion, Gain, PitchShift, Reverb, Mix
 
 passthrough = Gain(gain_db=0)
