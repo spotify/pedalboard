@@ -287,7 +287,7 @@ def test_basic_write(
             tolerance = 0.12
         else:
             file_bit_depth = int(af.file_dtype.replace("float", "").replace("int", ""))
-            tolerance = 4 / (2**file_bit_depth)
+            tolerance = 4 / (2 ** file_bit_depth)
             if np.issubdtype(input_format, np.signedinteger):
                 input_bit_depth = np.dtype(input_format).itemsize * 8
                 tolerance = 4 / (2 ** min(file_bit_depth, input_bit_depth))

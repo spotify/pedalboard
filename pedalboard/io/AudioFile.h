@@ -419,6 +419,7 @@ public:
             unsigned int bufferSize = DEFAULT_AUDIO_BUFFER_SIZE_FRAMES>
   bool writeConvertingTo(const InputType **channels, int numChannels,
                          unsigned int numSamples) {
+    printf("in writeConvertingTo with %d %s %d-channel frames, converting to %s\n", numSamples, typeid(InputType).name(), numChannels, typeid(TargetType).name());
     std::vector<std::vector<TargetType>> targetTypeBuffers;
     targetTypeBuffers.resize(numChannels);
 
