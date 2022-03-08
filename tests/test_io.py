@@ -51,6 +51,23 @@ UNSUPPORTED_FILENAMES = [
 ]
 
 
+def get_tolerance_for_format_and_bit_depth(extension: str, input_format, file_dtype: str) -> float:
+    if not extension.startswith("."):
+        extension = "." + extension
+    if extension in {".wav", ".aiff", ".aifc", ".flac"}:
+        file_bit_depth = int(file_dtype.replace("float", "").replace("int", ""))
+        if np.issubdtype(input_format, np.signedinteger):
+            input_bit_depth = np.dtype(input_format).itemsize * 8
+            return 4 / (2 ** min(file_bit_depth, input_bit_depth))
+        return 4 / (2**file_bit_depth)
+
+    # These formats offset the waveform substantially, and these tests don't do any realignment.
+    if extension in {".m4a", ".ac3", ".adts", ".mp4", ".mp2"}:
+        return 3.0
+
+    return 0.12
+
+
 def test_read_constructor_dispatch():
     filename, _samplerate = FILENAMES_AND_SAMPLERATES[0]
 
@@ -152,6 +169,16 @@ def test_basic_read(audio_filename: str, samplerate: float):
     assert f"channels={af.channels}" in repr(af)
     assert f"frames={af.frames}" in repr(af)
     assert f"file_dtype={af.file_dtype}" in repr(af)
+
+    af.seek(0)
+    actual = af.read(af.frames)
+    expected = generate_sine_at(af.samplerate, num_channels=af.channels, num_seconds=af.duration)
+    # Crop the ends of the file, as lossy formats sometimes don't encode the whole file:
+    actual = actual[:, : len(expected)]
+    tolerance = get_tolerance_for_format_and_bit_depth(
+        audio_filename.split(".")[-1], np.int16, af.file_dtype
+    )
+    np.testing.assert_allclose(np.squeeze(expected), np.squeeze(actual), atol=tolerance)
 
     af.close()
 
@@ -281,16 +308,7 @@ def test_basic_write(
     with pedalboard.io.ReadableAudioFile(filename) as af:
         assert af.samplerate == samplerate
         assert af.channels == num_channels
-
-        if extension == ".ogg":
-            tolerance = 0.12
-        else:
-            file_bit_depth = int(af.file_dtype.replace("float", "").replace("int", ""))
-            tolerance = 4 / (2 ** file_bit_depth)
-            if np.issubdtype(input_format, np.signedinteger):
-                input_bit_depth = np.dtype(input_format).itemsize * 8
-                tolerance = 4 / (2 ** min(file_bit_depth, input_bit_depth))
-
+        tolerance = get_tolerance_for_format_and_bit_depth(extension, input_format, af.file_dtype)
         as_written = af.read(num_samples)
         np.testing.assert_allclose(original_audio, np.squeeze(as_written), atol=tolerance)
 

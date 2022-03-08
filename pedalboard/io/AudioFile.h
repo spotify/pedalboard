@@ -53,17 +53,22 @@ public:
       // This is slower but more thorough:
       reader.reset(formatManager.createReaderFor(file.createInputStream()));
 
-      // Known bug: the juce::MP3Reader class will parse formats that are not MP3
-      // and pretend like they are, producing garbage output. For now, if we parse MP3
-      // from an input stream that's not explicitly got ".mp3" on the end, ignore it.
+      // Known bug: the juce::MP3Reader class will parse formats that are not
+      // MP3 and pretend like they are, producing garbage output. For now, if we
+      // parse MP3 from an input stream that's not explicitly got ".mp3" on the
+      // end, ignore it.
       if (reader->getFormatName() == "MP3 file") {
-        reader.reset();
+        throw std::domain_error(
+            "Failed to open audio file: file \"" + filename +
+            "\" does not seem to be of a known or supported format. (If trying "
+            "to open an MP3 file, ensure the filename ends with '.mp3'.)");
       }
     }
 
     if (!reader)
-      throw std::domain_error("Unable to open audio file for reading: " +
-                              filename);
+      throw std::domain_error(
+          "Failed to open audio file: file \"" + filename +
+          "\" does not seem to be of a known or supported format.");
   }
 
   double getSampleRate() const {
@@ -76,6 +81,12 @@ public:
     if (!reader)
       throw std::runtime_error("I/O operation on a closed file.");
     return reader->lengthInSamples;
+  }
+
+  double getDuration() const {
+    if (!reader)
+      throw std::runtime_error("I/O operation on a closed file.");
+    return reader->lengthInSamples / reader->sampleRate;
   }
 
   long getNumChannels() const {
@@ -403,7 +414,7 @@ public:
       break;
     }
     case ChannelLayout::NotInterleaved: {
-      // We can just pass all the data to writeFromFloatArrays:
+      // We can just pass all the data to write:
       const SampleType **channelPointers =
           (const SampleType **)alloca(numChannels * sizeof(SampleType *));
       for (int c = 0; c < numChannels; c++) {
@@ -467,7 +478,7 @@ public:
                                 std::is_integral<TargetType>::value,
                             "Can't convert int to float");
             } else {
-              // Converting float to float:
+              // Converting double to float:
               targetTypeBuffers[c][i] = channels[c][startSample + i];
             }
           }
@@ -496,15 +507,14 @@ public:
         return writeConvertingTo<int>(channels, numChannels, numSamples);
       }
     } else if constexpr (std::is_same<SampleType, float>::value) {
-      if (writer->isFloatingPoint()) {  
+      if (writer->isFloatingPoint()) {
         // Just pass the floating point data into the writer as if it were
         // integer data. If the writer requires floating-point input data, this
         // works (and is documented!)
         return writer->write((const int **)channels, numSamples);
       } else {
         // Convert floating-point to fixed point, but let JUCE do that for us:
-        return writer->writeFromFloatArrays(channels, numChannels,
-                                            numSamples);
+        return writer->writeFromFloatArrays(channels, numChannels, numSamples);
       }
     } else {
       // We must have double-format data:
@@ -678,6 +688,9 @@ inline void init_audiofile(py::module &m) {
       .def_property_readonly("frames", &ReadableAudioFile::getLengthInSamples,
                              "Fetch the total number of frames (samples per "
                              "channel) in the file.")
+      .def_property_readonly(
+          "duration", &ReadableAudioFile::getDuration,
+          "Fetch the duration of this file (frames divided by sample rate).")
       .def_property_readonly(
           "file_dtype", &ReadableAudioFile::getFileDatatype,
           "Fetch the data type stored natively by the file. Note that read() "
