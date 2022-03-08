@@ -27,7 +27,7 @@ import numpy as np
 from .utils import generate_sine_at
 
 EXPECTED_DURATION_SECONDS = 5
-EXPECT_LENGTH_TO_BE_EXACT = {"wav", "aiff", "aifc", "caf", "ogg", "m4a", "mp4"}
+EXPECT_LENGTH_TO_BE_EXACT = {"wav", "aiff", "caf", "ogg", "m4a", "mp4"}
 
 TEST_AUDIO_FILES = {
     44100: glob.glob(os.path.join(os.path.dirname(__file__), "audio", "correct", "*44100*")),
@@ -54,7 +54,7 @@ UNSUPPORTED_FILENAMES = [
 def get_tolerance_for_format_and_bit_depth(extension: str, input_format, file_dtype: str) -> float:
     if not extension.startswith("."):
         extension = "." + extension
-    if extension in {".wav", ".aiff", ".aifc", ".flac"}:
+    if extension in {".wav", ".aiff", ".flac"}:
         file_bit_depth = int(file_dtype.replace("float", "").replace("int", ""))
         if np.issubdtype(input_format, np.signedinteger):
             input_bit_depth = np.dtype(input_format).itemsize * 8
