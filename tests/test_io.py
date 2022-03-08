@@ -65,6 +65,9 @@ def get_tolerance_for_format_and_bit_depth(extension: str, input_format, file_dt
     if extension in {".m4a", ".ac3", ".adts", ".mp4", ".mp2"}:
         return 3.0
 
+    if extension in {".mp3"}:
+        return 0.8
+
     return 0.12
 
 
@@ -239,7 +242,7 @@ def test_context_manager_allows_exceptions():
 def test_read_okay_without_extension(
     tmp_path: pathlib.Path, audio_filename: str, samplerate: float
 ):
-    if '.mp3' in audio_filename:
+    if ".mp3" in audio_filename:
         # Skip this test - due to a bug in LAME's MP3 reader, we require
         # any MP3 files to be identified as such.
         return
