@@ -419,7 +419,6 @@ public:
             unsigned int bufferSize = DEFAULT_AUDIO_BUFFER_SIZE_FRAMES>
   bool writeConvertingTo(const InputType **channels, int numChannels,
                          unsigned int numSamples) {
-    printf("in writeConvertingTo with %d %s %d-channel frames, converting to %s\n", numSamples, typeid(InputType).name(), numChannels, typeid(TargetType).name());
     std::vector<std::vector<TargetType>> targetTypeBuffers;
     targetTypeBuffers.resize(numChannels);
 
@@ -436,6 +435,7 @@ public:
         for (unsigned int i = 0; i < samplesToWrite; i++) {
           if constexpr (std::is_integral<InputType>::value) {
             if constexpr (std::is_integral<TargetType>::value) {
+              // Left-align the samples to use all 32 bits, as JUCE requires:
               targetTypeBuffers[c][i] =
                   ((int)channels[c][startSample + i])
                   << (std::numeric_limits<int>::digits -
@@ -488,21 +488,20 @@ public:
       } else {
         return writeConvertingTo<int>(channels, numChannels, numSamples);
       }
-    } else {
-      if (writer->isFloatingPoint()) {
+    } else if constexpr (std::is_same<SampleType, float>::value) {
+      if (writer->isFloatingPoint()) {  
         // Just pass the floating point data into the writer as if it were
         // integer data. If the writer requires floating-point input data, this
         // works (and is documented!)
         return writer->write((const int **)channels, numSamples);
       } else {
-        if constexpr (std::is_same<SampleType, float>::value) {
-          // Convert floating-point to fixed point, but let JUCE do that for us:
-          return writer->writeFromFloatArrays(channels, numChannels,
-                                              numSamples);
-        } else {
-          return writeConvertingTo<float>(channels, numChannels, numSamples);
-        }
+        // Convert floating-point to fixed point, but let JUCE do that for us:
+        return writer->writeFromFloatArrays(channels, numChannels,
+                                            numSamples);
       }
+    } else {
+      // We must have double-format data:
+      return writeConvertingTo<float>(channels, numChannels, numSamples);
     }
   }
 

@@ -243,8 +243,7 @@ def test_fails_on_unsupported_format(audio_filename: str):
 
 @pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
 @pytest.mark.parametrize(
-    "samplerate",
-    [8000, 11025, 12000, 16000, 22050, 32000, 44100, 48000, 88200, 96000, 176400, 192000],
+    "samplerate", [8000, 11025, 12000, 16000, 22050, 32000, 44100, 48000, 88200, 96000]
 )
 @pytest.mark.parametrize("num_channels", [1, 2, 8])
 @pytest.mark.parametrize("transposed", [False, True])
