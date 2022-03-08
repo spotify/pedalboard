@@ -156,12 +156,21 @@ public:
     {
       py::gil_scoped_release release;
 
+      // If the file being read does not have enough content, it _should_ pad
+      // the rest of the array with zeroes. Unfortunately, this does not seem to
+      // be true in practice, so we pre-zero the array to be returned here:
+      std::memset((void *)outputInfo.ptr, 0,
+                  numChannels * numSamples * sizeof(float));
+
       float **channelPointers = (float **)alloca(numChannels * sizeof(float *));
       for (int c = 0; c < numChannels; c++) {
         channelPointers[c] = ((float *)outputInfo.ptr) + (numSamples * c);
       }
 
-      reader->read(channelPointers, numChannels, currentPosition, numSamples);
+      if (!reader->read(channelPointers, numChannels, currentPosition,
+                        numSamples)) {
+        throw std::runtime_error("Failed to read from file.");
+      }
     }
 
     currentPosition += numSamples;

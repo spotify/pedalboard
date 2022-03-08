@@ -59,7 +59,7 @@ def get_tolerance_for_format_and_bit_depth(extension: str, input_format, file_dt
         if np.issubdtype(input_format, np.signedinteger):
             input_bit_depth = np.dtype(input_format).itemsize * 8
             return 4 / (2 ** min(file_bit_depth, input_bit_depth))
-        return 4 / (2**file_bit_depth)
+        return 4 / (2 ** file_bit_depth)
 
     # These formats offset the waveform substantially, and these tests don't do any realignment.
     if extension in {".m4a", ".ac3", ".adts", ".mp4", ".mp2"}:
