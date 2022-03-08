@@ -57,7 +57,7 @@ public:
       // MP3 and pretend like they are, producing garbage output. For now, if we
       // parse MP3 from an input stream that's not explicitly got ".mp3" on the
       // end, ignore it.
-      if (reader->getFormatName() == "MP3 file") {
+      if (reader && reader->getFormatName() == "MP3 file") {
         throw std::domain_error(
             "Failed to open audio file: file \"" + filename +
             "\" does not seem to be of a known or supported format. (If trying "
