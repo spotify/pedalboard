@@ -52,6 +52,13 @@ public:
     if (!reader) {
       // This is slower but more thorough:
       reader.reset(formatManager.createReaderFor(file.createInputStream()));
+
+      // Known bug: the juce::MP3Reader class will parse formats that are not MP3
+      // and pretend like they are, producing garbage output. For now, if we parse MP3
+      // from an input stream that's not explicitly got ".mp3" on the end, ignore it.
+      if (reader->getFormatName() == "MP3 file") {
+        reader.reset();
+      }
     }
 
     if (!reader)
