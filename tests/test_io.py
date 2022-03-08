@@ -27,7 +27,7 @@ import numpy as np
 from .utils import generate_sine_at
 
 EXPECTED_DURATION_SECONDS = 5
-EXPECT_LENGTH_TO_BE_EXACT = {"mp3", "wav", "aiff", "aifc", "caf", "ogg", "m4a", "mp4"}
+EXPECT_LENGTH_TO_BE_EXACT = {"wav", "aiff", "aifc", "caf", "ogg", "m4a", "mp4"}
 
 TEST_AUDIO_FILES = {
     44100: glob.glob(os.path.join(os.path.dirname(__file__), "audio", "correct", "*44100*")),
@@ -63,7 +63,8 @@ def test_read_constructor_dispatch():
     # Support reading a file by using the appropriate subclass constructor just its filename:
     assert isinstance(pedalboard.io.ReadableAudioFile(filename), pedalboard.io.ReadableAudioFile)
 
-    # Don't support reading a file by passing a mode to the subclass constructor (which would be redundant):
+    # Don't support reading a file by passing a mode to the
+    # subclass constructor (which would be redundant):
     with pytest.raises(TypeError) as e:
         pedalboard.io.ReadableAudioFile(filename, "r")
     assert "incompatible function arguments" in str(e)
@@ -86,7 +87,8 @@ def test_write_constructor_dispatch(tmp_path: pathlib.Path):
         pedalboard.io.WriteableAudioFile(filename, 44100, 1), pedalboard.io.WriteableAudioFile
     )
 
-    # Don't support writing to a file by passing a mode to the subclass constructor (which would be redundant):
+    # Don't support writing to a file by passing a mode
+    # to the subclass constructor (which would be redundant):
     with pytest.raises(TypeError) as e:
         pedalboard.io.WriteableAudioFile(filename, "w", 44100, 1)
     assert "incompatible function arguments" in str(e)
@@ -149,6 +151,7 @@ def test_basic_read(audio_filename: str, samplerate: float):
     assert f"samplerate={int(af.samplerate)}" in repr(af)
     assert f"channels={af.channels}" in repr(af)
     assert f"frames={af.frames}" in repr(af)
+    assert f"file_dtype={af.file_dtype}" in repr(af)
 
     af.close()
 
@@ -227,14 +230,15 @@ def test_fails_gracefully():
         pedalboard.io.AudioFile(__file__)
 
     with pytest.raises(ValueError):
-        with pedalboard.io.AudioFile(__file__) as f:
+        with pedalboard.io.AudioFile(__file__):
             pass
 
 
 @pytest.mark.parametrize("audio_filename", UNSUPPORTED_FILENAMES)
 def test_fails_on_unsupported_format(audio_filename: str):
     with pytest.raises(ValueError):
-        pedalboard.io.AudioFile(audio_filename)
+        af = pedalboard.io.AudioFile(audio_filename)
+        assert not af
 
 
 @pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
@@ -244,32 +248,52 @@ def test_fails_on_unsupported_format(audio_filename: str):
 )
 @pytest.mark.parametrize("num_channels", [1, 2, 8])
 @pytest.mark.parametrize("transposed", [False, True])
+@pytest.mark.parametrize("input_format", [np.float32, np.float64, np.int8, np.int16, np.int32])
 def test_basic_write(
     tmp_path: pathlib.Path,
     extension: str,
     samplerate: float,
     num_channels: int,
     transposed: bool,
+    input_format,
 ):
     filename = str(tmp_path / f"test{extension}")
-    audio = generate_sine_at(samplerate, num_channels=num_channels).astype(np.float32)
+    original_audio = generate_sine_at(samplerate, num_channels=num_channels)
+
+    # Handle integer audio types by scaling the floating-point data to the full integer range:
+    if np.issubdtype(input_format, np.signedinteger):
+        _max = min(np.abs(np.iinfo(input_format).min), np.abs(np.iinfo(input_format).max))
+        audio = (original_audio * _max).astype(input_format)
+    else:
+        audio = original_audio.astype(input_format)
+
     num_samples = audio.shape[-1]
-    if transposed:
-        audio = audio.T
+
     with pedalboard.io.WriteableAudioFile(
         filename, samplerate=samplerate, num_channels=num_channels
     ) as af:
-        af.write(audio)
+        if transposed:
+            af.write(audio.T)
+        else:
+            af.write(audio)
+
     assert os.path.exists(filename)
     assert os.path.getsize(filename) > 0
     with pedalboard.io.ReadableAudioFile(filename) as af:
         assert af.samplerate == samplerate
         assert af.channels == num_channels
-        tolerance = 0.11 if extension == ".ogg" else 2 / (2**16)
+
+        if extension == ".ogg":
+            tolerance = 0.12
+        else:
+            file_bit_depth = int(af.file_dtype.replace("float", "").replace("int", ""))
+            tolerance = 4 / (2**file_bit_depth)
+            if np.issubdtype(input_format, np.signedinteger):
+                input_bit_depth = np.dtype(input_format).itemsize * 8
+                tolerance = 4 / (2 ** min(file_bit_depth, input_bit_depth))
+
         as_written = af.read(num_samples)
-        if transposed:
-            as_written = as_written.T
-        np.testing.assert_allclose(audio, np.squeeze(as_written), atol=tolerance)
+        np.testing.assert_allclose(original_audio, np.squeeze(as_written), atol=tolerance)
 
 
 @pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())

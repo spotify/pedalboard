@@ -30,6 +30,8 @@ namespace py = pybind11;
 
 namespace Pedalboard {
 
+static constexpr const unsigned int DEFAULT_AUDIO_BUFFER_SIZE_FRAMES = 8192;
+
 class AudioFile {};
 
 class ReadableAudioFile
@@ -73,6 +75,43 @@ public:
     if (!reader)
       throw std::runtime_error("I/O operation on a closed file.");
     return reader->numChannels;
+  }
+
+  std::string getFileFormat() const {
+    if (!reader)
+      throw std::runtime_error("I/O operation on a closed file.");
+
+    return reader->getFormatName().toStdString();
+  }
+
+  std::string getFileDatatype() const {
+    if (!reader)
+      throw std::runtime_error("I/O operation on a closed file.");
+
+    if (reader->usesFloatingPointData) {
+      switch (reader->bitsPerSample) {
+      case 16: // OGG returns 16-bit int data, but internally stores floats
+      case 32:
+        return "float32";
+      case 64:
+        return "float64";
+      default:
+        return "unknown";
+      }
+    } else {
+      switch (reader->bitsPerSample) {
+      case 8:
+        return "int8";
+      case 16:
+        return "int16";
+      case 32:
+        return "int32";
+      case 64:
+        return "int64";
+      default:
+        return "unknown";
+      }
+    }
   }
 
   py::array_t<float> read(long long numSamples) {
@@ -260,14 +299,13 @@ public:
     }
   }
 
-  // TODO: Support int16, int32, etc
-  void write(py::array_t<float, py::array::c_style> inputArray) {
+  template <typename SampleType>
+  void write(py::array_t<SampleType, py::array::c_style> inputArray) {
     const juce::ScopedLock scopedLock(objectLock);
 
     if (!writer)
       throw std::runtime_error("I/O operation on a closed file.");
 
-    // Numpy/Librosa convention is (num_samples, num_channels)
     py::buffer_info inputInfo = inputArray.request();
 
     unsigned int numChannels = 0;
@@ -324,16 +362,19 @@ public:
     // channel is still the same on every iteration of the loop.
     switch (inputChannelLayout) {
     case ChannelLayout::Interleaved: {
+      std::vector<std::vector<SampleType>> deinterleaveBuffers;
+
       // Use a temporary buffer to chunk the audio input
       // and pass it into the writer, chunk by chunk, rather
       // than de-interleaving the entire buffer at once:
       deinterleaveBuffers.resize(numChannels);
 
-      float **channelPointers = (float **)alloca(numChannels * sizeof(float *));
+      const SampleType **channelPointers =
+          (const SampleType **)alloca(numChannels * sizeof(SampleType *));
       for (int startSample = 0; startSample < numSamples;
-           startSample += DEINTERLEAVE_BUFFER_SIZE_FRAMES) {
-        int samplesToWrite =
-            std::min(numSamples - startSample, DEINTERLEAVE_BUFFER_SIZE_FRAMES);
+           startSample += DEFAULT_AUDIO_BUFFER_SIZE_FRAMES) {
+        int samplesToWrite = std::min(numSamples - startSample,
+                                      DEFAULT_AUDIO_BUFFER_SIZE_FRAMES);
 
         for (int c = 0; c < numChannels; c++) {
           deinterleaveBuffers[c].resize(samplesToWrite);
@@ -341,13 +382,13 @@ public:
 
           // We're de-interleaving the data here, so we can't use copyFrom.
           for (unsigned int i = 0; i < samplesToWrite; i++) {
-            deinterleaveBuffers[c][i] = ((
-                float *)(inputInfo.ptr))[((i + startSample) * numChannels) + c];
+            deinterleaveBuffers[c][i] =
+                ((SampleType
+                      *)(inputInfo.ptr))[((i + startSample) * numChannels) + c];
           }
         }
 
-        if (!writer->writeFromFloatArrays(channelPointers, numChannels,
-                                          samplesToWrite)) {
+        if (!write(channelPointers, numChannels, samplesToWrite)) {
           throw std::runtime_error("Unable to write data to audio file.");
         }
       }
@@ -356,12 +397,12 @@ public:
     }
     case ChannelLayout::NotInterleaved: {
       // We can just pass all the data to writeFromFloatArrays:
-      float **channelPointers = (float **)alloca(numChannels * sizeof(float *));
+      const SampleType **channelPointers =
+          (const SampleType **)alloca(numChannels * sizeof(SampleType *));
       for (int c = 0; c < numChannels; c++) {
-        channelPointers[c] = ((float *)inputInfo.ptr) + (numSamples * c);
+        channelPointers[c] = ((SampleType *)inputInfo.ptr) + (numSamples * c);
       }
-      if (!writer->writeFromFloatArrays(channelPointers, numChannels,
-                                        numSamples)) {
+      if (!write(channelPointers, numChannels, numSamples)) {
         throw std::runtime_error("Unable to write data to audio file.");
       }
       break;
@@ -372,6 +413,96 @@ public:
     }
 
     framesWritten += numSamples;
+  }
+
+  template <typename TargetType, typename InputType,
+            unsigned int bufferSize = DEFAULT_AUDIO_BUFFER_SIZE_FRAMES>
+  bool writeConvertingTo(const InputType **channels, int numChannels,
+                         unsigned int numSamples) {
+    std::vector<std::vector<TargetType>> targetTypeBuffers;
+    targetTypeBuffers.resize(numChannels);
+
+    const TargetType **channelPointers =
+        (const TargetType **)alloca(numChannels * sizeof(TargetType *));
+    for (unsigned int startSample = 0; startSample < numSamples;
+         startSample += bufferSize) {
+      int samplesToWrite = std::min(numSamples - startSample, bufferSize);
+
+      for (int c = 0; c < numChannels; c++) {
+        targetTypeBuffers[c].resize(samplesToWrite);
+        channelPointers[c] = targetTypeBuffers[c].data();
+
+        for (unsigned int i = 0; i < samplesToWrite; i++) {
+          if constexpr (std::is_integral<InputType>::value) {
+            if constexpr (std::is_integral<TargetType>::value) {
+              targetTypeBuffers[c][i] =
+                  ((int)channels[c][startSample + i])
+                  << (std::numeric_limits<int>::digits -
+                      std::numeric_limits<InputType>::digits);
+            } else if constexpr (std::is_same<TargetType, float>::value) {
+              juce::FloatVectorOperations::convertFixedToFloat(
+                  targetTypeBuffers[c].data(), channels[c] + startSample, 1.0,
+                  samplesToWrite);
+            } else {
+              // We should never get here - this would only be true
+              // if converting to double, which no formats require:
+              static_assert(std::is_integral<InputType>::value &&
+                                std::is_same<TargetType, double>::value,
+                            "Can't convert to double");
+            }
+
+          } else {
+            if constexpr (std::is_integral<TargetType>::value) {
+              // We should never get here - this would only be true
+              // if converting float to int, which JUCE handles for us:
+              static_assert(!std::is_integral<InputType>::value &&
+                                std::is_integral<TargetType>::value,
+                            "Can't convert int to float");
+            } else {
+              // Converting float to float:
+              targetTypeBuffers[c][i] = channels[c][startSample + i];
+            }
+          }
+        }
+      }
+
+      if (!write(channelPointers, numChannels, samplesToWrite)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  template <typename SampleType>
+  bool write(const SampleType **channels, int numChannels,
+             unsigned int numSamples) {
+    if constexpr (std::is_integral<SampleType>::value) {
+      if constexpr (std::is_same<SampleType, int>::value) {
+        if (writer->isFloatingPoint()) {
+          return writeConvertingTo<float>(channels, numChannels, numSamples);
+        } else {
+          return writer->write(channels, numSamples);
+        }
+      } else {
+        return writeConvertingTo<int>(channels, numChannels, numSamples);
+      }
+    } else {
+      if (writer->isFloatingPoint()) {
+        // Just pass the floating point data into the writer as if it were
+        // integer data. If the writer requires floating-point input data, this
+        // works (and is documented!)
+        return writer->write((const int **)channels, numSamples);
+      } else {
+        if constexpr (std::is_same<SampleType, float>::value) {
+          // Convert floating-point to fixed point, but let JUCE do that for us:
+          return writer->writeFromFloatArrays(channels, numChannels,
+                                              numSamples);
+        } else {
+          return writeConvertingTo<float>(channels, numChannels, numSamples);
+        }
+      }
+    }
   }
 
   void flush() {
@@ -425,11 +556,8 @@ private:
   juce::AudioFormatManager formatManager;
   std::string filename;
   std::unique_ptr<juce::AudioFormatWriter> writer;
-  std::vector<std::vector<float>> deinterleaveBuffers;
   juce::CriticalSection objectLock;
   int framesWritten = 0;
-
-  static constexpr const unsigned int DEINTERLEAVE_BUFFER_SIZE_FRAMES = 1024;
 };
 
 inline void init_audiofile(py::module &m) {
@@ -498,7 +626,7 @@ inline void init_audiofile(py::module &m) {
            "Read the given number of frames (samples in each channel) from the "
            "audio file at the current position. Audio samples are returned in "
            "the shape (channels, samples); i.e.: a stereo audio file will have "
-           "shape (2, <length>).")
+           "shape (2, <length>). Returned data is always in float32 format.")
       .def("seekable", &ReadableAudioFile::isSeekable,
            "Returns True if the file is currently open and calls to seek() "
            "will work.")
@@ -523,6 +651,7 @@ inline void init_audiofile(py::module &m) {
                ss << " samplerate=" << file.getSampleRate();
                ss << " channels=" << file.getNumChannels();
                ss << " frames=" << file.getLengthInSamples();
+               ss << " file_dtype=" << file.getFileDatatype();
              }
              ss << " at " << &file;
              ss << ">";
@@ -541,7 +670,11 @@ inline void init_audiofile(py::module &m) {
                              "Fetch the number of channels in the file.")
       .def_property_readonly("frames", &ReadableAudioFile::getLengthInSamples,
                              "Fetch the total number of frames (samples per "
-                             "channel) in the file.");
+                             "channel) in the file.")
+      .def_property_readonly(
+          "file_dtype", &ReadableAudioFile::getFileDatatype,
+          "Fetch the data type stored natively by the file. Note that read() "
+          "will always return a float32 array, regardless of this method.");
 
   py::class_<WriteableAudioFile, AudioFile,
              std::shared_ptr<WriteableAudioFile>>(
@@ -569,7 +702,36 @@ inline void init_audiofile(py::module &m) {
           },
           py::arg("cls"), py::arg("filename"), py::arg("samplerate") = -1,
           py::arg("num_channels") = 1)
-      .def("write", &WriteableAudioFile::write, py::arg("samples"))
+      .def(
+          "write",
+          [](WriteableAudioFile &file, py::array_t<char> samples) {
+            file.write<char>(samples);
+          },
+          py::arg("samples").noconvert())
+      .def(
+          "write",
+          [](WriteableAudioFile &file, py::array_t<short> samples) {
+            file.write<short>(samples);
+          },
+          py::arg("samples").noconvert())
+      .def(
+          "write",
+          [](WriteableAudioFile &file, py::array_t<int> samples) {
+            file.write<int>(samples);
+          },
+          py::arg("samples").noconvert())
+      .def(
+          "write",
+          [](WriteableAudioFile &file, py::array_t<float> samples) {
+            file.write<float>(samples);
+          },
+          py::arg("samples").noconvert())
+      .def(
+          "write",
+          [](WriteableAudioFile &file, py::array_t<double> samples) {
+            file.write<double>(samples);
+          },
+          py::arg("samples").noconvert())
       .def("flush", &WriteableAudioFile::flush)
       .def("close", &WriteableAudioFile::close,
            "Close the file, rendering this object unusable.")
