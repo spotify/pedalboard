@@ -194,6 +194,15 @@ def test_basic_read(audio_filename: str, samplerate: float):
 
 
 @pytest.mark.parametrize("audio_filename,samplerate", FILENAMES_AND_SAMPLERATES)
+def test_read_raw(audio_filename: str, samplerate: float):
+    with pedalboard.io.AudioFile(audio_filename) as af:
+        num_samples = int(samplerate * EXPECTED_DURATION_SECONDS)
+        raw_samples = af.read_raw(num_samples)
+        assert raw_samples.shape == (1, num_samples)
+        assert af.file_dtype in str(raw_samples.dtype)
+
+
+@pytest.mark.parametrize("audio_filename,samplerate", FILENAMES_AND_SAMPLERATES)
 def test_use_reader_as_context_manager(audio_filename: str, samplerate: float):
     with pedalboard.io.AudioFile(audio_filename) as af:
         assert af.samplerate == samplerate
@@ -281,7 +290,7 @@ def test_fails_on_unsupported_format(audio_filename: str):
 @pytest.mark.parametrize(
     "samplerate", [8000, 11025, 12000, 16000, 22050, 32000, 44100, 48000, 88200, 96000]
 )
-@pytest.mark.parametrize("num_channels", [1, 2, 8])
+@pytest.mark.parametrize("num_channels", [1, 2, 3])
 @pytest.mark.parametrize("transposed", [False, True])
 @pytest.mark.parametrize("input_format", [np.float32, np.float64, np.int8, np.int16, np.int32])
 def test_basic_write(
@@ -295,20 +304,25 @@ def test_basic_write(
     filename = str(tmp_path / f"test{extension}")
     original_audio = generate_sine_at(samplerate, num_channels=num_channels)
 
-    # Handle integer audio types by scaling the floating-point data to the full integer range:
-    if np.issubdtype(input_format, np.signedinteger):
-        _max = min(np.abs(np.iinfo(input_format).min), np.abs(np.iinfo(input_format).max))
-        audio = (original_audio * _max).astype(input_format)
-    else:
-        audio = original_audio.astype(input_format)
-
-    num_samples = audio.shape[-1]
-
     write_bit_depth = 16
 
     # Not all formats support full 32-bit depth:
     if extension in {".wav"} and np.issubdtype(input_format, np.signedinteger):
         write_bit_depth = np.dtype(input_format).itemsize * 8
+
+    # Handle integer audio types by scaling the floating-point data to the full integer range:
+    if np.issubdtype(input_format, np.signedinteger):
+        _max = np.iinfo(input_format).max
+        audio = (original_audio * _max).astype(input_format)
+    else:
+        _max = 1.0
+        audio = original_audio.astype(input_format)
+
+    # Before writing, assert that the data we're about to write is what we expect:
+    tolerance = get_tolerance_for_format_and_bit_depth(".wav", input_format, "int16")
+    np.testing.assert_allclose(original_audio, audio.astype(np.float32) / _max, atol=tolerance)
+
+    num_samples = audio.shape[-1]
 
     with pedalboard.io.WriteableAudioFile(
         filename,
@@ -354,13 +368,11 @@ def test_write_exact_int32_to_16_bit_wav(tmp_path: pathlib.Path):
 
 def test_read_16_bit_wav_matches_stdlib(tmp_path: pathlib.Path):
     filename = str(tmp_path / f"test-16bit.wav")
-    original = np.array([1, 2, 3, -1, -2, -3]).astype(np.int32)
-    signal = (original << 16).astype(np.int32)
+    original = np.array([1, 2, 3, -1, -2, -3]).astype(np.int16)
+    signal = original.astype(np.int32) << 16
 
-    with pedalboard.io.WriteableAudioFile(filename, samplerate=1) as af:
+    with pedalboard.io.WriteableAudioFile(filename, samplerate=1, bit_depth=16) as af:
         af.write(signal)
-
-    assert os.path.exists(filename)
 
     # Read the exact wave values out with the `wave` package:
     with wave.open(filename) as f:
@@ -368,7 +380,7 @@ def test_read_16_bit_wav_matches_stdlib(tmp_path: pathlib.Path):
         stdlib_result = np.frombuffer(f.readframes(len(signal)), dtype=np.int16)
         np.testing.assert_allclose(stdlib_result, original)
 
-    float_signal = signal / np.iinfo(np.int32).max
+    float_signal = original / np.iinfo(np.int16).max
     with pedalboard.io.AudioFile(filename) as af:
         np.testing.assert_allclose(float_signal, af.read(af.frames)[0])
 

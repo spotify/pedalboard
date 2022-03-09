@@ -219,6 +219,116 @@ public:
     return buffer;
   }
 
+  py::handle readRaw(long long numSamples) {
+    if (numSamples == 0)
+      throw std::domain_error(
+          "ReadableAudioFile will not read an entire file at once, due to the "
+          "possibility that a file may be larger than available memory. Please "
+          "pass a number of frames to read (available from the 'frames' "
+          "attribute).");
+
+    const juce::ScopedLock scopedLock(objectLock);
+    if (!reader)
+      throw std::runtime_error("I/O operation on a closed file.");
+
+    if (reader->usesFloatingPointData) {
+      return read(numSamples).release();
+    } else {
+      switch (reader->bitsPerSample) {
+      case 32:
+        return readInteger<int>(numSamples).release();
+      case 16:
+        return readInteger<short>(numSamples).release();
+      case 8:
+        return readInteger<char>(numSamples).release();
+      default:
+        throw std::runtime_error("Not sure how to read " +
+                                 std::to_string(reader->bitsPerSample) +
+                                 "-bit audio data!");
+      }
+    }
+  }
+
+  template <typename SampleType>
+  py::array_t<SampleType> readInteger(long long numSamples) {
+    if (reader->usesFloatingPointData) {
+      throw std::runtime_error(
+          "Can't call readInteger with a floating point file!");
+    }
+
+    // Allocate a buffer to return of up to numSamples:
+    int numChannels = reader->numChannels;
+    numSamples =
+        std::min(numSamples, reader->lengthInSamples - currentPosition);
+    py::array_t<SampleType> buffer =
+        py::array_t<SampleType>({(int)numChannels, (int)numSamples});
+
+    py::buffer_info outputInfo = buffer.request();
+
+    {
+      py::gil_scoped_release release;
+
+      // TODO: if reading 24-bit or 32-bit audio, pass through directly:
+      if (reader->bitsPerSample > 16) {
+        if (sizeof(SampleType) < 4) {
+          throw std::runtime_error("Output array not wide enough to store " +
+                                   std::to_string(reader->bitsPerSample) +
+                                   "-bit integer data.");
+        }
+
+        std::memset((void *)outputInfo.ptr, 0,
+                    numChannels * numSamples * sizeof(SampleType));
+
+        int **channelPointers = (int **)alloca(numChannels * sizeof(int *));
+        for (int c = 0; c < numChannels; c++) {
+          channelPointers[c] = ((int *)outputInfo.ptr) + (numSamples * c);
+        }
+
+        if (!reader->readSamples(channelPointers, numChannels, 0,
+                                 currentPosition, numSamples)) {
+          throw std::runtime_error("Failed to read from file.");
+        }
+      } else {
+        // Read the file in smaller chunks, converting from int32 to the
+        // appropriate output format as we go:
+        std::vector<std::vector<int>> intBuffers;
+        intBuffers.resize(numChannels);
+
+        int **channelPointers = (int **)alloca(numChannels * sizeof(int *));
+        for (long long startSample = 0; startSample < numSamples;
+             startSample += DEFAULT_AUDIO_BUFFER_SIZE_FRAMES) {
+          int samplesToRead =
+              std::min(numSamples - startSample,
+                       (long long)DEFAULT_AUDIO_BUFFER_SIZE_FRAMES);
+
+          for (int c = 0; c < numChannels; c++) {
+            intBuffers[c].resize(samplesToRead);
+            channelPointers[c] = intBuffers[c].data();
+          }
+
+          if (!reader->readSamples(channelPointers, numChannels, 0,
+                                   currentPosition + startSample,
+                                   samplesToRead)) {
+            throw std::runtime_error("Failed to read from file.");
+          }
+
+          // Convert the data in intBuffers to the output format:
+          char shift = 32 - reader->bitsPerSample;
+          for (int c = 0; c < numChannels; c++) {
+            SampleType *outputChannelPointer =
+                (((SampleType *)outputInfo.ptr) + (c * numSamples));
+            for (int i = 0; i < samplesToRead; i++) {
+              outputChannelPointer[startSample + i] = intBuffers[c][i] >> shift;
+            }
+          }
+        }
+      }
+    }
+
+    currentPosition += numSamples;
+    return buffer;
+  }
+
   void seek(long long targetPosition) {
     const juce::ScopedLock scopedLock(objectLock);
     if (!reader)
@@ -273,7 +383,7 @@ private:
   juce::CriticalSection objectLock;
 
   int currentPosition = 0;
-}; // namespace Pedalboard
+};
 
 bool isInteger(double value) {
   double intpart;
@@ -736,6 +846,12 @@ inline void init_audiofile(py::module &m) {
            "audio file at the current position. Audio samples are returned in "
            "the shape (channels, samples); i.e.: a stereo audio file will have "
            "shape (2, <length>). Returned data is always in float32 format.")
+      .def("read_raw", &ReadableAudioFile::readRaw, py::arg("num_frames") = 0,
+           "Read the given number of frames (samples in each channel) from the "
+           "audio file at the current position. Audio samples are returned in "
+           "the shape (channels, samples); i.e.: a stereo audio file will have "
+           "shape (2, <length>). Returned data is in the raw format stored by "
+           "the underlying file (one of int8, int16, int32, or float32).")
       .def("seekable", &ReadableAudioFile::isSeekable,
            "Returns True if the file is currently open and calls to seek() "
            "will work.")
