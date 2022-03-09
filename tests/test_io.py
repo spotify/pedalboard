@@ -388,7 +388,7 @@ def test_basic_write_int32_to_16_bit_wav(tmp_path: pathlib.Path):
     original = np.linspace(0, 1, 11)
 
     # As per AES17: the integer value -(2^31) should never show up in the stream.
-    signal = (original * (2**31 - 1)).astype(np.int32)
+    signal = (original * (2 ** 31 - 1)).astype(np.int32)
 
     with pedalboard.io.WriteableAudioFile(
         filename,
@@ -406,7 +406,7 @@ def test_basic_write_int32_to_16_bit_wav(tmp_path: pathlib.Path):
 
     with pedalboard.io.ReadableAudioFile(filename) as af:
         as_written = af.read(len(signal))[0]
-        np.testing.assert_allclose(original, as_written, atol=2 / (2**15))
+        np.testing.assert_allclose(original, as_written, atol=2 / (2 ** 15))
 
 
 @pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
