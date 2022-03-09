@@ -171,8 +171,7 @@ def test_basic_read(audio_filename: str, samplerate: float):
     assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS / 2))
 
     assert f"samplerate={int(af.samplerate)}" in repr(af)
-    assert f"channels={af.channels}" in repr(af)
-    assert f"frames={af.frames}" in repr(af)
+    assert f"num_channels={af.channels}" in repr(af)
     assert f"file_dtype={af.file_dtype}" in repr(af)
 
     af.seek(0)
@@ -231,8 +230,7 @@ def test_use_reader_as_context_manager(audio_filename: str, samplerate: float):
         assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS / 2))
 
         assert f"samplerate={int(af.samplerate)}" in repr(af)
-        assert f"channels={af.channels}" in repr(af)
-        assert f"frames={af.frames}" in repr(af)
+        assert f"num_channels={af.channels}" in repr(af)
 
     with pytest.raises(RuntimeError):
         af.channels

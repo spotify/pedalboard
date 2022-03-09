@@ -122,6 +122,8 @@ public:
         return "int8";
       case 16:
         return "int16";
+      case 24:
+        return "int24";
       case 32:
         return "int32";
       case 64:
@@ -596,8 +598,18 @@ public:
             " bits. Supported bit depths: " + bitDepthString.str());
       }
 
-      throw std::domain_error("Unable to create audio file writer: " +
-                              filename);
+      std::string humanReadableQuality;
+      if (qualityString.empty()) {
+        humanReadableQuality = "None";
+      } else {
+        humanReadableQuality = qualityString;
+      }
+
+      throw std::domain_error(
+          "Unable to create audio file writer with samplerate=" +
+          std::to_string(writeSampleRate) +
+          ", num_channels=" + std::to_string(numChannels) + ", bit_depth=" +
+          std::to_string(bitDepth) + ", and quality=" + humanReadableQuality);
     } else {
       outputStream.release();
     }
@@ -853,6 +865,38 @@ public:
     return writer->getNumChannels();
   }
 
+  std::string getFileDatatype() const {
+    if (!writer)
+      throw std::runtime_error("I/O operation on a closed file.");
+
+    if (writer->isFloatingPoint()) {
+      switch (writer->getBitsPerSample()) {
+      case 16: // OGG returns 16-bit int data, but internally stores floats
+      case 32:
+        return "float32";
+      case 64:
+        return "float64";
+      default:
+        return "unknown";
+      }
+    } else {
+      switch (writer->getBitsPerSample()) {
+      case 8:
+        return "int8";
+      case 16:
+        return "int16";
+      case 24:
+        return "int24";
+      case 32:
+        return "int32";
+      case 64:
+        return "int64";
+      default:
+        return "unknown";
+      }
+    }
+  }
+
   std::shared_ptr<WriteableAudioFile> enter() { return shared_from_this(); }
 
   void exit(const py::object &type, const py::object &value,
@@ -922,8 +966,8 @@ inline void init_audiofile(py::module &m) {
       "An audio file reader interface, with native support for Ogg Vorbis, "
       "MP3, WAV, FLAC, and AIFF files on all operating systems. On some "
       "platforms, other formats may also be readable. (Use "
-      "AudioFile.supported_read_formats and AudioFile.supported_write_formats "
-      "to see which formats are supported on the current platform.)")
+      "pedalboard.io.get_supported_read_formats() to see which formats are "
+      "supported on the current platform.)")
       .def(py::init([](std::string filename) {
              return std::make_shared<ReadableAudioFile>(filename);
            }),
@@ -934,26 +978,28 @@ inline void init_audiofile(py::module &m) {
             return std::make_shared<ReadableAudioFile>(filename);
           },
           py::arg("cls"), py::arg("filename"))
-      .def("read", &ReadableAudioFile::read, py::arg("num_frames") = 0,
-           "Read the given number of frames (samples in each channel) from the "
-           "audio file at the current position. Audio samples are returned in "
-           "the shape (channels, samples); i.e.: a stereo audio file will have "
-           "shape (2, <length>). Returned data is always in float32 format.")
-      .def("read_raw", &ReadableAudioFile::readRaw, py::arg("num_frames") = 0,
-           "Read the given number of frames (samples in each channel) from the "
-           "audio file at the current position. Audio samples are returned in "
-           "the shape (channels, samples); i.e.: a stereo audio file will have "
-           "shape (2, <length>). Returned data is in the raw format stored by "
-           "the underlying file (one of int8, int16, int32, or float32).")
+      .def(
+          "read", &ReadableAudioFile::read, py::arg("num_frames") = 0,
+          "Read the given number of frames (samples in each channel) from this "
+          "audio file at the current position. Audio samples are returned in "
+          "the shape (channels, samples); i.e.: a stereo audio file will have "
+          "shape (2, <length>). Returned data is always in float32 format.")
+      .def(
+          "read_raw", &ReadableAudioFile::readRaw, py::arg("num_frames") = 0,
+          "Read the given number of frames (samples in each channel) from this "
+          "audio file at the current position. Audio samples are returned in "
+          "the shape (channels, samples); i.e.: a stereo audio file will have "
+          "shape (2, <length>). Returned data is in the raw format stored by "
+          "the underlying file (one of int8, int16, int32, or float32).")
       .def("seekable", &ReadableAudioFile::isSeekable,
-           "Returns True if the file is currently open and calls to seek() "
+           "Returns True if this file is currently open and calls to seek() "
            "will work.")
       .def("seek", &ReadableAudioFile::seek, py::arg("position"),
-           "Seek the file to the provided location in frames.")
+           "Seek this file to the provided location in frames.")
       .def("tell", &ReadableAudioFile::tell,
-           "Fetch the position in the audio file, in frames.")
+           "Fetch the position in this audio file, in frames.")
       .def("close", &ReadableAudioFile::close,
-           "Close the file, rendering this object unusable.")
+           "Close this file, rendering this object unusable.")
       .def("__enter__", &ReadableAudioFile::enter)
       .def("__exit__", &ReadableAudioFile::exit)
       .def("__repr__",
@@ -967,7 +1013,7 @@ inline void init_audiofile(py::module &m) {
                ss << " closed";
              } else {
                ss << " samplerate=" << file.getSampleRate();
-               ss << " channels=" << file.getNumChannels();
+               ss << " num_channels=" << file.getNumChannels();
                ss << " frames=" << file.getLengthInSamples();
                ss << " file_dtype=" << file.getFileDatatype();
              }
@@ -975,33 +1021,35 @@ inline void init_audiofile(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property_readonly(
-          "name", &ReadableAudioFile::getFilename,
-          "If the file has been closed, this property will be True.")
+      .def_property_readonly("name", &ReadableAudioFile::getFilename,
+                             "The name of this file.")
       .def_property_readonly(
           "closed", &ReadableAudioFile::isClosed,
-          "If the file has been closed, this property will be True.")
+          "If this file has been closed, this property will be True.")
       .def_property_readonly("samplerate", &ReadableAudioFile::getSampleRate,
-                             "Fetch the sample rate of the file in samples "
+                             "The sample rate of this file in samples "
                              "(per channel) per second (Hz).")
       .def_property_readonly("channels", &ReadableAudioFile::getNumChannels,
-                             "Fetch the number of channels in the file.")
+                             "The number of channels in this file.")
       .def_property_readonly("frames", &ReadableAudioFile::getLengthInSamples,
-                             "Fetch the total number of frames (samples per "
-                             "channel) in the file.")
+                             "The total number of frames (samples per "
+                             "channel) in this file.")
       .def_property_readonly(
           "duration", &ReadableAudioFile::getDuration,
-          "Fetch the duration of this file (frames divided by sample rate).")
+          "The duration of this file (frames divided by sample rate).")
       .def_property_readonly(
           "file_dtype", &ReadableAudioFile::getFileDatatype,
-          "Fetch the data type stored natively by the file. Note that read() "
-          "will always return a float32 array, regardless of this method.");
+          "The data type stored natively by this file. Note that read(...) "
+          "will always return a float32 array, regardless of the value of this "
+          "property.");
 
   py::class_<WriteableAudioFile, AudioFile,
              std::shared_ptr<WriteableAudioFile>>(
       m, "WriteableAudioFile",
       "An audio file writer interface, with native support for Ogg Vorbis, "
-      "MP3, WAV, FLAC, and AIFF files on all operating systems.")
+      "MP3, WAV, FLAC, and AIFF files on all operating systems. (Use "
+      "pedalboard.io.get_supported_write_formats() to see which formats are "
+      "supported on the current platform.)")
       .def(
           py::init([](std::string filename, double sampleRate, int numChannels,
                       int bitDepth,
@@ -1033,34 +1081,67 @@ inline void init_audiofile(py::module &m) {
           [](WriteableAudioFile &file, py::array_t<char> samples) {
             file.write<char>(samples);
           },
-          py::arg("samples").noconvert())
+          py::arg("samples").noconvert(),
+          "Encode an array of int8 (8-bit signed integer) audio data and write "
+          "it to this file. The number of channels in the array must match the "
+          "number of channels used to open the file. The array may contain "
+          "audio in any shape. If the file's bit depth or format does not "
+          "match this data type, the audio will be automatically converted.")
       .def(
           "write",
           [](WriteableAudioFile &file, py::array_t<short> samples) {
             file.write<short>(samples);
           },
-          py::arg("samples").noconvert())
+          py::arg("samples").noconvert(),
+          "Encode an array of int16 (16-bit signed integer) audio data and "
+          "write it to this file. The number of channels in the array must "
+          "match the number of channels used to open the file. The array may "
+          "contain audio in any shape. If the file's bit depth or format does "
+          "not match this data type, the audio will be automatically "
+          "converted.")
       .def(
           "write",
           [](WriteableAudioFile &file, py::array_t<int> samples) {
             file.write<int>(samples);
           },
-          py::arg("samples").noconvert())
+          py::arg("samples").noconvert(),
+          "Encode an array of int32 (32-bit signed integer) audio data and "
+          "write it to this file. The number of channels in the array must "
+          "match the number of channels used to open the file. The array may "
+          "contain audio in any shape. If the file's bit depth or format does "
+          "not match this data type, the audio will be automatically "
+          "converted.")
       .def(
           "write",
           [](WriteableAudioFile &file, py::array_t<float> samples) {
             file.write<float>(samples);
           },
-          py::arg("samples").noconvert())
+          py::arg("samples").noconvert(),
+          "Encode an array of float32 (32-bit floating-point) audio data and "
+          "write it to this file. The number of channels in the array must "
+          "match the number of channels used to open the file. The array may "
+          "contain audio in any shape. If the file's bit depth or format does "
+          "not match this data type, the audio will be automatically "
+          "converted.")
       .def(
           "write",
           [](WriteableAudioFile &file, py::array_t<double> samples) {
             file.write<double>(samples);
           },
-          py::arg("samples").noconvert())
-      .def("flush", &WriteableAudioFile::flush)
+          py::arg("samples").noconvert(),
+          "Encode an array of float64 (64-bit floating-point) audio data and "
+          "write it to this file. The number of channels in the array must "
+          "match the number of channels used to open the file. The array may "
+          "contain audio in any shape. No supported formats support float64 "
+          "natively, so the audio will be converted automatically.")
+      .def("flush", &WriteableAudioFile::flush,
+           "Attempt to flush this audio file's contents to disk. Not all "
+           "formats support flushing, so this may throw a RuntimeError. (If "
+           "this happens, closing the file will reliably force a flush to "
+           "occur.)")
       .def("close", &WriteableAudioFile::close,
-           "Close the file, rendering this object unusable.")
+           "Close this file, flushing its contents to disk and rendering this "
+           "object unusable for further writing.")
       .def("__enter__", &WriteableAudioFile::enter)
       .def("__exit__", &WriteableAudioFile::exit)
       .def("__repr__",
@@ -1074,11 +1155,11 @@ inline void init_audiofile(py::module &m) {
                ss << " closed";
              } else {
                ss << " samplerate=" << file.getSampleRate();
-               ss << " channels=" << file.getNumChannels();
-               ss << " frames=" << file.getFramesWritten();
+               ss << " num_channels=" << file.getNumChannels();
                if (file.getQuality()) {
                  ss << " quality=\"" << file.getQuality().value() << "\"";
                }
+               ss << " file_dtype=" << file.getFileDatatype();
              }
              ss << " at " << &file;
              ss << ">";
@@ -1086,19 +1167,23 @@ inline void init_audiofile(py::module &m) {
            })
       .def_property_readonly(
           "closed", &WriteableAudioFile::isClosed,
-          "If the file has been closed, this property will be True.")
+          "If this file has been closed, this property will be True.")
       .def_property_readonly("samplerate", &WriteableAudioFile::getSampleRate,
-                             "Fetch the sample rate of the file in samples "
+                             "The sample rate of this file in samples "
                              "(per channel) per second (Hz).")
       .def_property_readonly("channels", &WriteableAudioFile::getNumChannels,
-                             "Fetch the number of channels in the file.")
+                             "The number of channels in this file.")
       .def_property_readonly("frames", &WriteableAudioFile::getFramesWritten,
-                             "Fetch the total number of frames (samples per "
-                             "channel) written to the file so far.")
-      // TODO: Add file_dtype!
+                             "The total number of frames (samples per "
+                             "channel) written to this file so far.")
+      .def_property_readonly(
+          "file_dtype", &WriteableAudioFile::getFileDatatype,
+          "The data type stored natively by this file. Note that write(...) "
+          "will accept multiple datatypes, regardless of the value of this "
+          "property.")
       .def_property_readonly(
           "quality", &WriteableAudioFile::getQuality,
-          "Fetch the quality setting used to write this file. For many "
+          "The quality setting used to write this file. For many "
           "formats, this may be None.");
 
   m.def("get_supported_read_formats", []() {
