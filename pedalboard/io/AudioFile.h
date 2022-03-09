@@ -243,8 +243,8 @@ class WriteableAudioFile
       public std::enable_shared_from_this<WriteableAudioFile> {
 public:
   WriteableAudioFile(std::string filename, double writeSampleRate,
-                     int numChannels = 1, int bitsPerSample = 16,
-                     int qualityOptionIndex = 0)
+                     int numChannels = 1, int bitDepth = 16,
+                     std::optional<std::string> qualityString = {})
       : filename(filename) {
     pybind11::gil_scoped_release release;
 
@@ -291,10 +291,14 @@ public:
           file.getFileExtension().toStdString());
     }
 
+    // Detect the quality level to use based on the string passed in.
+    // TODO: implement me!
+    int qualityOptionIndex = 0;
+
     juce::StringPairArray emptyMetadata;
     writer.reset(format->createWriterFor(outputStream.get(), writeSampleRate,
-                                         numChannels, bitsPerSample,
-                                         emptyMetadata, qualityOptionIndex));
+                                         numChannels, bitDepth, emptyMetadata,
+                                         qualityOptionIndex));
     if (!writer) {
       // Check common errors first:
       juce::Array<int> possibleSampleRates = format->getPossibleSampleRates();
@@ -317,6 +321,28 @@ public:
             " audio files do not support the provided sample rate of " +
             std::to_string(writeSampleRate) +
             "Hz. Supported sample rates: " + sampleRateString.str());
+      }
+
+      juce::Array<int> possibleBitDepths = format->getPossibleBitDepths();
+
+      if (possibleBitDepths.isEmpty()) {
+        throw std::domain_error(
+            file.getFileExtension().toStdString() +
+            " audio files are not writable with Pedalboard.");
+      }
+
+      if (!possibleBitDepths.contains((int)bitDepth)) {
+        std::ostringstream bitDepthString;
+        for (int i = 0; i < possibleBitDepths.size(); i++) {
+          bitDepthString << possibleBitDepths[i];
+          if (i < possibleBitDepths.size() - 1)
+            bitDepthString << ", ";
+        }
+        throw std::domain_error(
+            format->getFormatName().toStdString() +
+            " audio files do not support the provided bit depth of " +
+            std::to_string(bitDepth) +
+            " bits. Supported bit depths: " + bitDepthString.str());
       }
 
       throw std::domain_error("Unable to create audio file writer: " +
@@ -446,9 +472,8 @@ public:
             unsigned int bufferSize = DEFAULT_AUDIO_BUFFER_SIZE_FRAMES>
   bool writeConvertingTo(const InputType **channels, int numChannels,
                          unsigned int numSamples) {
-    printf("in writeConvertingTo<%s, %s>(%d, %d)\n",
-           typeid(TargetType).name(), typeid(InputType).name(),
-           numChannels, numSamples);
+    printf("in writeConvertingTo<%s, %s>(%d, %d)\n", typeid(TargetType).name(),
+           typeid(InputType).name(), numChannels, numSamples);
     std::vector<std::vector<TargetType>> targetTypeBuffers;
     targetTypeBuffers.resize(numChannels);
 
@@ -472,9 +497,11 @@ public:
                       std::numeric_limits<InputType>::digits);
             }
           } else if constexpr (std::is_same<TargetType, float>::value) {
+            constexpr auto scaleFactor =
+                1.0f / static_cast<float>(std::numeric_limits<int>::max());
             juce::FloatVectorOperations::convertFixedToFloat(
-                targetTypeBuffers[c].data(), channels[c] + startSample, 1.0,
-                samplesToWrite);
+                targetTypeBuffers[c].data(), channels[c] + startSample,
+                scaleFactor, samplesToWrite);
           } else {
             // We should never get here - this would only be true
             // if converting to double, which no formats require:
@@ -486,9 +513,9 @@ public:
           if constexpr (std::is_integral<TargetType>::value) {
             // We should never get here - this would only be true
             // if converting float to int, which JUCE handles for us:
-            static_assert(!std::is_integral<InputType>::value &&
-                              std::is_integral<TargetType>::value,
-                          "Can't convert int to float");
+            static_assert(std::is_integral<TargetType>::value &&
+                              !std::is_integral<InputType>::value,
+                          "Can't convert float to int");
           } else {
             // Converting double to float:
             for (unsigned int i = 0; i < samplesToWrite; i++) {
@@ -509,8 +536,8 @@ public:
   template <typename SampleType>
   bool write(const SampleType **channels, int numChannels,
              unsigned int numSamples) {
-    printf("in write<%s>(%d, %d)\n",
-           typeid(SampleType).name(), numChannels, numSamples);
+    printf("in write<%s>(%d, %d)\n", typeid(SampleType).name(), numChannels,
+           numSamples);
     if constexpr (std::is_integral<SampleType>::value) {
       if constexpr (std::is_same<SampleType, int>::value) {
         if (writer->isFloatingPoint()) {
@@ -619,28 +646,31 @@ inline void init_audiofile(py::module &m) {
       .def_static(
           "__new__",
           [](const py::object *, std::string filename, std::string mode,
-             double sampleRate, int numChannels) {
+             std::optional<double> sampleRate, int numChannels, int bitDepth,
+             std::optional<std::string> quality) {
             if (mode == "r") {
               throw py::type_error(
                   "Opening an audio file for reading does not require "
-                  "samplerate and num_channels arguments - these parameters "
+                  "samplerate, num_channels, bit_depth, or quality arguments - "
+                  "these parameters "
                   "will be read from the file.");
             } else if (mode == "w") {
-              if (sampleRate == -1) {
+              if (!sampleRate) {
                 throw py::type_error(
                     "Opening an audio file for writing requires a samplerate "
                     "argument to be provided.");
               }
 
-              return std::make_shared<WriteableAudioFile>(filename, sampleRate,
-                                                          numChannels);
+              return std::make_shared<WriteableAudioFile>(
+                  filename, sampleRate.value(), numChannels, bitDepth, quality);
             } else {
               throw py::type_error("AudioFile instances can only be opened in "
                                    "read mode (\"r\") and write mode (\"w\").");
             }
           },
           py::arg("cls"), py::arg("filename"), py::arg("mode") = "w",
-          py::arg("samplerate") = -1, py::arg("num_channels") = 1);
+          py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
+          py::arg("bit_depth") = 16, py::arg("quality") = py::none());
 
   py::class_<ReadableAudioFile, AudioFile, std::shared_ptr<ReadableAudioFile>>(
       m, "ReadableAudioFile",
@@ -721,27 +751,30 @@ inline void init_audiofile(py::module &m) {
       m, "WriteableAudioFile",
       "An audio file writer interface, with native support for Ogg Vorbis, "
       "MP3, WAV, FLAC, and AIFF files on all operating systems.")
-      .def(py::init([](std::string filename, double sampleRate,
-                       int numChannels) {
-             return std::make_shared<WriteableAudioFile>(filename, sampleRate,
-                                                         numChannels);
+      .def(py::init([](std::string filename, double sampleRate, int numChannels,
+                       int bitDepth, std::optional<std::string> quality) {
+             return std::make_shared<WriteableAudioFile>(
+                 filename, sampleRate, numChannels, bitDepth, quality);
            }),
            py::arg("filename"), py::arg("samplerate"),
-           py::arg("num_channels") = 1)
+           py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
+           py::arg("quality") = py::none())
       .def_static(
           "__new__",
-          [](const py::object *, std::string filename, double sampleRate,
-             int numChannels) {
-            if (sampleRate == -1) {
+          [](const py::object *, std::string filename,
+             std::optional<double> sampleRate, int numChannels, int bitDepth,
+             std::optional<std::string> quality) {
+            if (!sampleRate) {
               throw py::type_error(
                   "Opening an audio file for writing requires a samplerate "
                   "argument to be provided.");
             }
-            return std::make_shared<WriteableAudioFile>(filename, sampleRate,
-                                                        numChannels);
+            return std::make_shared<WriteableAudioFile>(
+                filename, sampleRate.value(), numChannels, bitDepth, quality);
           },
-          py::arg("cls"), py::arg("filename"), py::arg("samplerate") = -1,
-          py::arg("num_channels") = 1)
+          py::arg("cls"), py::arg("filename"),
+          py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
+          py::arg("bit_depth") = 16, py::arg("quality") = py::none())
       .def(
           "write",
           [](WriteableAudioFile &file, py::array_t<char> samples) {

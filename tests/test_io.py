@@ -304,8 +304,17 @@ def test_basic_write(
 
     num_samples = audio.shape[-1]
 
+    write_bit_depth = 16
+
+    # Not all formats support full 32-bit depth:
+    if extension in {".wav"} and np.issubdtype(input_format, np.signedinteger):
+        write_bit_depth = np.dtype(input_format).itemsize * 8
+
     with pedalboard.io.WriteableAudioFile(
-        filename, samplerate=samplerate, num_channels=num_channels
+        filename,
+        samplerate=samplerate,
+        num_channels=num_channels,
+        bit_depth=write_bit_depth,
     ) as af:
         if transposed:
             af.write(audio.T)
