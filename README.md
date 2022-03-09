@@ -36,7 +36,7 @@ Internally at Spotify, `pedalboard` is used for [data augmentation](https://en.w
      - No need to use `multiprocessing`!
    - Even when only using one thread:
      - Processes audio up to **300x** faster than [pySoX](https://github.com/rabitt/pysox) for single transforms, and 2-5x faster<sup>[1](https://github.com/iCorv/pedalboard_with_tfdata)</sup> than [SoxBindings](https://github.com/pseeth/soxbindings)
-     - Reads audio files up to **20x** faster than [`librosa.load`](https://librosa.org/doc/main/generated/librosa.load.html)
+     - Reads audio files up to **4x** faster than [`librosa.load`](https://librosa.org/doc/main/generated/librosa.load.html) (in many cases)
  - Tested compatibility with TensorFlow - can be used in `tf.data` pipelines!
 
 ## Installation
