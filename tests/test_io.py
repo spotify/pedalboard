@@ -331,7 +331,7 @@ def test_basic_write(
         np.testing.assert_allclose(original_audio, np.squeeze(as_written), atol=tolerance)
 
 
-def test_write_exact_int32_wav(tmp_path: pathlib.Path):
+def test_write_exact_int32_to_16_bit_wav(tmp_path: pathlib.Path):
     """
     This test should fail on Windows, where it seems that passing int32 sample
     data to WriteableAudioFile#write will invert (!?) the samples written.
@@ -350,6 +350,55 @@ def test_write_exact_int32_wav(tmp_path: pathlib.Path):
         assert f.getsampwidth() == 2
         encoded = np.frombuffer(f.readframes(len(signal)), dtype=np.int16)
         np.testing.assert_allclose(encoded, original)
+
+
+def test_read_16_bit_wav_matches_stdlib(tmp_path: pathlib.Path):
+    filename = str(tmp_path / f"test-16bit.wav")
+    original = np.array([1, 2, 3, -1, -2, -3]).astype(np.int32)
+    signal = (original << 16).astype(np.int32)
+
+    with pedalboard.io.WriteableAudioFile(filename, samplerate=1) as af:
+        af.write(signal)
+
+    assert os.path.exists(filename)
+
+    # Read the exact wave values out with the `wave` package:
+    with wave.open(filename) as f:
+        assert f.getsampwidth() == 2
+        stdlib_result = np.frombuffer(f.readframes(len(signal)), dtype=np.int16)
+        np.testing.assert_allclose(stdlib_result, original)
+
+    float_signal = signal / np.iinfo(np.int32).max
+    with pedalboard.io.AudioFile(filename) as af:
+        np.testing.assert_allclose(float_signal, af.read(af.frames)[0])
+
+
+def test_basic_write_int32_to_16_bit_wav(tmp_path: pathlib.Path):
+    samplerate = 44100
+    num_channels = 1
+    filename = str(tmp_path / f"test.wav")
+    original = np.linspace(0, 1, 11)
+
+    # As per AES17: the integer value -(2^31) should never show up in the stream.
+    signal = (original * (2**31 - 1)).astype(np.int32)
+
+    with pedalboard.io.WriteableAudioFile(
+        filename,
+        samplerate=samplerate,
+        num_channels=num_channels,
+        bit_depth=16,
+    ) as af:
+        af.write(signal)
+
+    # Read the exact wave values out with the `wave` package:
+    with wave.open(filename) as f:
+        assert f.getsampwidth() == 2
+        stdlib_result = np.frombuffer(f.readframes(len(signal)), dtype=np.int16)
+        assert np.all(np.equal(stdlib_result, signal >> 16))
+
+    with pedalboard.io.ReadableAudioFile(filename) as af:
+        as_written = af.read(len(signal))[0]
+        np.testing.assert_allclose(original, as_written, atol=2 / (2**15))
 
 
 @pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())

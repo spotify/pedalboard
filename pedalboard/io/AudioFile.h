@@ -167,9 +167,51 @@ public:
         channelPointers[c] = ((float *)outputInfo.ptr) + (numSamples * c);
       }
 
-      if (!reader->read(channelPointers, numChannels, currentPosition,
-                        numSamples)) {
-        throw std::runtime_error("Failed to read from file.");
+      if (reader->usesFloatingPointData || reader->bitsPerSample == 32) {
+        if (!reader->read(channelPointers, numChannels, currentPosition,
+                          numSamples)) {
+          throw std::runtime_error("Failed to read from file.");
+        }
+      } else {
+        // If the audio is stored in an integral format, read it as integers
+        // and do the floating-point conversion ourselves to work around
+        // floating-point imprecision in JUCE when reading formats smaller than
+        // 32-bit (i.e.: 16-bit audio is off by about 0.003%)
+
+        if (!reader->readSamples((int **)channelPointers, numChannels, 0,
+                                 currentPosition, numSamples)) {
+          throw std::runtime_error("Failed to read from file.");
+        }
+
+        // When converting 24-bit, 16-bit, or 8-bit data from int to float,
+        // the values provided by the above read() call are shifted left
+        // (such that the least significant bits are all zero)
+        // JUCE will then divide these values by 0x7FFFFFFF, even though
+        // the least significant bits are zero, effectively losing precision.
+        // Instead, here we set the scale factor appropriately.
+        int maxValueAsInt;
+        switch (reader->bitsPerSample) {
+        case 24:
+          maxValueAsInt = 0x7FFFFF00;
+          break;
+        case 16:
+          maxValueAsInt = 0x7FFF0000;
+          break;
+        case 8:
+          maxValueAsInt = 0x7F000000;
+          break;
+        default:
+          throw std::runtime_error("Not sure how to convert data from " +
+                                   std::to_string(reader->bitsPerSample) +
+                                   " bits per sample to floating point!");
+        }
+        float scaleFactor = 1.0f / static_cast<float>(maxValueAsInt);
+
+        for (int c = 0; c < numChannels; c++) {
+          juce::FloatVectorOperations::convertFixedToFloat(
+              channelPointers[c], (const int *)channelPointers[c], scaleFactor,
+              numSamples);
+        }
       }
     }
 
