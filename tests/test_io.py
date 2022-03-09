@@ -17,6 +17,7 @@
 
 import os
 import glob
+import wave
 import pathlib
 import shutil
 import pytest
@@ -319,6 +320,27 @@ def test_basic_write(
         tolerance = get_tolerance_for_format_and_bit_depth(extension, input_format, af.file_dtype)
         as_written = af.read(num_samples)
         np.testing.assert_allclose(original_audio, np.squeeze(as_written), atol=tolerance)
+
+
+def test_write_exact_int32_wav(tmp_path: pathlib.Path):
+    """
+    This test should fail on Windows, where it seems that passing int32 sample
+    data to WriteableAudioFile#write will invert (!?) the samples written.
+    """
+    filename = str(tmp_path / f"test.wav")
+    original = np.array([1, 2, 3, -1, -2, -3]).astype(np.int32)
+    signal = (original << 16).astype(np.int32)
+
+    with pedalboard.io.WriteableAudioFile(filename, samplerate=1) as af:
+        af.write(signal)
+
+    assert os.path.exists(filename)
+
+    # Read the exact wave values out with the `wave` package:
+    with wave.open(filename) as f:
+        assert f.getsampwidth() == 2
+        encoded = np.frombuffer(f.readframes(len(signal)), dtype=np.int16)
+        np.testing.assert_allclose(encoded, original)
 
 
 @pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())

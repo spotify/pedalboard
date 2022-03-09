@@ -446,6 +446,9 @@ public:
             unsigned int bufferSize = DEFAULT_AUDIO_BUFFER_SIZE_FRAMES>
   bool writeConvertingTo(const InputType **channels, int numChannels,
                          unsigned int numSamples) {
+    printf("in writeConvertingTo<%s, %s>(%d, %d)\n",
+           typeid(TargetType).name(), typeid(InputType).name(),
+           numChannels, numSamples);
     std::vector<std::vector<TargetType>> targetTypeBuffers;
     targetTypeBuffers.resize(numChannels);
 
@@ -459,35 +462,36 @@ public:
         targetTypeBuffers[c].resize(samplesToWrite);
         channelPointers[c] = targetTypeBuffers[c].data();
 
-        for (unsigned int i = 0; i < samplesToWrite; i++) {
-          if constexpr (std::is_integral<InputType>::value) {
-            if constexpr (std::is_integral<TargetType>::value) {
+        if constexpr (std::is_integral<InputType>::value) {
+          if constexpr (std::is_integral<TargetType>::value) {
+            for (unsigned int i = 0; i < samplesToWrite; i++) {
               // Left-align the samples to use all 32 bits, as JUCE requires:
               targetTypeBuffers[c][i] =
                   ((int)channels[c][startSample + i])
                   << (std::numeric_limits<int>::digits -
                       std::numeric_limits<InputType>::digits);
-            } else if constexpr (std::is_same<TargetType, float>::value) {
-              juce::FloatVectorOperations::convertFixedToFloat(
-                  targetTypeBuffers[c].data(), channels[c] + startSample, 1.0,
-                  samplesToWrite);
-            } else {
-              // We should never get here - this would only be true
-              // if converting to double, which no formats require:
-              static_assert(std::is_integral<InputType>::value &&
-                                std::is_same<TargetType, double>::value,
-                            "Can't convert to double");
             }
-
+          } else if constexpr (std::is_same<TargetType, float>::value) {
+            juce::FloatVectorOperations::convertFixedToFloat(
+                targetTypeBuffers[c].data(), channels[c] + startSample, 1.0,
+                samplesToWrite);
           } else {
-            if constexpr (std::is_integral<TargetType>::value) {
-              // We should never get here - this would only be true
-              // if converting float to int, which JUCE handles for us:
-              static_assert(!std::is_integral<InputType>::value &&
-                                std::is_integral<TargetType>::value,
-                            "Can't convert int to float");
-            } else {
-              // Converting double to float:
+            // We should never get here - this would only be true
+            // if converting to double, which no formats require:
+            static_assert(std::is_integral<InputType>::value &&
+                              std::is_same<TargetType, double>::value,
+                          "Can't convert to double");
+          }
+        } else {
+          if constexpr (std::is_integral<TargetType>::value) {
+            // We should never get here - this would only be true
+            // if converting float to int, which JUCE handles for us:
+            static_assert(!std::is_integral<InputType>::value &&
+                              std::is_integral<TargetType>::value,
+                          "Can't convert int to float");
+          } else {
+            // Converting double to float:
+            for (unsigned int i = 0; i < samplesToWrite; i++) {
               targetTypeBuffers[c][i] = channels[c][startSample + i];
             }
           }
@@ -505,11 +509,18 @@ public:
   template <typename SampleType>
   bool write(const SampleType **channels, int numChannels,
              unsigned int numSamples) {
+    printf("in write<%s>(%d, %d)\n",
+           typeid(SampleType).name(), numChannels, numSamples);
     if constexpr (std::is_integral<SampleType>::value) {
       if constexpr (std::is_same<SampleType, int>::value) {
         if (writer->isFloatingPoint()) {
           return writeConvertingTo<float>(channels, numChannels, numSamples);
         } else {
+          // When supplying int32 data, files come out inverted when writing on
+          // Windows! Try to get to the bottom of this:
+          printf("About to pass %d samples of %d-channel %s data to "
+                 "writer->write\n",
+                 numSamples, numChannels, typeid(SampleType).name());
           return writer->write(channels, numSamples);
         }
       } else {
