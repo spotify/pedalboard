@@ -624,8 +624,6 @@ public:
             unsigned int bufferSize = DEFAULT_AUDIO_BUFFER_SIZE_FRAMES>
   bool writeConvertingTo(const InputType **channels, int numChannels,
                          unsigned int numSamples) {
-    printf("in writeConvertingTo<%s, %s>(%d, %d)\n", typeid(TargetType).name(),
-           typeid(InputType).name(), numChannels, numSamples);
     std::vector<std::vector<TargetType>> targetTypeBuffers;
     targetTypeBuffers.resize(numChannels);
 
@@ -688,18 +686,11 @@ public:
   template <typename SampleType>
   bool write(const SampleType **channels, int numChannels,
              unsigned int numSamples) {
-    printf("in write<%s>(%d, %d)\n", typeid(SampleType).name(), numChannels,
-           numSamples);
     if constexpr (std::is_integral<SampleType>::value) {
       if constexpr (std::is_same<SampleType, int>::value) {
         if (writer->isFloatingPoint()) {
           return writeConvertingTo<float>(channels, numChannels, numSamples);
         } else {
-          // When supplying int32 data, files come out inverted when writing on
-          // Windows! Try to get to the bottom of this:
-          printf("About to pass %d samples of %d-channel %s data to "
-                 "writer->write\n",
-                 numSamples, numChannels, typeid(SampleType).name());
           return writer->write(channels, numSamples);
         }
       } else {

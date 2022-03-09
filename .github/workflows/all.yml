@@ -59,8 +59,8 @@ jobs:
       MINIMUM_COVERAGE_PERCENTAGE: 90
     strategy:
       matrix:
-        python-version: ['3.6']  # , '3.7', '3.8', '3.9', '3.10']
-        os: [windows-latest]  # ubuntu-18.04, ubuntu-latest, windows-latest, macos-10.15, macos-latest]
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10']
+        os: [ubuntu-18.04, ubuntu-latest, windows-latest, macos-10.15, macos-latest]
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -98,14 +98,14 @@ jobs:
         if: runner.os == 'Windows'
       - name: Build pedalboard locally
         run: python setup.py install
-      # - name: Install VSTs for testing
-      #   env:
-      #     GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
-      #     GCS_READER_SERVICE_ACCOUNT_KEY: ${{ secrets.GCS_READER_SERVICE_ACCOUNT_KEY }}
-      #   run: python ./tests/download_test_plugins.py
+      - name: Install VSTs for testing
+        env:
+          GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
+          GCS_READER_SERVICE_ACCOUNT_KEY: ${{ secrets.GCS_READER_SERVICE_ACCOUNT_KEY }}
+        run: python ./tests/download_test_plugins.py
       - name: Run tests
         if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.6'
-        run: pytest -v --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard -k int32 -s
+        run: pytest -v --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard
       - name: Run tests with coverage reporting
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.6'
         run: |
@@ -126,7 +126,6 @@ jobs:
 
   run-tests-with-address-sanitizer:
     runs-on: ${{ matrix.os }}
-    if: false
     strategy:
       matrix:
         python-version: ['3.6', '3.7', '3.8', '3.9', '3.10']
