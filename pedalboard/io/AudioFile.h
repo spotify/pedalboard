@@ -267,8 +267,6 @@ public:
 
     {
       py::gil_scoped_release release;
-
-      // TODO: if reading 24-bit or 32-bit audio, pass through directly:
       if (reader->bitsPerSample > 16) {
         if (sizeof(SampleType) < 4) {
           throw std::runtime_error("Output array not wide enough to store " +
@@ -390,13 +388,97 @@ bool isInteger(double value) {
   return modf(value, &intpart) == 0.0;
 }
 
+int determineQualityOptionIndex(juce::AudioFormat *format,
+                                const std::string inputString) {
+  // Detect the quality level to use based on the string passed in:
+  juce::StringArray possibleQualityOptions = format->getQualityOptions();
+  int qualityOptionIndex = -1;
+
+  std::string qualityString = juce::String(inputString).trim().toStdString();
+
+  if (!qualityString.empty()) {
+    if (!possibleQualityOptions.size()) {
+      throw std::domain_error("Unable to parse provided quality value (" +
+                              qualityString + "). " +
+                              format->getFormatName().toStdString() +
+                              "s do not accept quality settings.");
+    }
+
+    // Try to match the string against the available options. An exact match
+    // is preferred (ignoring case):
+    if (qualityOptionIndex == -1 &&
+        possibleQualityOptions.contains(qualityString, true)) {
+      qualityOptionIndex = possibleQualityOptions.indexOf(qualityString, true);
+    }
+
+    // And if no exact match was found, try casting to an integer:
+    if (qualityOptionIndex == -1) {
+      int numLeadingDigits = 0;
+      for (int i = 0; i < qualityString.size(); i++) {
+        if (juce::CharacterFunctions::isDigit(qualityString[i])) {
+          numLeadingDigits++;
+        }
+      }
+
+      if (numLeadingDigits) {
+        std::string leadingIntValue = qualityString.substr(0, numLeadingDigits);
+
+        // Check to see if any of the valid options start with this option,
+        // but make sure we don't select only the prefix of a number
+        // (i.e.: if someone gives us "32", don't select "320 kbps")
+        for (int i = 0; i < possibleQualityOptions.size(); i++) {
+          const juce::String &option = possibleQualityOptions[i];
+          if (option.startsWith(leadingIntValue) &&
+              option.length() > leadingIntValue.size() &&
+              !juce::CharacterFunctions::isDigit(
+                  option[leadingIntValue.size()])) {
+            qualityOptionIndex = i;
+            break;
+          }
+        }
+      } else {
+        // If our search string doesn't start with leading digits,
+        // check for a substring:
+        for (int i = 0; i < possibleQualityOptions.size(); i++) {
+          if (possibleQualityOptions[i].containsIgnoreCase(qualityString)) {
+            qualityOptionIndex = i;
+            break;
+          }
+        }
+      }
+    }
+
+    // If we get here, we received a string we were unable to parse,
+    // so the user should probably know about it:
+    if (qualityOptionIndex == -1) {
+      throw std::domain_error(
+          "Unable to parse provided quality value (" + qualityString +
+          "). Valid values for " + format->getFormatName().toStdString() +
+          "s are: " +
+          possibleQualityOptions.joinIntoString(", ").toStdString());
+    }
+  }
+
+  if (qualityOptionIndex == -1) {
+    if (possibleQualityOptions.size()) {
+      // Choose the best quality by default if possible:
+      qualityOptionIndex = possibleQualityOptions.size() - 1;
+    } else {
+      qualityOptionIndex = 0;
+    }
+  }
+
+  return qualityOptionIndex;
+}
+
 class WriteableAudioFile
     : public AudioFile,
       public std::enable_shared_from_this<WriteableAudioFile> {
 public:
-  WriteableAudioFile(std::string filename, double writeSampleRate,
-                     int numChannels = 1, int bitDepth = 16,
-                     std::optional<std::string> qualityString = {})
+  WriteableAudioFile(
+      std::string filename, double writeSampleRate, int numChannels = 1,
+      int bitDepth = 16,
+      std::optional<std::variant<std::string, float>> qualityInput = {})
       : filename(filename) {
     pybind11::gil_scoped_release release;
 
@@ -443,9 +525,26 @@ public:
           file.getFileExtension().toStdString());
     }
 
-    // Detect the quality level to use based on the string passed in.
-    // TODO: implement me!
-    int qualityOptionIndex = 0;
+    // Normalize the input to a string here, as we need to do parsing anyways:
+    std::string qualityString;
+    if (qualityInput) {
+      if (auto *q = std::get_if<std::string>(&qualityInput.value())) {
+        qualityString = *q;
+      } else if (auto *q = std::get_if<float>(&qualityInput.value())) {
+        if (isInteger(*q)) {
+          qualityString = std::to_string((int)*q);
+        } else {
+          qualityString = std::to_string(*q);
+        }
+      } else {
+        throw std::runtime_error("Unknown quality type!");
+      }
+    }
+
+    int qualityOptionIndex = determineQualityOptionIndex(format, qualityString);
+    if (format->getQualityOptions().size() > qualityOptionIndex) {
+      quality = format->getQualityOptions()[qualityOptionIndex].toStdString();
+    }
 
     juce::StringPairArray emptyMetadata;
     writer.reset(format->createWriterFor(outputStream.get(), writeSampleRate,
@@ -746,6 +845,8 @@ public:
 
   long getFramesWritten() const { return framesWritten; }
 
+  std::optional<std::string> getQuality() const { return quality; }
+
   long getNumChannels() const {
     if (!writer)
       throw std::runtime_error("I/O operation on a closed file.");
@@ -762,6 +863,7 @@ public:
 private:
   juce::AudioFormatManager formatManager;
   std::string filename;
+  std::optional<std::string> quality;
   std::unique_ptr<juce::AudioFormatWriter> writer;
   juce::CriticalSection objectLock;
   int framesWritten = 0;
@@ -790,7 +892,7 @@ inline void init_audiofile(py::module &m) {
           "__new__",
           [](const py::object *, std::string filename, std::string mode,
              std::optional<double> sampleRate, int numChannels, int bitDepth,
-             std::optional<std::string> quality) {
+             std::optional<std::variant<std::string, float>> quality) {
             if (mode == "r") {
               throw py::type_error(
                   "Opening an audio file for reading does not require "
@@ -859,7 +961,7 @@ inline void init_audiofile(py::module &m) {
              std::ostringstream ss;
              ss << "<pedalboard.io.ReadableAudioFile";
              if (!file.getFilename().empty()) {
-               ss << " filename=" << file.getFilename();
+               ss << " filename=\"" << file.getFilename() << "\"";
              }
              if (file.isClosed()) {
                ss << " closed";
@@ -900,19 +1002,21 @@ inline void init_audiofile(py::module &m) {
       m, "WriteableAudioFile",
       "An audio file writer interface, with native support for Ogg Vorbis, "
       "MP3, WAV, FLAC, and AIFF files on all operating systems.")
-      .def(py::init([](std::string filename, double sampleRate, int numChannels,
-                       int bitDepth, std::optional<std::string> quality) {
-             return std::make_shared<WriteableAudioFile>(
-                 filename, sampleRate, numChannels, bitDepth, quality);
-           }),
-           py::arg("filename"), py::arg("samplerate"),
-           py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
-           py::arg("quality") = py::none())
+      .def(
+          py::init([](std::string filename, double sampleRate, int numChannels,
+                      int bitDepth,
+                      std::optional<std::variant<std::string, float>> quality) {
+            return std::make_shared<WriteableAudioFile>(
+                filename, sampleRate, numChannels, bitDepth, quality);
+          }),
+          py::arg("filename"), py::arg("samplerate"),
+          py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
+          py::arg("quality") = py::none())
       .def_static(
           "__new__",
           [](const py::object *, std::string filename,
              std::optional<double> sampleRate, int numChannels, int bitDepth,
-             std::optional<std::string> quality) {
+             std::optional<std::variant<std::string, float>> quality) {
             if (!sampleRate) {
               throw py::type_error(
                   "Opening an audio file for writing requires a samplerate "
@@ -964,7 +1068,7 @@ inline void init_audiofile(py::module &m) {
              std::ostringstream ss;
              ss << "<pedalboard.io.WriteableAudioFile";
              if (!file.getFilename().empty()) {
-               ss << " filename=" << file.getFilename();
+               ss << " filename=\"" << file.getFilename() << "\"";
              }
              if (file.isClosed()) {
                ss << " closed";
@@ -972,6 +1076,9 @@ inline void init_audiofile(py::module &m) {
                ss << " samplerate=" << file.getSampleRate();
                ss << " channels=" << file.getNumChannels();
                ss << " frames=" << file.getFramesWritten();
+               if (file.getQuality()) {
+                 ss << " quality=\"" << file.getQuality().value() << "\"";
+               }
              }
              ss << " at " << &file;
              ss << ">";
@@ -987,7 +1094,12 @@ inline void init_audiofile(py::module &m) {
                              "Fetch the number of channels in the file.")
       .def_property_readonly("frames", &WriteableAudioFile::getFramesWritten,
                              "Fetch the total number of frames (samples per "
-                             "channel) written to the file so far.");
+                             "channel) written to the file so far.")
+      // TODO: Add file_dtype!
+      .def_property_readonly(
+          "quality", &WriteableAudioFile::getQuality,
+          "Fetch the quality setting used to write this file. For many "
+          "formats, this may be None.");
 
   m.def("get_supported_read_formats", []() {
     juce::AudioFormatManager manager;

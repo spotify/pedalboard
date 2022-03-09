@@ -22,6 +22,7 @@ import pathlib
 import shutil
 import pytest
 import pedalboard
+from typing import Optional
 
 import numpy as np
 
@@ -442,3 +443,115 @@ def test_fail_to_write_unsigned(tmp_path: pathlib.Path, dtype):
     with pytest.raises(TypeError):
         with pedalboard.io.WriteableAudioFile(filename, samplerate=44100) as af:
             af.write(np.array([1, 2, 3, 4], dtype=dtype))
+
+
+@pytest.mark.parametrize(
+    "extension,quality,expected",
+    [
+        ("ogg", "64 kbps", "64 kbps"),
+        ("ogg", "80 kbps", "80 kbps"),
+        ("ogg", "96 kbps", "96 kbps"),
+        ("ogg", "112 kbps", "112 kbps"),
+        ("ogg", "128 kbps", "128 kbps"),
+        ("ogg", "160 kbps", "160 kbps"),
+        ("ogg", "192 kbps", "192 kbps"),
+        ("ogg", "224 kbps", "224 kbps"),
+        ("ogg", "256 kbps", "256 kbps"),
+        ("ogg", "320 kbps", "320 kbps"),
+        ("ogg", "500 kbps", "500 kbps"),
+        ("ogg", 64, "64 kbps"),
+        ("ogg", 80, "80 kbps"),
+        ("ogg", 96, "96 kbps"),
+        ("ogg", 112, "112 kbps"),
+        ("ogg", 128, "128 kbps"),
+        ("ogg", 160, "160 kbps"),
+        ("ogg", 192, "192 kbps"),
+        ("ogg", 224, "224 kbps"),
+        ("ogg", 256, "256 kbps"),
+        ("ogg", 320, "320 kbps"),
+        ("ogg", 500, "500 kbps"),
+        ("ogg", 64.0, "64 kbps"),
+        ("ogg", 80.0, "80 kbps"),
+        ("ogg", 96.0, "96 kbps"),
+        ("ogg", 112.0, "112 kbps"),
+        ("ogg", 128.0, "128 kbps"),
+        ("ogg", 160.0, "160 kbps"),
+        ("ogg", 192.0, "192 kbps"),
+        ("ogg", 224.0, "224 kbps"),
+        ("ogg", 256.0, "256 kbps"),
+        ("ogg", 320.0, "320 kbps"),
+        ("ogg", 500.0, "500 kbps"),
+        ("ogg", "64", "64 kbps"),
+        ("ogg", "80", "80 kbps"),
+        ("ogg", "96", "96 kbps"),
+        ("ogg", "112", "112 kbps"),
+        ("ogg", "128", "128 kbps"),
+        ("ogg", "160", "160 kbps"),
+        ("ogg", "192", "192 kbps"),
+        ("ogg", "224", "224 kbps"),
+        ("ogg", "256", "256 kbps"),
+        ("ogg", "320", "320 kbps"),
+        ("ogg", "500", "500 kbps"),
+        ("ogg", "   500   ", "500 kbps"),
+        ("ogg", "", "500 kbps"),
+        ("ogg", "  ", "500 kbps"),
+        ("ogg", None, "500 kbps"),
+        ("flac", "0 (Fastest)", "0 (Fastest)"),
+        ("flac", "0", "0 (Fastest)"),
+        ("flac", "fastest", "0 (Fastest)"),
+        ("flac", "1", "1"),
+        ("flac", "2", "2"),
+        ("flac", "3", "3"),
+        ("flac", "4", "4"),
+        ("flac", "default", "5 (Default)"),
+        ("flac", "5 (Default)", "5 (Default)"),
+        ("flac", "5", "5 (Default)"),
+        ("flac", "6", "6"),
+        ("flac", "7", "7"),
+        ("flac", "8 (Highest quality)", "8 (Highest quality)"),
+        ("flac", "8", "8 (Highest quality)"),
+        ("flac", "", "8 (Highest quality)"),
+        ("flac", "  ", "8 (Highest quality)"),
+        ("flac", None, "8 (Highest quality)"),
+        ("flac", "high", "8 (Highest quality)"),
+        ("flac", 0, "0 (Fastest)"),
+        ("flac", 1, "1"),
+        ("flac", 2, "2"),
+        ("flac", 3, "3"),
+        ("flac", 4, "4"),
+        ("flac", 5, "5 (Default)"),
+        ("flac", 6, "6"),
+        ("flac", 7, "7"),
+        ("flac", 8, "8 (Highest quality)"),
+        ("wav", None, None),
+        ("wav", "", None),
+        ("aiff", None, None),
+        ("aiff", "", None),
+    ],
+)
+def test_write_quality(tmp_path: pathlib.Path, extension: str, quality, expected: Optional[str]):
+    filename = str(tmp_path / f"test.{extension}")
+    with pedalboard.io.WriteableAudioFile(filename, samplerate=44100, quality=quality) as af:
+        assert af.quality == expected
+
+
+@pytest.mark.parametrize(
+    "extension,quality",
+    [
+        ("ogg", "63 kbps"),
+        ("ogg", 63),
+        ("ogg", 63.5),
+        ("ogg", -500),
+        ("flac", "slowest"),
+        ("flac", 11),
+        ("flac", -1),
+        ("wav", "128"),
+        ("wav", 128),
+        ("aiff", "128"),
+        ("aiff", 128),
+    ],
+)
+def test_bad_write_quality(tmp_path: pathlib.Path, extension: str, quality):
+    filename = str(tmp_path / f"test.{extension}")
+    with pytest.raises(ValueError):
+        pedalboard.io.WriteableAudioFile(filename, samplerate=44100, quality=quality)
