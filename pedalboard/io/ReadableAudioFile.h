@@ -26,6 +26,7 @@
 #include "../BufferUtils.h"
 #include "../JuceHeader.h"
 #include "AudioFile.h"
+#include "PythonInputStream.h"
 
 namespace py = pybind11;
 
@@ -66,6 +67,57 @@ public:
       throw std::domain_error(
           "Failed to open audio file: file \"" + filename +
           "\" does not seem to be of a known or supported format.");
+  }
+
+  ReadableAudioFile(std::unique_ptr<PythonInputStream> inputStream) {
+    formatManager.registerBasicFormats();
+
+    if (!inputStream->isSeekable()) {
+      throw std::domain_error("Failed to open audio file-like object: input "
+                              "stream must be seekable.");
+    }
+
+    // TODO: look at file extension hint
+
+    if (!reader) {
+      auto originalStreamPosition = inputStream->getPosition();
+
+      for (int i = 0; i < formatManager.getNumKnownFormats(); i++) {
+        auto *af = formatManager.getKnownFormat(i);
+
+        if (auto *r = af->createReaderFor(inputStream.get(), false)) {
+          inputStream.release();
+          reader.reset(r);
+          break;
+        }
+
+        inputStream->setPosition(originalStreamPosition);
+        if (inputStream->getPosition() != originalStreamPosition) {
+          throw std::runtime_error(
+              "Input file-like object did not seek to expected position. The "
+              "provided file-like object must be fully seekable to allow "
+              "reading audio files.");
+        }
+      }
+
+      // Known bug: the juce::MP3Reader class will parse formats that are not
+      // MP3 and pretend like they are, producing garbage output. For now, if we
+      // parse MP3 from an input stream that's not explicitly got ".mp3" on the
+      // end, ignore it.
+      if (reader && reader->getFormatName() == "MP3 file") {
+        throw std::domain_error(
+            "Failed to open audio file-like object: stream does not seem to "
+            "contain a known or supported format. (If trying "
+            "to open an MP3 file, pass a format hint of \"mp3\".)");
+      }
+    }
+
+    if (!reader)
+      throw std::domain_error(
+          "Failed to open audio file-like object: file \"" + filename +
+          "\" does not seem to contain a known or supported format.");
+
+    raisePendingPythonExceptions();
   }
 
   double getSampleRate() const {
@@ -171,6 +223,7 @@ public:
                           numSamples)) {
           throw std::runtime_error("Failed to read from file.");
         }
+        raisePendingPythonExceptions();
       } else {
         // If the audio is stored in an integral format, read it as integers
         // and do the floating-point conversion ourselves to work around
@@ -181,6 +234,7 @@ public:
                                  currentPosition, numSamples)) {
           throw std::runtime_error("Failed to read from file.");
         }
+        raisePendingPythonExceptions();
 
         // When converting 24-bit, 16-bit, or 8-bit data from int to float,
         // the values provided by the above read() call are shifted left
@@ -285,6 +339,7 @@ public:
                                  currentPosition, numSamples)) {
           throw std::runtime_error("Failed to read from file.");
         }
+        raisePendingPythonExceptions();
       } else {
         // Read the file in smaller chunks, converting from int32 to the
         // appropriate output format as we go:
@@ -308,6 +363,7 @@ public:
                                    samplesToRead)) {
             throw std::runtime_error("Failed to read from file.");
           }
+          raisePendingPythonExceptions();
 
           // Convert the data in intBuffers to the output format:
           char shift = 32 - reader->bitsPerSample;
@@ -366,11 +422,29 @@ public:
 
   std::string getFilename() const { return filename; }
 
+  PythonInputStream *getPythonInputStream() const {
+    if (!filename.empty()) {
+      return nullptr;
+    }
+    if (!reader) {
+      return nullptr;
+    }
+
+    // the AudioFormatReader retains exclusive ownership over the input stream,
+    // so we have to cast here instead of holding a shared_ptr:
+    return (PythonInputStream *)reader->input;
+  }
+
   std::shared_ptr<ReadableAudioFile> enter() { return shared_from_this(); }
 
   void exit(const py::object &type, const py::object &value,
             const py::object &traceback) {
     close();
+  }
+
+  void raisePendingPythonExceptions() {
+    if (auto *inputStream = getPythonInputStream())
+      inputStream->raisePendingPythonExceptions();
   }
 
 private:
@@ -394,6 +468,18 @@ inline void init_readable_audio_file(py::module &m) {
              return std::make_shared<ReadableAudioFile>(filename);
            }),
            py::arg("filename"))
+      .def(py::init([](py::object filelike) {
+             if (!isReadableFileLike(filelike)) {
+               throw py::type_error(
+                   "Expected either a filename or a file-like object (with "
+                   "read, seek, seekable, and tell methods), but received: " +
+                   filelike.attr("__repr__")().cast<std::string>());
+             }
+
+             return std::make_shared<ReadableAudioFile>(
+                 std::make_unique<PythonInputStream>(filelike));
+           }),
+           py::arg("file_like"))
       .def_static(
           "__new__",
           [](const py::object *, std::string filename) {
@@ -428,9 +514,17 @@ inline void init_readable_audio_file(py::module &m) {
            [](const ReadableAudioFile &file) {
              std::ostringstream ss;
              ss << "<pedalboard.io.ReadableAudioFile";
+
              if (!file.getFilename().empty()) {
                ss << " filename=\"" << file.getFilename() << "\"";
+             } else if (PythonInputStream *stream =
+                            file.getPythonInputStream()) {
+               ss << " file_like="
+                  << stream->getFileLikeObject()
+                         .attr("__repr__")()
+                         .cast<std::string>();
              }
+
              if (file.isClosed()) {
                ss << " closed";
              } else {

@@ -53,10 +53,33 @@ inline void init_audio_file(py::module &m) {
                                    "samplerate and num_channels arguments.");
             } else {
               throw py::type_error("AudioFile instances can only be opened in "
-                                   "read mode (\"r\") and write mode (\"w\").");
+                                   "read mode (\"r\") or write mode (\"w\").");
             }
           },
           py::arg("cls"), py::arg("filename"), py::arg("mode") = "r")
+      .def_static(
+          "__new__",
+          [](const py::object *, py::object filelike, std::string mode) {
+            if (mode == "r") {
+              if (!isReadableFileLike(filelike)) {
+                throw py::type_error(
+                    "Expected either a filename or a file-like object (with "
+                    "read, seek, seekable, and tell methods), but received: " +
+                    filelike.attr("__repr__")().cast<std::string>());
+              }
+
+              return std::make_shared<ReadableAudioFile>(
+                  std::make_unique<PythonInputStream>(filelike));
+            } else if (mode == "w") {
+              throw py::type_error(
+                  "Opening an audio file-like object for writing requires "
+                  "samplerate and num_channels arguments.");
+            } else {
+              throw py::type_error("AudioFile instances can only be opened in "
+                                   "read mode (\"r\") or write mode (\"w\").");
+            }
+          },
+          py::arg("cls"), py::arg("file_like"), py::arg("mode") = "r")
       .def_static(
           "__new__",
           [](const py::object *, std::string filename, std::string mode,
@@ -79,7 +102,7 @@ inline void init_audio_file(py::module &m) {
                   filename, sampleRate.value(), numChannels, bitDepth, quality);
             } else {
               throw py::type_error("AudioFile instances can only be opened in "
-                                   "read mode (\"r\") and write mode (\"w\").");
+                                   "read mode (\"r\") or write mode (\"w\").");
             }
           },
           py::arg("cls"), py::arg("filename"), py::arg("mode") = "w",

@@ -15,6 +15,7 @@
 # limitations under the License.
 
 
+import io
 import os
 import glob
 import wave
@@ -261,6 +262,87 @@ def test_read_okay_without_extension(
     with pedalboard.io.AudioFile(dest_path) as af:
         assert af.samplerate == samplerate
         assert af.channels == 1
+
+
+@pytest.mark.parametrize("audio_filename,samplerate", FILENAMES_AND_SAMPLERATES)
+def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
+    with open(audio_filename, 'rb') as f:
+        stream = io.BytesIO(f.read())
+
+    with pedalboard.io.AudioFile(stream) as af:
+        assert af.samplerate == samplerate
+        assert af.channels == 1
+        if any(ext in audio_filename for ext in EXPECT_LENGTH_TO_BE_EXACT):
+            assert af.frames == int(samplerate * EXPECTED_DURATION_SECONDS)
+        else:
+            assert af.frames >= int(samplerate * EXPECTED_DURATION_SECONDS)
+
+        samples = af.read(int(samplerate * EXPECTED_DURATION_SECONDS))
+        assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS))
+
+        # File should no longer be useful:
+        af.read(1).nbytes == 0
+
+        # Seeking back to the start of the file should work:
+        assert af.seekable()
+        af.seek(0)
+        samples = af.read(int(samplerate * EXPECTED_DURATION_SECONDS))
+        assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS))
+
+        # Seeking to an arbitrary point should also work
+        af.seek(int(samplerate * EXPECTED_DURATION_SECONDS / 2))
+        samples = af.read(int(samplerate * EXPECTED_DURATION_SECONDS / 2))
+        assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS / 2))
+
+        assert f"samplerate={int(af.samplerate)}" in repr(af)
+        assert f"num_channels={af.channels}" in repr(af)
+        assert repr(stream) in repr(af)
+
+    with pytest.raises(RuntimeError):
+        af.channels
+
+    with pytest.raises(RuntimeError):
+        af.read(1)
+
+
+def test_file_like_exceptions_propagate():
+    audio_filename = FILENAMES_AND_SAMPLERATES[0][0]
+
+    with open(audio_filename, 'rb') as f:
+        stream = io.BytesIO(f.read())
+
+    stream_read = stream.read
+
+    call_count = [0]
+
+    def throw_exception_on_99th_call(*args, **kwargs):
+        call_count[0] += 1
+        if call_count[0] == 99:
+            raise ValueError("Called 99 times!")
+        return stream_read(*args, **kwargs)
+
+    stream.read = throw_exception_on_99th_call
+
+    with pedalboard.io.AudioFile(stream) as af:
+        assert af.read(1).nbytes > 0
+        with pytest.raises(ValueError) as e:
+            for _ in range(100):
+                af.read(100)
+        assert "Called 99 times!" in str(e)
+
+
+def test_file_like_must_be_seekable():
+    audio_filename = FILENAMES_AND_SAMPLERATES[0][0]
+
+    with open(audio_filename, 'rb') as f:
+        stream = io.BytesIO(f.read())
+    stream.seekable = lambda: False
+
+    with pytest.raises(ValueError) as e:
+        with pedalboard.io.AudioFile(stream):
+            pass
+
+    assert "seekable" in str(e)
 
 
 def test_write_fails_without_extension(tmp_path: pathlib.Path):
