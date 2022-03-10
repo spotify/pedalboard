@@ -77,8 +77,6 @@ public:
                               "stream must be seekable.");
     }
 
-    // TODO: look at file extension hint
-
     if (!reader) {
       auto originalStreamPosition = inputStream->getPosition();
 
@@ -105,10 +103,19 @@ public:
       // parse MP3 from an input stream that's not explicitly got ".mp3" on the
       // end, ignore it.
       if (reader && reader->getFormatName() == "MP3 file") {
-        throw std::domain_error(
-            "Failed to open audio file-like object: stream does not seem to "
-            "contain a known or supported format. (If trying "
-            "to open an MP3 file, pass a format hint of \"mp3\".)");
+        bool fileLooksLikeAnMP3 = false;
+        if (auto filename = getPythonInputStream()->getFilename()) {
+          fileLooksLikeAnMP3 =
+              juce::File(filename.value()).hasFileExtension("mp3");
+        }
+
+        if (!fileLooksLikeAnMP3) {
+          throw std::domain_error(
+              "Failed to open audio file-like object: stream does not seem to "
+              "contain a known or supported format. (If trying to open an MP3 "
+              "file, pass a file-like with a \"name\" attribute ending with "
+              "\".mp3\".)");
+        }
       }
     }
 

@@ -252,16 +252,20 @@ def test_context_manager_allows_exceptions():
 def test_read_okay_without_extension(
     tmp_path: pathlib.Path, audio_filename: str, samplerate: float
 ):
-    if ".mp3" in audio_filename:
-        # Skip this test - due to a bug in LAME's MP3 reader, we require
-        # any MP3 files to be identified as such.
-        return
-
     dest_path = str(tmp_path / "no_extension")
     shutil.copyfile(audio_filename, dest_path)
-    with pedalboard.io.AudioFile(dest_path) as af:
-        assert af.samplerate == samplerate
-        assert af.channels == 1
+    try:
+        with pedalboard.io.AudioFile(dest_path) as af:
+            assert af.samplerate == samplerate
+            assert af.channels == 1
+    except Exception:
+        if ".mp3" in audio_filename:
+            # Skip this test - due to a bug in JUCE's MP3 reader on Linux/Windows,
+            # we throw an exception when trying to read MP3 files without a known
+            # extension.
+            pass
+        else:
+            raise
 
 
 @pytest.mark.parametrize("audio_filename,samplerate", FILENAMES_AND_SAMPLERATES)
@@ -269,7 +273,18 @@ def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
     with open(audio_filename, "rb") as f:
         stream = io.BytesIO(f.read())
 
-    with pedalboard.io.AudioFile(stream) as af:
+    try:
+        af = pedalboard.io.AudioFile(stream)
+    except Exception:
+        if ".mp3" in audio_filename:
+            # Skip this test - due to a bug in JUCE's MP3 reader on Linux/Windows,
+            # we throw an exception when trying to read MP3 files without a known
+            # extension.
+            return
+        else:
+            raise
+
+    with af:
         assert af.samplerate == samplerate
         assert af.channels == 1
         if any(ext in audio_filename for ext in EXPECT_LENGTH_TO_BE_EXACT):
@@ -303,6 +318,15 @@ def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
 
     with pytest.raises(RuntimeError):
         af.read(1)
+
+
+@pytest.mark.parametrize(
+    "mp3_filename",
+    [f for f in sum(TEST_AUDIO_FILES.values(), []) if f.endswith("mp3")],
+)
+def test_read_mp3_from_named_stream(mp3_filename: str):
+    with pedalboard.io.AudioFile(open(mp3_filename, "rb")) as af:
+        assert af is not None
 
 
 def test_file_like_exceptions_propagate():

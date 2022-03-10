@@ -44,6 +44,17 @@ public:
     }
   }
 
+  std::optional<std::string> getFilename() {
+    // Some Python file-like objects expose a ".name" property.
+    // If this object has that property, return its value;
+    // otherwise return an empty optional.
+    if (py::hasattr(fileLike, "name")) {
+      return fileLike.attr("name").cast<std::string>();
+    } else {
+      return {};
+    }
+  }
+
   bool isSeekable() {
     try {
       return fileLike.attr("seekable")().cast<bool>();
