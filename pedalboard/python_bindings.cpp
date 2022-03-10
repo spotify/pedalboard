@@ -61,7 +61,9 @@ namespace py = pybind11;
 #include "plugins/PitchShift.h"
 #include "plugins/Reverb.h"
 
-#include "io/AudioFile.h"
+#include "io/AudioFileInit.h"
+#include "io/ReadableAudioFile.h"
+#include "io/WriteableAudioFile.h"
 
 using namespace Pedalboard;
 
@@ -191,5 +193,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
 
   // I/O helpers and utilities:
   py::module io = m.def_submodule("io");
-  init_audiofile(io);
+  init_audio_file(io);
+  init_readable_audio_file(io);
+  init_writeable_audio_file(io);
 };

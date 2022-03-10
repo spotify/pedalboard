@@ -1,0 +1,802 @@
+/*
+ * pedalboard
+ * Copyright 2022 Spotify AB
+ *
+ * Licensed under the GNU Public License, Version 3.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.gnu.org/licenses/gpl-3.0.html
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#pragma once
+
+#include <mutex>
+#include <optional>
+
+#include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
+
+#include "../BufferUtils.h"
+#include "../JuceHeader.h"
+#include "AudioFile.h"
+
+namespace py = pybind11;
+
+namespace Pedalboard {
+
+bool isInteger(double value) {
+  double intpart;
+  return modf(value, &intpart) == 0.0;
+}
+
+int determineQualityOptionIndex(juce::AudioFormat *format,
+                                const std::string inputString) {
+  // Detect the quality level to use based on the string passed in:
+  juce::StringArray possibleQualityOptions = format->getQualityOptions();
+  int qualityOptionIndex = -1;
+
+  std::string qualityString = juce::String(inputString).trim().toStdString();
+
+  if (!qualityString.empty()) {
+    if (!possibleQualityOptions.size()) {
+      throw std::domain_error("Unable to parse provided quality value (" +
+                              qualityString + "). " +
+                              format->getFormatName().toStdString() +
+                              "s do not accept quality settings.");
+    }
+
+    // Try to match the string against the available options. An exact match
+    // is preferred (ignoring case):
+    if (qualityOptionIndex == -1 &&
+        possibleQualityOptions.contains(qualityString, true)) {
+      qualityOptionIndex = possibleQualityOptions.indexOf(qualityString, true);
+    }
+
+    // And if no exact match was found, try casting to an integer:
+    if (qualityOptionIndex == -1) {
+      int numLeadingDigits = 0;
+      for (int i = 0; i < qualityString.size(); i++) {
+        if (juce::CharacterFunctions::isDigit(qualityString[i])) {
+          numLeadingDigits++;
+        }
+      }
+
+      if (numLeadingDigits) {
+        std::string leadingIntValue = qualityString.substr(0, numLeadingDigits);
+
+        // Check to see if any of the valid options start with this option,
+        // but make sure we don't select only the prefix of a number
+        // (i.e.: if someone gives us "32", don't select "320 kbps")
+        for (int i = 0; i < possibleQualityOptions.size(); i++) {
+          const juce::String &option = possibleQualityOptions[i];
+          if (option.startsWith(leadingIntValue) &&
+              option.length() > leadingIntValue.size() &&
+              !juce::CharacterFunctions::isDigit(
+                  option[leadingIntValue.size()])) {
+            qualityOptionIndex = i;
+            break;
+          }
+        }
+      } else {
+        // If our search string doesn't start with leading digits,
+        // check for a substring:
+        for (int i = 0; i < possibleQualityOptions.size(); i++) {
+          if (possibleQualityOptions[i].containsIgnoreCase(qualityString)) {
+            qualityOptionIndex = i;
+            break;
+          }
+        }
+      }
+    }
+
+    // If we get here, we received a string we were unable to parse,
+    // so the user should probably know about it:
+    if (qualityOptionIndex == -1) {
+      throw std::domain_error(
+          "Unable to parse provided quality value (" + qualityString +
+          "). Valid values for " + format->getFormatName().toStdString() +
+          "s are: " +
+          possibleQualityOptions.joinIntoString(", ").toStdString());
+    }
+  }
+
+  if (qualityOptionIndex == -1) {
+    if (possibleQualityOptions.size()) {
+      // Choose the best quality by default if possible:
+      qualityOptionIndex = possibleQualityOptions.size() - 1;
+    } else {
+      qualityOptionIndex = 0;
+    }
+  }
+
+  return qualityOptionIndex;
+}
+
+/**
+ * A tiny RAII wrapper around juce::FileOutputStream that
+ * deletes the file on destruction if it was not written to.
+ */
+class AutoDeleteFileOutputStream : public juce::FileOutputStream {
+public:
+  AutoDeleteFileOutputStream(const juce::File &fileToWriteTo,
+                             size_t bufferSizeToUse = 16384,
+                             bool deleteFileOnDestruction = true)
+      : juce::FileOutputStream(fileToWriteTo, bufferSizeToUse),
+        deleteFileOnDestruction(deleteFileOnDestruction) {}
+
+  static std::unique_ptr<AutoDeleteFileOutputStream>
+  createOutputStream(const juce::File &fileToWriteTo,
+                     size_t bufferSizeToUse = 16384) {
+    return std::make_unique<AutoDeleteFileOutputStream>(
+        fileToWriteTo, bufferSizeToUse, !fileToWriteTo.existsAsFile());
+  };
+
+  juce::Result truncate() {
+    deleteFileOnDestruction = false;
+    return juce::FileOutputStream::truncate();
+  }
+
+  virtual bool setPosition(juce::int64 pos) override {
+    deleteFileOnDestruction = false;
+    return juce::FileOutputStream::setPosition(pos);
+  }
+
+  virtual bool write(const void *bytes, size_t len) override {
+    if (!hasWrittenToFile) {
+      setPosition(0);
+      truncate();
+      hasWrittenToFile = true;
+    }
+
+    deleteFileOnDestruction = false;
+    return juce::FileOutputStream::write(bytes, len);
+  }
+
+  virtual bool writeRepeatedByte(juce::uint8 byte,
+                                 size_t numTimesToRepeat) override {
+    if (!hasWrittenToFile) {
+      setPosition(0);
+      truncate();
+      hasWrittenToFile = true;
+    }
+
+    deleteFileOnDestruction = false;
+    return juce::FileOutputStream::writeRepeatedByte(byte, numTimesToRepeat);
+  }
+
+  ~AutoDeleteFileOutputStream() override {
+    if (deleteFileOnDestruction) {
+      getFile().deleteFile();
+    }
+  }
+
+private:
+  bool deleteFileOnDestruction = false;
+  bool hasWrittenToFile = false;
+};
+
+class WriteableAudioFile
+    : public AudioFile,
+      public std::enable_shared_from_this<WriteableAudioFile> {
+public:
+  WriteableAudioFile(
+      std::string filename, double writeSampleRate, int numChannels = 1,
+      int bitDepth = 16,
+      std::optional<std::variant<std::string, float>> qualityInput = {})
+      : filename(filename) {
+    pybind11::gil_scoped_release release;
+
+    if (!isInteger(writeSampleRate)) {
+      throw std::domain_error(
+          "Opening an audio file for writing requires an integer sample rate.");
+    }
+
+    if (writeSampleRate == 0) {
+      throw std::domain_error(
+          "Opening an audio file for writing requires a non-zero sample rate.");
+    }
+
+    if (numChannels == 0) {
+      throw py::type_error("Opening an audio file for writing requires a "
+                           "non-zero num_channels.");
+    }
+
+    formatManager.registerBasicFormats();
+    juce::File file(filename);
+
+    std::unique_ptr<AutoDeleteFileOutputStream> outputStream =
+        AutoDeleteFileOutputStream::createOutputStream(file);
+    if (!outputStream->openedOk()) {
+      throw std::domain_error("Unable to open audio file for writing: " +
+                              filename);
+    }
+
+    juce::AudioFormat *format =
+        formatManager.findFormatForFileExtension(file.getFileExtension());
+
+    if (!format) {
+      if (file.getFileExtension().isEmpty()) {
+        throw std::domain_error("No file extension provided - cannot detect "
+                                "audio format to write with for file path: " +
+                                filename);
+      }
+
+      throw std::domain_error(
+          "Unable to detect audio format for file extension: " +
+          file.getFileExtension().toStdString());
+    }
+
+    // Normalize the input to a string here, as we need to do parsing anyways:
+    std::string qualityString;
+    if (qualityInput) {
+      if (auto *q = std::get_if<std::string>(&qualityInput.value())) {
+        qualityString = *q;
+      } else if (auto *q = std::get_if<float>(&qualityInput.value())) {
+        if (isInteger(*q)) {
+          qualityString = std::to_string((int)*q);
+        } else {
+          qualityString = std::to_string(*q);
+        }
+      } else {
+        throw std::runtime_error("Unknown quality type!");
+      }
+    }
+
+    int qualityOptionIndex = determineQualityOptionIndex(format, qualityString);
+    if (format->getQualityOptions().size() > qualityOptionIndex) {
+      quality = format->getQualityOptions()[qualityOptionIndex].toStdString();
+    }
+
+    juce::StringPairArray emptyMetadata;
+    writer.reset(format->createWriterFor(outputStream.get(), writeSampleRate,
+                                         numChannels, bitDepth, emptyMetadata,
+                                         qualityOptionIndex));
+    if (!writer) {
+      // Check common errors first:
+      juce::Array<int> possibleSampleRates = format->getPossibleSampleRates();
+
+      if (possibleSampleRates.isEmpty()) {
+        throw std::domain_error(
+            file.getFileExtension().toStdString() +
+            " audio files are not writable with Pedalboard.");
+      }
+
+      if (!possibleSampleRates.contains((int)writeSampleRate)) {
+        std::ostringstream sampleRateString;
+        for (int i = 0; i < possibleSampleRates.size(); i++) {
+          sampleRateString << possibleSampleRates[i];
+          if (i < possibleSampleRates.size() - 1)
+            sampleRateString << ", ";
+        }
+        throw std::domain_error(
+            format->getFormatName().toStdString() +
+            " audio files do not support the provided sample rate of " +
+            std::to_string(writeSampleRate) +
+            "Hz. Supported sample rates: " + sampleRateString.str());
+      }
+
+      juce::Array<int> possibleBitDepths = format->getPossibleBitDepths();
+
+      if (possibleBitDepths.isEmpty()) {
+        throw std::domain_error(
+            file.getFileExtension().toStdString() +
+            " audio files are not writable with Pedalboard.");
+      }
+
+      if (!possibleBitDepths.contains((int)bitDepth)) {
+        std::ostringstream bitDepthString;
+        for (int i = 0; i < possibleBitDepths.size(); i++) {
+          bitDepthString << possibleBitDepths[i];
+          if (i < possibleBitDepths.size() - 1)
+            bitDepthString << ", ";
+        }
+        throw std::domain_error(
+            format->getFormatName().toStdString() +
+            " audio files do not support the provided bit depth of " +
+            std::to_string(bitDepth) +
+            " bits. Supported bit depths: " + bitDepthString.str());
+      }
+
+      std::string humanReadableQuality;
+      if (qualityString.empty()) {
+        humanReadableQuality = "None";
+      } else {
+        humanReadableQuality = qualityString;
+      }
+
+      throw std::domain_error(
+          "Unable to create audio file writer with samplerate=" +
+          std::to_string(writeSampleRate) +
+          ", num_channels=" + std::to_string(numChannels) + ", bit_depth=" +
+          std::to_string(bitDepth) + ", and quality=" + humanReadableQuality);
+    } else {
+      outputStream.release();
+    }
+  }
+
+  template <typename SampleType>
+  void write(py::array_t<SampleType, py::array::c_style> inputArray) {
+    const juce::ScopedLock scopedLock(objectLock);
+
+    if (!writer)
+      throw std::runtime_error("I/O operation on a closed file.");
+
+    py::buffer_info inputInfo = inputArray.request();
+
+    unsigned int numChannels = 0;
+    unsigned int numSamples = 0;
+    ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
+
+    // Release the GIL when we do the writing, after we
+    // already have a reference to the input array:
+    pybind11::gil_scoped_release release;
+
+    if (inputInfo.ndim == 1) {
+      numSamples = inputInfo.shape[0];
+      numChannels = 1;
+    } else if (inputInfo.ndim == 2) {
+      // Try to auto-detect the channel layout from the shape
+      if (inputInfo.shape[0] == getNumChannels() &&
+          inputInfo.shape[1] == getNumChannels()) {
+        throw std::runtime_error(
+            "Unable to determine shape of audio input! Both dimensions have "
+            "the same shape. Expected " +
+            std::to_string(getNumChannels()) +
+            "-channel audio, with one dimension larger than the other.");
+      } else if (inputInfo.shape[1] == getNumChannels()) {
+        numSamples = inputInfo.shape[0];
+        numChannels = inputInfo.shape[1];
+      } else if (inputInfo.shape[0] == getNumChannels()) {
+        numSamples = inputInfo.shape[1];
+        numChannels = inputInfo.shape[0];
+      } else {
+        throw std::runtime_error(
+            "Unable to determine shape of audio input! Expected " +
+            std::to_string(getNumChannels()) + "-channel audio.");
+      }
+    } else {
+      throw std::runtime_error(
+          "Number of input dimensions must be 1 or 2 (got " +
+          std::to_string(inputInfo.ndim) + ").");
+    }
+
+    if (numChannels == 0) {
+      // No work to do.
+      return;
+    } else if (numChannels != getNumChannels()) {
+      throw std::runtime_error(
+          "WritableAudioFile was opened with num_channels=" +
+          std::to_string(getNumChannels()) +
+          ", but was passed an array containing " +
+          std::to_string(numChannels) + "-channel audio!");
+    }
+
+    // Depending on the input channel layout, we need to copy data
+    // differently. This loop is duplicated here to move the if statement
+    // outside of the tight loop, as we don't need to re-check that the input
+    // channel is still the same on every iteration of the loop.
+    switch (inputChannelLayout) {
+    case ChannelLayout::Interleaved: {
+      std::vector<std::vector<SampleType>> deinterleaveBuffers;
+
+      // Use a temporary buffer to chunk the audio input
+      // and pass it into the writer, chunk by chunk, rather
+      // than de-interleaving the entire buffer at once:
+      deinterleaveBuffers.resize(numChannels);
+
+      const SampleType **channelPointers =
+          (const SampleType **)alloca(numChannels * sizeof(SampleType *));
+      for (int startSample = 0; startSample < numSamples;
+           startSample += DEFAULT_AUDIO_BUFFER_SIZE_FRAMES) {
+        int samplesToWrite = std::min(numSamples - startSample,
+                                      DEFAULT_AUDIO_BUFFER_SIZE_FRAMES);
+
+        for (int c = 0; c < numChannels; c++) {
+          deinterleaveBuffers[c].resize(samplesToWrite);
+          channelPointers[c] = deinterleaveBuffers[c].data();
+
+          // We're de-interleaving the data here, so we can't use copyFrom.
+          for (unsigned int i = 0; i < samplesToWrite; i++) {
+            deinterleaveBuffers[c][i] =
+                ((SampleType
+                      *)(inputInfo.ptr))[((i + startSample) * numChannels) + c];
+          }
+        }
+
+        if (!write(channelPointers, numChannels, samplesToWrite)) {
+          throw std::runtime_error("Unable to write data to audio file.");
+        }
+      }
+
+      break;
+    }
+    case ChannelLayout::NotInterleaved: {
+      // We can just pass all the data to write:
+      const SampleType **channelPointers =
+          (const SampleType **)alloca(numChannels * sizeof(SampleType *));
+      for (int c = 0; c < numChannels; c++) {
+        channelPointers[c] = ((SampleType *)inputInfo.ptr) + (numSamples * c);
+      }
+      if (!write(channelPointers, numChannels, numSamples)) {
+        throw std::runtime_error("Unable to write data to audio file.");
+      }
+      break;
+    }
+    default:
+      throw std::runtime_error(
+          "Internal error: got unexpected channel layout.");
+    }
+
+    framesWritten += numSamples;
+  }
+
+  template <typename TargetType, typename InputType,
+            unsigned int bufferSize = DEFAULT_AUDIO_BUFFER_SIZE_FRAMES>
+  bool writeConvertingTo(const InputType **channels, int numChannels,
+                         unsigned int numSamples) {
+    std::vector<std::vector<TargetType>> targetTypeBuffers;
+    targetTypeBuffers.resize(numChannels);
+
+    const TargetType **channelPointers =
+        (const TargetType **)alloca(numChannels * sizeof(TargetType *));
+    for (unsigned int startSample = 0; startSample < numSamples;
+         startSample += bufferSize) {
+      int samplesToWrite = std::min(numSamples - startSample, bufferSize);
+
+      for (int c = 0; c < numChannels; c++) {
+        targetTypeBuffers[c].resize(samplesToWrite);
+        channelPointers[c] = targetTypeBuffers[c].data();
+
+        if constexpr (std::is_integral<InputType>::value) {
+          if constexpr (std::is_integral<TargetType>::value) {
+            for (unsigned int i = 0; i < samplesToWrite; i++) {
+              // Left-align the samples to use all 32 bits, as JUCE requires:
+              targetTypeBuffers[c][i] =
+                  ((int)channels[c][startSample + i])
+                  << (std::numeric_limits<int>::digits -
+                      std::numeric_limits<InputType>::digits);
+            }
+          } else if constexpr (std::is_same<TargetType, float>::value) {
+            constexpr auto scaleFactor =
+                1.0f / static_cast<float>(std::numeric_limits<int>::max());
+            juce::FloatVectorOperations::convertFixedToFloat(
+                targetTypeBuffers[c].data(), channels[c] + startSample,
+                scaleFactor, samplesToWrite);
+          } else {
+            // We should never get here - this would only be true
+            // if converting to double, which no formats require:
+            static_assert(std::is_integral<InputType>::value &&
+                              std::is_same<TargetType, double>::value,
+                          "Can't convert to double");
+          }
+        } else {
+          if constexpr (std::is_integral<TargetType>::value) {
+            // We should never get here - this would only be true
+            // if converting float to int, which JUCE handles for us:
+            static_assert(std::is_integral<TargetType>::value &&
+                              !std::is_integral<InputType>::value,
+                          "Can't convert float to int");
+          } else {
+            // Converting double to float:
+            for (unsigned int i = 0; i < samplesToWrite; i++) {
+              targetTypeBuffers[c][i] = channels[c][startSample + i];
+            }
+          }
+        }
+      }
+
+      if (!write(channelPointers, numChannels, samplesToWrite)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  template <typename SampleType>
+  bool write(const SampleType **channels, int numChannels,
+             unsigned int numSamples) {
+    if constexpr (std::is_integral<SampleType>::value) {
+      if constexpr (std::is_same<SampleType, int>::value) {
+        if (writer->isFloatingPoint()) {
+          return writeConvertingTo<float>(channels, numChannels, numSamples);
+        } else {
+          return writer->write(channels, numSamples);
+        }
+      } else {
+        return writeConvertingTo<int>(channels, numChannels, numSamples);
+      }
+    } else if constexpr (std::is_same<SampleType, float>::value) {
+      if (writer->isFloatingPoint()) {
+        // Just pass the floating point data into the writer as if it were
+        // integer data. If the writer requires floating-point input data, this
+        // works (and is documented!)
+        return writer->write((const int **)channels, numSamples);
+      } else {
+        // Convert floating-point to fixed point, but let JUCE do that for us:
+        return writer->writeFromFloatArrays(channels, numChannels, numSamples);
+      }
+    } else {
+      // We must have double-format data:
+      return writeConvertingTo<float>(channels, numChannels, numSamples);
+    }
+  }
+
+  void flush() {
+    if (!writer)
+      throw std::runtime_error("I/O operation on a closed file.");
+    const juce::ScopedLock scopedLock(objectLock);
+    pybind11::gil_scoped_release release;
+
+    if (!writer->flush()) {
+      throw std::runtime_error(
+          "Unable to flush audio file; is the underlying file seekable?");
+    }
+  }
+
+  void close() {
+    if (!writer)
+      throw std::runtime_error("Cannot close closed file.");
+    const juce::ScopedLock scopedLock(objectLock);
+    writer.reset();
+  }
+
+  bool isClosed() const {
+    const juce::ScopedLock scopedLock(objectLock);
+    return !writer;
+  }
+
+  double getSampleRate() const {
+    if (!writer)
+      throw std::runtime_error("I/O operation on a closed file.");
+    return writer->getSampleRate();
+  }
+
+  std::string getFilename() const { return filename; }
+
+  long getFramesWritten() const { return framesWritten; }
+
+  std::optional<std::string> getQuality() const { return quality; }
+
+  long getNumChannels() const {
+    if (!writer)
+      throw std::runtime_error("I/O operation on a closed file.");
+    return writer->getNumChannels();
+  }
+
+  std::string getFileDatatype() const {
+    if (!writer)
+      throw std::runtime_error("I/O operation on a closed file.");
+
+    if (writer->isFloatingPoint()) {
+      switch (writer->getBitsPerSample()) {
+      case 16: // OGG returns 16-bit int data, but internally stores floats
+      case 32:
+        return "float32";
+      case 64:
+        return "float64";
+      default:
+        return "unknown";
+      }
+    } else {
+      switch (writer->getBitsPerSample()) {
+      case 8:
+        return "int8";
+      case 16:
+        return "int16";
+      case 24:
+        return "int24";
+      case 32:
+        return "int32";
+      case 64:
+        return "int64";
+      default:
+        return "unknown";
+      }
+    }
+  }
+
+  std::shared_ptr<WriteableAudioFile> enter() { return shared_from_this(); }
+
+  void exit(const py::object &type, const py::object &value,
+            const py::object &traceback) {
+    close();
+  }
+
+private:
+  juce::AudioFormatManager formatManager;
+  std::string filename;
+  std::optional<std::string> quality;
+  std::unique_ptr<juce::AudioFormatWriter> writer;
+  juce::CriticalSection objectLock;
+  int framesWritten = 0;
+};
+
+inline void init_writeable_audio_file(py::module &m) {
+  py::class_<WriteableAudioFile, AudioFile,
+             std::shared_ptr<WriteableAudioFile>>(
+      m, "WriteableAudioFile",
+      "An audio file writer interface, with native support for Ogg Vorbis, "
+      "MP3, WAV, FLAC, and AIFF files on all operating systems. (Use "
+      "pedalboard.io.get_supported_write_formats() to see which formats are "
+      "supported on the current platform.)")
+      .def(
+          py::init([](std::string filename, double sampleRate, int numChannels,
+                      int bitDepth,
+                      std::optional<std::variant<std::string, float>> quality) {
+            return std::make_shared<WriteableAudioFile>(
+                filename, sampleRate, numChannels, bitDepth, quality);
+          }),
+          py::arg("filename"), py::arg("samplerate"),
+          py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
+          py::arg("quality") = py::none())
+      .def_static(
+          "__new__",
+          [](const py::object *, std::string filename,
+             std::optional<double> sampleRate, int numChannels, int bitDepth,
+             std::optional<std::variant<std::string, float>> quality) {
+            if (!sampleRate) {
+              throw py::type_error(
+                  "Opening an audio file for writing requires a samplerate "
+                  "argument to be provided.");
+            }
+            return std::make_shared<WriteableAudioFile>(
+                filename, sampleRate.value(), numChannels, bitDepth, quality);
+          },
+          py::arg("cls"), py::arg("filename"),
+          py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
+          py::arg("bit_depth") = 16, py::arg("quality") = py::none())
+      .def(
+          "write",
+          [](WriteableAudioFile &file, py::array_t<char> samples) {
+            file.write<char>(samples);
+          },
+          py::arg("samples").noconvert(),
+          "Encode an array of int8 (8-bit signed integer) audio data and write "
+          "it to this file. The number of channels in the array must match the "
+          "number of channels used to open the file. The array may contain "
+          "audio in any shape. If the file's bit depth or format does not "
+          "match this data type, the audio will be automatically converted.")
+      .def(
+          "write",
+          [](WriteableAudioFile &file, py::array_t<short> samples) {
+            file.write<short>(samples);
+          },
+          py::arg("samples").noconvert(),
+          "Encode an array of int16 (16-bit signed integer) audio data and "
+          "write it to this file. The number of channels in the array must "
+          "match the number of channels used to open the file. The array may "
+          "contain audio in any shape. If the file's bit depth or format does "
+          "not match this data type, the audio will be automatically "
+          "converted.")
+      .def(
+          "write",
+          [](WriteableAudioFile &file, py::array_t<int> samples) {
+            file.write<int>(samples);
+          },
+          py::arg("samples").noconvert(),
+          "Encode an array of int32 (32-bit signed integer) audio data and "
+          "write it to this file. The number of channels in the array must "
+          "match the number of channels used to open the file. The array may "
+          "contain audio in any shape. If the file's bit depth or format does "
+          "not match this data type, the audio will be automatically "
+          "converted.")
+      .def(
+          "write",
+          [](WriteableAudioFile &file, py::array_t<float> samples) {
+            file.write<float>(samples);
+          },
+          py::arg("samples").noconvert(),
+          "Encode an array of float32 (32-bit floating-point) audio data and "
+          "write it to this file. The number of channels in the array must "
+          "match the number of channels used to open the file. The array may "
+          "contain audio in any shape. If the file's bit depth or format does "
+          "not match this data type, the audio will be automatically "
+          "converted.")
+      .def(
+          "write",
+          [](WriteableAudioFile &file, py::array_t<double> samples) {
+            file.write<double>(samples);
+          },
+          py::arg("samples").noconvert(),
+          "Encode an array of float64 (64-bit floating-point) audio data and "
+          "write it to this file. The number of channels in the array must "
+          "match the number of channels used to open the file. The array may "
+          "contain audio in any shape. No supported formats support float64 "
+          "natively, so the audio will be converted automatically.")
+      .def("flush", &WriteableAudioFile::flush,
+           "Attempt to flush this audio file's contents to disk. Not all "
+           "formats support flushing, so this may throw a RuntimeError. (If "
+           "this happens, closing the file will reliably force a flush to "
+           "occur.)")
+      .def("close", &WriteableAudioFile::close,
+           "Close this file, flushing its contents to disk and rendering this "
+           "object unusable for further writing.")
+      .def("__enter__", &WriteableAudioFile::enter)
+      .def("__exit__", &WriteableAudioFile::exit)
+      .def("__repr__",
+           [](const WriteableAudioFile &file) {
+             std::ostringstream ss;
+             ss << "<pedalboard.io.WriteableAudioFile";
+             if (!file.getFilename().empty()) {
+               ss << " filename=\"" << file.getFilename() << "\"";
+             }
+             if (file.isClosed()) {
+               ss << " closed";
+             } else {
+               ss << " samplerate=" << file.getSampleRate();
+               ss << " num_channels=" << file.getNumChannels();
+               if (file.getQuality()) {
+                 ss << " quality=\"" << file.getQuality().value() << "\"";
+               }
+               ss << " file_dtype=" << file.getFileDatatype();
+             }
+             ss << " at " << &file;
+             ss << ">";
+             return ss.str();
+           })
+      .def_property_readonly(
+          "closed", &WriteableAudioFile::isClosed,
+          "If this file has been closed, this property will be True.")
+      .def_property_readonly("samplerate", &WriteableAudioFile::getSampleRate,
+                             "The sample rate of this file in samples "
+                             "(per channel) per second (Hz).")
+      .def_property_readonly("channels", &WriteableAudioFile::getNumChannels,
+                             "The number of channels in this file.")
+      .def_property_readonly("frames", &WriteableAudioFile::getFramesWritten,
+                             "The total number of frames (samples per "
+                             "channel) written to this file so far.")
+      .def_property_readonly(
+          "file_dtype", &WriteableAudioFile::getFileDatatype,
+          "The data type stored natively by this file. Note that write(...) "
+          "will accept multiple datatypes, regardless of the value of this "
+          "property.")
+      .def_property_readonly(
+          "quality", &WriteableAudioFile::getQuality,
+          "The quality setting used to write this file. For many "
+          "formats, this may be None.");
+
+  m.def("get_supported_read_formats", []() {
+    juce::AudioFormatManager manager;
+    manager.registerBasicFormats();
+
+    std::vector<std::string> formatNames(manager.getNumKnownFormats());
+    juce::StringArray extensions;
+    for (int i = 0; i < manager.getNumKnownFormats(); i++) {
+      auto *format = manager.getKnownFormat(i);
+      extensions.addArray(format->getFileExtensions());
+    }
+
+    extensions.trim();
+    extensions.removeEmptyStrings();
+    extensions.removeDuplicates(true);
+
+    std::vector<std::string> output;
+    for (juce::String s : extensions) {
+      output.push_back(s.toStdString());
+    }
+
+    std::sort(
+        output.begin(), output.end(),
+        [](const std::string lhs, const std::string rhs) { return lhs < rhs; });
+
+    return output;
+  });
+
+  m.def("get_supported_write_formats", []() {
+    // JUCE doesn't support writing other formats out-of-the-box on all
+    // platforms, and there's no easy way to tell which formats are supported
+    // without attempting to create an AudioFileWriter object - so this list is
+    // hardcoded for now.
+    const std::vector<std::string> formats = {".aiff", ".flac", ".ogg", ".wav"};
+    return formats;
+  });
+}
+} // namespace Pedalboard
