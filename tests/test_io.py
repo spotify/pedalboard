@@ -266,7 +266,7 @@ def test_read_okay_without_extension(
 
 @pytest.mark.parametrize("audio_filename,samplerate", FILENAMES_AND_SAMPLERATES)
 def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
-    with open(audio_filename, 'rb') as f:
+    with open(audio_filename, "rb") as f:
         stream = io.BytesIO(f.read())
 
     with pedalboard.io.AudioFile(stream) as af:
@@ -308,7 +308,7 @@ def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
 def test_file_like_exceptions_propagate():
     audio_filename = FILENAMES_AND_SAMPLERATES[0][0]
 
-    with open(audio_filename, 'rb') as f:
+    with open(audio_filename, "rb") as f:
         stream = io.BytesIO(f.read())
 
     stream_read = stream.read
@@ -334,7 +334,7 @@ def test_file_like_exceptions_propagate():
 def test_file_like_must_be_seekable():
     audio_filename = FILENAMES_AND_SAMPLERATES[0][0]
 
-    with open(audio_filename, 'rb') as f:
+    with open(audio_filename, "rb") as f:
         stream = io.BytesIO(f.read())
     stream.seekable = lambda: False
 
