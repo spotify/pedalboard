@@ -553,3 +553,11 @@ def test_bad_write_quality(tmp_path: pathlib.Path, extension: str, quality):
     filename = str(tmp_path / f"test.{extension}")
     with pytest.raises(ValueError):
         pedalboard.io.WriteableAudioFile(filename, samplerate=44100, quality=quality)
+
+
+def test_file_not_created_if_constructor_error_thrown(tmp_path: pathlib.Path):
+    filename = str(tmp_path / f"test.wav")
+    assert not os.path.exists(filename)
+    with pytest.raises(ValueError):
+        pedalboard.io.WriteableAudioFile(filename, samplerate=44100, quality="break")
+    assert not os.path.exists(filename)

@@ -473,6 +473,69 @@ int determineQualityOptionIndex(juce::AudioFormat *format,
   return qualityOptionIndex;
 }
 
+/**
+ * A tiny RAII wrapper around juce::FileOutputStream that
+ * deletes the file on destruction if it was not written to.
+ */
+class AutoDeleteFileOutputStream : public juce::FileOutputStream {
+public:
+  AutoDeleteFileOutputStream(const juce::File &fileToWriteTo,
+                             size_t bufferSizeToUse = 16384,
+                             bool deleteFileOnDestruction = true)
+      : juce::FileOutputStream(fileToWriteTo, bufferSizeToUse),
+        deleteFileOnDestruction(deleteFileOnDestruction) {}
+
+  static std::unique_ptr<AutoDeleteFileOutputStream>
+  createOutputStream(const juce::File &fileToWriteTo,
+                     size_t bufferSizeToUse = 16384) {
+    return std::make_unique<AutoDeleteFileOutputStream>(
+        fileToWriteTo, bufferSizeToUse, !fileToWriteTo.existsAsFile());
+  };
+
+  juce::Result truncate() {
+    deleteFileOnDestruction = false;
+    return juce::FileOutputStream::truncate();
+  }
+
+  virtual bool setPosition(juce::int64 pos) override {
+    deleteFileOnDestruction = false;
+    return juce::FileOutputStream::setPosition(pos);
+  }
+
+  virtual bool write(const void *bytes, size_t len) override {
+    if (!hasWrittenToFile) {
+      setPosition(0);
+      truncate();
+      hasWrittenToFile = true;
+    }
+
+    deleteFileOnDestruction = false;
+    return juce::FileOutputStream::write(bytes, len);
+  }
+
+  virtual bool writeRepeatedByte(juce::uint8 byte,
+                                 size_t numTimesToRepeat) override {
+    if (!hasWrittenToFile) {
+      setPosition(0);
+      truncate();
+      hasWrittenToFile = true;
+    }
+
+    deleteFileOnDestruction = false;
+    return juce::FileOutputStream::writeRepeatedByte(byte, numTimesToRepeat);
+  }
+
+  ~AutoDeleteFileOutputStream() override {
+    if (deleteFileOnDestruction) {
+      getFile().deleteFile();
+    }
+  }
+
+private:
+  bool deleteFileOnDestruction = false;
+  bool hasWrittenToFile = false;
+};
+
 class WriteableAudioFile
     : public AudioFile,
       public std::enable_shared_from_this<WriteableAudioFile> {
@@ -502,15 +565,12 @@ public:
     formatManager.registerBasicFormats();
     juce::File file(filename);
 
-    std::unique_ptr<juce::FileOutputStream> outputStream =
-        std::make_unique<juce::FileOutputStream>(file);
+    std::unique_ptr<AutoDeleteFileOutputStream> outputStream =
+        AutoDeleteFileOutputStream::createOutputStream(file);
     if (!outputStream->openedOk()) {
       throw std::domain_error("Unable to open audio file for writing: " +
                               filename);
     }
-
-    outputStream->setPosition(0);
-    outputStream->truncate();
 
     juce::AudioFormat *format =
         formatManager.findFormatForFileExtension(file.getFileExtension());
