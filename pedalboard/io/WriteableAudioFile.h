@@ -691,27 +691,28 @@ inline void init_writeable_audio_file(py::module &m) {
       "MP3, WAV, FLAC, and AIFF files on all operating systems. (Use "
       "pedalboard.io.get_supported_write_formats() to see which formats are "
       "supported on the current platform.)")
-      .def(
-          py::init([](std::string filename, double sampleRate, int numChannels,
-                      int bitDepth,
-                      std::optional<std::variant<std::string, float>> quality) {
-            // This definition is only here to provide nice docstrings.
-            throw std::runtime_error(
-                "Internal error: __init__ should never be called, as this "
-                "class implements __new__.");
-          }),
-          py::arg("filename"), py::arg("samplerate"),
-          py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
-          py::arg("quality") = py::none())
-      .def(py::init([](py::object filelike, double sampleRate, int numChannels,
+      .def(py::init([](std::string filename, double sampleRate, int numChannels,
                        int bitDepth,
-                       std::optional<std::variant<std::string, float>> quality,
-                       std::optional<std::string> format) {
+                       std::optional<std::variant<std::string, float>> quality)
+                        -> WriteableAudioFile * {
              // This definition is only here to provide nice docstrings.
              throw std::runtime_error(
                  "Internal error: __init__ should never be called, as this "
                  "class implements __new__.");
            }),
+           py::arg("filename"), py::arg("samplerate"),
+           py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
+           py::arg("quality") = py::none())
+      .def(py::init(
+               [](py::object filelike, double sampleRate, int numChannels,
+                  int bitDepth,
+                  std::optional<std::variant<std::string, float>> quality,
+                  std::optional<std::string> format) -> WriteableAudioFile * {
+                 // This definition is only here to provide nice docstrings.
+                 throw std::runtime_error(
+                     "Internal error: __init__ should never be called, as this "
+                     "class implements __new__.");
+               }),
            py::arg("file_like"), py::arg("samplerate"),
            py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
            py::arg("quality") = py::none(), py::arg("format") = py::none())

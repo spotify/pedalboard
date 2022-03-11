@@ -482,14 +482,14 @@ inline void init_readable_audio_file(py::module &m) {
       "platforms, other formats may also be readable. (Use "
       "pedalboard.io.get_supported_read_formats() to see which formats are "
       "supported on the current platform.)")
-      .def(py::init([](std::string filename) {
+      .def(py::init([](std::string filename) -> ReadableAudioFile * {
              // This definition is only here to provide nice docstrings.
              throw std::runtime_error(
                  "Internal error: __init__ should never be called, as this "
                  "class implements __new__.");
            }),
            py::arg("filename"))
-      .def(py::init([](py::object filelike) {
+      .def(py::init([](py::object filelike) -> ReadableAudioFile * {
              // This definition is only here to provide nice docstrings.
              throw std::runtime_error(
                  "Internal error: __init__ should never be called, as this "
