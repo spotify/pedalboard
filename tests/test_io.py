@@ -349,7 +349,8 @@ def test_file_like_exceptions_propagate():
         assert af.read(1).nbytes > 0
         should_throw[0] = True
         with pytest.raises(ValueError) as e:
-            af.read(100)
+            for _ in range(af.frames - 1):
+                af.read(1)
         assert "Some kinda error!" in str(e)
 
 
