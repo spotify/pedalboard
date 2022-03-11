@@ -46,11 +46,12 @@ public:
   }
 
   bool isSeekable() noexcept {
+    py::gil_scoped_acquire acquire;
+
     if (PythonException::isPending())
       return false;
 
     try {
-      py::gil_scoped_acquire acquire;
       return fileLike.attr("seekable")().cast<bool>();
     } catch (py::error_already_set e) {
       e.restore();
@@ -62,10 +63,10 @@ public:
   }
 
   juce::int64 getTotalLength() noexcept {
+    py::gil_scoped_acquire acquire;
+
     if (PythonException::isPending())
       return -1;
-
-    py::gil_scoped_acquire acquire;
 
     // TODO: Try reading a couple of Python properties that may contain the
     // total length: urllib3.response.HTTPResponse provides `length_remaining`,
@@ -147,6 +148,8 @@ public:
   }
 
   bool isExhausted() noexcept {
+    py::gil_scoped_acquire acquire;
+
     if (PythonException::isPending())
       return true;
 
@@ -155,7 +158,6 @@ public:
     }
 
     try {
-      py::gil_scoped_acquire acquire;
       return fileLike.attr("tell")().cast<juce::int64>() == getTotalLength();
     } catch (py::error_already_set e) {
       e.restore();
@@ -167,11 +169,12 @@ public:
   }
 
   juce::int64 getPosition() noexcept {
+    py::gil_scoped_acquire acquire;
+
     if (PythonException::isPending())
       return -1;
 
     try {
-      py::gil_scoped_acquire acquire;
       return fileLike.attr("tell")().cast<juce::int64>();
     } catch (py::error_already_set e) {
       e.restore();
@@ -183,12 +186,12 @@ public:
   }
 
   bool setPosition(juce::int64 pos) noexcept {
+    py::gil_scoped_acquire acquire;
+
     if (PythonException::isPending())
       return false;
 
     try {
-      py::gil_scoped_acquire acquire;
-
       if (fileLike.attr("seekable")().cast<bool>()) {
         fileLike.attr("seek")(pos);
       }

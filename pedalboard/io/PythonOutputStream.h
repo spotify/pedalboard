@@ -47,6 +47,7 @@ public:
 
   virtual void flush() noexcept override {
     py::gil_scoped_acquire acquire;
+
     try {
       if (py::hasattr(fileLike, "flush")) {
         fileLike.attr("flush")();
@@ -91,11 +92,31 @@ public:
 
   virtual bool writeRepeatedByte(juce::uint8 byte,
                                  size_t numTimesToRepeat) noexcept override {
-    // TODO: This could be made faster, but is it ever actually called?
-    for (int i = 0; i < numTimesToRepeat; i++) {
-      if (!write(&byte, 1)) {
-        return false;
+    py::gil_scoped_acquire acquire;
+
+    try {
+      const size_t maxEffectiveSize =
+          std::min(numTimesToRepeat, 8192UL);
+      std::vector<char> buffer(maxEffectiveSize, byte);
+
+      for (size_t i = 0; i < numTimesToRepeat; i += buffer.size()) {
+        const size_t chunkSize = std::min(numTimesToRepeat - i, buffer.size());
+
+        int bytesWritten = fileLike
+                               .attr("write")(py::bytes(
+                                   (const char *)buffer.data(), chunkSize))
+                               .cast<int>();
+
+        if (bytesWritten != chunkSize) {
+          return false;
+        }
       }
+    } catch (py::error_already_set e) {
+      e.restore();
+      return false;
+    } catch (const py::builtin_exception &e) {
+      e.set_error();
+      return false;
     }
 
     return true;
