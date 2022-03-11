@@ -336,22 +336,21 @@ def test_file_like_exceptions_propagate():
     stream = open(audio_filename, "rb")
     stream_read = stream.read
 
-    call_count = [0]
+    should_throw = [False]
 
-    def throw_exception_on_99th_call(*args, **kwargs):
-        call_count[0] += 1
-        if call_count[0] == 99:
-            raise ValueError("Called 99 times!")
+    def eventually_throw_exception(*args, **kwargs):
+        if should_throw[0]:
+            raise ValueError("Some kinda error!")
         return stream_read(*args, **kwargs)
 
-    stream.read = throw_exception_on_99th_call
+    stream.read = eventually_throw_exception
 
     with pedalboard.io.AudioFile(stream) as af:
         assert af.read(1).nbytes > 0
+        should_throw[0] = True
         with pytest.raises(ValueError) as e:
-            for _ in range(100):
-                af.read(100)
-        assert "Called 99 times!" in str(e)
+            af.read(100)
+        assert "Some kinda error!" in str(e)
 
 
 def test_file_like_must_be_seekable():
