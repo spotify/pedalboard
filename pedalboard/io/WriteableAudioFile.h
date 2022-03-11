@@ -230,7 +230,9 @@ public:
       } else if (auto streamName = pythonOutputStream->getFilename()) {
         // Dummy-stream-filename added here to avoid a JUCE assertion
         // if the stream name doesn't start with a slash.
-        juce::File file(File::getSeparatorString().toStdString() + "dummy-stream-filename-" + streamName.value());
+        juce::File file(
+            juce::String(juce::File::getSeparatorString()).toStdString() +
+            "dummy-stream-filename-" + streamName.value());
         extension = file.getFileExtension().toStdString();
       }
 
