@@ -331,10 +331,7 @@ def test_read_mp3_from_named_stream(mp3_filename: str):
 
 def test_file_like_exceptions_propagate():
     audio_filename = FILENAMES_AND_SAMPLERATES[0][0]
-
-    with open(audio_filename, "rb") as f:
-        stream = io.BytesIO(f.read())
-
+    stream = open(audio_filename, "rb")
     stream_read = stream.read
 
     call_count = [0]
@@ -369,10 +366,90 @@ def test_file_like_must_be_seekable():
     assert "seekable" in str(e)
 
 
+def test_no_crash_if_type_error_on_file_like():
+    audio_filename = FILENAMES_AND_SAMPLERATES[0][0]
+
+    with open(audio_filename, "rb") as f:
+        stream = io.BytesIO(f.read())
+
+    # Seekable should be a method, not a property:
+    stream.seekable = False
+
+    with pytest.raises(TypeError) as e:
+        with pedalboard.io.AudioFile(stream):
+            pass
+
+    assert "bool" in str(e)
+
+
 def test_write_fails_without_extension(tmp_path: pathlib.Path):
     dest_path = str(tmp_path / "no_extension")
     with pytest.raises(ValueError):
         pedalboard.io.AudioFile(dest_path, "w", 44100, 1)
+
+
+@pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
+def test_write_to_stream_supports_format(extension: str):
+    assert pedalboard.io.AudioFile(io.BytesIO(), "w", 44100, 2, format=extension) is not None
+    assert pedalboard.io.AudioFile(io.BytesIO(), "w", 44100, 2, format=extension[1:]) is not None
+    assert pedalboard.io.WriteableAudioFile(io.BytesIO(), 44100, 2, format=extension) is not None
+    assert (
+        pedalboard.io.WriteableAudioFile(io.BytesIO(), 44100, 2, format=extension[1:]) is not None
+    )
+
+    with pytest.raises(ValueError):
+        pedalboard.io.AudioFile(io.BytesIO(), "w", 44100, 2, format="txt")
+
+
+@pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
+def test_write_to_stream_prefers_format_over_stream_name(extension: str):
+    stream = io.BytesIO()
+    stream.name = "foo.txt"
+    assert pedalboard.io.AudioFile(stream, "w", 44100, 2, format=extension) is not None
+    assert pedalboard.io.AudioFile(stream, "w", 44100, 2, format=extension[1:]) is not None
+    assert pedalboard.io.WriteableAudioFile(stream, 44100, 2, format=extension) is not None
+    assert pedalboard.io.WriteableAudioFile(stream, 44100, 2, format=extension[1:]) is not None
+
+    with pytest.raises(ValueError):
+        pedalboard.io.AudioFile(stream, "w", 44100, 2)
+
+
+@pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
+def test_read_from_non_bytes_stream(extension: str):
+    stream = io.StringIO()
+    stream.name = f"foo{extension}"
+
+    with pytest.raises(TypeError) as e:
+        pedalboard.io.AudioFile(stream, "r")
+
+    assert "expected to return bytes" in str(e)
+    assert "returned str" in str(e)
+
+    with pytest.raises(TypeError) as e:
+        pedalboard.io.ReadableAudioFile(stream)
+
+    assert "expected to return bytes" in str(e)
+    assert "returned str" in str(e)
+
+
+@pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
+def test_write_to_non_bytes_stream(extension: str):
+    stream = io.StringIO()
+
+    try:
+        stream.write(b"")
+    except TypeError as e:
+        expected_message = e.args[0]
+
+    with pytest.raises(TypeError) as e:
+        pedalboard.io.AudioFile(stream, "w", 44100, 2, format=extension)
+
+    assert expected_message in str(e)
+
+    with pytest.raises(TypeError) as e:
+        pedalboard.io.WriteableAudioFile(stream, 44100, 2, format=extension)
+
+    assert expected_message in str(e)
 
 
 def test_fails_gracefully():
@@ -511,7 +588,64 @@ def test_basic_write_int32_to_16_bit_wav(tmp_path: pathlib.Path):
 
     with pedalboard.io.ReadableAudioFile(filename) as af:
         as_written = af.read(len(signal))[0]
-        np.testing.assert_allclose(original, as_written, atol=2 / (2 ** 15))
+        np.testing.assert_allclose(original, as_written, atol=2 / (2**15))
+
+
+@pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
+@pytest.mark.parametrize(
+    "samplerate", [8000, 11025, 12000, 16000, 22050, 32000, 44100, 48000, 88200, 96000]
+)
+@pytest.mark.parametrize("num_channels", [1, 2, 3])
+@pytest.mark.parametrize("transposed", [False, True])
+@pytest.mark.parametrize("input_format", [np.float32, np.float64, np.int8, np.int16, np.int32])
+def test_write_to_seekable_stream(
+    extension: str, samplerate: float, num_channels: int, transposed: bool, input_format
+):
+    original_audio = generate_sine_at(samplerate, num_channels=num_channels)
+
+    write_bit_depth = 16
+
+    # Not all formats support full 32-bit depth:
+    if extension in {".wav"} and np.issubdtype(input_format, np.signedinteger):
+        write_bit_depth = np.dtype(input_format).itemsize * 8
+
+    # Handle integer audio types by scaling the floating-point data to the full integer range:
+    if np.issubdtype(input_format, np.signedinteger):
+        _max = np.iinfo(input_format).max
+        audio = (original_audio * _max).astype(input_format)
+    else:
+        _max = 1.0
+        audio = original_audio.astype(input_format)
+
+    # Before writing, assert that the data we're about to write is what we expect:
+    tolerance = get_tolerance_for_format_and_bit_depth(".wav", input_format, "int16")
+    np.testing.assert_allclose(original_audio, audio.astype(np.float32) / _max, atol=tolerance)
+
+    num_samples = audio.shape[-1]
+
+    stream = io.BytesIO()
+    stream.name = f"my_file{extension}"
+
+    with pedalboard.io.WriteableAudioFile(
+        stream,
+        samplerate=samplerate,
+        num_channels=num_channels,
+        bit_depth=write_bit_depth,
+    ) as af:
+        if transposed:
+            af.write(audio.T)
+        else:
+            af.write(audio)
+
+    assert stream.tell() > 0
+    stream.seek(0)
+
+    with pedalboard.io.AudioFile(stream) as af:
+        assert af.samplerate == samplerate
+        assert af.channels == num_channels
+        tolerance = get_tolerance_for_format_and_bit_depth(extension, input_format, af.file_dtype)
+        as_written = af.read(num_samples)
+        np.testing.assert_allclose(original_audio, np.squeeze(as_written), atol=tolerance)
 
 
 @pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())

@@ -23,6 +23,7 @@
 namespace py = pybind11;
 
 #include "../JuceHeader.h"
+#include "PythonFileLike.h"
 
 namespace Pedalboard {
 
@@ -35,37 +36,35 @@ bool isReadableFileLike(py::object fileLike) {
  * A juce::InputStream subclass that fetches its
  * data from a provided Python file-like object.
  */
-class PythonInputStream : public juce::InputStream {
+class PythonInputStream : public juce::InputStream, public PythonFileLike {
 public:
-  PythonInputStream(py::object fileLike) : fileLike(fileLike) {
+  PythonInputStream(py::object fileLike) : PythonFileLike(fileLike) {
     if (!isReadableFileLike(fileLike)) {
       throw py::type_error("Expected a file-like object (with read, seek, "
                            "seekable, and tell methods).");
     }
   }
 
-  std::optional<std::string> getFilename() {
-    // Some Python file-like objects expose a ".name" property.
-    // If this object has that property, return its value;
-    // otherwise return an empty optional.
-    if (py::hasattr(fileLike, "name")) {
-      return fileLike.attr("name").cast<std::string>();
-    } else {
-      return {};
-    }
-  }
+  bool isSeekable() noexcept {
+    if (PythonException::isPending())
+      return false;
 
-  bool isSeekable() {
     try {
+      py::gil_scoped_acquire acquire;
       return fileLike.attr("seekable")().cast<bool>();
     } catch (py::error_already_set e) {
-      pythonErrorRaised = true;
       e.restore();
+      return false;
+    } catch (const py::builtin_exception &e) {
+      e.set_error();
       return false;
     }
   }
 
-  juce::int64 getTotalLength() {
+  juce::int64 getTotalLength() noexcept {
+    if (PythonException::isPending())
+      return -1;
+
     py::gil_scoped_acquire acquire;
 
     // TODO: Try reading a couple of Python properties that may contain the
@@ -76,46 +75,68 @@ public:
       if (!fileLike.attr("seekable")().cast<bool>()) {
         return -1;
       }
-    } catch (py::error_already_set e) {
-      pythonErrorRaised = true;
-      e.restore();
-      return 0;
-    }
 
-    if (totalLength == -1) {
-      try {
+      if (totalLength == -1) {
         juce::int64 pos = fileLike.attr("tell")().cast<juce::int64>();
         fileLike.attr("seek")(0, 2);
         totalLength = fileLike.attr("tell")().cast<juce::int64>();
         fileLike.attr("seek")(pos, 0);
-      } catch (py::error_already_set e) {
-        pythonErrorRaised = true;
-        e.restore();
-        return -1;
       }
+    } catch (py::error_already_set e) {
+      e.restore();
+      return -1;
+    } catch (const py::builtin_exception &e) {
+      e.set_error();
+      return -1;
     }
 
     return totalLength;
   }
 
-  int read(void *buffer, int bytesToRead) {
+  int read(void *buffer, int bytesToRead) noexcept {
     // The buffer should never be null, and a negative size is probably a
     // sign that something is broken!
     jassert(buffer != nullptr && bytesToRead >= 0);
 
-    py::bytes result;
+    if (PythonException::isPending())
+      return 0;
+
+    py::bytes resultBytes;
     {
       py::gil_scoped_acquire acquire;
       try {
-        result = fileLike.attr("read")(bytesToRead).cast<py::bytes>();
+        auto readResult = fileLike.attr("read")(bytesToRead);
+
+        if (!py::isinstance<py::bytes>(readResult)) {
+          std::string message =
+              "File-like object passed to AudioFile was expected to return "
+              "bytes from its read(...) method, but "
+              "returned " +
+              py::str(readResult.get_type().attr("__name__"))
+                  .cast<std::string>() +
+              ".";
+
+          if (py::hasattr(fileLike, "mode") &&
+              fileLike.attr("mode").cast<std::string>() == "r") {
+            message += " (Try opening the stream in \"rb\" mode instead of "
+                       "\"r\" mode if possible.)";
+          }
+
+          throw py::type_error(message);
+          return 0;
+        }
+
+        resultBytes = readResult.cast<py::bytes>();
       } catch (py::error_already_set e) {
-        pythonErrorRaised = true;
         e.restore();
+        return 0;
+      } catch (const py::builtin_exception &e) {
+        e.set_error();
         return 0;
       }
     }
 
-    std::string resultAsString = result;
+    std::string resultAsString = resultBytes;
     std::memcpy((char *)buffer, (char *)resultAsString.data(),
                 resultAsString.size());
 
@@ -125,7 +146,10 @@ public:
     return bytesCopied;
   }
 
-  bool isExhausted() {
+  bool isExhausted() noexcept {
+    if (PythonException::isPending())
+      return true;
+
     if (lastReadWasSmallerThanExpected) {
       return true;
     }
@@ -134,24 +158,34 @@ public:
       py::gil_scoped_acquire acquire;
       return fileLike.attr("tell")().cast<juce::int64>() == getTotalLength();
     } catch (py::error_already_set e) {
-      pythonErrorRaised = true;
       e.restore();
+      return true;
+    } catch (const py::builtin_exception &e) {
+      e.set_error();
       return true;
     }
   }
 
-  juce::int64 getPosition() {
+  juce::int64 getPosition() noexcept {
+    if (PythonException::isPending())
+      return -1;
+
     try {
       py::gil_scoped_acquire acquire;
       return fileLike.attr("tell")().cast<juce::int64>();
     } catch (py::error_already_set e) {
-      pythonErrorRaised = true;
       e.restore();
+      return -1;
+    } catch (const py::builtin_exception &e) {
+      e.set_error();
       return -1;
     }
   }
 
-  bool setPosition(juce::int64 pos) {
+  bool setPosition(juce::int64 pos) noexcept {
+    if (PythonException::isPending())
+      return false;
+
     try {
       py::gil_scoped_acquire acquire;
 
@@ -161,30 +195,16 @@ public:
 
       return fileLike.attr("tell")().cast<juce::int64>() == pos;
     } catch (py::error_already_set e) {
-      pythonErrorRaised = true;
       e.restore();
+      return false;
+    } catch (const py::builtin_exception &e) {
+      e.set_error();
       return false;
     }
   }
 
-  void raisePendingPythonExceptions() {
-    if (pythonErrorRaised) {
-      pythonErrorRaised = false;
-      py::gil_scoped_acquire acquire;
-      throw py::error_already_set();
-    }
-  }
-
-  py::object getFileLikeObject() { return fileLike; }
-
 private:
-  py::object fileLike;
   juce::int64 totalLength = -1;
   bool lastReadWasSmallerThanExpected = false;
-
-  // the juce::InputStream interface is not exception-safe, so we have to
-  // change the behaviour of this subclass if an exception gets thrown,
-  // then throw the exception ourselves when we have the opportunity.
-  bool pythonErrorRaised = false;
 };
 }; // namespace Pedalboard

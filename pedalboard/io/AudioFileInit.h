@@ -42,7 +42,7 @@ inline void init_audio_file(py::module &m) {
   py::class_<AudioFile, std::shared_ptr<AudioFile>>(
       m, "AudioFile", "A base class for readable and writeable audio files.")
       .def(py::init<>()) // Make this class effectively abstract; we can only
-                         // instantiate subclasses.
+                         // instantiate subclasses via __new__.
       .def_static(
           "__new__",
           [](const py::object *, std::string filename, std::string mode) {
@@ -107,6 +107,55 @@ inline void init_audio_file(py::module &m) {
           },
           py::arg("cls"), py::arg("filename"), py::arg("mode") = "w",
           py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
-          py::arg("bit_depth") = 16, py::arg("quality") = py::none());
+          py::arg("bit_depth") = 16, py::arg("quality") = py::none())
+      .def_static(
+          "__new__",
+          [](const py::object *, py::object filelike, std::string mode,
+             std::optional<double> sampleRate, int numChannels, int bitDepth,
+             std::optional<std::variant<std::string, float>> quality,
+             std::optional<std::string> format) {
+            if (mode == "r") {
+              throw py::type_error(
+                  "Opening a file-like object for reading does not require "
+                  "samplerate, num_channels, bit_depth, or quality arguments - "
+                  "these parameters "
+                  "will be read from the file-like object.");
+            } else if (mode == "w") {
+              if (!sampleRate) {
+                throw py::type_error("Opening a file-like object for writing "
+                                     "requires a samplerate "
+                                     "argument to be provided.");
+              }
+
+              if (!isWriteableFileLike(filelike)) {
+                throw py::type_error(
+                    "Expected either a filename or a file-like object (with "
+                    "write, seek, seekable, and tell methods), but received: " +
+                    filelike.attr("__repr__")().cast<std::string>());
+              }
+
+              auto stream = std::make_unique<PythonOutputStream>(filelike);
+              if (!format && !stream->getFilename()) {
+                throw py::type_error(
+                    "Unable to infer audio file format for writing. Expected "
+                    "either a \".name\" property on the provided file-like "
+                    "object (" +
+                    filelike.attr("__repr__")().cast<std::string>() +
+                    ") or an explicit file format passed as the \"format=\" "
+                    "argument.");
+              }
+
+              return std::make_shared<WriteableAudioFile>(
+                  format.value_or(""), std::move(stream), sampleRate.value(),
+                  numChannels, bitDepth, quality);
+            } else {
+              throw py::type_error("AudioFile instances can only be opened in "
+                                   "read mode (\"r\") or write mode (\"w\").");
+            }
+          },
+          py::arg("cls"), py::arg("file_like"), py::arg("mode") = "w",
+          py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
+          py::arg("bit_depth") = 16, py::arg("quality") = py::none(),
+          py::arg("format") = py::none());
 }
 } // namespace Pedalboard

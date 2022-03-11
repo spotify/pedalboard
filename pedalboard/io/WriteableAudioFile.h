@@ -26,6 +26,7 @@
 #include "../BufferUtils.h"
 #include "../JuceHeader.h"
 #include "AudioFile.h"
+#include "PythonOutputStream.h"
 
 namespace py = pybind11;
 
@@ -190,7 +191,14 @@ public:
       std::string filename, double writeSampleRate, int numChannels = 1,
       int bitDepth = 16,
       std::optional<std::variant<std::string, float>> qualityInput = {})
-      : filename(filename) {
+      : WriteableAudioFile(filename, nullptr, writeSampleRate, numChannels,
+                           bitDepth, qualityInput) {}
+
+  WriteableAudioFile(
+      std::string filename,
+      std::unique_ptr<PythonOutputStream> pythonOutputStream,
+      double writeSampleRate, int numChannels = 1, int bitDepth = 16,
+      std::optional<std::variant<std::string, float>> qualityInput = {}) {
     pybind11::gil_scoped_release release;
 
     if (!isInteger(writeSampleRate)) {
@@ -209,28 +217,63 @@ public:
     }
 
     formatManager.registerBasicFormats();
-    juce::File file(filename);
+    std::unique_ptr<juce::OutputStream> outputStream;
+    juce::AudioFormat *format = nullptr;
+    std::string extension;
 
-    std::unique_ptr<AutoDeleteFileOutputStream> outputStream =
-        AutoDeleteFileOutputStream::createOutputStream(file);
-    if (!outputStream->openedOk()) {
-      throw std::domain_error("Unable to open audio file for writing: " +
-                              filename);
-    }
+    if (pythonOutputStream) {
+      // Use the pythonOutputStream's filename if possible, falling back to the
+      // provided filename string (which should contain an extension) if
+      // necessary.
+      std::string filenameOrFormat;
+      if (!filename.empty()) {
+        filenameOrFormat = ("." + filename);
+      } else if (auto streamName = pythonOutputStream->getFilename()) {
+        filenameOrFormat = streamName.value();
+      }
 
-    juce::AudioFormat *format =
-        formatManager.findFormatForFileExtension(file.getFileExtension());
+      juce::File file(filenameOrFormat);
+      extension = file.getFileExtension().toStdString();
 
-    if (!format) {
-      if (file.getFileExtension().isEmpty()) {
-        throw std::domain_error("No file extension provided - cannot detect "
-                                "audio format to write with for file path: " +
+      format = formatManager.findFormatForFileExtension(extension);
+
+      if (!format) {
+        if (pythonOutputStream->getFilename()) {
+          throw std::domain_error("Unable to detect audio format to use for "
+                                  "file-like object with filename: " +
+                                  pythonOutputStream->getFilename().value());
+        } else {
+          throw std::domain_error(
+              "Provided format argument (\"" + filename +
+              "\") does not correspond to a supported file type.");
+        }
+      }
+
+      unsafeOutputStream = pythonOutputStream.get();
+      outputStream = std::move(pythonOutputStream);
+    } else {
+      juce::File file(filename);
+      extension = file.getFileExtension().toStdString();
+
+      outputStream = AutoDeleteFileOutputStream::createOutputStream(file);
+      if (!static_cast<juce::FileOutputStream *>(outputStream.get())
+               ->openedOk()) {
+        throw std::domain_error("Unable to open audio file for writing: " +
                                 filename);
       }
 
-      throw std::domain_error(
-          "Unable to detect audio format for file extension: " +
-          file.getFileExtension().toStdString());
+      format = formatManager.findFormatForFileExtension(extension);
+
+      if (!format) {
+        if (extension.empty()) {
+          throw std::domain_error("No file extension provided - cannot detect "
+                                  "audio format to write with for filename: " +
+                                  filename);
+        }
+
+        throw std::domain_error(
+            "Unable to detect audio format for file extension: " + extension);
+      }
     }
 
     // Normalize the input to a string here, as we need to do parsing anyways:
@@ -259,13 +302,14 @@ public:
                                          numChannels, bitDepth, emptyMetadata,
                                          qualityOptionIndex));
     if (!writer) {
+      PythonException::raise();
+
       // Check common errors first:
       juce::Array<int> possibleSampleRates = format->getPossibleSampleRates();
 
       if (possibleSampleRates.isEmpty()) {
         throw std::domain_error(
-            file.getFileExtension().toStdString() +
-            " audio files are not writable with Pedalboard.");
+            extension + " audio files are not writable with Pedalboard.");
       }
 
       if (!possibleSampleRates.contains((int)writeSampleRate)) {
@@ -286,8 +330,7 @@ public:
 
       if (possibleBitDepths.isEmpty()) {
         throw std::domain_error(
-            file.getFileExtension().toStdString() +
-            " audio files are not writable with Pedalboard.");
+            extension + " audio files are not writable with Pedalboard.");
       }
 
       if (!possibleBitDepths.contains((int)bitDepth)) {
@@ -312,12 +355,16 @@ public:
       }
 
       throw std::domain_error(
-          "Unable to create audio file writer with samplerate=" +
-          std::to_string(writeSampleRate) +
+          "Unable to create " + format->getFormatName().toStdString() +
+          " writer with samplerate=" + std::to_string(writeSampleRate) +
           ", num_channels=" + std::to_string(numChannels) + ", bit_depth=" +
           std::to_string(bitDepth) + ", and quality=" + humanReadableQuality);
     } else {
+      // If we have a writer object, it now owns the OutputStream we passed in
+      // - so we need to release it before possibly throwing an exception, or
+      // the stream will leak.
       outputStream.release();
+      PythonException::raise();
     }
   }
 
@@ -372,7 +419,7 @@ public:
       return;
     } else if (numChannels != getNumChannels()) {
       throw std::runtime_error(
-          "WritableAudioFile was opened with num_channels=" +
+          "WriteableAudioFile was opened with num_channels=" +
           std::to_string(getNumChannels()) +
           ", but was passed an array containing " +
           std::to_string(numChannels) + "-channel audio!");
@@ -413,6 +460,7 @@ public:
         if (!write(channelPointers, numChannels, samplesToWrite)) {
           throw std::runtime_error("Unable to write data to audio file.");
         }
+        PythonException::raise();
       }
 
       break;
@@ -427,6 +475,7 @@ public:
       if (!write(channelPointers, numChannels, numSamples)) {
         throw std::runtime_error("Unable to write data to audio file.");
       }
+      PythonException::raise();
       break;
     }
     default:
@@ -610,11 +659,26 @@ public:
     close();
   }
 
+  PythonOutputStream *getPythonOutputStream() const {
+    if (!filename.empty()) {
+      return nullptr;
+    }
+    if (!writer) {
+      return nullptr;
+    }
+
+    // the AudioFormatWriter retains exclusive ownership over the output stream,
+    // and doesn't expose it - so we keep our own reference (which may be
+    // deallocated out from under us!)
+    return unsafeOutputStream;
+  }
+
 private:
   juce::AudioFormatManager formatManager;
   std::string filename;
   std::optional<std::string> quality;
   std::unique_ptr<juce::AudioFormatWriter> writer;
+  PythonOutputStream *unsafeOutputStream = nullptr;
   juce::CriticalSection objectLock;
   int framesWritten = 0;
 };
@@ -631,12 +695,26 @@ inline void init_writeable_audio_file(py::module &m) {
           py::init([](std::string filename, double sampleRate, int numChannels,
                       int bitDepth,
                       std::optional<std::variant<std::string, float>> quality) {
-            return std::make_shared<WriteableAudioFile>(
-                filename, sampleRate, numChannels, bitDepth, quality);
+            // This definition is only here to provide nice docstrings.
+            throw std::runtime_error(
+                "Internal error: __init__ should never be called, as this "
+                "class implements __new__.");
           }),
           py::arg("filename"), py::arg("samplerate"),
           py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
           py::arg("quality") = py::none())
+      .def(py::init([](py::object filelike, double sampleRate, int numChannels,
+                       int bitDepth,
+                       std::optional<std::variant<std::string, float>> quality,
+                       std::optional<std::string> format) {
+             // This definition is only here to provide nice docstrings.
+             throw std::runtime_error(
+                 "Internal error: __init__ should never be called, as this "
+                 "class implements __new__.");
+           }),
+           py::arg("file_like"), py::arg("samplerate"),
+           py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
+           py::arg("quality") = py::none(), py::arg("format") = py::none())
       .def_static(
           "__new__",
           [](const py::object *, std::string filename,
@@ -653,6 +731,43 @@ inline void init_writeable_audio_file(py::module &m) {
           py::arg("cls"), py::arg("filename"),
           py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
           py::arg("bit_depth") = 16, py::arg("quality") = py::none())
+      .def_static(
+          "__new__",
+          [](const py::object *, py::object filelike,
+             std::optional<double> sampleRate, int numChannels, int bitDepth,
+             std::optional<std::variant<std::string, float>> quality,
+             std::optional<std::string> format) {
+            if (!sampleRate) {
+              throw py::type_error(
+                  "Opening an audio file for writing requires a samplerate "
+                  "argument to be provided.");
+            }
+            if (!isWriteableFileLike(filelike)) {
+              throw py::type_error(
+                  "Expected either a filename or a file-like object (with "
+                  "write, seek, seekable, and tell methods), but received: " +
+                  py::repr(filelike).cast<std::string>());
+            }
+
+            auto stream = std::make_unique<PythonOutputStream>(filelike);
+            if (!format && !stream->getFilename()) {
+              throw py::type_error(
+                  "Unable to infer audio file format for writing. Expected "
+                  "either a \".name\" property on the provided file-like "
+                  "object (" +
+                  py::repr(filelike).cast<std::string>() +
+                  ") or an explicit file format passed as the \"format=\" "
+                  "argument.");
+            }
+
+            return std::make_shared<WriteableAudioFile>(
+                format.value_or(""), std::move(stream), sampleRate.value(),
+                numChannels, bitDepth, quality);
+          },
+          py::arg("cls"), py::arg("file_like"),
+          py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
+          py::arg("bit_depth") = 16, py::arg("quality") = py::none(),
+          py::arg("format") = py::none())
       .def(
           "write",
           [](WriteableAudioFile &file, py::array_t<char> samples) {
@@ -725,9 +840,14 @@ inline void init_writeable_audio_file(py::module &m) {
            [](const WriteableAudioFile &file) {
              std::ostringstream ss;
              ss << "<pedalboard.io.WriteableAudioFile";
+
              if (!file.getFilename().empty()) {
                ss << " filename=\"" << file.getFilename() << "\"";
+             } else if (PythonOutputStream *stream =
+                            file.getPythonOutputStream()) {
+               ss << " file_like=" << stream->getRepresentation();
              }
+
              if (file.isClosed()) {
                ss << " closed";
              } else {

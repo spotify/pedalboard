@@ -73,6 +73,7 @@ public:
     formatManager.registerBasicFormats();
 
     if (!inputStream->isSeekable()) {
+      PythonException::raise();
       throw std::domain_error("Failed to open audio file-like object: input "
                               "stream must be seekable.");
     }
@@ -89,11 +90,15 @@ public:
           break;
         }
 
+        // createReaderFor may have thrown a Python exception, under the hood
+        // which we need to check for before blindly continuing:
+        PythonException::raise();
+
         inputStream->setPosition(originalStreamPosition);
         if (inputStream->getPosition() != originalStreamPosition) {
           throw std::runtime_error(
-              "Input file-like object did not seek to expected position. The "
-              "provided file-like object must be fully seekable to allow "
+              "Input file-like object did not seek to the expected position. "
+              "The provided file-like object must be fully seekable to allow "
               "reading audio files.");
         }
       }
@@ -110,6 +115,7 @@ public:
         }
 
         if (!fileLooksLikeAnMP3) {
+          PythonException::raise();
           throw std::domain_error(
               "Failed to open audio file-like object: stream does not seem to "
               "contain a known or supported format. (If trying to open an MP3 "
@@ -119,12 +125,15 @@ public:
       }
     }
 
+    PythonException::raise();
+
     if (!reader)
       throw std::domain_error(
-          "Failed to open audio file-like object: file \"" + filename +
-          "\" does not seem to contain a known or supported format.");
+          "Failed to open audio file-like object: " +
+          inputStream->getRepresentation() +
+          " does not seem to contain a known or supported format.");
 
-    raisePendingPythonExceptions();
+    PythonException::raise();
   }
 
   double getSampleRate() const {
@@ -226,22 +235,25 @@ public:
       }
 
       if (reader->usesFloatingPointData || reader->bitsPerSample == 32) {
-        if (!reader->read(channelPointers, numChannels, currentPosition,
-                          numSamples)) {
+        auto readResult = reader->read(channelPointers, numChannels,
+                                       currentPosition, numSamples);
+        PythonException::raise();
+
+        if (!readResult) {
           throw std::runtime_error("Failed to read from file.");
         }
-        raisePendingPythonExceptions();
       } else {
         // If the audio is stored in an integral format, read it as integers
         // and do the floating-point conversion ourselves to work around
         // floating-point imprecision in JUCE when reading formats smaller than
         // 32-bit (i.e.: 16-bit audio is off by about 0.003%)
-
-        if (!reader->readSamples((int **)channelPointers, numChannels, 0,
-                                 currentPosition, numSamples)) {
+        auto readResult =
+            reader->readSamples((int **)channelPointers, numChannels, 0,
+                                currentPosition, numSamples);
+        PythonException::raise();
+        if (!readResult) {
           throw std::runtime_error("Failed to read from file.");
         }
-        raisePendingPythonExceptions();
 
         // When converting 24-bit, 16-bit, or 8-bit data from int to float,
         // the values provided by the above read() call are shifted left
@@ -342,11 +354,12 @@ public:
           channelPointers[c] = ((int *)outputInfo.ptr) + (numSamples * c);
         }
 
-        if (!reader->readSamples(channelPointers, numChannels, 0,
-                                 currentPosition, numSamples)) {
+        auto readResult = reader->readSamples(channelPointers, numChannels, 0,
+                                              currentPosition, numSamples);
+        PythonException::raise();
+        if (!readResult) {
           throw std::runtime_error("Failed to read from file.");
         }
-        raisePendingPythonExceptions();
       } else {
         // Read the file in smaller chunks, converting from int32 to the
         // appropriate output format as we go:
@@ -365,12 +378,15 @@ public:
             channelPointers[c] = intBuffers[c].data();
           }
 
-          if (!reader->readSamples(channelPointers, numChannels, 0,
-                                   currentPosition + startSample,
-                                   samplesToRead)) {
+          auto readResult =
+              reader->readSamples(channelPointers, numChannels, 0,
+                                  currentPosition + startSample, samplesToRead);
+
+          PythonException::raise();
+
+          if (!readResult) {
             throw std::runtime_error("Failed to read from file.");
           }
-          raisePendingPythonExceptions();
 
           // Convert the data in intBuffers to the output format:
           char shift = 32 - reader->bitsPerSample;
@@ -449,11 +465,6 @@ public:
     close();
   }
 
-  void raisePendingPythonExceptions() {
-    if (auto *inputStream = getPythonInputStream())
-      inputStream->raisePendingPythonExceptions();
-  }
-
 private:
   juce::AudioFormatManager formatManager;
   std::string filename;
@@ -472,19 +483,17 @@ inline void init_readable_audio_file(py::module &m) {
       "pedalboard.io.get_supported_read_formats() to see which formats are "
       "supported on the current platform.)")
       .def(py::init([](std::string filename) {
-             return std::make_shared<ReadableAudioFile>(filename);
+             // This definition is only here to provide nice docstrings.
+             throw std::runtime_error(
+                 "Internal error: __init__ should never be called, as this "
+                 "class implements __new__.");
            }),
            py::arg("filename"))
       .def(py::init([](py::object filelike) {
-             if (!isReadableFileLike(filelike)) {
-               throw py::type_error(
-                   "Expected either a filename or a file-like object (with "
-                   "read, seek, seekable, and tell methods), but received: " +
-                   filelike.attr("__repr__")().cast<std::string>());
-             }
-
-             return std::make_shared<ReadableAudioFile>(
-                 std::make_unique<PythonInputStream>(filelike));
+             // This definition is only here to provide nice docstrings.
+             throw std::runtime_error(
+                 "Internal error: __init__ should never be called, as this "
+                 "class implements __new__.");
            }),
            py::arg("file_like"))
       .def_static(
@@ -493,6 +502,20 @@ inline void init_readable_audio_file(py::module &m) {
             return std::make_shared<ReadableAudioFile>(filename);
           },
           py::arg("cls"), py::arg("filename"))
+      .def_static(
+          "__new__",
+          [](const py::object *, py::object filelike) {
+            if (!isReadableFileLike(filelike)) {
+              throw py::type_error(
+                  "Expected either a filename or a file-like object (with "
+                  "read, seek, seekable, and tell methods), but received: " +
+                  py::repr(filelike).cast<std::string>());
+            }
+
+            return std::make_shared<ReadableAudioFile>(
+                std::make_unique<PythonInputStream>(filelike));
+          },
+          py::arg("cls"), py::arg("file_like"))
       .def(
           "read", &ReadableAudioFile::read, py::arg("num_frames") = 0,
           "Read the given number of frames (samples in each channel) from this "
@@ -526,10 +549,7 @@ inline void init_readable_audio_file(py::module &m) {
                ss << " filename=\"" << file.getFilename() << "\"";
              } else if (PythonInputStream *stream =
                             file.getPythonInputStream()) {
-               ss << " file_like="
-                  << stream->getFileLikeObject()
-                         .attr("__repr__")()
-                         .cast<std::string>();
+               ss << " file_like=" << stream->getRepresentation();
              }
 
              if (file.isClosed()) {
