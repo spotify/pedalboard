@@ -22,6 +22,7 @@ import wave
 import pathlib
 import shutil
 import pytest
+import platform
 import pedalboard
 from typing import Optional
 
@@ -797,6 +798,10 @@ def test_bad_write_quality(tmp_path: pathlib.Path, extension: str, quality):
         pedalboard.io.WriteableAudioFile(filename, samplerate=44100, quality=quality)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="Windows file handling behaves differently, for some reason",
+)
 def test_file_not_created_if_constructor_error_thrown(tmp_path: pathlib.Path):
     filename = str(tmp_path / "test.wav")
     assert not os.path.exists(filename)
