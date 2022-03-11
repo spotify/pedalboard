@@ -127,7 +127,7 @@ public:
 
       py::bytes bytesObject = readResult.cast<py::bytes>();
       char *pythonBuffer = nullptr;
-      ssize_t pythonLength = 0;
+      py::ssize_t pythonLength = 0;
 
       if (PYBIND11_BYTES_AS_STRING_AND_SIZE(bytesObject.ptr(), &pythonBuffer,
                                             &pythonLength)) {
