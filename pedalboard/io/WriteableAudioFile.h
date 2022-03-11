@@ -225,15 +225,14 @@ public:
       // Use the pythonOutputStream's filename if possible, falling back to the
       // provided filename string (which should contain an extension) if
       // necessary.
-      std::string filenameOrFormat;
       if (!filename.empty()) {
-        filenameOrFormat = ("." + filename);
+        extension = filename;
       } else if (auto streamName = pythonOutputStream->getFilename()) {
-        filenameOrFormat = streamName.value();
+        // Dummy-stream-filename added here to avoid a JUCE assertion
+        // if the stream name doesn't start with a slash.
+        juce::File file(File::getSeparatorString().toStdString() + "dummy-stream-filename-" + streamName.value());
+        extension = file.getFileExtension().toStdString();
       }
-
-      juce::File file(filenameOrFormat);
-      extension = file.getFileExtension().toStdString();
 
       format = formatManager.findFormatForFileExtension(extension);
 
@@ -869,7 +868,8 @@ inline void init_writeable_audio_file(py::module &m) {
       .def_property_readonly("samplerate", &WriteableAudioFile::getSampleRate,
                              "The sample rate of this file in samples "
                              "(per channel) per second (Hz).")
-      .def_property_readonly("channels", &WriteableAudioFile::getNumChannels,
+      .def_property_readonly("num_channels",
+                             &WriteableAudioFile::getNumChannels,
                              "The number of channels in this file.")
       .def_property_readonly("frames", &WriteableAudioFile::getFramesWritten,
                              "The total number of frames (samples per "

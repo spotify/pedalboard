@@ -148,7 +148,7 @@ def test_basic_formats_available_on_all_platforms(extension: str):
 def test_basic_read(audio_filename: str, samplerate: float):
     af = pedalboard.io.AudioFile(audio_filename)
     assert af.samplerate == samplerate
-    assert af.channels == 1
+    assert af.num_channels == 1
     if any(ext in audio_filename for ext in EXPECT_LENGTH_TO_BE_EXACT):
         assert af.frames == int(samplerate * EXPECTED_DURATION_SECONDS)
     else:
@@ -172,12 +172,14 @@ def test_basic_read(audio_filename: str, samplerate: float):
     assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS / 2))
 
     assert f"samplerate={int(af.samplerate)}" in repr(af)
-    assert f"num_channels={af.channels}" in repr(af)
+    assert f"num_channels={af.num_channels}" in repr(af)
     assert f"file_dtype={af.file_dtype}" in repr(af)
 
     af.seek(0)
     actual = af.read(af.frames)
-    expected = generate_sine_at(af.samplerate, num_channels=af.channels, num_seconds=af.duration)
+    expected = generate_sine_at(
+        af.samplerate, num_channels=af.num_channels, num_seconds=af.duration
+    )
     # Crop the ends of the file, as lossy formats sometimes don't encode the whole file:
     actual = actual[:, : len(expected)]
     tolerance = get_tolerance_for_format_and_bit_depth(
@@ -188,7 +190,7 @@ def test_basic_read(audio_filename: str, samplerate: float):
     af.close()
 
     with pytest.raises(RuntimeError):
-        af.channels
+        af.num_channels
 
     with pytest.raises(RuntimeError):
         af.read(1)
@@ -207,7 +209,7 @@ def test_read_raw(audio_filename: str, samplerate: float):
 def test_use_reader_as_context_manager(audio_filename: str, samplerate: float):
     with pedalboard.io.AudioFile(audio_filename) as af:
         assert af.samplerate == samplerate
-        assert af.channels == 1
+        assert af.num_channels == 1
         if any(ext in audio_filename for ext in EXPECT_LENGTH_TO_BE_EXACT):
             assert af.frames == int(samplerate * EXPECTED_DURATION_SECONDS)
         else:
@@ -231,10 +233,10 @@ def test_use_reader_as_context_manager(audio_filename: str, samplerate: float):
         assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS / 2))
 
         assert f"samplerate={int(af.samplerate)}" in repr(af)
-        assert f"num_channels={af.channels}" in repr(af)
+        assert f"num_channels={af.num_channels}" in repr(af)
 
     with pytest.raises(RuntimeError):
-        af.channels
+        af.num_channels
 
     with pytest.raises(RuntimeError):
         af.read(1)
@@ -257,7 +259,7 @@ def test_read_okay_without_extension(
     try:
         with pedalboard.io.AudioFile(dest_path) as af:
             assert af.samplerate == samplerate
-            assert af.channels == 1
+            assert af.num_channels == 1
     except Exception:
         if ".mp3" in audio_filename:
             # Skip this test - due to a bug in JUCE's MP3 reader on Linux/Windows,
@@ -286,7 +288,7 @@ def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
 
     with af:
         assert af.samplerate == samplerate
-        assert af.channels == 1
+        assert af.num_channels == 1
         if any(ext in audio_filename for ext in EXPECT_LENGTH_TO_BE_EXACT):
             assert af.frames == int(samplerate * EXPECTED_DURATION_SECONDS)
         else:
@@ -310,11 +312,11 @@ def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
         assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS / 2))
 
         assert f"samplerate={int(af.samplerate)}" in repr(af)
-        assert f"num_channels={af.channels}" in repr(af)
+        assert f"num_channels={af.num_channels}" in repr(af)
         assert repr(stream) in repr(af)
 
     with pytest.raises(RuntimeError):
-        af.channels
+        af.num_channels
 
     with pytest.raises(RuntimeError):
         af.read(1)
@@ -521,7 +523,7 @@ def test_basic_write(
     assert os.path.getsize(filename) > 0
     with pedalboard.io.ReadableAudioFile(filename) as af:
         assert af.samplerate == samplerate
-        assert af.channels == num_channels
+        assert af.num_channels == num_channels
         tolerance = get_tolerance_for_format_and_bit_depth(extension, input_format, af.file_dtype)
         as_written = af.read(num_samples)
         np.testing.assert_allclose(original_audio, np.squeeze(as_written), atol=tolerance)
@@ -642,7 +644,7 @@ def test_write_to_seekable_stream(
 
     with pedalboard.io.AudioFile(stream) as af:
         assert af.samplerate == samplerate
-        assert af.channels == num_channels
+        assert af.num_channels == num_channels
         tolerance = get_tolerance_for_format_and_bit_depth(extension, input_format, af.file_dtype)
         as_written = af.read(num_samples)
         np.testing.assert_allclose(original_audio, np.squeeze(as_written), atol=tolerance)

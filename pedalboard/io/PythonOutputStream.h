@@ -95,7 +95,7 @@ public:
     py::gil_scoped_acquire acquire;
 
     try {
-      const size_t maxEffectiveSize = std::min(numTimesToRepeat, 8192UL);
+      const size_t maxEffectiveSize = std::min(numTimesToRepeat, (size_t)8192);
       std::vector<char> buffer(maxEffectiveSize, byte);
 
       for (size_t i = 0; i < numTimesToRepeat; i += buffer.size()) {

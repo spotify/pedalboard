@@ -572,7 +572,7 @@ inline void init_readable_audio_file(py::module &m) {
       .def_property_readonly("samplerate", &ReadableAudioFile::getSampleRate,
                              "The sample rate of this file in samples "
                              "(per channel) per second (Hz).")
-      .def_property_readonly("channels", &ReadableAudioFile::getNumChannels,
+      .def_property_readonly("num_channels", &ReadableAudioFile::getNumChannels,
                              "The number of channels in this file.")
       .def_property_readonly("frames", &ReadableAudioFile::getLengthInSamples,
                              "The total number of frames (samples per "

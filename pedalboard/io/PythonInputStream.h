@@ -102,49 +102,57 @@ public:
     if (PythonException::isPending())
       return 0;
 
-    py::bytes resultBytes;
-    {
-      py::gil_scoped_acquire acquire;
-      try {
-        auto readResult = fileLike.attr("read")(bytesToRead);
+    py::gil_scoped_acquire acquire;
+    try {
+      auto readResult = fileLike.attr("read")(bytesToRead);
 
-        if (!py::isinstance<py::bytes>(readResult)) {
-          std::string message =
-              "File-like object passed to AudioFile was expected to return "
-              "bytes from its read(...) method, but "
-              "returned " +
-              py::str(readResult.get_type().attr("__name__"))
-                  .cast<std::string>() +
-              ".";
+      if (!py::isinstance<py::bytes>(readResult)) {
+        std::string message =
+            "File-like object passed to AudioFile was expected to return "
+            "bytes from its read(...) method, but "
+            "returned " +
+            py::str(readResult.get_type().attr("__name__"))
+                .cast<std::string>() +
+            ".";
 
-          if (py::hasattr(fileLike, "mode") &&
-              fileLike.attr("mode").cast<std::string>() == "r") {
-            message += " (Try opening the stream in \"rb\" mode instead of "
-                       "\"r\" mode if possible.)";
-          }
-
-          throw py::type_error(message);
-          return 0;
+        if (py::hasattr(fileLike, "mode") &&
+            py::str(fileLike.attr("mode")).cast<std::string>() == "r") {
+          message += " (Try opening the stream in \"rb\" mode instead of "
+                     "\"r\" mode if possible.)";
         }
 
-        resultBytes = readResult.cast<py::bytes>();
-      } catch (py::error_already_set e) {
-        e.restore();
-        return 0;
-      } catch (const py::builtin_exception &e) {
-        e.set_error();
+        throw py::type_error(message);
         return 0;
       }
+
+      py::bytes bytesObject = readResult.cast<py::bytes>();
+      char *pythonBuffer = nullptr;
+      ssize_t pythonLength = 0;
+
+      if (PYBIND11_BYTES_AS_STRING_AND_SIZE(bytesObject.ptr(), &pythonBuffer,
+                                            &pythonLength)) {
+        throw py::buffer_error(
+            "Internal error: failed to read bytes from bytes object!");
+      }
+
+      if (!buffer && pythonLength > 0) {
+        throw py::buffer_error("Internal error: bytes pointer is null, but a "
+                               "non-zero number of bytes were returned!");
+      }
+
+      if (buffer && pythonLength) {
+        std::memcpy(buffer, pythonBuffer, pythonLength);
+      }
+
+      lastReadWasSmallerThanExpected = bytesToRead > pythonLength;
+      return pythonLength;
+    } catch (py::error_already_set e) {
+      e.restore();
+      return 0;
+    } catch (const py::builtin_exception &e) {
+      e.set_error();
+      return 0;
     }
-
-    std::string resultAsString = resultBytes;
-    std::memcpy((char *)buffer, (char *)resultAsString.data(),
-                resultAsString.size());
-
-    int bytesCopied = resultAsString.size();
-
-    lastReadWasSmallerThanExpected = bytesToRead > bytesCopied;
-    return bytesCopied;
   }
 
   bool isExhausted() noexcept {
