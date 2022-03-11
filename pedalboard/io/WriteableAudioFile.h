@@ -144,11 +144,6 @@ public:
     return juce::FileOutputStream::truncate();
   }
 
-  virtual bool setPosition(juce::int64 pos) override {
-    deleteFileOnDestruction = false;
-    return juce::FileOutputStream::setPosition(pos);
-  }
-
   virtual bool write(const void *bytes, size_t len) override {
     if (!hasWrittenToFile) {
       setPosition(0);
