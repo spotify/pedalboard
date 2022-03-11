@@ -215,7 +215,8 @@ enum class ExternalPluginReloadType {
 
 template <typename ExternalPluginType> class ExternalPlugin : public Plugin {
 public:
-  ExternalPlugin(std::string &_pathToPluginFile)
+  ExternalPlugin(std::string &_pathToPluginFile,
+                 std::optional<std::string> pluginName = {})
       : pathToPluginFile(_pathToPluginFile) {
     py::gil_scoped_release release;
     // Ensure we have a MessageManager, which is required by the VST wrapper
@@ -245,7 +246,45 @@ public:
     pluginList.scanAndAddFile(pluginFileStripped, false, typesFound, format);
 
     if (!typesFound.isEmpty()) {
-      foundPluginDescription = *typesFound[0];
+      if (typesFound.size() == 1) {
+        foundPluginDescription = *typesFound[0];
+      } else if (typesFound.size() > 1) {
+        std::string errorMessage =
+            "Plugin file " + pathToPluginFile.toStdString() + " contains " +
+            std::to_string(typesFound.size()) + " plugins";
+
+        // Use the provided plugin name to disambiguate:
+        if (pluginName) {
+          for (int i = 0; i < typesFound.size(); i++) {
+            if (typesFound[i]->name.toStdString() == pluginName.value()) {
+              foundPluginDescription = *typesFound[i];
+              break;
+            }
+          }
+
+          if (foundPluginDescription.name.isEmpty()) {
+            errorMessage += ", and the provided plugin_name \"" +
+                            pluginName.value() + "\" matched no plugins. ";
+          }
+        } else {
+          errorMessage += ". ";
+        }
+
+        if (foundPluginDescription.name.isEmpty()) {
+          juce::StringArray pluginNames;
+          for (int i = 0; i < typesFound.size(); i++) {
+            pluginNames.add(typesFound[i]->name);
+          }
+
+          errorMessage +=
+              ("To open a specific plugin within this file, pass a "
+               "\"plugin_name\" parameter with one of the following "
+               "values:\n\t\"" +
+               pluginNames.joinIntoString("\"\n\t\"").toStdString() + "\"");
+          throw std::domain_error(errorMessage);
+        }
+      }
+
       reinstantiatePlugin();
     } else {
 #if JUCE_LINUX
@@ -358,6 +397,13 @@ public:
 
     juce::String loadError;
     {
+      if (foundPluginDescription.numInputChannels == 0) {
+        throw std::invalid_argument(
+          "Plugin '" + foundPluginDescription.name.toStdString() +
+          "' does not accept audio input. It may be an instrument plug-in "
+          "and not an audio effect processor.");
+      }
+
       std::lock_guard<std::mutex> lock(EXTERNAL_PLUGIN_MUTEX);
       pluginInstance = pluginFormatManager.createPluginInstance(
           foundPluginDescription, ExternalLoadSampleRate,
@@ -373,15 +419,6 @@ public:
 
       auto mainInputBus = pluginInstance->getBus(true, 0);
       auto mainOutputBus = pluginInstance->getBus(false, 0);
-
-      if (!mainInputBus) {
-        auto exception = std::invalid_argument(
-            "Plugin '" + pluginInstance->getName().toStdString() +
-            "' does not accept audio input. It may be an instrument plug-in "
-            "and not an audio effect processor.");
-        pluginInstance.reset();
-        throw exception;
-      }
 
       if (!mainOutputBus) {
         auto exception = std::invalid_argument(
@@ -904,11 +941,12 @@ inline void init_external_plugins(py::module &m) {
       "(i.e.: if you're running Linux but trying to open a VST that does not "
       "support Linux, this will fail).",
       py::dynamic_attr())
-      .def(py::init([](std::string &pathToPluginFile) {
-             return new ExternalPlugin<juce::VST3PluginFormat>(
-                 pathToPluginFile);
+      .def(py::init([](std::string &pathToPluginFile,
+                       std::optional<std::string> pluginName) {
+             return std::make_unique<ExternalPlugin<juce::VST3PluginFormat>>(
+                 pathToPluginFile, pluginName);
            }),
-           py::arg("path_to_plugin_file"))
+           py::arg("path_to_plugin_file"), py::arg("plugin_name") = py::none())
       .def("__repr__",
            [](ExternalPlugin<juce::VST3PluginFormat> &plugin) {
              std::ostringstream ss;
@@ -930,6 +968,12 @@ inline void init_external_plugins(py::module &m) {
           "plugins in this list are not guaranteed to be compatible with "
           "Pedalboard.")
       .def_property_readonly(
+          "name",
+          [](ExternalPlugin<juce::VST3PluginFormat> &plugin) {
+            return plugin.getName().toStdString();
+          },
+          "The name of this plugin.")
+      .def_property_readonly(
           "_parameters", &ExternalPlugin<juce::VST3PluginFormat>::getParameters,
           py::return_value_policy::reference_internal)
       .def("_get_parameter",
@@ -948,11 +992,13 @@ inline void init_external_plugins(py::module &m) {
       "A wrapper around any Apple Audio Unit audio effect plugin. Only "
       "available on macOS.",
       py::dynamic_attr())
-      .def(py::init([](std::string &pathToPluginFile) {
-             return new ExternalPlugin<juce::AudioUnitPluginFormat>(
-                 pathToPluginFile);
+      .def(py::init([](std::string &pathToPluginFile,
+                       std::optional<std::string> pluginName) {
+             return std::make_unique<
+                 ExternalPlugin<juce::AudioUnitPluginFormat>>(pathToPluginFile,
+                                                              pluginName);
            }),
-           py::arg("path_to_plugin_file"))
+           py::arg("path_to_plugin_file"), py::arg("plugin_name") = py::none())
       .def("__repr__",
            [](const ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
              std::ostringstream ss;
@@ -971,6 +1017,12 @@ inline void init_external_plugins(py::module &m) {
           "location on this system. This list may not be exhaustive, and "
           "plugins in this list are not guaranteed to be compatible with "
           "Pedalboard.")
+      .def_property_readonly(
+          "name",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.getName().toStdString();
+          },
+          "The name of this plugin.")
       .def_property_readonly(
           "_parameters",
           &ExternalPlugin<juce::AudioUnitPluginFormat>::getParameters,

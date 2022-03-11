@@ -1,6 +1,6 @@
 [submodule "JUCE"]
 	path = JUCE
-	url = https://github.com/juce-framework/JUCE.git
+	url = https://github.com/psobot/JUCE.git
 [submodule "vendors/rubberband"]
 	path = vendors/rubberband
 	url = https://github.com/BreakfastQuay/Rubberband.git

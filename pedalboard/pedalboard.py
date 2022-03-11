@@ -525,8 +525,15 @@ try:
             self,
             path_to_plugin_file: str,
             parameter_values: Dict[str, Union[str, int, float, bool]] = {},
+            plugin_name: Optional[str] = None,
         ):
-            super().__init__(path_to_plugin_file)
+            if not isinstance(parameter_values, dict):
+                raise TypeError(
+                    "Expected a dictionary to be passed to parameter_values, but received a"
+                    f" {type(parameter_values).__name__}. (If passing a plugin name, pass"
+                    " \"plugin_name=...\" as a keyword argument instead.)"
+                )
+            super().__init__(path_to_plugin_file, plugin_name)
             self.__set_initial_parameter_values__(parameter_values)
 
 
@@ -542,8 +549,15 @@ try:
             self,
             path_to_plugin_file: str,
             parameter_values: Dict[str, Union[str, int, float, bool]] = {},
+            plugin_name: Optional[str] = None,
         ):
-            super().__init__(path_to_plugin_file)
+            if not isinstance(parameter_values, dict):
+                raise TypeError(
+                    "Expected a dictionary to be passed to parameter_values, but received a"
+                    f" {type(parameter_values).__name__}. (If passing a plugin name, pass"
+                    " \"plugin_name=...\" as a keyword argument instead.)"
+                )
+            super().__init__(path_to_plugin_file, plugin_name)
             self.__set_initial_parameter_values__(parameter_values)
 
 

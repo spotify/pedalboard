@@ -53,6 +53,15 @@ if os.getenv("CIBW_TEST_REQUIRES") or os.getenv("CI"):
         f for f in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT if "component" not in f
     ]
 
+# Waves is the only known plugin vendor who regularly bundles multiple VSTs/AUs into one file:
+KNOWN_CONTAINER_PLUGIN_NAMES = {"WaveShell"}
+
+AVAILABLE_CONTAINER_PLUGINS_IN_TEST_ENVIRONMENT = [
+    filename
+    for filename in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
+    if any(container_name in filename for container_name in KNOWN_CONTAINER_PLUGIN_NAMES)
+]
+
 
 def get_parameters(plugin_filename: str):
     return load_test_plugin(plugin_filename).parameters
@@ -144,8 +153,15 @@ if os.environ.get("ENABLE_TESTING_WITH_LOCAL_PLUGINS", False):
             try:
                 load_test_plugin(plugin_path)
                 AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT.append(plugin_path)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Tried to load {plugin_path} for local testing, but failed with: {e}")
+
+            # Even if the plugin failed to load, add it to
+            # the list of known container plugins if necessary:
+            if any(
+                container_name in plugin_path for container_name in KNOWN_CONTAINER_PLUGIN_NAMES
+            ):
+                AVAILABLE_CONTAINER_PLUGINS_IN_TEST_ENVIRONMENT.append(plugin_path)
 
 
 def plugin_named(*substrings: str) -> Optional[str]:
@@ -675,3 +691,30 @@ def test_show_editor(plugin_filename: str):
     except subprocess.TimeoutExpired:
         # This is good: the UI was shown, no issues.
         pass
+
+
+@pytest.mark.skipif(
+    not AVAILABLE_CONTAINER_PLUGINS_IN_TEST_ENVIRONMENT,
+    reason="No plugin containers installed in test environment!",
+)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_CONTAINER_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_plugin_container_handling(plugin_filename: str):
+    """
+    Some plugins can have multiple sub-plugins within them.
+    As of v0.4.5, Pedalboard requires indicating the specific plugin to open within the container.
+    These plugins will fail by default:
+    """
+    with pytest.raises(ValueError) as e:
+        load_test_plugin(plugin_filename, disable_caching=True)
+    assert plugin_filename in str(e)
+    assert "plugin_name" in str(e)
+
+    # Hackily parse out the plugin names:
+    message = e.value.args[0]
+    plugin_names = [line.strip().strip("\"") for line in message.split("\n")[1:]]
+    assert f"{len(plugin_names)} plugins" in message
+
+    # Try to re-load each of the component plugins here:
+    for plugin_name in plugin_names:
+        plugin = load_test_plugin(plugin_filename, disable_caching=True, plugin_name=plugin_name)
+        assert plugin_name == plugin.name
