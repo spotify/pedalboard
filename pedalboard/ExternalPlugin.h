@@ -134,6 +134,7 @@ static std::vector<std::string> getPluginNamesForFile(std::string filename) {
   std::string errorMessage = "Unable to scan plugin " + filename +
                              ": unsupported plugin format or scan failure.";
 
+#if JUCE_PLUGINHOST_AU && JUCE_MAC
   if constexpr (std::is_same<ExternalPluginType,
                              juce::AudioUnitPluginFormat>::value) {
     auto identifiers = getAudioUnitIdentifiersFromFile(filename);
@@ -148,6 +149,9 @@ static std::vector<std::string> getPluginNamesForFile(std::string filename) {
   } else {
     format.findAllTypesForFile(typesFound, filename);
   }
+#else
+  format.findAllTypesForFile(typesFound, filename);
+#endif
 
   if (typesFound.isEmpty()) {
     throw pybind11::import_error(errorMessage);
@@ -289,6 +293,7 @@ public:
                                    ": plugin file not found.");
     }
 
+#if JUCE_PLUGINHOST_AU && JUCE_MAC
     if constexpr (std::is_same<ExternalPluginType,
                                juce::AudioUnitPluginFormat>::value) {
       auto identifiers = getAudioUnitIdentifiersFromFile(pluginFileStripped);
@@ -299,6 +304,9 @@ public:
     } else {
       format.findAllTypesForFile(typesFound, pluginFileStripped);
     }
+#else
+    format.findAllTypesForFile(typesFound, pluginFileStripped);
+#endif
 
     if (!typesFound.isEmpty()) {
       if (typesFound.size() == 1) {
