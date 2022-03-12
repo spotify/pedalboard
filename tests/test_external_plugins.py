@@ -674,7 +674,7 @@ def test_show_editor(plugin_filename: str):
                 psutil.Process(os.getpid()).exe(),
                 "-c",
                 "import pedalboard;"
-                f"pedalboard.load_plugin(r\"{full_plugin_filename}\").show_editor();",
+                f'pedalboard.load_plugin(r"{full_plugin_filename}").show_editor();',
             ],
             timeout=5,
             stderr=subprocess.STDOUT,
