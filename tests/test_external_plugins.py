@@ -53,13 +53,18 @@ if os.getenv("CIBW_TEST_REQUIRES") or os.getenv("CI"):
         f for f in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT if "component" not in f
     ]
 
-# Waves is the only known plugin vendor who regularly bundles multiple VSTs/AUs into one file:
-KNOWN_CONTAINER_PLUGIN_NAMES = {"WaveShell"}
+
+def is_container_plugin(filename: str):
+    for klass in pedalboard.AVAILABLE_PLUGIN_CLASSES:
+        try:
+            return len(klass.get_plugin_names_for_file(filename)) > 1
+        except ImportError:
+            pass
+    return False
+
 
 AVAILABLE_CONTAINER_PLUGINS_IN_TEST_ENVIRONMENT = [
-    filename
-    for filename in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
-    if any(container_name in filename for container_name in KNOWN_CONTAINER_PLUGIN_NAMES)
+    filename for filename in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT if is_container_plugin(filename)
 ]
 
 
@@ -70,10 +75,7 @@ def get_parameters(plugin_filename: str):
 TEST_PLUGIN_CACHE = {}
 TEST_PLUGIN_ORIGINAL_PARAMETER_CACHE = {}
 
-# If true, copy all test Audio Units into the appropriate install path
-# before running tests. On some versions of macOS, this is necessary or
-# else Audio Units won't load.
-TEMPORARILY_INSTALL_AUDIO_UNITS = True
+
 PLUGIN_FILES_TO_DELETE = set()
 MACOS_PLUGIN_INSTALL_PATH = Path.home() / "Library" / "Audio" / "Plug-Ins" / "Components"
 
@@ -91,13 +93,9 @@ def load_test_plugin(plugin_filename: str, disable_caching: bool = False, *args,
     if key not in TEST_PLUGIN_CACHE or disable_caching:
         plugin_path = os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_filename)
 
-        if (
-            platform.system() == "Darwin"
-            and plugin_filename.endswith(".component")
-            and TEMPORARILY_INSTALL_AUDIO_UNITS
-        ):
-            # On certain macOS machines, it seems AudioUnit components must be
-            # installed in ~/Library/Audio/Plug-Ins/Components in order to be loaded.
+        if platform.system() == "Darwin" and plugin_filename.endswith(".component"):
+            # On macOS, AudioUnit components must be installed in
+            # ~/Library/Audio/Plug-Ins/Components in order to be loaded.
             installed_plugin_path = os.path.join(MACOS_PLUGIN_INSTALL_PATH, plugin_filename)
             plugin_already_installed = os.path.exists(installed_plugin_path)
             if not plugin_already_installed:
@@ -158,9 +156,7 @@ if os.environ.get("ENABLE_TESTING_WITH_LOCAL_PLUGINS", False):
 
             # Even if the plugin failed to load, add it to
             # the list of known container plugins if necessary:
-            if any(
-                container_name in plugin_path for container_name in KNOWN_CONTAINER_PLUGIN_NAMES
-            ):
+            if is_container_plugin(plugin_path):
                 AVAILABLE_CONTAINER_PLUGINS_IN_TEST_ENVIRONMENT.append(plugin_path)
 
 
@@ -678,7 +674,7 @@ def test_show_editor(plugin_filename: str):
                 psutil.Process(os.getpid()).exe(),
                 "-c",
                 "import pedalboard;"
-                f'pedalboard.load_plugin(r"{full_plugin_filename}").show_editor();',
+                f"pedalboard.load_plugin(r\"{full_plugin_filename}\").show_editor();",
             ],
             timeout=5,
             stderr=subprocess.STDOUT,
@@ -702,7 +698,7 @@ def test_plugin_container_handling(plugin_filename: str):
     """
     Some plugins can have multiple sub-plugins within them.
     As of v0.4.5, Pedalboard requires indicating the specific plugin to open within the container.
-    These plugins will fail by default:
+    These plugins will fail by default.
     """
     with pytest.raises(ValueError) as e:
         load_test_plugin(plugin_filename, disable_caching=True)
@@ -711,10 +707,41 @@ def test_plugin_container_handling(plugin_filename: str):
 
     # Hackily parse out the plugin names:
     message = e.value.args[0]
-    plugin_names = [line.strip().strip("\"") for line in message.split("\n")[1:]]
+    plugin_names = [line.strip().strip('"') for line in message.split("\n")[1:]]
     assert f"{len(plugin_names)} plugins" in message
 
     # Try to re-load each of the component plugins here:
     for plugin_name in plugin_names:
         plugin = load_test_plugin(plugin_filename, disable_caching=True, plugin_name=plugin_name)
         assert plugin_name == plugin.name
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_get_plugin_name_from_regular_plugin(plugin_filename: str):
+    plugin_path = os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_filename)
+    if ".vst3" in plugin_filename:
+        names = pedalboard.VST3Plugin.get_plugin_names_for_file(plugin_path)
+    elif ".component" in plugin_filename:
+        names = pedalboard.AudioUnitPlugin.get_plugin_names_for_file(plugin_path)
+    else:
+        raise ValueError("Plugin does not seem to be a .vst3 or .component.")
+
+    assert len(names) == 1
+    assert load_test_plugin(plugin_filename).name == names[0]
+
+
+@pytest.mark.skipif(
+    not AVAILABLE_CONTAINER_PLUGINS_IN_TEST_ENVIRONMENT,
+    reason="No plugin containers installed in test environment!",
+)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_CONTAINER_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_get_plugin_names_from_container(plugin_filename: str):
+    plugin_path = os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_filename)
+    if ".vst3" in plugin_filename:
+        names = pedalboard.VST3Plugin.get_plugin_names_for_file(plugin_path)
+    elif ".component" in plugin_filename:
+        names = pedalboard.AudioUnitPlugin.get_plugin_names_for_file(plugin_path)
+    else:
+        raise ValueError("Plugin does not seem to be a .vst3 or .component.")
+
+    assert len(names) > 1

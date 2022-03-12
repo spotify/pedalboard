@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 import platform
 import weakref
 from functools import update_wrapper
@@ -151,7 +152,10 @@ BooleanWithParameter = wrap_type(WrappedBool)
 # expose every possible MIDI CC value as a separate parameter
 # (i.e.: MIDI CC [0-16]|[0-128], resulting in 2,048 parameters).
 # This hugely delays load times and adds complexity to the interface.
-PARAMETER_NAME_SUBSTRINGS_TO_IGNORE = {"MIDI CC "}
+# Guitar Rig also seems to expose 512 parameters, each matching "P\d\d\d"
+PARAMETER_NAME_REGEXES_TO_IGNORE = set(
+    [re.compile(pattern) for pattern in ["MIDI CC ", r"P\d\d\d"]]
+)
 
 TRUE_BOOLEANS = {"on", "yes", "true", "enabled"}
 
@@ -446,9 +450,7 @@ class ExternalPlugin(object):
 
         parameters = {}
         for cpp_parameter in self._parameters:
-            if any(
-                [substr in cpp_parameter.name for substr in PARAMETER_NAME_SUBSTRINGS_TO_IGNORE]
-            ):
+            if any([regex.match(cpp_parameter.name) for regex in PARAMETER_NAME_REGEXES_TO_IGNORE]):
                 continue
             if cpp_parameter.name not in self.__python_parameter_cache__:
                 self.__python_parameter_cache__[cpp_parameter.name] = AudioProcessorParameter(
@@ -531,7 +533,7 @@ try:
                 raise TypeError(
                     "Expected a dictionary to be passed to parameter_values, but received a"
                     f" {type(parameter_values).__name__}. (If passing a plugin name, pass"
-                    " \"plugin_name=...\" as a keyword argument instead.)"
+                    ' "plugin_name=..." as a keyword argument instead.)'
                 )
             super().__init__(path_to_plugin_file, plugin_name)
             self.__set_initial_parameter_values__(parameter_values)
@@ -555,7 +557,7 @@ try:
                 raise TypeError(
                     "Expected a dictionary to be passed to parameter_values, but received a"
                     f" {type(parameter_values).__name__}. (If passing a plugin name, pass"
-                    " \"plugin_name=...\" as a keyword argument instead.)"
+                    ' "plugin_name=..." as a keyword argument instead.)'
                 )
             super().__init__(path_to_plugin_file, plugin_name)
             self.__set_initial_parameter_values__(parameter_values)

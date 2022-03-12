@@ -188,6 +188,8 @@ if platform.system() == "Darwin":
         )
         if matching_cpp_source:
             ALL_SOURCE_PATHS[ALL_SOURCE_PATHS.index(matching_cpp_source)] = objc_source
+        else:
+            ALL_SOURCE_PATHS.append(objc_source)
     ALL_RESOLVED_SOURCE_PATHS = [str(p.resolve()) for p in ALL_SOURCE_PATHS]
 elif platform.system() == "Linux":
     for package in ['freetype2']:

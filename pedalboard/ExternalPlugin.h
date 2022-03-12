@@ -25,8 +25,13 @@
 #include <sys/utsname.h>
 #endif
 
+#include "AudioUnitParser.h"
 #include "Plugin.h"
 #include <pybind11/stl.h>
+
+#if JUCE_MAC
+#include <AudioToolbox/AudioUnitUtilities.h>
+#endif
 
 namespace Pedalboard {
 
@@ -34,6 +39,11 @@ namespace Pedalboard {
 // to play nicely with the Python interpreter.
 static std::mutex EXTERNAL_PLUGIN_MUTEX;
 static int NUM_ACTIVE_EXTERNAL_PLUGINS = 0;
+
+static const std::string AUDIO_UNIT_NOT_INSTALLED_ERROR =
+    "macOS requires plugin files to be moved to "
+    "/Library/Audio/Plug-Ins/Components/ or "
+    "~/Library/Audio/Plug-Ins/Components/ before loading.";
 
 inline std::vector<std::string> findInstalledVSTPluginPaths() {
   // Ensure we have a MessageManager, which is required by the VST wrapper
@@ -109,6 +119,46 @@ private:
   }
 };
 #endif
+
+static bool audioUnitIsInstalled(const juce::String audioUnitFilePath) {
+  return audioUnitFilePath.contains("/Library/Audio/Plug-Ins/Components/");
+}
+
+template <typename ExternalPluginType>
+static std::vector<std::string> getPluginNamesForFile(std::string filename) {
+  juce::MessageManager::getInstance();
+
+  ExternalPluginType format;
+  juce::OwnedArray<juce::PluginDescription> typesFound;
+
+  std::string errorMessage = "Unable to scan plugin " + filename +
+                             ": unsupported plugin format or scan failure.";
+
+  if constexpr (std::is_same<ExternalPluginType,
+                             juce::AudioUnitPluginFormat>::value) {
+    auto identifiers = getAudioUnitIdentifiersFromFile(filename);
+    // For each plugin in the identified bundle, scan using its AU identifier:
+    for (int i = 0; i < identifiers.size(); i++) {
+      format.findAllTypesForFile(typesFound, identifiers[i]);
+    }
+
+    if (typesFound.isEmpty() && !audioUnitIsInstalled(filename)) {
+      errorMessage += " " + AUDIO_UNIT_NOT_INSTALLED_ERROR;
+    }
+  } else {
+    format.findAllTypesForFile(typesFound, filename);
+  }
+
+  if (typesFound.isEmpty()) {
+    throw pybind11::import_error(errorMessage);
+  }
+
+  std::vector<std::string> pluginNames;
+  for (int i = 0; i < typesFound.size(); i++) {
+    pluginNames.push_back(typesFound[i]->name.toStdString());
+  }
+  return pluginNames;
+}
 
 class StandalonePluginWindow : public juce::DocumentWindow {
 public:
@@ -223,13 +273,9 @@ public:
     // Without this, we get an assert(false) from JUCE at runtime
     juce::MessageManager::getInstance();
 
-    juce::KnownPluginList pluginList;
-
     juce::OwnedArray<juce::PluginDescription> typesFound;
     ExternalPluginType format;
 
-    juce::String pluginLoadError =
-        "Plugin not found or not in the appropriate format.";
     pluginFormatManager.addDefaultFormats();
 
     auto pluginFileStripped =
@@ -243,7 +289,16 @@ public:
                                    ": plugin file not found.");
     }
 
-    pluginList.scanAndAddFile(pluginFileStripped, false, typesFound, format);
+    if constexpr (std::is_same<ExternalPluginType,
+                               juce::AudioUnitPluginFormat>::value) {
+      auto identifiers = getAudioUnitIdentifiersFromFile(pluginFileStripped);
+      // For each plugin in the identified bundle, scan using its AU identifier:
+      for (int i = 0; i < identifiers.size(); i++) {
+        format.findAllTypesForFile(typesFound, identifiers[i]);
+      }
+    } else {
+      format.findAllTypesForFile(typesFound, pluginFileStripped);
+    }
 
     if (!typesFound.isEmpty()) {
       if (typesFound.size() == 1) {
@@ -287,6 +342,9 @@ public:
 
       reinstantiatePlugin();
     } else {
+      std::string errorMessage = "Unable to load plugin " +
+                                 pathToPluginFile.toStdString() +
+                                 ": unsupported plugin format or load failure.";
 #if JUCE_LINUX
       auto machineName = []() -> juce::String {
         struct utsname unameData;
@@ -305,30 +363,20 @@ public:
               .getChildFile(machineName + "-linux")
               .getChildFile(pluginBundle.getFileNameWithoutExtension() + ".so");
 
-      throw pybind11::import_error(
-          "Unable to load plugin " + pathToPluginFile.toStdString() +
-          ": unsupported plugin format or load failure. Plugin files or " +
-          "shared library dependencies may be missing. (Try running `ldd \"" +
-          pathToSharedObjectFile.getFullPathName().toStdString() + "\"` to " +
-          "see which dependencies might be missing.).");
+      errorMessage += " Plugin files or shared library dependencies may be "
+                      "missing. (Try running `ldd \"" +
+                      pathToSharedObjectFile.getFullPathName().toStdString() +
+                      "\"` to see which dependencies might be missing.).";
 #else
-
-// On certain Macs, plugins will only load if installed in the appropriate path.
-#if JUCE_MAC
-      bool pluginIsInstalled =
-          pluginFileStripped.contains("/Library/Audio/Plug-Ins/Components/");
-      if (!pluginIsInstalled) {
-        throw pybind11::import_error(
-            "Unable to load plugin " + pathToPluginFile.toStdString() +
-            ": unsupported plugin format or load failure. Plugin file may need "
-            "to be moved to /Library/Audio/Plug-Ins/Components/ or "
-            "~/Library/Audio/Plug-Ins/Components/.");
+      if constexpr (std::is_same<ExternalPluginType,
+                                 juce::AudioUnitPluginFormat>::value) {
+        if (!audioUnitIsInstalled(pathToPluginFile)) {
+          errorMessage += " " + AUDIO_UNIT_NOT_INSTALLED_ERROR;
+        }
       }
 #endif
-      throw pybind11::import_error(
-          "Unable to load plugin " + pathToPluginFile.toStdString() +
-          ": unsupported plugin format or load failure.");
-#endif
+
+      throw pybind11::import_error(errorMessage);
     }
   }
 
@@ -375,7 +423,8 @@ public:
   }
 
   void reinstantiatePlugin() {
-    // If we have an existing plugin, save its state and reload its state later:
+    // If we have an existing plugin, save its state and reload its state
+    // later:
     juce::MemoryBlock savedState;
     std::map<int, float> currentParameters;
 
@@ -399,9 +448,9 @@ public:
     {
       if (foundPluginDescription.numInputChannels == 0) {
         throw std::invalid_argument(
-          "Plugin '" + foundPluginDescription.name.toStdString() +
-          "' does not accept audio input. It may be an instrument plug-in "
-          "and not an audio effect processor.");
+            "Plugin '" + foundPluginDescription.name.toStdString() +
+            "' does not accept audio input. It may be an instrument plug-in "
+            "and not an audio effect processor.");
       }
 
       std::lock_guard<std::mutex> lock(EXTERNAL_PLUGIN_MUTEX);
@@ -451,9 +500,9 @@ public:
     pluginInstance->setStateInformation(savedState.getData(),
                                         savedState.getSize());
 
-    // Set all of the parameters twice: we may have meta-parameters that change
-    // the validity of other `setValue` calls. (i.e.: param1 can't be set until
-    // param2 is set.)
+    // Set all of the parameters twice: we may have meta-parameters that
+    // change the validity of other `setValue` calls. (i.e.: param1 can't be
+    // set until param2 is set.)
     for (int i = 0; i < 2; i++) {
       for (auto *parameter : pluginInstance->getParameters()) {
         if (currentParameters.count(parameter->getParameterIndex()) > 0) {
@@ -681,7 +730,8 @@ public:
         lastSpec.maximumBlockSize < spec.maximumBlockSize ||
         lastSpec.numChannels != spec.numChannels) {
 
-      // Changing the number of channels requires releaseResources to be called:
+      // Changing the number of channels requires releaseResources to be
+      // called:
       if (lastSpec.numChannels != spec.numChannels) {
         pluginInstance->releaseResources();
         setNumChannels(spec.numChannels);
@@ -906,7 +956,8 @@ inline void init_external_plugins(py::module &m) {
           },
           py::arg("string_value"),
           "Returns the raw value of the supplied text. Plugins may handle "
-          "errors however they see fit, but will likely not raise exceptions.")
+          "errors however they see fit, but will likely not raise "
+          "exceptions.")
       .def_property_readonly(
           "is_orientation_inverted",
           &juce::AudioProcessorParameter::isOrientationInverted,
@@ -915,10 +966,11 @@ inline void init_external_plugins(py::module &m) {
       .def_property_readonly("is_automatable",
                              &juce::AudioProcessorParameter::isAutomatable,
                              "Returns true if this parameter can be automated.")
-      .def_property_readonly(
-          "is_automatable", &juce::AudioProcessorParameter::isAutomatable,
-          "Returns true if this parameter can be automated (i.e.: scheduled to "
-          "change over time, in real-time, in a DAW).")
+      .def_property_readonly("is_automatable",
+                             &juce::AudioProcessorParameter::isAutomatable,
+                             "Returns true if this parameter can be "
+                             "automated (i.e.: scheduled to "
+                             "change over time, in real-time, in a DAW).")
       .def_property_readonly(
           "is_meta_parameter", &juce::AudioProcessorParameter::isMetaParameter,
           "A meta-parameter is a parameter that changes other parameters.")
@@ -960,6 +1012,14 @@ inline void init_external_plugins(py::module &m) {
            &ExternalPlugin<juce::VST3PluginFormat>::loadPresetData,
            "Load a VST3 preset file in .vstpreset format.",
            py::arg("preset_file_path"))
+      .def_static(
+          "get_plugin_names_for_file",
+          [](std::string filename) {
+            return getPluginNamesForFile<juce::VST3PluginFormat>(filename);
+          },
+          "Return a list of plugin names contained within a given VST3 "
+          "plugin (i.e.: a \".vst3\"). If the provided file cannot be scanned, "
+          "an ImportError will be raised.")
       .def_property_readonly_static(
           "installed_plugins",
           [](py::object /* cls */) { return findInstalledVSTPluginPaths(); },
@@ -1008,6 +1068,14 @@ inline void init_external_plugins(py::module &m) {
              ss << ">";
              return ss.str();
            })
+      .def_static(
+          "get_plugin_names_for_file",
+          [](std::string filename) {
+            return getPluginNamesForFile<juce::AudioUnitPluginFormat>(filename);
+          },
+          "Return a list of plugin names contained within a given Audio Unit "
+          "bundle (i.e.: a \".component\"). If the provided file cannot be "
+          "scanned, an ImportError will be raised.")
       .def_property_readonly_static(
           "installed_plugins",
           [](py::object /* cls */) {
