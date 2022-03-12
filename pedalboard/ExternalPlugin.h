@@ -375,7 +375,7 @@ public:
                       "missing. (Try running `ldd \"" +
                       pathToSharedObjectFile.getFullPathName().toStdString() +
                       "\"` to see which dependencies might be missing.).";
-#else
+#elif JUCE_PLUGINHOST_AU && JUCE_MAC
       if constexpr (std::is_same<ExternalPluginType,
                                  juce::AudioUnitPluginFormat>::value) {
         if (!audioUnitIsInstalled(pathToPluginFile)) {
