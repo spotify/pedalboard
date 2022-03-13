@@ -21,15 +21,12 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
+#include "BufferUtils.h"
 #include "Plugin.h"
 
 namespace py = pybind11;
 
 namespace Pedalboard {
-enum class ChannelLayout {
-  Interleaved,
-  NotInterleaved,
-};
 
 /**
  * Non-float32 overload.
@@ -55,152 +52,6 @@ processSingle(const py::array_t<SampleType, py::array::c_style> inputArray,
   std::vector<std::shared_ptr<Plugin>> plugins{plugin};
   return process<SampleType>(inputArray, sampleRate, plugins, bufferSize,
                              reset);
-}
-
-template <typename T>
-ChannelLayout
-detectChannelLayout(const py::array_t<T, py::array::c_style> inputArray) {
-  py::buffer_info inputInfo = inputArray.request();
-
-  if (inputInfo.ndim == 1) {
-    return ChannelLayout::Interleaved;
-  } else if (inputInfo.ndim == 2) {
-    // Try to auto-detect the channel layout from the shape
-    if (inputInfo.shape[1] < inputInfo.shape[0]) {
-      return ChannelLayout::Interleaved;
-    } else if (inputInfo.shape[0] < inputInfo.shape[1]) {
-      return ChannelLayout::NotInterleaved;
-    } else {
-      throw std::runtime_error(
-          "Unable to determine channel layout from shape!");
-    }
-  } else {
-    throw std::runtime_error("Number of input dimensions must be 1 or 2 (got " +
-                             std::to_string(inputInfo.ndim) + ").");
-  }
-}
-
-template <typename T>
-juce::AudioBuffer<T>
-copyPyArrayIntoJuceBuffer(const py::array_t<T, py::array::c_style> inputArray) {
-  // Numpy/Librosa convention is (num_samples, num_channels)
-  py::buffer_info inputInfo = inputArray.request();
-
-  unsigned int numChannels = 0;
-  unsigned int numSamples = 0;
-  ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
-
-  if (inputInfo.ndim == 1) {
-    numSamples = inputInfo.shape[0];
-    numChannels = 1;
-  } else if (inputInfo.ndim == 2) {
-    // Try to auto-detect the channel layout from the shape
-    if (inputInfo.shape[1] < inputInfo.shape[0]) {
-      numSamples = inputInfo.shape[0];
-      numChannels = inputInfo.shape[1];
-    } else if (inputInfo.shape[0] < inputInfo.shape[1]) {
-      numSamples = inputInfo.shape[1];
-      numChannels = inputInfo.shape[0];
-    } else {
-      throw std::runtime_error("Unable to determine shape of audio input!");
-    }
-  } else {
-    throw std::runtime_error("Number of input dimensions must be 1 or 2 (got " +
-                             std::to_string(inputInfo.ndim) + ").");
-  }
-
-  if (numChannels == 0) {
-    throw std::runtime_error("No channels passed!");
-  } else if (numChannels > 2) {
-    throw std::runtime_error("More than two channels received!");
-  }
-
-  juce::AudioBuffer<T> ioBuffer(numChannels, numSamples);
-
-  // Depending on the input channel layout, we need to copy data
-  // differently. This loop is duplicated here to move the if statement
-  // outside of the tight loop, as we don't need to re-check that the input
-  // channel is still the same on every iteration of the loop.
-  switch (inputChannelLayout) {
-  case ChannelLayout::Interleaved:
-    for (unsigned int i = 0; i < numChannels; i++) {
-      T *channelBuffer = ioBuffer.getWritePointer(i);
-      // We're de-interleaving the data here, so we can't use copyFrom.
-      for (unsigned int j = 0; j < numSamples; j++) {
-        channelBuffer[j] = static_cast<T *>(inputInfo.ptr)[j * numChannels + i];
-      }
-    }
-    break;
-  case ChannelLayout::NotInterleaved:
-    for (unsigned int i = 0; i < numChannels; i++) {
-      ioBuffer.copyFrom(
-          i, 0, static_cast<T *>(inputInfo.ptr) + (numSamples * i), numSamples);
-    }
-    break;
-  default:
-    throw std::runtime_error("Internal error: got unexpected channel layout.");
-  }
-
-  return ioBuffer;
-}
-
-template <typename T>
-py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> juceBuffer,
-                                         ChannelLayout channelLayout,
-                                         int offsetSamples, int ndim = 2) {
-  unsigned int numChannels = juceBuffer.getNumChannels();
-  unsigned int numSamples = juceBuffer.getNumSamples();
-  unsigned int outputSampleCount =
-      std::max((int)numSamples - (int)offsetSamples, 0);
-
-  // TODO: Avoid the need to copy here if offsetSamples is 0!
-  py::array_t<T> outputArray;
-  if (ndim == 2) {
-    switch (channelLayout) {
-    case ChannelLayout::Interleaved:
-      outputArray = py::array_t<T>({outputSampleCount, numChannels});
-      break;
-    case ChannelLayout::NotInterleaved:
-      outputArray = py::array_t<T>({numChannels, outputSampleCount});
-      break;
-    default:
-      throw std::runtime_error(
-          "Internal error: got unexpected channel layout.");
-    }
-  } else {
-    outputArray = py::array_t<T>(outputSampleCount);
-  }
-
-  py::buffer_info outputInfo = outputArray.request();
-
-  // Depending on the input channel layout, we need to copy data
-  // differently. This loop is duplicated here to move the if statement
-  // outside of the tight loop, as we don't need to re-check that the input
-  // channel is still the same on every iteration of the loop.
-  T *outputBasePointer = static_cast<T *>(outputInfo.ptr);
-
-  switch (channelLayout) {
-  case ChannelLayout::Interleaved:
-    for (unsigned int i = 0; i < numChannels; i++) {
-      const T *channelBuffer = juceBuffer.getReadPointer(i, offsetSamples);
-      // We're interleaving the data here, so we can't use copyFrom.
-      for (unsigned int j = 0; j < outputSampleCount; j++) {
-        outputBasePointer[j * numChannels + i] = channelBuffer[j];
-      }
-    }
-    break;
-  case ChannelLayout::NotInterleaved:
-    for (unsigned int i = 0; i < numChannels; i++) {
-      const T *channelBuffer = juceBuffer.getReadPointer(i, offsetSamples);
-      std::copy(channelBuffer, channelBuffer + outputSampleCount,
-                &outputBasePointer[outputSampleCount * i]);
-    }
-    break;
-  default:
-    throw std::runtime_error("Internal error: got unexpected channel layout.");
-  }
-
-  return outputArray;
 }
 
 inline int process(juce::AudioBuffer<float> &ioBuffer,
