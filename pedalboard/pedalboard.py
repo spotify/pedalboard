@@ -46,11 +46,21 @@ FLOAT_SUFFIXES_TO_IGNORE = set(["x", "%", "*", ",", ".", "hz"])
 
 
 def strip_common_float_suffixes(s: str) -> str:
-    value = s.lower().strip()
+    s = s.strip()
+
+    # Handle certain plugins that report "Hz" and "kHz" suffixes:
+    if s.lower().endswith("khz") and len(s) > 3:
+        try:
+            s = str(float(s[:-3]) * 1000)
+        except ValueError:
+            pass
+
     for suffix in FLOAT_SUFFIXES_TO_IGNORE:
-        if value[-len(suffix) :] == suffix:
-            value = value[: -len(suffix)].strip()
-    return value
+        if suffix == "hz" and "khz" in s.lower():
+            continue
+        if s[-len(suffix) :].lower() == suffix.lower():
+            s = s[: -len(suffix)].strip()
+    return s
 
 
 def looks_like_float(s: str) -> bool:
