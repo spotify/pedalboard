@@ -31,6 +31,7 @@ namespace py = pybind11;
 #include "JucePlugin.h"
 #include "Plugin.h"
 #include "PluginContainer.h"
+#include "PythonPlugin.h"
 #include "process.h"
 
 #include "plugin_templates/FixedBlockSize.h"
@@ -177,6 +178,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_reverb(m);
 
   init_external_plugins(m);
+  init_python_plugin(m);
 
   // Plugins that don't perform any audio effects, but that add other utilities:
   py::module utils = m.def_submodule("utils");

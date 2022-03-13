@@ -64,8 +64,17 @@ copyPyArrayIntoJuceBuffer(const py::array_t<T, py::array::c_style> inputArray) {
     numSamples = inputInfo.shape[0];
     numChannels = 1;
   } else if (inputInfo.ndim == 2) {
-    // Try to auto-detect the channel layout from the shape
-    if (inputInfo.shape[1] < inputInfo.shape[0]) {
+    // Try to auto-detect the channel layout from the shape.
+    // Assume that if one dimension is 0 but the other is not, the 0 dimension
+    // must be the number of samples (as it's meaningless to provide <n> samples
+    // of 0-channel audio).
+    if (inputInfo.shape[0] == 0 && inputInfo.shape[1] != 0) {
+      numSamples = inputInfo.shape[0];
+      numChannels = inputInfo.shape[1];
+    } else if (inputInfo.shape[0] != 0 && inputInfo.shape[1] == 0) {
+      numSamples = inputInfo.shape[1];
+      numChannels = inputInfo.shape[0];
+    } else if (inputInfo.shape[1] < inputInfo.shape[0]) {
       numSamples = inputInfo.shape[0];
       numChannels = inputInfo.shape[1];
     } else if (inputInfo.shape[0] < inputInfo.shape[1]) {
