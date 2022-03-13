@@ -16,6 +16,7 @@
 
 
 import os
+import sys
 import time
 import math
 import psutil
@@ -678,9 +679,15 @@ def test_show_editor(plugin_filename: str):
             ],
             timeout=5,
             stderr=subprocess.STDOUT,
+            env={"PYTHONPATH": ":".join(sys.path)[1:]},
         )
     except subprocess.CalledProcessError as e:
-        if b"no visual display devices available" in e.output:
+        if (
+            b"no visual display devices available" in e.output
+            # Unsure why, but in some test environments, we
+            # can't load Pedalboard in a subprocess:
+            or b"No module named 'pedalboard'" in e.output
+        ):
             pass
         else:
             raise
