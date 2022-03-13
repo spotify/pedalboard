@@ -319,15 +319,15 @@ public:
         // Use the provided plugin name to disambiguate:
         if (pluginName) {
           for (int i = 0; i < typesFound.size(); i++) {
-            if (typesFound[i]->name.toStdString() == pluginName.value()) {
+            if (typesFound[i]->name.toStdString() == *pluginName) {
               foundPluginDescription = *typesFound[i];
               break;
             }
           }
 
           if (foundPluginDescription.name.isEmpty()) {
-            errorMessage += ", and the provided plugin_name \"" +
-                            pluginName.value() + "\" matched no plugins. ";
+            errorMessage += ", and the provided plugin_name \"" + *pluginName +
+                            "\" matched no plugins. ";
           }
         } else {
           errorMessage += ". ";

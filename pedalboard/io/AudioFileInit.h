@@ -99,7 +99,7 @@ inline void init_audio_file(py::module &m) {
               }
 
               return std::make_shared<WriteableAudioFile>(
-                  filename, sampleRate.value(), numChannels, bitDepth, quality);
+                  filename, *sampleRate, numChannels, bitDepth, quality);
             } else {
               throw py::type_error("AudioFile instances can only be opened in "
                                    "read mode (\"r\") or write mode (\"w\").");
@@ -146,7 +146,7 @@ inline void init_audio_file(py::module &m) {
               }
 
               return std::make_shared<WriteableAudioFile>(
-                  format.value_or(""), std::move(stream), sampleRate.value(),
+                  format.value_or(""), std::move(stream), *sampleRate,
                   numChannels, bitDepth, quality);
             } else {
               throw py::type_error("AudioFile instances can only be opened in "

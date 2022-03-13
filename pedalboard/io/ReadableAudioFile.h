@@ -110,8 +110,7 @@ public:
       if (reader && reader->getFormatName() == "MP3 file") {
         bool fileLooksLikeAnMP3 = false;
         if (auto filename = getPythonInputStream()->getFilename()) {
-          fileLooksLikeAnMP3 =
-              juce::File(filename.value()).hasFileExtension("mp3");
+          fileLooksLikeAnMP3 = juce::File(*filename).hasFileExtension("mp3");
         }
 
         if (!fileLooksLikeAnMP3) {

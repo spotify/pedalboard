@@ -227,7 +227,7 @@ public:
         // if the stream name doesn't start with a slash.
         juce::File file(
             juce::String(juce::File::getSeparatorString()).toStdString() +
-            "dummy-stream-filename-" + streamName.value());
+            "dummy-stream-filename-" + *streamName);
         extension = file.getFileExtension().toStdString();
       }
 
@@ -237,7 +237,7 @@ public:
         if (pythonOutputStream->getFilename()) {
           throw std::domain_error("Unable to detect audio format to use for "
                                   "file-like object with filename: " +
-                                  pythonOutputStream->getFilename().value());
+                                  *(pythonOutputStream->getFilename()));
         } else {
           throw std::domain_error(
               "Provided format argument (\"" + filename +
@@ -275,9 +275,9 @@ public:
     // Normalize the input to a string here, as we need to do parsing anyways:
     std::string qualityString;
     if (qualityInput) {
-      if (auto *q = std::get_if<std::string>(&qualityInput.value())) {
+      if (auto *q = std::get_if<std::string>(&(*qualityInput))) {
         qualityString = *q;
-      } else if (auto *q = std::get_if<float>(&qualityInput.value())) {
+      } else if (auto *q = std::get_if<float>(&(*qualityInput))) {
         if (isInteger(*q)) {
           qualityString = std::to_string((int)*q);
         } else {
@@ -723,7 +723,7 @@ inline void init_writeable_audio_file(py::module &m) {
                   "argument to be provided.");
             }
             return std::make_shared<WriteableAudioFile>(
-                filename, sampleRate.value(), numChannels, bitDepth, quality);
+                filename, *sampleRate, numChannels, bitDepth, quality);
           },
           py::arg("cls"), py::arg("filename"),
           py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
@@ -758,7 +758,7 @@ inline void init_writeable_audio_file(py::module &m) {
             }
 
             return std::make_shared<WriteableAudioFile>(
-                format.value_or(""), std::move(stream), sampleRate.value(),
+                format.value_or(""), std::move(stream), *sampleRate,
                 numChannels, bitDepth, quality);
           },
           py::arg("cls"), py::arg("file_like"),
@@ -851,7 +851,7 @@ inline void init_writeable_audio_file(py::module &m) {
                ss << " samplerate=" << file.getSampleRate();
                ss << " num_channels=" << file.getNumChannels();
                if (file.getQuality()) {
-                 ss << " quality=\"" << file.getQuality().value() << "\"";
+                 ss << " quality=\"" << *file.getQuality() << "\"";
                }
                ss << " file_dtype=" << file.getFileDatatype();
              }
