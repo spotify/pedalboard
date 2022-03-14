@@ -666,34 +666,18 @@ def test_external_plugin_latency_compensation(buffer_size: int, oversampling: in
 
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_show_editor(plugin_filename: str):
-    # Run this test in a subprocess, as otherwise we'd block this thread:
-    full_plugin_filename = os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_filename)
+    plugin = load_test_plugin(plugin_filename)
+
+    start = time.time()
+    # Close the editor window after 1 second.
+    should_close_callback = lambda: time.time() > (start + 1)
     try:
-        subprocess.check_output(
-            [
-                psutil.Process(os.getpid()).exe(),
-                "-c",
-                "import pedalboard;"
-                f'pedalboard.load_plugin(r"{full_plugin_filename}").show_editor();',
-            ],
-            timeout=5,
-            stderr=subprocess.STDOUT,
-        )
-    except subprocess.CalledProcessError as e:
-        if (
-            b"no visual display devices available" in e.output
-            # Unsure why, but in some test environments, we
-            # can't load Pedalboard in a subprocess.
-            # TODO(psobot): Ensure we can load Pedalboard properly
-            # in all environments for this test.
-            or b"No module named 'pedalboard'" in e.output
-        ):
+        plugin.show_editor(should_close_callback)
+    except RuntimeError as e:
+        if "no visual display devices available" in str(e):
             pass
         else:
             raise
-    except subprocess.TimeoutExpired:
-        # This is good: the UI was shown, no issues.
-        pass
 
 
 @pytest.mark.skipif(

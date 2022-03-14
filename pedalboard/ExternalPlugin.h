@@ -27,6 +27,7 @@
 
 #include "AudioUnitParser.h"
 #include "Plugin.h"
+#include <pybind11/functional.h>
 #include <pybind11/stl.h>
 
 #if JUCE_MAC
@@ -167,7 +168,7 @@ static std::vector<std::string> getPluginNamesForFile(std::string filename) {
 class StandalonePluginWindow : public juce::DocumentWindow {
 public:
   StandalonePluginWindow(juce::AudioProcessor &processor)
-      : DocumentWindow("Pedalboard",
+      : DocumentWindow("Pedalboard - " + processor.getName().toStdString(),
                        juce::LookAndFeel::getDefaultLookAndFeel().findColour(
                            juce::ResizableWindow::backgroundColourId),
                        juce::DocumentWindow::minimiseButton |
@@ -192,8 +193,16 @@ public:
    * pumping the juce::MessageManager run loop as necessary to service
    * UI events.
    */
-  static void openWindowAndWait(juce::AudioProcessor &processor) {
+  static void openWindowAndWait(
+      juce::AudioProcessor &processor,
+      const std::optional<std::function<bool()>> &shouldCloseCallable) {
     bool shouldThrowErrorAlreadySet = false;
+
+    int delayMilliseconds = 10;
+
+    if (shouldCloseCallable) {
+      delayMilliseconds = 100;
+    }
 
     JUCE_AUTORELEASEPOOL {
       StandalonePluginWindow window(processor);
@@ -210,18 +219,37 @@ public:
           break;
         }
 
+        if (shouldCloseCallable) {
+          try {
+            if ((*shouldCloseCallable)()) {
+              window.closeButtonPressed();
+              break;
+            }
+          } catch (py::error_already_set &e) {
+            e.restore();
+            shouldThrowErrorAlreadySet = true;
+            break;
+          } catch (const py::builtin_exception &e) {
+            e.set_error();
+            shouldThrowErrorAlreadySet = true;
+            break;
+          }
+        }
+
         {
           // Release the GIL to allow other Python threads to run in the
           // background while we the UI is running:
           py::gil_scoped_release release;
-          juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+          juce::MessageManager::getInstance()->runDispatchLoopUntil(
+              delayMilliseconds);
         }
       }
     }
 
     // Once the Autorelease pool has been drained, pump the dispatch loop one
     // more time to process any window close events:
-    juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(
+        delayMilliseconds);
 
     if (shouldThrowErrorAlreadySet) {
       throw py::error_already_set();
@@ -850,7 +878,8 @@ public:
     return pluginInstance->getLatencySamples();
   }
 
-  void showEditor() {
+  void
+  showEditor(const std::optional<std::function<bool()>> shouldCloseCallable) {
     if (!pluginInstance) {
       throw std::runtime_error(
           "Editor cannot be shown - plugin not loaded. This is an internal "
@@ -1047,10 +1076,14 @@ inline void init_external_plugins(py::module &m) {
       .def("_get_parameter",
            &ExternalPlugin<juce::VST3PluginFormat>::getParameter,
            py::return_value_policy::reference_internal)
-      .def("show_editor", &ExternalPlugin<juce::VST3PluginFormat>::showEditor,
-           "Show the UI of this plugin as a native window. This method will "
-           "block until the window is closed or a KeyboardInterrupt is "
-           "received.");
+      .def(
+          "show_editor", &ExternalPlugin<juce::VST3PluginFormat>::showEditor,
+          "Show the UI of this plugin as a native window. This method will "
+          "block until the window is closed or a KeyboardInterrupt is "
+          "received. Accepts an optional callback (returning a single boolean) "
+          "that will be called periodically to determine if the window should "
+          "close.",
+          py::arg("should_close_callback") = nullptr);
 #endif
 
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
@@ -1106,11 +1139,14 @@ inline void init_external_plugins(py::module &m) {
       .def("_get_parameter",
            &ExternalPlugin<juce::AudioUnitPluginFormat>::getParameter,
            py::return_value_policy::reference_internal)
-      .def("show_editor",
-           &ExternalPlugin<juce::AudioUnitPluginFormat>::showEditor,
-           "Show the UI of this plugin as a native window. This method will "
-           "block until the window is closed or a KeyboardInterrupt is "
-           "received.");
+      .def(
+          "show_editor",
+          &ExternalPlugin<juce::AudioUnitPluginFormat>::showEditor,
+          "Show the UI of this plugin as a native window. This method will "
+          "block until the window is closed or a KeyboardInterrupt is "
+          "received. Accepts an optional callback (returning a single boolean) "
+          "that will be called periodically to determine if the window should "
+          "close.", py::arg("should_close_callback") = nullptr);
 #endif
 }
 
