@@ -318,6 +318,6 @@ setup(
     ],
     ext_modules=[pedalboard_cpp],
     install_requires=['numpy'],
-    packages=['pedalboard'],
+    packages=['pedalboard', 'pedalboard.io'],
     cmdclass={"build_ext": BuildC_CxxExtensions},
 )
