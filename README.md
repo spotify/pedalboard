@@ -108,7 +108,7 @@ board = Pedalboard([Chorus(), Reverb(room_size=0.25)])
 effected = board(audio, samplerate)
 
 # Write the audio back as a wav file:
-with AudioFile('processed-output.wav', 'w', samplerate) as f:
+with AudioFile('processed-output.wav', 'w', samplerate, effected.shape[0]) as f:
   f.write(effected)
 ```
 
@@ -146,7 +146,7 @@ board[0].threshold_db = -40
 effected = board(audio, samplerate)
 
 # Write the audio back as a wav file:
-with AudioFile('processed-output.wav', 'w', samplerate) as f:
+with AudioFile('processed-output.wav', 'w', samplerate, effected.shape[0]) as f:
   f.write(effected)
 ```
 
