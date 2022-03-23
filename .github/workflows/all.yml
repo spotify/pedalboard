@@ -177,6 +177,9 @@ jobs:
         include:
         - { os: macos-latest, build: cp36-macosx_x86_64 }
         - { os: macos-latest, build: cp37-macosx_x86_64 }
+        - { os: macos-latest, build: cp38-macosx_x86_64 }
+        - { os: macos-latest, build: cp39-macosx_x86_64 }
+        - { os: macos-latest, build: cp310-macosx_x86_64 }
         - { os: macos-latest, build: cp38-macosx_universal2 }
         - { os: macos-latest, build: cp39-macosx_universal2 }
         - { os: macos-latest, build: cp310-macosx_universal2 }
