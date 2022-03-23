@@ -26,6 +26,7 @@
 #include "../BufferUtils.h"
 #include "../JuceHeader.h"
 #include "AudioFile.h"
+#include "LameMP3AudioFormat.h"
 #include "PythonOutputStream.h"
 
 namespace py = pybind11;
@@ -66,6 +67,8 @@ int determineQualityOptionIndex(juce::AudioFormat *format,
       for (int i = 0; i < qualityString.size(); i++) {
         if (juce::CharacterFunctions::isDigit(qualityString[i])) {
           numLeadingDigits++;
+        } else {
+          break;
         }
       }
 
@@ -211,7 +214,13 @@ public:
                            "non-zero num_channels.");
     }
 
-    formatManager.registerBasicFormats();
+    // Don't use registerBasicFormats(), as it'll register the wrong MP3 format:
+    formatManager.registerFormat(new juce::WavAudioFormat(), false);
+    formatManager.registerFormat(new juce::AiffAudioFormat(), false);
+    formatManager.registerFormat(new juce::FlacAudioFormat(), false);
+    formatManager.registerFormat(new juce::OggVorbisAudioFormat(), false);
+    formatManager.registerFormat(new LameMP3AudioFormat(), false);
+
     std::unique_ptr<juce::OutputStream> outputStream;
     juce::AudioFormat *format = nullptr;
     std::string extension;
@@ -318,7 +327,7 @@ public:
         throw std::domain_error(
             format->getFormatName().toStdString() +
             " audio files do not support the provided sample rate of " +
-            std::to_string(writeSampleRate) +
+            juce::String(writeSampleRate, 2).toStdString() +
             "Hz. Supported sample rates: " + sampleRateString.str());
       }
 
@@ -913,7 +922,8 @@ inline void init_writeable_audio_file(py::module &m) {
     // platforms, and there's no easy way to tell which formats are supported
     // without attempting to create an AudioFileWriter object - so this list is
     // hardcoded for now.
-    const std::vector<std::string> formats = {".aiff", ".flac", ".ogg", ".wav"};
+    const std::vector<std::string> formats = {".aiff", ".flac", ".ogg", ".wav",
+                                              ".mp3"};
     return formats;
   });
 }
