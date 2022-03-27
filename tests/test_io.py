@@ -754,7 +754,7 @@ def test_write_empty_file(extension: str, samplerate: float, num_channels: int):
         assert af.num_channels == num_channels
         # The built-in JUCE MP3 reader (only used on Linux and Windows)
         # reads zero-length MP3 files as having exactly one frame.
-        if 'mp3' in extension and platform.system() != "Darwin":
+        if "mp3" in extension and platform.system() != "Darwin":
             assert af.frames <= 1152
             contents = af.read(af.frames)
             np.testing.assert_allclose(np.zeros_like(contents), contents)
