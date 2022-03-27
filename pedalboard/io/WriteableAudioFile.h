@@ -894,33 +894,6 @@ inline void init_writeable_audio_file(py::module &m) {
           "The quality setting used to write this file. For many "
           "formats, this may be None.");
 
-  m.def("get_supported_read_formats", []() {
-    juce::AudioFormatManager manager;
-    manager.registerBasicFormats();
-
-    std::vector<std::string> formatNames(manager.getNumKnownFormats());
-    juce::StringArray extensions;
-    for (int i = 0; i < manager.getNumKnownFormats(); i++) {
-      auto *format = manager.getKnownFormat(i);
-      extensions.addArray(format->getFileExtensions());
-    }
-
-    extensions.trim();
-    extensions.removeEmptyStrings();
-    extensions.removeDuplicates(true);
-
-    std::vector<std::string> output;
-    for (juce::String s : extensions) {
-      output.push_back(s.toStdString());
-    }
-
-    std::sort(
-        output.begin(), output.end(),
-        [](const std::string lhs, const std::string rhs) { return lhs < rhs; });
-
-    return output;
-  });
-
   m.def("get_supported_write_formats", []() {
     // JUCE doesn't support writing other formats out-of-the-box on all
     // platforms, and there's no easy way to tell which formats are supported
