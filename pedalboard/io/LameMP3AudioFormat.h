@@ -227,6 +227,10 @@ public:
         return;
       }
 
+      if (!output->setPosition(0)) {
+        return;
+      }
+
       if (!output->write(buffer, frameTagSize)) {
         return;
       }

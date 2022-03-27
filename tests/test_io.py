@@ -729,6 +729,33 @@ def test_mp3_write(samplerate: float, num_channels: int, qualities):
     assert len(set(file_sizes)) <= len(file_sizes)
 
 
+@pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
+@pytest.mark.parametrize("samplerate", [32000, 44100, 48000])
+@pytest.mark.parametrize("num_channels", [1, 2])
+def test_write_empty_file(extension: str, samplerate: float, num_channels: int):
+    stream = io.BytesIO()
+
+    with pedalboard.io.WriteableAudioFile(
+        stream,
+        samplerate=samplerate,
+        num_channels=num_channels,
+        format=extension,
+    ) as af:
+        pass
+
+    assert len(stream.getvalue()) > 0
+    stream.seek(0)
+
+    with pedalboard.io.AudioFile(stream) as af:
+        assert af.samplerate == samplerate
+        assert af.num_channels == num_channels
+        try:
+            assert af.frames == 0
+        finally:
+            with open("should_be_empty.mp3", "wb") as f:
+                f.write(stream.getvalue())
+
+
 @pytest.mark.parametrize(
     "extension,quality,expected",
     [
