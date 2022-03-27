@@ -735,6 +735,9 @@ def test_mp3_write(samplerate: float, num_channels: int, qualities):
 def test_write_empty_file(extension: str, samplerate: float, num_channels: int):
     stream = io.BytesIO()
 
+    # Set the stream's name so that ReadableAudioFile knows that it's an MP3 on Linux/Windows
+    stream.name = f"test{extension}"
+
     with pedalboard.io.WriteableAudioFile(
         stream,
         samplerate=samplerate,
