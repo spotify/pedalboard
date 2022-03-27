@@ -462,10 +462,12 @@ public:
           }
         }
 
-        if (!write(channelPointers, numChannels, samplesToWrite)) {
+        bool writeSuccessful =
+            write(channelPointers, numChannels, samplesToWrite);
+        PythonException::raise();
+        if (!writeSuccessful) {
           throw std::runtime_error("Unable to write data to audio file.");
         }
-        PythonException::raise();
       }
 
       break;
@@ -477,10 +479,12 @@ public:
       for (int c = 0; c < numChannels; c++) {
         channelPointers[c] = ((SampleType *)inputInfo.ptr) + (numSamples * c);
       }
-      if (!write(channelPointers, numChannels, numSamples)) {
+
+      bool writeSuccessful = write(channelPointers, numChannels, numSamples);
+      PythonException::raise();
+      if (!writeSuccessful) {
         throw std::runtime_error("Unable to write data to audio file.");
       }
-      PythonException::raise();
       break;
     }
     default:

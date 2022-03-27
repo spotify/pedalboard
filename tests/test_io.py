@@ -442,12 +442,14 @@ def test_write_to_non_bytes_stream(extension: str):
         expected_message = e.args[0]
 
     with pytest.raises(TypeError) as e:
-        pedalboard.io.AudioFile(stream, "w", 44100, 2, format=extension)
+        with pedalboard.io.AudioFile(stream, "w", 44100, 2, format=extension) as af:
+            af.write(np.random.rand(1, 2))
 
     assert expected_message in str(e)
 
     with pytest.raises(TypeError) as e:
-        pedalboard.io.WriteableAudioFile(stream, 44100, 2, format=extension)
+        with pedalboard.io.WriteableAudioFile(stream, 44100, 2, format=extension) as af:
+            af.write(np.random.rand(1, 2))
 
     assert expected_message in str(e)
 
@@ -527,6 +529,7 @@ def test_basic_write(
     with pedalboard.io.ReadableAudioFile(filename) as af:
         assert af.samplerate == samplerate
         assert af.num_channels == num_channels
+        assert af.frames >= num_samples
         tolerance = get_tolerance_for_format_and_bit_depth(extension, input_format, af.file_dtype)
         as_written = af.read(num_samples)
         np.testing.assert_allclose(original_audio, np.squeeze(as_written), atol=tolerance)
@@ -691,6 +694,39 @@ def test_fail_to_write_unsigned(tmp_path: pathlib.Path, dtype):
     with pytest.raises(TypeError):
         with pedalboard.io.WriteableAudioFile(filename, samplerate=44100) as af:
             af.write(np.array([1, 2, 3, 4], dtype=dtype))
+
+
+@pytest.mark.parametrize("samplerate", [32000, 44100, 48000])
+@pytest.mark.parametrize("num_channels", [1, 2])
+@pytest.mark.parametrize(
+    "qualities",
+    [
+        ["V9", "V8", "V7", "V6", "V5", "V4", "V3", "V2", "V1", "V0"],
+        [32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
+    ],
+)
+def test_mp3_write(samplerate: float, num_channels: int, qualities):
+    audio = generate_sine_at(samplerate, num_channels=num_channels)
+
+    file_sizes = []
+    for quality in qualities:
+        buffer = io.BytesIO()
+        with pedalboard.io.WriteableAudioFile(
+            buffer,
+            samplerate,
+            num_channels,
+            format="mp3",
+            quality=quality,
+        ) as af:
+            af.write(audio)
+        file_sizes.append(len(buffer.getvalue()))
+
+    # Assert that file sizes change as bitrate changes:
+    assert file_sizes == sorted(file_sizes)
+    # ...and that they don't all share the same output size:
+    # (note that this won't be true for VBR, because it's adaptive)
+    assert len(set(file_sizes)) >= len(file_sizes) // 2
+    assert len(set(file_sizes)) <= len(file_sizes)
 
 
 @pytest.mark.parametrize(

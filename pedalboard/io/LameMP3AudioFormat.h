@@ -23,6 +23,8 @@ extern "C" {
 #include <lame.h>
 }
 
+static const inline int MAXIMUM_MP3_FRAME_SIZE = 7200;
+
 namespace Pedalboard {
 class LameMP3AudioFormat : public juce::AudioFormat {
 public:
@@ -76,9 +78,10 @@ public:
                                   16) {
       usesFloatingPointData = false;
 
-      // Suppress all error logging from LAME
-      // TODO: find out how to catch and report these errors to Python!
+      // Suppress all error logging from LAME directly to stdout
       lame_set_errorf(encoder.getContext(), nullptr);
+      lame_set_debugf(encoder.getContext(), nullptr);
+      lame_set_msgf(encoder.getContext(), nullptr);
 
       if (lame_set_in_samplerate(encoder.getContext(), sampleRate) != 0 ||
           lame_set_out_samplerate(encoder.getContext(), sampleRate) != 0) {
@@ -94,14 +97,12 @@ public:
             std::to_string(numChannels) + "-channel audio.)");
       }
 
-      if (lame_set_VBR(encoder.getContext(), vbr_default) != 0) {
-        throw std::domain_error(
-            "MP3 encoder failed to set variable bit rate flag.");
-      }
-
-      juce::StringArray opts(VBR_OPTIONS);
-
       if (qualityOptionIndex < NUM_VBR_OPTIONS) {
+        if (lame_set_VBR(encoder.getContext(), vbr_default) != 0) {
+          throw std::domain_error(
+              "MP3 encoder failed to set variable bit rate flag.");
+        }
+
         // VBR options:
         if (lame_set_VBR_quality(encoder.getContext(), qualityOptionIndex) !=
             0) {
@@ -111,6 +112,11 @@ public:
         }
       } else if (qualityOptionIndex <
                  (NUM_VBR_OPTIONS + juce::numElementsInArray(CBR_OPTIONS))) {
+        if (lame_set_VBR(encoder.getContext(), vbr_off) != 0) {
+          throw std::domain_error(
+              "MP3 encoder failed to set constant bit rate flag.");
+        }
+
         // CBR options:
         if (lame_set_brate(encoder.getContext(),
                            CBR_OPTIONS[qualityOptionIndex - NUM_VBR_OPTIONS]) !=
@@ -135,20 +141,27 @@ public:
       // automatically deletes this pointer, and we don't want that
       // to happen if our constructor fails.
       output = destStream;
-
-      // Flush the initial header:
-      const int *emptyBuffers[2] = {0};
-      if (!write(emptyBuffers, 0)) {
-        output = nullptr;
-        throw std::runtime_error("Failed to write header!");
-      }
     }
 
-    virtual ~Writer() override { flush(); };
+    virtual ~Writer() override {
+      if (!output)
+        return;
+
+      std::vector<unsigned char> mp3buf(MAXIMUM_MP3_FRAME_SIZE);
+
+      int bytesWritten =
+          lame_encode_flush(encoder.getContext(), mp3buf.data(), mp3buf.size());
+      if (bytesWritten > 0) {
+        output->write(mp3buf.data(), bytesWritten);
+      }
+
+      writeVBRTag();
+      flush();
+    };
 
     virtual bool write(const int **samplesToWrite, int numSamples) {
-      // Constants from the LAME docs
-      std::vector<unsigned char> encodedMp3Buffer(1.25 * numSamples + 7200);
+      std::vector<unsigned char> encodedMp3Buffer(1.25 * numSamples +
+                                                  MAXIMUM_MP3_FRAME_SIZE);
 
       std::vector<std::vector<short>> shortSamples(numChannels);
       for (int c = 0; c < numChannels; c++) {
@@ -162,25 +175,63 @@ public:
           encoder.getContext(), shortSamples[0].data(),
           numChannels == 1 ? nullptr : shortSamples[1].data(), numSamples,
           (unsigned char *)encodedMp3Buffer.data(), encodedMp3Buffer.size());
-      return output->write((unsigned char *)encodedMp3Buffer.data(),
-                           mp3BufferBytesFilled);
+
+      if (mp3BufferBytesFilled < 0) {
+        return false;
+      }
+
+      if (mp3BufferBytesFilled) {
+        return output->write((unsigned char *)encodedMp3Buffer.data(),
+                             mp3BufferBytesFilled);
+      }
+
+      return true;
     }
 
     virtual bool flush() {
       if (!output)
         return false;
-
-      std::vector<unsigned char> mp3buf(7200); // Constant from the LAME docs
-      int bytesWritten = lame_encode_flush_nogap(encoder.getContext(),
-                                                 mp3buf.data(), mp3buf.size());
-
-      if (bytesWritten < 0) {
-        return false;
-      }
-
-      output->write(mp3buf.data(), bytesWritten);
       output->flush();
       return true;
+    }
+
+    void writeVBRTag() {
+      /**
+       * MP3 files in VBR mode are expected to have
+       * a single frame after their ID3 tags indicating
+       * information about how to seek through the
+       * file effectively.
+       *
+       * The LAME encoder automatically
+       * writes an empty frame at the start of the file
+       * with the expectation that the encoder will
+       * overwrite this frame once the file is done.
+       *
+       * LAME assumes we're writing to a file, which
+       * is not true here - we're writing to a seekable
+       * output stream, so we have to reimplement this
+       * logic ourselves.
+       */
+      if (!output)
+        return;
+
+      size_t currentPosition = output->getPosition();
+
+      uint8_t buffer[MAXIMUM_MP3_FRAME_SIZE];
+      size_t frameTagSize =
+          lame_get_lametag_frame(encoder.getContext(), buffer, sizeof(buffer));
+
+      if (frameTagSize > sizeof(buffer)) {
+        return;
+      } else if (frameTagSize < 1) {
+        return;
+      }
+
+      if (!output->write(buffer, frameTagSize)) {
+        return;
+      }
+
+      output->setPosition(currentPosition);
     }
 
   private:
