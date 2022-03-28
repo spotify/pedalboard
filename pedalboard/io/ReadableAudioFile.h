@@ -26,18 +26,35 @@
 #include "../BufferUtils.h"
 #include "../JuceHeader.h"
 #include "AudioFile.h"
+#include "LameMP3AudioFormat.h"
 #include "PythonInputStream.h"
 
 namespace py = pybind11;
 
 namespace Pedalboard {
 
+static inline void
+registerPedalboardReadFormats(juce::AudioFormatManager &formatManager) {
+  // Don't use registerBasicFormats(), as it'll register formats in the wrong
+  // order, preventing our custom MP3 reader from being used on macOS:
+  formatManager.registerFormat(new juce::WavAudioFormat(), false);
+  formatManager.registerFormat(new juce::AiffAudioFormat(), false);
+  formatManager.registerFormat(new juce::FlacAudioFormat(), false);
+  formatManager.registerFormat(new juce::OggVorbisAudioFormat(), false);
+  formatManager.registerFormat(new LameMP3AudioFormat(), false);
+  //   formatManager.registerFormat(new juce::MP3AudioFormat(), false);
+
+  // #if JUCE_MAC || JUCE_IOS
+  //   formatManager.registerFormat(new juce::CoreAudioFormat(), false);
+  // #endif
+}
+
 class ReadableAudioFile
     : public AudioFile,
       public std::enable_shared_from_this<ReadableAudioFile> {
 public:
   ReadableAudioFile(std::string filename) : filename(filename) {
-    formatManager.registerBasicFormats();
+    registerPedalboardReadFormats(formatManager);
     juce::File file(filename);
 
     if (!file.existsAsFile()) {
@@ -587,7 +604,7 @@ inline void init_readable_audio_file(py::module &m) {
 
   m.def("get_supported_read_formats", []() {
     juce::AudioFormatManager manager;
-    manager.registerBasicFormats();
+    registerPedalboardReadFormats(manager);
 
     std::vector<std::string> formatNames(manager.getNumKnownFormats());
     juce::StringArray extensions;

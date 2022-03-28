@@ -46,8 +46,16 @@ public:
     return opts;
   }
 
-  juce::AudioFormatReader *createReaderFor(juce::InputStream *,
+  juce::AudioFormatReader *createReaderFor(juce::InputStream *in,
                                            bool deleteStreamIfOpeningFails) {
+    std::unique_ptr<Reader> r(new Reader(in));
+
+    if (r->sampleRate > 0)
+      return r.release();
+
+    if (!deleteStreamIfOpeningFails)
+      r->input = nullptr;
+
     return nullptr;
   }
 
@@ -69,6 +77,98 @@ public:
     return nullptr;
   }
   using juce::AudioFormat::createWriterFor;
+
+  class Reader : public juce::AudioFormatReader {
+  public:
+    Reader(juce::InputStream *sourceStream)
+        : juce::AudioFormatReader(sourceStream, "MP3") {
+      bitsPerSample = 16;
+
+      // Read the first frame of the file to extract file details:
+      mp3data_struct mp3Header;
+      unsigned char headerReadBuffer[16];
+      short dummySamples[1152];
+      bool frameParsed = false;
+
+      while (!mp3Header.header_parsed) {
+        int bytesRead = input->read(headerReadBuffer, sizeof(headerReadBuffer));
+
+        if (bytesRead == 0) {
+          break;
+        }
+
+        hip_decode1_headers(decoder.getContext(), headerReadBuffer, bytesRead,
+                            dummySamples, dummySamples, &mp3Header);
+      }
+
+      if (!mp3Header.header_parsed) {
+        jassertfalse;
+      } else {
+        sampleRate = mp3Header.samplerate;
+        numChannels = mp3Header.stereo;
+        if (mp3Header.nsamp) {
+          lengthInSamples = mp3Header.nsamp;
+        }
+      }
+
+      input->setPosition(0);
+    }
+
+    virtual bool readSamples(int **destChannels, int numDestChannels,
+                             int startOffsetInDestBuffer,
+                             juce::int64 startSampleInFile,
+                             int numSamples) override {
+      short leftBuffer[1152];
+      short rightBuffer[1152];
+      unsigned char readBuffer[512];
+
+      int samplesOutput = 0;
+      while (samplesOutput < numSamples) {
+        int bytesRead = input->read(readBuffer, sizeof(readBuffer));
+        if (bytesRead == 0) {
+          break;
+        }
+
+        int samplesDecoded = hip_decode1(decoder.getContext(), readBuffer,
+                                         bytesRead, leftBuffer, rightBuffer);
+        switch (samplesDecoded) {
+        case -1:
+          return false; // Decoding error
+        case 0:
+          break; // Need more data
+        default: {
+          // samplesDecoded samples were placed in the output buffers.
+          int samplesToReturn =
+              std::min(numSamples - samplesOutput, samplesDecoded);
+          printf("Writing %d samples to destChannels at (%d + %d)\n",
+                 samplesToReturn, startOffsetInDestBuffer, samplesOutput);
+          for (int c = 0; c < numDestChannels; c++) {
+            short *channelBuffer = c == 0 ? leftBuffer : rightBuffer;
+            for (int i = 0; i < samplesToReturn; i++) {
+              int fullInt = channelBuffer[i] << 16;
+              destChannels[c][i + startOffsetInDestBuffer + samplesOutput] =
+                  fullInt;
+            }
+          }
+
+          samplesOutput += samplesToReturn;
+
+          if (samplesDecoded > numSamples) {
+            // TODO: Bank these samples for the next call to readSamples()
+            int samplesLeftOver = samplesDecoded - numSamples;
+          }
+
+          break;
+        }
+        }
+      }
+
+      return samplesOutput == numSamples;
+    };
+
+  private:
+    DecoderWrapper decoder;
+  };
 
   class Writer : public juce::AudioFormatWriter {
   public:
