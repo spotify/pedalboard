@@ -28,8 +28,7 @@ Internally at Spotify, `pedalboard` is used for [data augmentation](https://en.w
  - Supports VST3® plugins on macOS, Windows, and Linux (`pedalboard.load_plugin`)
  - Supports Audio Units on macOS
  - Built-in audio I/O utilities (`pedalboard.io.AudioFile`)
-   - Support for reading AIFF, FLAC, MP3, OGG, and WAV files on all platforms with no dependencies
-   - Support for writing AIFF, FLAC, OGG, and WAV on all platforms with no dependencies
+   - Support for reading and writing AIFF, FLAC, MP3, OGG, and WAV files on all platforms with no dependencies
    - Additional support for reading AAC, AC3, WMA, and other formats depending on platform
  - Strong thread-safety, memory usage, and speed guarantees
    - Releases Python's Global Interpreter Lock (GIL) to allow use of multiple CPU cores

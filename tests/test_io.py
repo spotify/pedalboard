@@ -66,11 +66,8 @@ def get_tolerance_for_format_and_bit_depth(extension: str, input_format, file_dt
         return 4 / (2 ** file_bit_depth)
 
     # These formats offset the waveform substantially, and these tests don't do any realignment.
-    if extension in {".m4a", ".ac3", ".adts", ".mp4", ".mp2"}:
+    if extension in {".m4a", ".ac3", ".adts", ".mp4", ".mp2", ".mp3"}:
         return 3.0
-
-    if extension in {".mp3"}:
-        return 0.8
 
     return 0.12
 
@@ -445,12 +442,14 @@ def test_write_to_non_bytes_stream(extension: str):
         expected_message = e.args[0]
 
     with pytest.raises(TypeError) as e:
-        pedalboard.io.AudioFile(stream, "w", 44100, 2, format=extension)
+        with pedalboard.io.AudioFile(stream, "w", 44100, 2, format=extension) as af:
+            af.write(np.random.rand(1, 2))
 
     assert expected_message in str(e)
 
     with pytest.raises(TypeError) as e:
-        pedalboard.io.WriteableAudioFile(stream, 44100, 2, format=extension)
+        with pedalboard.io.WriteableAudioFile(stream, 44100, 2, format=extension) as af:
+            af.write(np.random.rand(1, 2))
 
     assert expected_message in str(e)
 
@@ -486,6 +485,11 @@ def test_basic_write(
     transposed: bool,
     input_format,
 ):
+    if extension == ".mp3":
+        if samplerate not in {32000, 44100, 48000}:
+            return
+        if num_channels > 2:
+            return
     filename = str(tmp_path / f"test{extension}")
     original_audio = generate_sine_at(samplerate, num_channels=num_channels)
 
@@ -525,6 +529,7 @@ def test_basic_write(
     with pedalboard.io.ReadableAudioFile(filename) as af:
         assert af.samplerate == samplerate
         assert af.num_channels == num_channels
+        assert af.frames >= num_samples
         tolerance = get_tolerance_for_format_and_bit_depth(extension, input_format, af.file_dtype)
         as_written = af.read(num_samples)
         np.testing.assert_allclose(original_audio, np.squeeze(as_written), atol=tolerance)
@@ -604,6 +609,11 @@ def test_basic_write_int32_to_16_bit_wav(tmp_path: pathlib.Path):
 def test_write_to_seekable_stream(
     extension: str, samplerate: float, num_channels: int, transposed: bool, input_format
 ):
+    if extension == ".mp3":
+        if samplerate not in {32000, 44100, 48000}:
+            return
+        if num_channels > 2:
+            return
     original_audio = generate_sine_at(samplerate, num_channels=num_channels)
 
     write_bit_depth = 16
@@ -659,7 +669,7 @@ def test_fractional_sample_rates(tmp_path: pathlib.Path, extension: str, sampler
         pedalboard.io.WriteableAudioFile(filename, samplerate=samplerate, num_channels=1)
 
 
-@pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
+@pytest.mark.parametrize("extension", set(pedalboard.io.get_supported_write_formats()) - {".mp3"})
 @pytest.mark.parametrize("samplerate", [123, 999, 48001])
 def test_uncommon_sample_rates(tmp_path: pathlib.Path, extension: str, samplerate):
     filename = str(tmp_path / f"test{extension}")
@@ -684,6 +694,72 @@ def test_fail_to_write_unsigned(tmp_path: pathlib.Path, dtype):
     with pytest.raises(TypeError):
         with pedalboard.io.WriteableAudioFile(filename, samplerate=44100) as af:
             af.write(np.array([1, 2, 3, 4], dtype=dtype))
+
+
+@pytest.mark.parametrize("samplerate", [32000, 44100, 48000])
+@pytest.mark.parametrize("num_channels", [1, 2])
+@pytest.mark.parametrize(
+    "qualities",
+    [
+        ["V9", "V8", "V7", "V6", "V5", "V4", "V3", "V2", "V1", "V0"],
+        [32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
+    ],
+)
+def test_mp3_write(samplerate: float, num_channels: int, qualities):
+    audio = generate_sine_at(samplerate, num_channels=num_channels)
+
+    file_sizes = []
+    for quality in qualities:
+        buffer = io.BytesIO()
+        with pedalboard.io.WriteableAudioFile(
+            buffer,
+            samplerate,
+            num_channels,
+            format="mp3",
+            quality=quality,
+        ) as af:
+            af.write(audio)
+        file_sizes.append(len(buffer.getvalue()))
+
+    # Assert that file sizes change as bitrate changes:
+    assert file_sizes == sorted(file_sizes)
+    # ...and that they don't all share the same output size:
+    # (note that this won't be true for VBR, because it's adaptive)
+    assert len(set(file_sizes)) >= len(file_sizes) // 2
+    assert len(set(file_sizes)) <= len(file_sizes)
+
+
+@pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
+@pytest.mark.parametrize("samplerate", [32000, 44100, 48000])
+@pytest.mark.parametrize("num_channels", [1, 2])
+def test_write_empty_file(extension: str, samplerate: float, num_channels: int):
+    stream = io.BytesIO()
+
+    # Set the stream's name so that ReadableAudioFile knows that it's an MP3 on Linux/Windows
+    stream.name = f"test{extension}"
+
+    with pedalboard.io.WriteableAudioFile(
+        stream,
+        samplerate=samplerate,
+        num_channels=num_channels,
+        format=extension,
+    ) as af:
+        pass
+
+    assert len(stream.getvalue()) > 0
+    stream.seek(0)
+
+    with pedalboard.io.AudioFile(stream) as af:
+        assert af.samplerate == samplerate
+        assert af.num_channels == num_channels
+        # The built-in JUCE MP3 reader (only used on Linux and Windows)
+        # reads zero-length MP3 files as having exactly one frame.
+        if "mp3" in extension and platform.system() != "Darwin":
+            assert af.frames <= 1152
+            contents = af.read(af.frames)
+            np.testing.assert_allclose(np.zeros_like(contents), contents)
+        else:
+            assert af.frames == 0
 
 
 @pytest.mark.parametrize(
@@ -764,6 +840,53 @@ def test_fail_to_write_unsigned(tmp_path: pathlib.Path, dtype):
         ("flac", 6, "6"),
         ("flac", 7, "7"),
         ("flac", 8, "8 (Highest quality)"),
+        ("mp3", "V0", "V0 (best)"),
+        ("mp3", "V0 (best)", "V0 (best)"),
+        ("mp3", "best", "V0 (best)"),
+        ("mp3", "V1", "V1"),
+        ("mp3", "V2", "V2"),
+        ("mp3", "V3", "V3"),
+        ("mp3", "V4", "V4 (normal)"),
+        ("mp3", "V4 (normal)", "V4 (normal)"),
+        ("mp3", "normal", "V4 (normal)"),
+        ("mp3", "V5", "V5"),
+        ("mp3", "V6", "V6"),
+        ("mp3", "V7", "V7"),
+        ("mp3", "V8", "V8"),
+        ("mp3", "V9", "V9 (smallest)"),
+        ("mp3", "V9 (smallest)", "V9 (smallest)"),
+        ("mp3", "smallest", "V9 (smallest)"),
+        ("mp3", "", "320 kbps"),
+        ("mp3", "  ", "320 kbps"),
+        ("mp3", None, "320 kbps"),
+        ("mp3", 32, "32 kbps"),
+        ("mp3", 40, "40 kbps"),
+        ("mp3", 48, "48 kbps"),
+        ("mp3", 56, "56 kbps"),
+        ("mp3", 64, "64 kbps"),
+        ("mp3", 80, "80 kbps"),
+        ("mp3", 96, "96 kbps"),
+        ("mp3", 112, "112 kbps"),
+        ("mp3", 128, "128 kbps"),
+        ("mp3", 160, "160 kbps"),
+        ("mp3", 192, "192 kbps"),
+        ("mp3", 224, "224 kbps"),
+        ("mp3", 256, "256 kbps"),
+        ("mp3", 320, "320 kbps"),
+        ("mp3", "32 kbps", "32 kbps"),
+        ("mp3", "40 kbps", "40 kbps"),
+        ("mp3", "48 kbps", "48 kbps"),
+        ("mp3", "56 kbps", "56 kbps"),
+        ("mp3", "64 kbps", "64 kbps"),
+        ("mp3", "80 kbps", "80 kbps"),
+        ("mp3", "96 kbps", "96 kbps"),
+        ("mp3", "112 kbps", "112 kbps"),
+        ("mp3", "128 kbps", "128 kbps"),
+        ("mp3", "160 kbps", "160 kbps"),
+        ("mp3", "192 kbps", "192 kbps"),
+        ("mp3", "224 kbps", "224 kbps"),
+        ("mp3", "256 kbps", "256 kbps"),
+        ("mp3", "320 kbps", "320 kbps"),
         ("wav", None, None),
         ("wav", "", None),
         ("aiff", None, None),
