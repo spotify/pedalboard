@@ -42,6 +42,7 @@ ALL_CPPFLAGS.extend(
         "-DJUCE_DISPLAY_SPLASH_SCREEN=1",
         "-DJUCE_USE_DARK_SPLASH_SCREEN=1",
         "-DJUCE_MODULE_AVAILABLE_juce_audio_basics=1",
+        "-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1",
         "-DJUCE_MODULE_AVAILABLE_juce_audio_formats=1",
         "-DJUCE_MODULE_AVAILABLE_juce_audio_processors=1",
         "-DJUCE_MODULE_AVAILABLE_juce_core=1",
