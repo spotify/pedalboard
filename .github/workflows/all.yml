@@ -82,7 +82,7 @@ jobs:
           && sudo apt-get install -y pkg-config libsndfile1 \
           libx11-dev libxrandr-dev libxinerama-dev \
           libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
-          libxcursor-dev libfreetype6 libfreetype6-dev
+          libxcursor-dev libfreetype6 libfreetype6-dev libasound2-dev
       - name: Install test dependencies
         env:
           # on macOS and with Python 3.10: building NumPy from source fails without these options:

@@ -20,11 +20,15 @@
 #include <mutex>
 #include <optional>
 
+#include <chrono>
+#include <thread>
+
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
 #include "../BufferUtils.h"
 #include "../JuceHeader.h"
+#include "../plugins/Chain.h"
 #include "AudioFile.h"
 #include "PythonInputStream.h"
 
@@ -36,7 +40,10 @@ class AudioStream : public std::enable_shared_from_this<AudioStream>,
                     public juce::AudioIODeviceCallback {
 public:
   AudioStream(std::string inputDeviceName, std::string outputDeviceName,
-              double sampleRate, int bufferSize) {
+              double sampleRate, int bufferSize)
+      : pedalboard(
+            std::make_shared<Chain>(std::vector<std::shared_ptr<Plugin>>())),
+        livePedalboard(std::vector<std::shared_ptr<Plugin>>()) {
     juce::AudioDeviceManager::AudioDeviceSetup setup;
     setup.inputDeviceName = inputDeviceName;
     setup.outputDeviceName = outputDeviceName;
@@ -51,25 +58,65 @@ public:
     }
   }
 
-  ~AudioStream() { close(); }
+  ~AudioStream() {
+    stop();
+    close();
+  }
 
-  std::vector<std::shared_ptr<Plugin>> getPluginList() { return plugins; }
+  std::shared_ptr<Chain> getPedalboard() { return pedalboard; }
 
-  void setPluginList(std::vector<std::shared_ptr<Plugin>> plugins) {
-    this->plugins = plugins;
+  void setPedalboard(std::shared_ptr<Chain> chain) { pedalboard = chain; }
 
-    if (isRunning) {
-      for (auto plugin : this->plugins) {
-        plugin->prepare(spec);
+  void close() { deviceManager.closeAudioDevice(); }
+
+  void start() {
+    isRunning = true;
+    changeObserverThread =
+        std::thread(&AudioStream::propagateChangesToAudioThread, this);
+    deviceManager.addAudioCallback(this);
+  }
+
+  void stop() {
+    deviceManager.removeAudioCallback(this);
+    isRunning = false;
+    if (changeObserverThread.joinable()) {
+      changeObserverThread.join();
+    }
+  }
+
+  void propagateChangesToAudioThread() {
+    while (isRunning) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+      // Check to see if the live pedalboard and the regular pedalboard
+      // differ, and apply any changes as necessary:
+      if (pedalboard->getAllPlugins() != livePedalboard.getAllPlugins()) {
+        livePedalboard.getPlugins().clear();
+        for (auto plugin : pedalboard->getPlugins()) {
+          plugin->prepare(spec);
+          livePedalboard.getPlugins().push_back(plugin);
+        }
       }
     }
   }
 
-  void close() { deviceManager.closeAudioDevice(); }
+  void stream() {
+    start();
+    while (isRunning) {
+      if (PyErr_CheckSignals() != 0) {
+        break;
+      }
 
-  void start() { deviceManager.addAudioCallback(this); }
+      {
+        py::gil_scoped_release release;
 
-  void stop() { deviceManager.removeAudioCallback(this); }
+        // Let other Python threads run:
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
+    }
+    stop();
+    throw py::error_already_set();
+  }
 
   std::shared_ptr<AudioStream> enter() {
     start();
@@ -81,15 +128,12 @@ public:
     stop();
   }
 
-  static std::vector<std::string> getDeviceNames() {
+  static std::vector<std::string> getDeviceNames(bool isInput) {
     juce::AudioDeviceManager deviceManager;
 
     std::vector<std::string> names;
     for (auto *type : deviceManager.getAvailableDeviceTypes()) {
-      for (juce::String name : type->getDeviceNames(false)) {
-        names.push_back(name.toStdString());
-      }
-      for (juce::String name : type->getDeviceNames(true)) {
+      for (juce::String name : type->getDeviceNames(isInput)) {
         names.push_back(name.toStdString());
       }
     }
@@ -110,7 +154,8 @@ public:
         outputChannelData, numOutputChannels, 0, numSamples);
     juce::dsp::ProcessContextReplacing<float> context(ioBlock);
 
-    for (auto plugin : plugins) {
+    // TODO: Should getPlugins() here have a lock around it?
+    for (auto plugin : livePedalboard.getPlugins()) {
       int outputSamples = plugin->process(context);
     }
   }
@@ -122,17 +167,21 @@ public:
     spec.numChannels = static_cast<juce::uint32>(
         device->getActiveOutputChannels().countNumberOfSetBits());
 
-    for (auto plugin : plugins) {
+    for (auto plugin : livePedalboard.getPlugins()) {
       plugin->prepare(spec);
     }
-    isRunning = true;
   }
 
   virtual void audioDeviceStopped() {
-    for (auto plugin : plugins) {
+    for (auto plugin : livePedalboard.getPlugins()) {
       plugin->reset();
     }
-    isRunning = false;
+  }
+
+  bool getIsRunning() const { return isRunning; }
+
+  juce::AudioDeviceManager::AudioDeviceSetup getAudioDeviceSetup() const {
+    return deviceManager.getAudioDeviceSetup();
   }
 
 private:
@@ -140,7 +189,17 @@ private:
   juce::dsp::ProcessSpec spec;
   bool isRunning = false;
 
-  std::vector<std::shared_ptr<Plugin>> plugins;
+  std::shared_ptr<Chain> pedalboard;
+
+  // A "live" pedalboard, called from the audio thread.
+  // This is not exposed to Python, and is only updated from C++.
+  Chain livePedalboard;
+
+  // A background thread, independent of the audio thread, that
+  // watches for any changes to the Pedalboard object (which may
+  // happen in Python) and copies those changes over to data
+  // structures used by the audio thread.
+  std::thread changeObserverThread;
 };
 
 inline void init_audio_stream(py::module &m) {
@@ -155,25 +214,47 @@ inline void init_audio_stream(py::module &m) {
                 inputDeviceName, outputDeviceName, sampleRate, bufferSize);
           }),
           py::arg("input_device_name"), py::arg("output_device_name"),
-          py::arg("sample_rate"), py::arg("buffer_size") = 512)
-      .def("start", &AudioStream::start, "Start processing audio.")
-      .def("stop", &AudioStream::stop, "Stop processing audio.")
+          py::arg("sample_rate") = 44100, py::arg("buffer_size") = 512)
+      .def("stream", &AudioStream::stream,
+           "Stream audio from input to output, through the `plugins` on this "
+           "AudioStream object, until a KeyboardInterrupt is received.")
+      .def_property_readonly("running", &AudioStream::getIsRunning,
+                             "True iff this stream is currently streaming live "
+                             "audio from input to output.")
       .def("__enter__", &AudioStream::enter)
       .def("__exit__", &AudioStream::exit)
       .def("__repr__",
            [](const AudioStream &stream) {
              std::ostringstream ss;
              ss << "<pedalboard.io.AudioStream";
+             auto audioDeviceSetup = stream.getAudioDeviceSetup();
+             ss << " input_device_name="
+                << audioDeviceSetup.inputDeviceName.toStdString();
+             ss << " output_device_name="
+                << audioDeviceSetup.outputDeviceName.toStdString();
+             ss << " sample_rate="
+                << juce::String(audioDeviceSetup.sampleRate, 2).toStdString();
+             ss << " buffer_size=" << audioDeviceSetup.bufferSize;
+             if (stream.getIsRunning()) {
+               ss << " running";
+             } else {
+               ss << " not running";
+             }
              ss << " at " << &stream;
              ss << ">";
              return ss.str();
            })
-      .def_property("plugins", &AudioStream::getPluginList,
-                    &AudioStream::setPluginList,
-                    "List of plugins currently in the chain.")
+      .def_property(
+          "pedalboard", &AudioStream::getPedalboard,
+          &AudioStream::setPedalboard,
+          "The Pedalboard object currently processing the live effects chain.")
       .def_property_readonly_static(
-          "device_names",
-          [](py::object *obj) { return AudioStream::getDeviceNames(); },
-          "The currently-available device names.");
+          "input_device_names",
+          [](py::object *obj) { return AudioStream::getDeviceNames(true); },
+          "The currently-available input device names.")
+      .def_property_readonly_static(
+          "output_device_names",
+          [](py::object *obj) { return AudioStream::getDeviceNames(false); },
+          "The currently-available output device names.");
 }
 } // namespace Pedalboard
