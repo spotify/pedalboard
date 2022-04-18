@@ -7,6 +7,7 @@ setuptools>=42
 wheel
 flake8
 black==21.7b0
+click==8.0.4
 interrogate
 
 numpy

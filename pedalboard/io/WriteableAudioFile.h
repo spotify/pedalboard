@@ -158,6 +158,12 @@ public:
     return juce::FileOutputStream::write(bytes, len);
   }
 
+  virtual juce::int64 getPosition() override {
+    if (!hasWrittenToFile)
+      return 0;
+    return juce::FileOutputStream::getPosition();
+  }
+
   virtual bool writeRepeatedByte(juce::uint8 byte,
                                  size_t numTimesToRepeat) override {
     if (!hasWrittenToFile) {
@@ -261,7 +267,7 @@ public:
       extension = file.getFileExtension().toStdString();
 
       outputStream = AutoDeleteFileOutputStream::createOutputStream(file);
-      if (!static_cast<juce::FileOutputStream *>(outputStream.get())
+      if (!static_cast<AutoDeleteFileOutputStream *>(outputStream.get())
                ->openedOk()) {
         throw std::domain_error("Unable to open audio file for writing: " +
                                 filename);

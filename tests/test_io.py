@@ -662,6 +662,44 @@ def test_write_to_seekable_stream(
 
 
 @pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
+@pytest.mark.parametrize("samplerate", [32000, 44100, 48000])
+@pytest.mark.parametrize("num_channels", [1, 2])
+def test_write_twice_overwrites(
+    tmp_path: pathlib.Path, extension: str, samplerate: float, num_channels: int
+):
+    filename = str(tmp_path / f"test{extension}")
+    original_audio = np.zeros((num_channels, samplerate))
+
+    with pedalboard.io.AudioFile(
+        filename, "w", samplerate=samplerate, num_channels=num_channels
+    ) as af:
+        af.write(original_audio)
+
+    assert os.path.exists(filename)
+    assert os.path.getsize(filename) > 0
+
+    with pedalboard.io.AudioFile(filename) as af:
+        assert af.samplerate == samplerate
+        assert af.num_channels == num_channels
+        assert af.frames > 0
+        first_read_result = af.read(af.frames)
+
+    # Write again:
+    with pedalboard.io.AudioFile(
+        filename, "w", samplerate=samplerate, num_channels=num_channels
+    ) as af:
+        af.write(original_audio)
+
+    with pedalboard.io.AudioFile(filename) as af:
+        assert af.samplerate == samplerate
+        assert af.num_channels == num_channels
+        assert af.frames > 0
+        second_read_result = af.read(af.frames)
+
+    np.testing.assert_allclose(second_read_result, first_read_result)
+
+
+@pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
 @pytest.mark.parametrize("samplerate", [1234.5, 23.0000000001])
 def test_fractional_sample_rates(tmp_path: pathlib.Path, extension: str, samplerate):
     filename = str(tmp_path / f"test{extension}")
