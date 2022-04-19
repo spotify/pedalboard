@@ -63,15 +63,11 @@ namespace py = pybind11;
 #include "plugins/Reverb.h"
 
 #include "io/AudioFileInit.h"
+#include "io/AudioStream.h"
 #include "io/ReadableAudioFile.h"
 #include "io/ResampledReadableAudioFile.h"
 #include "io/StreamResampler.h"
 #include "io/WriteableAudioFile.h"
-
-// AudioStream is not yet supported on Linux (due to the ALSA dependency)
-#ifndef JUCE_LINUX
-#include "io/AudioStream.h"
-#endif
 
 using namespace Pedalboard;
 
@@ -236,8 +232,5 @@ or buffer, set ``reset`` to ``False``.
   init_writeable_audio_file(io, pyWriteableAudioFile);
 
   init_stream_resampler(io);
-
-#ifndef JUCE_LINUX
   init_audio_stream(io);
-#endif
 };

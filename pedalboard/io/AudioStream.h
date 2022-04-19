@@ -29,13 +29,12 @@
 #include "../BufferUtils.h"
 #include "../JuceHeader.h"
 #include "../plugins/Chain.h"
-#include "AudioFile.h"
-#include "PythonInputStream.h"
 
 namespace py = pybind11;
 
 namespace Pedalboard {
 
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
 class AudioStream : public std::enable_shared_from_this<AudioStream>,
                     public juce::AudioIODeviceCallback {
 public:
@@ -257,4 +256,20 @@ inline void init_audio_stream(py::module &m) {
           [](py::object *obj) { return AudioStream::getDeviceNames(false); },
           "The currently-available output device names.");
 }
+#else
+inline void init_audio_stream(py::module &m) {
+  py::class_<AudioStream, std::shared_ptr<AudioStream>>(
+      m, "AudioStream",
+      "A class that pipes audio from an input device to an output device, "
+      "passing it through a Pedalboard to add effects.")
+      .def(
+          py::init([](std::string inputDeviceName, std::string outputDeviceName,
+                      double sampleRate, int bufferSize) {
+            throw std::runtime_error(
+                "AudioStream is not yet supported on this operating system.");
+          }),
+          py::arg("input_device_name"), py::arg("output_device_name"),
+          py::arg("sample_rate") = 44100, py::arg("buffer_size") = 512);
+}
+#endif
 } // namespace Pedalboard
