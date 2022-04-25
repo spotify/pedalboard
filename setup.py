@@ -117,8 +117,14 @@ ALL_INCLUDES += ['vendors/libgsm/inc']
 if platform.system() == "Darwin":
     ALL_CPPFLAGS.append("-DMACOS=1")
     ALL_CPPFLAGS.append("-DHAVE_VDSP=1")
+    ALL_CPPFLAGS.append("-flto=thin")
+    ALL_LINK_ARGS.append("-flto=thin")
+    ALL_LINK_ARGS.append("-fvisibility=hidden")
 elif platform.system() == "Linux":
     ALL_CPPFLAGS.append("-DLINUX=1")
+    ALL_CPPFLAGS.append("-flto=thin")
+    ALL_LINK_ARGS.append("-flto=thin")
+    ALL_LINK_ARGS.append("-fvisibility=hidden")
 elif platform.system() == "Windows":
     ALL_CPPFLAGS.append("-DWINDOWS=1")
 else:
