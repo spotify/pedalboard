@@ -49,7 +49,7 @@ public:
     _semitones = semitones;
   }
 
-  double getSemitones() { return _semitones; }
+  double getSemitones() const { return _semitones; }
 
   void prepare(const juce::dsp::ProcessSpec &spec) override final {
     setSilenceLengthSamples(spec.sampleRate);
@@ -67,6 +67,15 @@ inline void init_pitch_shift(py::module &m) {
              return plugin;
            }),
            py::arg("semitones") = 0.0)
+      .def("__repr__",
+           [](const PitchShift &plugin) {
+             std::ostringstream ss;
+             ss << "<pedalboard.PitchShift";
+             ss << " semitones=" << plugin.getSemitones();
+             ss << " at " << &plugin;
+             ss << ">";
+             return ss.str();
+           })
       .def_property("semitones", &PitchShift::getSemitones,
                     &PitchShift::setSemitones);
 }
