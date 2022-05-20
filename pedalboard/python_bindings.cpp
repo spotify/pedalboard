@@ -62,6 +62,7 @@ namespace py = pybind11;
 #include "plugins/Reverb.h"
 
 #include "io/AudioFileInit.h"
+#include "io/AudioStream.h"
 #include "io/ReadableAudioFile.h"
 #include "io/WriteableAudioFile.h"
 
@@ -196,4 +197,5 @@ PYBIND11_MODULE(pedalboard_native, m) {
   init_audio_file(io);
   init_readable_audio_file(io);
   init_writeable_audio_file(io);
+  init_audio_stream(io);
 };

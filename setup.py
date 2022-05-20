@@ -117,10 +117,12 @@ ALL_INCLUDES += ['vendors/libgsm/inc']
 if platform.system() == "Darwin":
     ALL_CPPFLAGS.append("-DMACOS=1")
     ALL_CPPFLAGS.append("-DHAVE_VDSP=1")
+    ALL_CPPFLAGS.append("-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1")
 elif platform.system() == "Linux":
     ALL_CPPFLAGS.append("-DLINUX=1")
 elif platform.system() == "Windows":
     ALL_CPPFLAGS.append("-DWINDOWS=1")
+    ALL_CPPFLAGS.append("-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1")
 else:
     raise NotImplementedError(
         "Not sure how to build JUCE on platform: {}!".format(platform.system())
