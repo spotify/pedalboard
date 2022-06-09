@@ -245,29 +245,45 @@ Yes! While there's no built-in function for this, it is possible to
 vary the parameters of a plugin over time manually:
 
 ```python
-import numpy
+from pedalboard.io import AudioFile
 from pedalboard import Pedalboard, Compressor, Reverb
+from tqdm import tqdm
+import numpy as np
 
-input_audio = ...
+with AudioFile("sample.wav", "r") as af:
+    input_audio = af.read(af.frames)
+    sr = af.samplerate
+
 output_audio = np.zeros_like(input_audio)
 board = Pedalboard([Compressor(), Reverb()])
-reverb = board[-1]
+reverb = board[1]
 
 # smaller step sizes would give a smoother transition,
 # at the expense of processing speed
 step_size_in_samples = 100
 
-# Manually step through the audio 100 samples at a time
-for i in range(0, input_audio.shape[0], step_size_in_samples):
-    # Set the reverb's "wet" parameter to be equal to the percentage through the track
-    # (i.e.: make a ramp from 0% to 100%)
-    percentage_through_track = i / input_audio.shape[0]
-    reverb.wet_level = percentage_through_track
-    
-    # Process this chunk of audio, setting `reset` to `False`
-    # to ensure that reverb tails aren't cut off
-    chunk = board.process(input_audio[i : i + step_size_in_samples], reset=False)
-    output_audio[i : i + step_size_in_samples] = chunk
+# Manually step through the audio n samples at a time
+with tqdm(total=input_audio.shape[1]) as pbar:
+    for i in range(0, input_audio.shape[1], step_size_in_samples):
+        # Set the reverb's "wet" parameter to be equal to the
+        # percentage through the track (i.e.: make a ramp from 0% to 100%)
+        percentage_through_track = i / input_audio.shape[1]
+        reverb.wet_level = percentage_through_track
+        pbar.update(step_size_in_samples)
+
+        # Process this chunk of audio, setting `reset` to `False`
+        # to ensure that reverb tails aren't cut off
+        chunkl = board.process(
+            input_audio[0, i : i + step_size_in_samples], sr, reset=False
+        )
+        chunkr = board.process(
+            input_audio[1, i : i + step_size_in_samples], sr, reset=False
+        )
+        output_audio[0, i : i + step_size_in_samples] = chunkl
+        output_audio[1, i : i + step_size_in_samples] = chunkr
+
+with AudioFile("sample-processed-output.wav", "w", sr, num_channels=output_audio.shape[0]) as f:
+    f.write(output_audio)
 ```
 
 With this technique, it's possible to automate any parameter. Usually, using a step size of somewhere between 100 and 1,000 (2ms to 22ms at a 44.1kHz sample rate) is small enough to avoid hearing any audio artifacts, but big enough to avoid slowing down the code dramatically.
