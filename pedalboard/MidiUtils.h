@@ -23,12 +23,31 @@
 
 namespace Pedalboard {
 
-juce::MidiBuffer
-copyPyArrayIntoJuceMidiBuffer(const py::array_t<int, py::array::c_style> midiMessages) {
-  // Numpy/Librosa convention is (num_samples, num_channels)
+juce::MidiMessageSequence
+copyPyArrayIntoJuceMidiMessageSequence(const py::array_t<float, py::array::c_style> midiMessages) {
   py::buffer_info inputInfo = midiMessages.request();
 
-  return juce::MidiBuffer();
+  if(inputInfo.shape[1] != 4) {
+     throw std::runtime_error("Each element must have length 4 (got " +
+                             std::to_string(inputInfo.shape[1]) + ").");
+  }
+
+  juce::MidiMessageSequence midiSequence;
+
+  float *data = static_cast<float *>(inputInfo.ptr);
+
+  for(int i = 0; i < inputInfo.shape[0]; i++) {
+    int byte1 = (int) data[i * 4 + 0];
+    int byte2 = (int) data[i * 4 + 1];
+    int byte3 = (int) data[i * 4 + 2];
+    float timeSeconds = data[i * 4 + 3];
+
+    midiSequence.addEvent(juce::MidiMessage(byte1, byte2, byte3), timeSeconds);
+
+    DBG( byte1 );
+  }
+
+  return midiSequence;
 }
 
 } // namespace Pedalboard

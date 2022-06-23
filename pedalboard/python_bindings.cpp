@@ -119,7 +119,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
               "process",
               [](std::shared_ptr<Plugin> self,
                  const py::array_t<float, py::array::c_style> inputArray,
-                 const py::array_t<int, py::array::c_style> midiMessages,
+                 const py::array_t<float, py::array::c_style> midiMessages,
                  double sampleRate, unsigned int bufferSize, bool reset) {
                 return process(inputArray, midiMessages, sampleRate, {self}, bufferSize,
                                reset);
@@ -135,7 +135,7 @@ PYBIND11_MODULE(pedalboard_native, m) {
               "process",
               [](std::shared_ptr<Plugin> self,
                  const py::array_t<double, py::array::c_style> inputArray,
-                 const py::array_t<int, py::array::c_style> midiMessages,
+                 const py::array_t<float, py::array::c_style> midiMessages,
                  double sampleRate, unsigned int bufferSize, bool reset) {
                 const py::array_t<float, py::array::c_style> float32InputArray =
                     inputArray.attr("astype")("float32");

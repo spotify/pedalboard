@@ -36,7 +36,7 @@ namespace Pedalboard {
 template <typename SampleType>
 py::array_t<float>
 process(const py::array_t<SampleType, py::array::c_style> inputArray,
-        const py::array_t<int, py::array::c_style> midiMessages,
+        const py::array_t<float, py::array::c_style> midiMessages,
         double sampleRate, const std::vector<std::shared_ptr<Plugin>> plugins,
         unsigned int bufferSize, bool reset) {
   const py::array_t<float, py::array::c_style> float32InputArray =
@@ -50,7 +50,7 @@ process(const py::array_t<SampleType, py::array::c_style> inputArray,
 template <typename SampleType>
 py::array_t<float>
 processSingle(const py::array_t<SampleType, py::array::c_style> inputArray,
-              const py::array_t<int, py::array::c_style> midiMessages,
+              const py::array_t<float, py::array::c_style> midiMessages,
               double sampleRate, std::shared_ptr<Plugin> plugin,
               unsigned int bufferSize, bool reset) {
   std::vector<std::shared_ptr<Plugin>> plugins{plugin};
@@ -58,8 +58,9 @@ processSingle(const py::array_t<SampleType, py::array::c_style> inputArray,
                              reset);
 }
 
+
 inline int process(juce::AudioBuffer<float> &ioBuffer,
-                   juce::MidiBuffer& midiBuffer,
+                   juce::MidiMessageSequence& midiSequence,
                    juce::dsp::ProcessSpec spec,
                    const std::vector<std::shared_ptr<Plugin>> &plugins,
                    bool isProbablyLastProcessCall) {
@@ -107,6 +108,24 @@ inline int process(juce::AudioBuffer<float> &ioBuffer,
           ioBuffer.getArrayOfWritePointers(), ioBuffer.getNumChannels(),
           blockStart, blockSize);
       juce::dsp::ProcessContextReplacing<float> context(ioBlock);
+
+      juce::MidiBuffer midiBuffer;
+      auto startTime = blockStart / spec.sampleRate;
+      auto endTime = blockEnd / spec.sampleRate;
+
+      for (auto i = midiSequence.getNextIndexAtTime(startTime); i < midiSequence.getNumEvents(); i++)
+      {
+        juce::MidiMessageSequence::MidiEventHolder *event = midiSequence.getEventPointer(i);
+
+        if (event->message.getTimeStamp() >= startTime && event->message.getTimeStamp() < endTime)
+        {
+          auto samplePosition = juce::roundToInt((event->message.getTimeStamp() - startTime) * spec.sampleRate);
+          midiBuffer.addEvent(event->message, samplePosition);
+        } else {
+          break;
+        }
+      }
+
 
       int outputSamples = plugin->process(context, midiBuffer);
       if (outputSamples < 0) {
@@ -184,6 +203,25 @@ inline int process(juce::AudioBuffer<float> &ioBuffer,
   return intendedOutputBufferSize - totalOutputLatencySamples;
 }
 
+inline int process(juce::AudioBuffer<float> &ioBuffer,
+                   juce::MidiBuffer& midiBuffer,
+                   juce::dsp::ProcessSpec spec,
+                   const std::vector<std::shared_ptr<Plugin>> &plugins,
+                   bool isProbablyLastProcessCall) {
+  juce::MidiMessageSequence midiSequence;
+
+  int time;
+  juce::MidiMessage m;
+
+  for (juce::MidiBuffer::Iterator i(midiBuffer); i.getNextEvent (m, time);)
+  {
+    midiSequence.addEvent(m, time / spec.sampleRate);
+  }
+
+  return process(ioBuffer, midiSequence, spec, plugins, isProbablyLastProcessCall);
+}
+
+
 /**
  * Process a given audio buffer through a list of
  * Pedalboard plugins at a given sample rate.
@@ -192,12 +230,12 @@ inline int process(juce::AudioBuffer<float> &ioBuffer,
 template <>
 py::array_t<float>
 process<float>(const py::array_t<float, py::array::c_style> inputArray,
-               const py::array_t<int, py::array::c_style> midiMessages,
+               const py::array_t<float, py::array::c_style> midiMessages,
                double sampleRate, std::vector<std::shared_ptr<Plugin>> plugins,
                unsigned int bufferSize, bool reset) {
   const ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
   juce::AudioBuffer<float> ioBuffer = copyPyArrayIntoJuceBuffer(inputArray);
-  juce::MidiBuffer midiBuffer = copyPyArrayIntoJuceMidiBuffer(midiMessages);
+  juce::MidiMessageSequence midiSequence = copyPyArrayIntoJuceMidiMessageSequence(midiMessages);
 
   int totalOutputLatencySamples;
 
@@ -266,7 +304,7 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
     }
 
     // Actually run the process method of all plugins.
-    int samplesReturned = process(ioBuffer, midiBuffer, spec, plugins, reset);
+    int samplesReturned = process(ioBuffer, midiSequence, spec, plugins, reset);
     totalOutputLatencySamples = ioBuffer.getNumSamples() - samplesReturned;
   }
 
