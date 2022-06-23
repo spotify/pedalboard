@@ -253,7 +253,7 @@ public:
   }
 
   int process(
-      const juce::dsp::ProcessContextReplacing<float> &context) override final {
+      const juce::dsp::ProcessContextReplacing<float> &context, juce::MidiBuffer &midiBuffer) override final {
     auto ioBlock = context.getOutputBlock();
 
     if (mp3BufferBytesFilled > 0) {

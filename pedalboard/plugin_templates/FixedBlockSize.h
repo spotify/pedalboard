@@ -65,7 +65,7 @@ public:
   }
 
   virtual int
-  process(const juce::dsp::ProcessContextReplacing<SampleType> &context) {
+  process(const juce::dsp::ProcessContextReplacing<SampleType> &context, juce::MidiBuffer &midiBuffer) {
     auto ioBlock = context.getOutputBlock();
 
     if (lastSpec.maximumBlockSize % blockSize == 0) {
@@ -81,7 +81,7 @@ public:
         juce::dsp::AudioBlock<SampleType> subBlock =
             ioBlock.getSubBlock(i, blockSize);
         juce::dsp::ProcessContextReplacing<SampleType> subContext(subBlock);
-        int samplesOutputThisBlock = plugin.process(subContext);
+        int samplesOutputThisBlock = plugin.process(subContext, midiBuffer);
 
         if (samplesOutput > 0 && samplesOutputThisBlock < blockSize) {
           throw std::runtime_error(
@@ -106,7 +106,7 @@ public:
         subBlock.copyFrom(ioBlock.getSubBlock(offset, remainderInSamples));
 
         juce::dsp::ProcessContextReplacing<SampleType> subContext(subBlock);
-        int samplesOutputThisBlock = plugin.process(subContext);
+        int samplesOutputThisBlock = plugin.process(subContext, midiBuffer);
 
         // Copy the output back into ioBlock, right-aligned:
         ioBlock
@@ -164,7 +164,7 @@ public:
         juce::dsp::AudioBlock<SampleType> subBlock =
             inputBlock.getSubBlock(i, blockSize);
         juce::dsp::ProcessContextReplacing<SampleType> subContext(subBlock);
-        int samplesProcessedThisBlock = plugin.process(subContext);
+        int samplesProcessedThisBlock = plugin.process(subContext, midiBuffer);
         inputSamplesConsumed += blockSize;
 
         if (samplesProcessedThisBlock > 0) {
@@ -272,12 +272,12 @@ public:
   }
 
   virtual int
-  process(const juce::dsp::ProcessContextReplacing<float> &context) {
+  process(const juce::dsp::ProcessContextReplacing<float> &context, juce::MidiBuffer &midiBuffer) {
     if (context.getInputBlock().getNumSamples() != expectedBlockSize) {
       throw std::runtime_error("Expected maximum block size of exactly " +
                                std::to_string(expectedBlockSize) + "!");
     }
-    return AddLatency::process(context);
+    return AddLatency::process(context, midiBuffer);
   }
 
   virtual void reset() { AddLatency::reset(); }

@@ -81,7 +81,7 @@ public:
   }
 
   int process(
-      const juce::dsp::ProcessContextReplacing<float> &context) override final {
+      const juce::dsp::ProcessContextReplacing<float> &context, juce::MidiBuffer &midiBuffer) override final {
     auto ioBlock = context.getOutputBlock();
 
     if (ioBlock.getNumSamples() != GSM_FRAME_SIZE_SAMPLES) {

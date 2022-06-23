@@ -37,7 +37,7 @@ public:
   }
 
   virtual int
-  process(const juce::dsp::ProcessContextReplacing<float> &context) override {
+  process(const juce::dsp::ProcessContextReplacing<float> &context, juce::MidiBuffer &midiBuffer) override {
     getDSP().process(context);
     int blockSize = context.getInputBlock().getNumSamples();
     samplesProvided += blockSize;

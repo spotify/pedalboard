@@ -22,6 +22,8 @@
 #include <pybind11/pybind11.h>
 
 #include "BufferUtils.h"
+#include "MidiUtils.h"
+
 #include "Plugin.h"
 
 namespace py = pybind11;
@@ -34,11 +36,12 @@ namespace Pedalboard {
 template <typename SampleType>
 py::array_t<float>
 process(const py::array_t<SampleType, py::array::c_style> inputArray,
+        const py::array_t<int, py::array::c_style> midiMessages,
         double sampleRate, const std::vector<std::shared_ptr<Plugin>> plugins,
         unsigned int bufferSize, bool reset) {
   const py::array_t<float, py::array::c_style> float32InputArray =
       inputArray.attr("astype")("float32");
-  return process(float32InputArray, sampleRate, plugins, bufferSize, reset);
+  return process(float32InputArray, midiMessages, sampleRate, plugins, bufferSize, reset);
 }
 
 /**
@@ -47,14 +50,16 @@ process(const py::array_t<SampleType, py::array::c_style> inputArray,
 template <typename SampleType>
 py::array_t<float>
 processSingle(const py::array_t<SampleType, py::array::c_style> inputArray,
+              const py::array_t<int, py::array::c_style> midiMessages,
               double sampleRate, std::shared_ptr<Plugin> plugin,
               unsigned int bufferSize, bool reset) {
   std::vector<std::shared_ptr<Plugin>> plugins{plugin};
-  return process<SampleType>(inputArray, sampleRate, plugins, bufferSize,
+  return process<SampleType>(inputArray, midiMessages, sampleRate, plugins, bufferSize,
                              reset);
 }
 
 inline int process(juce::AudioBuffer<float> &ioBuffer,
+                   juce::MidiBuffer& midiBuffer,
                    juce::dsp::ProcessSpec spec,
                    const std::vector<std::shared_ptr<Plugin>> &plugins,
                    bool isProbablyLastProcessCall) {
@@ -103,7 +108,7 @@ inline int process(juce::AudioBuffer<float> &ioBuffer,
           blockStart, blockSize);
       juce::dsp::ProcessContextReplacing<float> context(ioBlock);
 
-      int outputSamples = plugin->process(context);
+      int outputSamples = plugin->process(context, midiBuffer);
       if (outputSamples < 0) {
         throw std::runtime_error(
             "A plugin returned a negative number of output samples! "
@@ -187,10 +192,13 @@ inline int process(juce::AudioBuffer<float> &ioBuffer,
 template <>
 py::array_t<float>
 process<float>(const py::array_t<float, py::array::c_style> inputArray,
+               const py::array_t<int, py::array::c_style> midiMessages,
                double sampleRate, std::vector<std::shared_ptr<Plugin>> plugins,
                unsigned int bufferSize, bool reset) {
   const ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
   juce::AudioBuffer<float> ioBuffer = copyPyArrayIntoJuceBuffer(inputArray);
+  juce::MidiBuffer midiBuffer = copyPyArrayIntoJuceMidiBuffer(midiMessages);
+
   int totalOutputLatencySamples;
 
   {
@@ -258,7 +266,7 @@ process<float>(const py::array_t<float, py::array::c_style> inputArray,
     }
 
     // Actually run the process method of all plugins.
-    int samplesReturned = process(ioBuffer, spec, plugins, reset);
+    int samplesReturned = process(ioBuffer, midiBuffer, spec, plugins, reset);
     totalOutputLatencySamples = ioBuffer.getNumSamples() - samplesReturned;
   }
 

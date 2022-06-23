@@ -40,7 +40,7 @@ public:
   }
 
   virtual int
-  process(const juce::dsp::ProcessContextReplacing<float> &context) {
+  process(const juce::dsp::ProcessContextReplacing<float> &context, juce::MidiBuffer &midiBuffer) {
     // assuming process context replacing
     auto ioBlock = context.getOutputBlock();
 
@@ -52,7 +52,7 @@ public:
 
     juce::AudioBuffer<float> ioBuffer(channels, ioBlock.getNumChannels(),
                                       ioBlock.getNumSamples());
-    return ::Pedalboard::process(ioBuffer, lastSpec, plugins, false);
+    return ::Pedalboard::process(ioBuffer, midiBuffer, lastSpec, plugins, false);
   }
 
   virtual void reset() {
@@ -104,31 +104,33 @@ inline void init_chain(py::module &m) {
           "process",
           [](std::shared_ptr<Chain> self,
              const py::array_t<float, py::array::c_style> inputArray,
+             const py::array_t<int, py::array::c_style> midiMessages,
              double sampleRate, unsigned int bufferSize, bool reset) {
-            return process(inputArray, sampleRate, self->getPlugins(),
+            return process(inputArray, midiMessages, sampleRate, self->getPlugins(),
                            bufferSize, reset);
           },
           "Run a 32-bit floating point audio buffer through this plugin."
           "(Note: if calling this multiple times with multiple plugins, "
           "consider using pedalboard.process(...) instead.)",
-          py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("input_array"), py::arg("midi_messages"), py::arg("sample_rate"),
           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
 
       .def(
           "process",
           [](std::shared_ptr<Chain> self,
              const py::array_t<double, py::array::c_style> inputArray,
+             const py::array_t<int, py::array::c_style> midiMessages,
              double sampleRate, unsigned int bufferSize, bool reset) {
             const py::array_t<float, py::array::c_style> float32InputArray =
                 inputArray.attr("astype")("float32");
-            return process(float32InputArray, sampleRate, self->getPlugins(),
+            return process(float32InputArray, midiMessages, sampleRate, self->getPlugins(),
                            bufferSize, reset);
           },
           "Run a 64-bit floating point audio buffer through this plugin."
           "(Note: if calling this multiple times with multiple plugins, "
           "consider using pedalboard.process(...) instead.) The buffer "
           "will be converted to 32-bit for processing.",
-          py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("input_array"), py::arg("midi_messages"), py::arg("sample_rate"),
           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
           py::arg("reset") = true);
 }
