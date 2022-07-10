@@ -248,42 +248,39 @@ vary the parameters of a plugin over time manually:
 from pedalboard.io import AudioFile
 from pedalboard import Pedalboard, Compressor, Reverb
 from tqdm import tqdm
-import numpy as np
 
-with AudioFile("sample.wav", "r") as af:
-    input_audio = af.read(af.frames)
-    sr = af.samplerate
-
-output_audio = np.zeros_like(input_audio)
 board = Pedalboard([Compressor(), Reverb()])
 reverb = board[1]
 
-# smaller step sizes would give a smoother transition,
+# Smaller step sizes would give a smoother transition,
 # at the expense of processing speed
 step_size_in_samples = 100
 
-# Manually step through the audio n samples at a time
-with tqdm(total=input_audio.shape[1]) as pbar:
-    for i in range(0, input_audio.shape[1], step_size_in_samples):
-        # Set the reverb's "wet" parameter to be equal to the
-        # percentage through the track (i.e.: make a ramp from 0% to 100%)
-        percentage_through_track = i / input_audio.shape[1]
-        reverb.wet_level = percentage_through_track
-        pbar.update(step_size_in_samples)
+# Manually step through the audio _n_ samples at a time, reading in chunks:
+with AudioFile("sample.wav") as af:
 
-        # Process this chunk of audio, setting `reset` to `False`
-        # to ensure that reverb tails aren't cut off
-        chunkl = board.process(
-            input_audio[0, i : i + step_size_in_samples], sr, reset=False
-        )
-        chunkr = board.process(
-            input_audio[1, i : i + step_size_in_samples], sr, reset=False
-        )
-        output_audio[0, i : i + step_size_in_samples] = chunkl
-        output_audio[1, i : i + step_size_in_samples] = chunkr
+    # Open the output audio file so that we can directly write audio as we process, saving memory:
+    with AudioFile(
+        "sample-processed-output.wav", "w", af.samplerate, num_channels=af.num_channels
+    ) as o:
 
-with AudioFile("sample-processed-output.wav", "w", sr, num_channels=output_audio.shape[0]) as f:
-    f.write(output_audio)
+        # Create a progress bar to show processing speed in real-time:
+        with tqdm(total=af.frames, unit=' samples') as pbar:
+            for i in range(0, af.frames, step_size_in_samples):
+                chunk = af.read(step_size_in_samples)
+
+                # Set the reverb's "wet" parameter to be equal to the
+                # percentage through the track (i.e.: make a ramp from 0% to 100%)
+                percentage_through_track = i / af.frames
+                reverb.wet_level = percentage_through_track
+
+                # Update our progress bar with the number of samples received:
+                pbar.update(chunk.shape[1])
+
+                # Process this chunk of audio, setting `reset` to `False`
+                # to ensure that reverb tails aren't cut off
+                output = board.process(chunk, af.samplerate, reset=False)
+                o.write(output)
 ```
 
 With this technique, it's possible to automate any parameter. Usually, using a step size of somewhere between 100 and 1,000 (2ms to 22ms at a 44.1kHz sample rate) is small enough to avoid hearing any audio artifacts, but big enough to avoid slowing down the code dramatically.
