@@ -122,8 +122,9 @@ if platform.system() == "Darwin":
     ALL_LINK_ARGS.append("-fvisibility=hidden")
 elif platform.system() == "Linux":
     ALL_CPPFLAGS.append("-DLINUX=1")
-    ALL_CPPFLAGS.append("-flto=thin")
-    ALL_LINK_ARGS.append("-flto=thin")
+    # We use GCC on Linux, which doesn't take a value for the -flto flag:
+    ALL_CPPFLAGS.append("-flto")
+    ALL_LINK_ARGS.append("-flto")
     ALL_LINK_ARGS.append("-fvisibility=hidden")
 elif platform.system() == "Windows":
     ALL_CPPFLAGS.append("-DWINDOWS=1")
