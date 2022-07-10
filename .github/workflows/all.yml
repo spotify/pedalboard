@@ -59,7 +59,7 @@ jobs:
       MINIMUM_COVERAGE_PERCENTAGE: 89
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11.0-beta.3']
         # TODO: Switch back to macos-latest once https://github.com/actions/python-versions/pull/114 is fixed
         os: [ubuntu-18.04, ubuntu-latest, windows-latest, macos-10.15]
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
@@ -194,6 +194,7 @@ jobs:
         - { os: windows-latest, build: cp38-win_amd64 }
         - { os: windows-latest, build: cp39-win_amd64 }
         - { os: windows-latest, build: cp310-win_amd64 }
+        - { os: windows-latest, build: cp311-win_amd64 }
         - { os: windows-latest, build: pp37-win_amd64 }
         - { os: windows-latest, build: pp38-win_amd64 }
         - { os: windows-latest, build: pp39-win_amd64 }
@@ -217,6 +218,10 @@ jobs:
         - { os: ubuntu-latest, build: cp310-musllinux_x86_64 }
         - { os: ubuntu-latest, build: cp310-manylinux_aarch64 }
         - { os: ubuntu-latest, build: cp310-musllinux_aarch64 }
+        - { os: ubuntu-latest, build: cp311-manylinux_x86_64 }
+        - { os: ubuntu-latest, build: cp311-musllinux_x86_64 }
+        - { os: ubuntu-latest, build: cp311-manylinux_aarch64 }
+        - { os: ubuntu-latest, build: cp311-musllinux_aarch64 }
         - { os: ubuntu-latest, build: pp37-manylinux_x86_64 }
         - { os: ubuntu-latest, build: pp37-manylinux_aarch64 }
         - { os: ubuntu-latest, build: pp38-manylinux_x86_64 }
