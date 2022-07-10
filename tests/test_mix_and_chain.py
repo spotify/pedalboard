@@ -34,6 +34,33 @@ from pedalboard_native._internal import AddLatency
 NUM_SECONDS = 4
 
 
+def test_chain_access_like_list():
+    a = Gain(6)
+
+    b = Gain(-6)
+    c = Gain(1)
+
+    d = Chain([b, c])
+    e = Gain(-1)
+
+    pb = Pedalboard([a, d, e])
+
+    assert pb[0] is a
+    assert pb[-3] is a
+
+    assert pb[1] is d
+    assert pb[-2] is d
+
+    assert pb[1][0] is b
+    assert pb[1][-2] is b
+
+    assert pb[1][1] is c
+    assert pb[1][-1] is c
+
+    assert pb[2] is e
+    assert pb[-1] is e
+
+
 def test_nested_chain():
     sr = 44100
     _input = np.random.rand(int(NUM_SECONDS * sr), 2).astype(np.float32)
