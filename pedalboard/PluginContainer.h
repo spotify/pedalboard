@@ -72,7 +72,7 @@ inline void init_plugin_container(py::module &m) {
       }))
       // Implement the Sequence protocol:
       .def("__getitem__",
-           [](PluginContainer &s, size_t i) {
+           [](PluginContainer &s, int i) {
              if (i < 0)
                i = s.getPlugins().size() + i;
              if (i < 0)
@@ -82,7 +82,7 @@ inline void init_plugin_container(py::module &m) {
              return s.getPlugins()[i];
            })
       .def("__setitem__",
-           [](PluginContainer &s, size_t i, std::shared_ptr<Plugin> plugin) {
+           [](PluginContainer &s, int i, std::shared_ptr<Plugin> plugin) {
              if (i < 0)
                i = s.getPlugins().size() + i;
              if (i < 0)
@@ -92,7 +92,7 @@ inline void init_plugin_container(py::module &m) {
              s.getPlugins()[i] = plugin;
            })
       .def("__delitem__",
-           [](PluginContainer &s, size_t i) {
+           [](PluginContainer &s, int i) {
              if (i < 0)
                i = s.getPlugins().size() + i;
              if (i < 0)
