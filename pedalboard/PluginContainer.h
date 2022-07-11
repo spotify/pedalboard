@@ -72,19 +72,31 @@ inline void init_plugin_container(py::module &m) {
       }))
       // Implement the Sequence protocol:
       .def("__getitem__",
-           [](PluginContainer &s, size_t i) {
+           [](PluginContainer &s, int i) {
+             if (i < 0)
+               i = s.getPlugins().size() + i;
+             if (i < 0)
+               throw py::index_error("index out of range");
              if (i >= s.getPlugins().size())
                throw py::index_error("index out of range");
              return s.getPlugins()[i];
            })
       .def("__setitem__",
-           [](PluginContainer &s, size_t i, std::shared_ptr<Plugin> plugin) {
+           [](PluginContainer &s, int i, std::shared_ptr<Plugin> plugin) {
+             if (i < 0)
+               i = s.getPlugins().size() + i;
+             if (i < 0)
+               throw py::index_error("index out of range");
              if (i >= s.getPlugins().size())
                throw py::index_error("index out of range");
              s.getPlugins()[i] = plugin;
            })
       .def("__delitem__",
-           [](PluginContainer &s, size_t i) {
+           [](PluginContainer &s, int i) {
+             if (i < 0)
+               i = s.getPlugins().size() + i;
+             if (i < 0)
+               throw py::index_error("index out of range");
              if (i >= s.getPlugins().size())
                throw py::index_error("index out of range");
              auto &plugins = s.getPlugins();
@@ -93,6 +105,10 @@ inline void init_plugin_container(py::module &m) {
       .def("__len__", [](PluginContainer &s) { return s.getPlugins().size(); })
       .def("insert",
            [](PluginContainer &s, int i, std::shared_ptr<Plugin> plugin) {
+             if (i < 0)
+               i = s.getPlugins().size() + i;
+             if (i < 0)
+               throw py::index_error("index out of range");
              if (i > s.getPlugins().size())
                throw py::index_error("index out of range");
              auto &plugins = s.getPlugins();
