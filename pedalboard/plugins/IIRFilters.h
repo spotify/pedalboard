@@ -37,7 +37,9 @@ inline float clampCutoffFrequency(float cutoffFrequencyHz, float sampleRate) {
  * A base class for all IIR filter classes.
  */
 template <typename SampleType>
-class IIRFilter : public JucePlugin<juce::dsp::IIR::Filter<SampleType>> {
+class IIRFilter : public JucePlugin<juce::dsp::ProcessorDuplicator<
+                      juce::dsp::IIR::Filter<SampleType>,
+                      juce::dsp::IIR::Coefficients<SampleType>>> {
 public:
   void setCutoffFrequencyHz(float f) {
     if (f <= 0)
@@ -64,7 +66,9 @@ public:
     if (this->lastSpec.sampleRate != spec.sampleRate ||
         this->lastSpec.maximumBlockSize < spec.maximumBlockSize ||
         spec.numChannels != this->lastSpec.numChannels) {
-      JucePlugin<juce::dsp::IIR::Filter<SampleType>>::prepare(spec);
+      JucePlugin<juce::dsp::ProcessorDuplicator<
+          juce::dsp::IIR::Filter<SampleType>,
+          juce::dsp::IIR::Coefficients<SampleType>>>::prepare(spec);
       this->lastSpec = spec;
     }
   }
@@ -79,13 +83,13 @@ template <typename SampleType>
 class HighShelfFilter : public IIRFilter<SampleType> {
 public:
   virtual void prepare(const juce::dsp::ProcessSpec &spec) override {
-    IIRFilter<SampleType>::prepare(spec);
-
-    this->getDSP().coefficients =
-        juce::dsp::IIR::Coefficients<SampleType>::makeHighShelf(
+    *this->getDSP().state =
+        *juce::dsp::IIR::Coefficients<SampleType>::makeHighShelf(
             spec.sampleRate,
             clampCutoffFrequency(this->cutoffFrequencyHz, spec.sampleRate),
             this->Q, this->gainFactor);
+            
+    IIRFilter<SampleType>::prepare(spec);
   }
 };
 
@@ -93,26 +97,25 @@ template <typename SampleType>
 class LowShelfFilter : public IIRFilter<SampleType> {
 public:
   virtual void prepare(const juce::dsp::ProcessSpec &spec) override {
-    IIRFilter<SampleType>::prepare(spec);
-
-    this->getDSP().coefficients =
-        juce::dsp::IIR::Coefficients<SampleType>::makeLowShelf(
+    *this->getDSP().state =
+        *juce::dsp::IIR::Coefficients<SampleType>::makeLowShelf(
             spec.sampleRate,
             clampCutoffFrequency(this->cutoffFrequencyHz, spec.sampleRate),
             this->Q, this->gainFactor);
+
+    IIRFilter<SampleType>::prepare(spec);
   }
 };
 
 template <typename SampleType> class PeakFilter : public IIRFilter<SampleType> {
 public:
   virtual void prepare(const juce::dsp::ProcessSpec &spec) override {
-    IIRFilter<SampleType>::prepare(spec);
-
-    this->getDSP().coefficients =
-        juce::dsp::IIR::Coefficients<SampleType>::makePeakFilter(
+    *this->getDSP().state =
+        *juce::dsp::IIR::Coefficients<SampleType>::makePeakFilter(
             spec.sampleRate,
             clampCutoffFrequency(this->cutoffFrequencyHz, spec.sampleRate),
             this->Q, this->gainFactor);
+    IIRFilter<SampleType>::prepare(spec);
   }
 };
 
