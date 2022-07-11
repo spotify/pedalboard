@@ -273,7 +273,10 @@ jobs:
           CIBW_PRERELEASE_PYTHONS: true
       - uses: actions/upload-artifact@v2
         with:
-          path: ./wheelhouse/*.whl
+          # TODO(psobot): Don't upload wheels for prerelease Python versions: 3.11
+          path: |
+            ./wheelhouse/*.whl
+            !./wheelhouse/*cp311*.whl
 
   upload-pypi:
     needs: [build-wheels]
