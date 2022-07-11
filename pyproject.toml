@@ -14,4 +14,4 @@ before-all = "yum install -y libsndfile libX11-devel libXrandr-devel libXinerama
 [[tool.cibuildwheel.overrides]]
 # Use apk instead of yum when building on Alpine Linux
 select = "*-musllinux*"
-before-all = "apk add libsndfile libX11-devel libXrandr-devel libXinerama-devel libXrender-devel libXcomposite-devel libXinerama-devel libXcursor-devel freetype-devel"
+before-all = "apk add libsndfile libX11-dev libXrandr-dev libXinerama-dev libXrender-dev libXcomposite-dev libXinerama-dev libXcursor-dev freetype-dev"
