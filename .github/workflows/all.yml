@@ -252,7 +252,7 @@ jobs:
           CIBW_BUILD: ${{ matrix.build }}
           CIBW_ARCHS: auto64 # Only support building 64-bit wheels. It's 2022!
           CIBW_ARCHS_LINUX: auto64 aarch64 # Useful for building linux images with Apple Silicon
-          CIBW_ARCHS_MACOS: x86_64 universal2 # Support Apple Silicon
+          CIBW_ARCHS_MACOS: x86_64 universal2 arm64 # Support Apple Silicon
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
           CIBW_ENVIRONMENT: NPY_BLAS_ORDER="" NPY_LAPACK_ORDER=""
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: pip install auditwheel-symbols && (auditwheel repair -w {dest_dir} {wheel} || auditwheel-symbols --manylinux 2010 {wheel})
@@ -270,6 +270,7 @@ jobs:
           # so we can't run post-wheel-build tests there.
           # Also testing any pypy versions fails, as TensorFlow isn't pypy compatible.
           CIBW_TEST_SKIP: "*manylinux* *pp* *-macosx_universal2:arm64"
+          CIBW_PRERELEASE_PYTHONS: true
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl
