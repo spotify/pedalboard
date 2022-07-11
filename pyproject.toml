@@ -7,11 +7,11 @@ requires = [
 
 build-backend = "setuptools.build_meta"
 
-// See: https://cibuildwheel.readthedocs.io/en/stable/options/#examples
+# See: https://cibuildwheel.readthedocs.io/en/stable/options/#examples
 [tool.cibuildwheel.linux]
 before-all = "yum install -y libsndfile libX11-devel libXrandr-devel libXinerama-devel libXrender-devel libXcomposite-devel libXinerama-devel libXcursor-devel freetype-devel"
 
 [[tool.cibuildwheel.overrides]]
-// Use apk instead of yum when building on Alpine Linux
+# Use apk instead of yum when building on Alpine Linux
 select = "*-musllinux*"
 before-all = "apk add libsndfile libX11-devel libXrandr-devel libXinerama-devel libXrender-devel libXcomposite-devel libXinerama-devel libXcursor-devel freetype-devel"
