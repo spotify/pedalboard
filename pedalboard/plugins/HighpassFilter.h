@@ -36,8 +36,8 @@ public:
         *juce::dsp::IIR::Coefficients<SampleType>::makeFirstOrderHighPass(
             spec.sampleRate, cutoffFrequencyHz);
     JucePlugin<juce::dsp::ProcessorDuplicator<
-                           juce::dsp::IIR::Filter<SampleType>,
-                           juce::dsp::IIR::Coefficients<SampleType>>>::prepare(spec);
+        juce::dsp::IIR::Filter<SampleType>,
+        juce::dsp::IIR::Coefficients<SampleType>>>::prepare(spec);
   }
 
 private:
