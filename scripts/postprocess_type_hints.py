@@ -107,7 +107,7 @@ def main():
             output = black.format_file_contents(
                 file_contents.getvalue(),
                 fast=False,
-                mode=black.FileMode(),
+                mode=black.FileMode(is_pyi=True, line_length=100),
             )
         except black.report.NothingChanged:
             output = file_contents.getvalue()

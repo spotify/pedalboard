@@ -589,7 +589,6 @@ try:
             _VST3Plugin.__init__(self, path_to_plugin_file, plugin_name)
             self.__set_initial_parameter_values__(parameter_values)
 
-
 except ImportError:
     # We may be on a system that doesn't have native VST3Plugin support.
     pass
@@ -612,7 +611,6 @@ try:
                 )
             _AudioUnitPlugin.__init__(self, path_to_plugin_file, plugin_name)
             self.__set_initial_parameter_values__(parameter_values)
-
 
 except ImportError:
     # We may be on a system that doesn't have native AudioUnitPlugin support.
