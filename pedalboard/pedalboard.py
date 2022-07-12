@@ -204,7 +204,7 @@ class AudioProcessorParameter(object):
 
         with self.__get_cpp_parameter() as cpp_parameter:
             start_of_range: float = 0
-            text_value: Union[None, str] = None
+            text_value: Optional[str] = None
             for x in range(0, search_steps + 1):
                 raw_value = x / search_steps
                 x_text_value = cpp_parameter.get_text_for_raw_value(raw_value)
