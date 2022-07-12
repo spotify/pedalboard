@@ -22,11 +22,10 @@ from .utils import generate_sine_at
 
 
 def rms(x: np.ndarray) -> float:
-    return np.sqrt(np.mean(x ** 2))
-
-
-def normalized(x: np.ndarray) -> np.ndarray:
-    return x / np.amax(np.abs(x))
+    if len(x.shape) == 1:
+        return np.sqrt(np.mean(x ** 2))
+    else:
+        return np.array([rms(channel) for channel in x])
 
 
 def db_to_gain(db: float) -> float:
@@ -44,10 +43,11 @@ def octaves_between(a_hz: float, b_hz: float) -> float:
 @pytest.mark.parametrize("filter_type", [HighpassFilter, LowpassFilter])
 @pytest.mark.parametrize("fundamental_hz", [440, 880])
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
-def test_filter_attenutation(filter_type, fundamental_hz, sample_rate):
-    num_seconds = 10.0
-    samples = np.arange(num_seconds * sample_rate)
-    sine_wave = np.sin(2 * np.pi * fundamental_hz * samples / sample_rate)
+@pytest.mark.parametrize("num_channels", [1, 2])
+def test_filter_attenutation(filter_type, fundamental_hz, sample_rate, num_channels):
+    sine_wave = generate_sine_at(
+        sample_rate, fundamental_hz, num_seconds=10, num_channels=num_channels
+    )
     filtered = filter_type(cutoff_frequency_hz=fundamental_hz)(sine_wave, sample_rate)
 
     # The volume at the cutoff frequency should be -3dB of the input volume
@@ -57,10 +57,11 @@ def test_filter_attenutation(filter_type, fundamental_hz, sample_rate):
 @pytest.mark.parametrize("cutoff_frequency_hz", [440, 880])
 @pytest.mark.parametrize("fundamental_hz", [880, 1760])
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
-def test_lowpass_slope(cutoff_frequency_hz, fundamental_hz, sample_rate):
-    num_seconds = 1.0
-    samples = np.arange(num_seconds * sample_rate)
-    sine_wave = np.sin(2 * np.pi * fundamental_hz * samples / sample_rate)
+@pytest.mark.parametrize("num_channels", [1, 2])
+def test_lowpass_slope(cutoff_frequency_hz, fundamental_hz, sample_rate, num_channels):
+    sine_wave = generate_sine_at(
+        sample_rate, fundamental_hz, num_seconds=1, num_channels=num_channels
+    )
 
     filtered = LowpassFilter(cutoff_frequency_hz=cutoff_frequency_hz)(sine_wave, sample_rate)
 
@@ -75,9 +76,12 @@ def test_lowpass_slope(cutoff_frequency_hz, fundamental_hz, sample_rate):
 @pytest.mark.parametrize("filter_type", [HighShelfFilter, LowShelfFilter])
 @pytest.mark.parametrize("fundamental_hz", [440, 880])
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
+@pytest.mark.parametrize("num_channels", [1, 2])
 @pytest.mark.parametrize("gain_db", [-12, -6, 0, 6, 12])
-def test_shelf_filters(filter_type, fundamental_hz, sample_rate, gain_db):
-    sine_wave = generate_sine_at(sample_rate, fundamental_hz, num_seconds=2)
+def test_shelf_filters(filter_type, fundamental_hz, sample_rate, num_channels, gain_db):
+    sine_wave = generate_sine_at(
+        sample_rate, fundamental_hz, num_seconds=2, num_channels=num_channels
+    )
     filtered = filter_type(cutoff_frequency_hz=fundamental_hz, gain_db=gain_db)(
         sine_wave, sample_rate
     )
@@ -88,8 +92,9 @@ def test_shelf_filters(filter_type, fundamental_hz, sample_rate, gain_db):
 
 @pytest.mark.parametrize("fundamental_hz", [440, 880])
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
+@pytest.mark.parametrize("num_channels", [1, 2])
 @pytest.mark.parametrize("gain_db", [-12, -6, 0, 6, 12])
-def test_peak_filter(fundamental_hz, sample_rate, gain_db):
+def test_peak_filter(fundamental_hz, sample_rate, num_channels, gain_db):
     sine_wave = generate_sine_at(sample_rate, fundamental_hz, num_seconds=2)
     filtered = PeakFilter(cutoff_frequency_hz=fundamental_hz, gain_db=gain_db)(
         sine_wave, sample_rate
@@ -102,10 +107,13 @@ def test_peak_filter(fundamental_hz, sample_rate, gain_db):
 @pytest.mark.parametrize("filter_type", [HighShelfFilter, LowShelfFilter])
 @pytest.mark.parametrize("fundamental_hz", [440, 880])
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
+@pytest.mark.parametrize("num_channels", [1, 2])
 @pytest.mark.parametrize("gain_db", [-12, -6, 0, 6, 12])
 @pytest.mark.parametrize("q", [1 / np.sqrt(2), 1, 100])
-def test_q_factor(filter_type, fundamental_hz, sample_rate, gain_db, q):
-    sine_wave = generate_sine_at(sample_rate, fundamental_hz, num_seconds=2)
+def test_q_factor(filter_type, fundamental_hz, sample_rate, num_channels, gain_db, q):
+    sine_wave = generate_sine_at(
+        sample_rate, fundamental_hz, num_seconds=2, num_channels=num_channels
+    )
 
     cutoff_frequency_hz = (
         (fundamental_hz / 4) if filter_type == HighShelfFilter else (fundamental_hz * 4)

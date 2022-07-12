@@ -24,16 +24,20 @@ namespace py = pybind11;
 
 namespace Pedalboard {
 template <typename SampleType>
-class LowpassFilter : public JucePlugin<juce::dsp::IIR::Filter<SampleType>> {
+class LowpassFilter : public JucePlugin<juce::dsp::ProcessorDuplicator<
+                          juce::dsp::IIR::Filter<SampleType>,
+                          juce::dsp::IIR::Coefficients<SampleType>>> {
 public:
   void setCutoffFrequencyHz(float f) noexcept { cutoffFrequencyHz = f; }
   float getCutoffFrequencyHz() const noexcept { return cutoffFrequencyHz; }
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) override {
-    JucePlugin<juce::dsp::IIR::Filter<SampleType>>::prepare(spec);
-    this->getDSP().coefficients =
-        juce::dsp::IIR::Coefficients<SampleType>::makeFirstOrderLowPass(
+    *this->getDSP().state =
+        *juce::dsp::IIR::Coefficients<SampleType>::makeFirstOrderLowPass(
             spec.sampleRate, cutoffFrequencyHz);
+    JucePlugin<juce::dsp::ProcessorDuplicator<
+        juce::dsp::IIR::Filter<SampleType>,
+        juce::dsp::IIR::Coefficients<SampleType>>>::prepare(spec);
   }
 
 private:
