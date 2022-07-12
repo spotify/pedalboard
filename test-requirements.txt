@@ -10,7 +10,7 @@ black==21.7b0
 click==8.0.4
 interrogate
 
-numpy
+numpy>=1.21
 sox
 tensorflow~=2.6.2; python_version < '3.10' and platform.machine != 'arm64'
 google-cloud-storage
