@@ -40,7 +40,8 @@ REPLACEMENTS = [
     ("mode: str = 'w'", r'mode: typing.Literal["w"]'),
     # ndarrays need to be corrected as well:
     (r"numpy\.ndarray\[(.*?)\]", r"numpy.ndarray[typing.Any, numpy.dtype[\1]]"),
-    # We return an ndarray with indeterminate type from read_raw, which is represented by a py::handle object.
+    # We return an ndarray with indeterminate type from read_raw,
+    # which is represented by a py::handle object.
     # Type this as a numpy.ndarray with no type arguments:
     ("-> handle:", "-> numpy.ndarray:"),
     # None of our enums are properly detected by pybind11-stubgen:
