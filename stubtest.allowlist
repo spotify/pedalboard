@@ -1,4 +1,13 @@
+pedalboard.Plugin.__call__
+pedalboard.__all__
+pedalboard.io.__all__
 pedalboard.pedalboard.Dict
 pedalboard.pedalboard.Iterable
 pedalboard.pedalboard.List
+pedalboard.pedalboard.Plugin.__call__
 pedalboard.pedalboard.WeakTypeWrapper@91
+pedalboard.pedalboard._AudioProcessorParameter.__init__
+pedalboard.utils.Chain
+pedalboard.utils.Mix
+pedalboard.utils.__all__
+pedalboard.version.__all__

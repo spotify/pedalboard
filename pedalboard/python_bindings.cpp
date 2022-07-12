@@ -193,7 +193,12 @@ PYBIND11_MODULE(pedalboard_native, m) {
 
   // I/O helpers and utilities:
   py::module io = m.def_submodule("io");
-  init_audio_file(io);
-  init_readable_audio_file(io);
-  init_writeable_audio_file(io);
+
+  auto pyAudioFile = declare_audio_file(io);
+  auto pyReadableAudioFile = declare_readable_audio_file(io);
+  auto pyWriteableAudioFile = declare_writeable_audio_file(io);
+
+  init_audio_file(pyAudioFile);
+  init_readable_audio_file(io, pyReadableAudioFile);
+  init_writeable_audio_file(io, pyWriteableAudioFile);
 };

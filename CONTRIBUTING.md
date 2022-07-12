@@ -26,8 +26,19 @@ Then, you can `import pedalboard` from Python (or run the tests with `tox`) to t
 > ```
 > Note that `ccache` may or may not work out-of-the-box on other platforms - see https://github.com/spotify/pedalboard/issues/62 for more information.
 
-By default, [all `.cpp` and `.mm` files in the `pedalboard` directory (or subdirectories)](https://github.com/spotify/pedalboard/blob/master/setup.py#L129)
-will be automatically compiled by `setup.py`.
+By default, [all `.cpp` and `.mm` files in the `pedalboard` directory (or subdirectories)](https://github.com/spotify/pedalboard/blob/master/setup.py#L129) will be automatically compiled by `setup.py`.
+
+While `pedalboard` is mostly C++ code, it ships with `.pyi` files to allow for type hints in text editors and via MyPy. To update the type hint files, use the following commands:
+
+```shell
+# Use pybind11-stubgen to create intermediate stub files:
+pybind11-stubgen -o stubs_output pedalboard pedalboard_native --no-setup-py
+# Post-process the stub files into more human-readable, usable ones:
+python3 -m scripts.postprocess_type_hints stubs_output pedalboard --check
+# Run mypy.stubtest to ensure the resulting stubs are valid
+python3 -m mypy.stubtest pedalboard --allowlist stubtest.allowlist
+# If all looks good, commit the resulting stubs to Git.
+```
 
 ## Workflow
 
