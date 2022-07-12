@@ -188,6 +188,8 @@ def test_at_least_one_plugin_is_available_for_testing():
         ("123.45 Hz", "123.45"),
         ("123.45 kHz", "123450.0"),
         ("kHz", "kHz"),
+        (1.23, 1.23),
+        ("one thousand kHz", "one thousand kHz"),
     ],
 )
 def test_strip_common_float_suffixes(value, expected):

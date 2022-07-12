@@ -84,14 +84,14 @@ class WriteableAudioFile(AudioFile):
 
 class AudioFile(object):
     @overload
-    def __new__(cls, filename: str, mode: Literal['r'] = ...) -> ReadableAudioFile: ...
+    def __new__(cls, filename: str, mode: Literal["r"] = ...) -> ReadableAudioFile: ...
     @overload
-    def __new__(cls, file_like: BinaryIO, mode: Literal['r'] = ...) -> ReadableAudioFile: ...
+    def __new__(cls, file_like: BinaryIO, mode: Literal["r"] = ...) -> ReadableAudioFile: ...
     @overload
     def __new__(
         cls,
         filename: str,
-        mode: Literal['w'],
+        mode: Literal["w"],
         samplerate: Optional[float] = ...,
         num_channels: int = ...,
         bit_depth: int = ...,
@@ -101,7 +101,7 @@ class AudioFile(object):
     def __new__(
         cls,
         file_like: BinaryIO,
-        mode: Literal['w'],
+        mode: Literal["w"],
         samplerate: Optional[float] = ...,
         num_channels: int = ...,
         bit_depth: int = ...,
