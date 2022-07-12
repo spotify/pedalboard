@@ -68,6 +68,11 @@ namespace py = pybind11;
 using namespace Pedalboard;
 
 PYBIND11_MODULE(pedalboard_native, m) {
+  auto plugin = py::class_<Plugin, std::shared_ptr<Plugin>>(
+      m, "Plugin",
+      "A generic audio processing plugin. Base class of all "
+      "Pedalboard plugins.");
+
   m.def("process", process<float>,
         "Run a 32-bit floating point audio buffer through a list of Pedalboard "
         "plugins.",
@@ -95,10 +100,6 @@ PYBIND11_MODULE(pedalboard_native, m) {
         py::arg("input_array"), py::arg("sample_rate"), py::arg("plugin"),
         py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true);
 
-  auto plugin = py::class_<Plugin, std::shared_ptr<Plugin>>(
-      m, "Plugin",
-      "A generic audio processing plugin. Base class of all "
-      "Pedalboard plugins.");
   plugin
       .def(py::init([]() {
         throw py::type_error(

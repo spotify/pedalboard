@@ -1,12 +1,3 @@
-"""
-      Pedalboard
-      ----------
-
-      .. currentmodule:: pedalboard
-
-      .. autosummary::
-         :toctree: _generate
-  """
 from __future__ import annotations
 import pedalboard_native
 import typing
@@ -1047,4 +1038,52 @@ class _VST3Plugin(Plugin):
 
         :type: str
         """
+    pass
+
+@typing.overload
+def process(
+    input_array: numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]],
+    sample_rate: float,
+    plugin: Plugin,
+    buffer_size: int = 8192,
+    reset: bool = True,
+) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+    """
+    Run a 32-bit floating point audio buffer through a list of Pedalboard plugins.
+
+    Run a 64-bit floating point audio buffer through a list of Pedalboard plugins. The buffer will be converted to 32-bit for processing.
+
+    Run a 32-bit floating point audio buffer through a single Pedalboard plugin. (Note: if calling this multiple times with multiple plugins, consider passing a list of plugins instead.)
+
+    Run a 64-bit floating point audio buffer through a single Pedalboard plugin. (Note: if calling this multiple times with multiple plugins, consider passing a list of plugins instead.) The buffer will be converted to 32-bit for processing.
+    """
+
+@typing.overload
+def process(
+    input_array: numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]],
+    sample_rate: float,
+    plugins: typing.List[Plugin],
+    buffer_size: int = 8192,
+    reset: bool = True,
+) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+    pass
+
+@typing.overload
+def process(
+    input_array: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
+    sample_rate: float,
+    plugin: Plugin,
+    buffer_size: int = 8192,
+    reset: bool = True,
+) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+    pass
+
+@typing.overload
+def process(
+    input_array: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]],
+    sample_rate: float,
+    plugins: typing.List[Plugin],
+    buffer_size: int = 8192,
+    reset: bool = True,
+) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
     pass
