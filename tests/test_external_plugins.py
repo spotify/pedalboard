@@ -55,7 +55,7 @@ if os.getenv("CIBW_TEST_REQUIRES") or os.getenv("CI"):
 
 
 def is_container_plugin(filename: str):
-    for klass in pedalboard.AVAILABLE_PLUGIN_CLASSES:
+    for klass in pedalboard._AVAILABLE_PLUGIN_CLASSES:
         try:
             return len(klass.get_plugin_names_for_file(filename)) > 1
         except ImportError:
@@ -146,7 +146,7 @@ atexit.register(delete_installed_plugins)
 
 # Allow testing with all of the plugins on the local machine:
 if os.environ.get("ENABLE_TESTING_WITH_LOCAL_PLUGINS", False):
-    for plugin_class in pedalboard.AVAILABLE_PLUGIN_CLASSES:
+    for plugin_class in pedalboard._AVAILABLE_PLUGIN_CLASSES:
         for plugin_path in plugin_class.installed_plugins:
             try:
                 load_test_plugin(plugin_path)
@@ -271,7 +271,7 @@ def test_initial_parameter_validation_missing(plugin_filename: str):
         load_test_plugin(plugin_filename, parameter_values={"missing_parameter": 123})
 
 
-@pytest.mark.parametrize("loader", [pedalboard.load_plugin] + pedalboard.AVAILABLE_PLUGIN_CLASSES)
+@pytest.mark.parametrize("loader", [pedalboard.load_plugin] + pedalboard._AVAILABLE_PLUGIN_CLASSES)
 def test_import_error_on_missing_path(loader):
     with pytest.raises(ImportError):
         loader("./")

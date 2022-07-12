@@ -38,6 +38,8 @@ jobs:
         run: flake8 . --count --ignore=W503,E203 --exclude .git,dist,doc,build,vendors --show-source --statistics --max-line-length 100
       - name: Check Python formatting
         run: black pedalboard tests --line-length 100 --experimental-string-processing --diff --check
+      - name: Check MyPy Stubs
+        run: python3 -m mypy.stubtest pedalboard --allowlist stubtest.allowlist
 
   lint-cpp:
     runs-on: ubuntu-latest

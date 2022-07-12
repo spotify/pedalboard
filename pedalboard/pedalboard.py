@@ -16,13 +16,13 @@
 
 import re
 import platform
-import weakref
-from functools import update_wrapper
-from contextlib import contextmanager
-from typing import List, Optional, Dict, Tuple, Iterable, Union
 
-from pedalboard_native import Plugin, _AudioProcessorParameter
-from pedalboard_native.utils import Chain
+import weakref
+from contextlib import contextmanager
+from typing import List, Optional, Dict, Tuple, Iterable, Type, Union
+
+from pedalboard_native import Plugin, _AudioProcessorParameter  # type: ignore
+from pedalboard_native.utils import Chain  # type: ignore
 
 
 class Pedalboard(Chain):
@@ -45,7 +45,10 @@ class Pedalboard(Chain):
 FLOAT_SUFFIXES_TO_IGNORE = set(["x", "%", "*", ",", ".", "hz"])
 
 
-def strip_common_float_suffixes(s: str) -> str:
+def strip_common_float_suffixes(s: Union[float, str]) -> Union[float, str]:
+    if isinstance(s, float):
+        return s
+
     s = s.strip()
 
     # Handle certain plugins that report "Hz" and "kHz" suffixes:
@@ -63,7 +66,10 @@ def strip_common_float_suffixes(s: str) -> str:
     return s
 
 
-def looks_like_float(s: str) -> bool:
+def looks_like_float(s: Union[float, str]) -> bool:
+    if isinstance(s, float):
+        return True
+
     try:
         float(strip_common_float_suffixes(s))
         return True
@@ -197,8 +203,8 @@ class AudioProcessorParameter(object):
         self.ranges: Dict[Tuple[float, float], Union[str, float, bool]] = {}
 
         with self.__get_cpp_parameter() as cpp_parameter:
-            start_of_range = 0
-            text_value = None
+            start_of_range: float = 0
+            text_value: Union[None, str] = None
             for x in range(0, search_steps + 1):
                 raw_value = x / search_steps
                 x_text_value = cpp_parameter.get_text_for_raw_value(raw_value)
@@ -209,6 +215,11 @@ class AudioProcessorParameter(object):
                     self.ranges[(start_of_range, raw_value)] = text_value
                     text_value = x_text_value
                     start_of_range = raw_value
+            if text_value is None:
+                raise NotImplementedError(
+                    f"Plugin parameter '{parameter_name}' failed to return a valid string for its"
+                    " value."
+                )
             self.ranges[(start_of_range, 1)] = text_value
 
             self.python_name = to_python_parameter_name(cpp_parameter)
@@ -217,15 +228,17 @@ class AudioProcessorParameter(object):
         self.max_value = None
         self.step_size = None
         self.approximate_step_size = None
-        self.type = str
+        self.type: Type = str
 
         if all(looks_like_float(v) for v in self.ranges.values()):
             self.type = float
-            self.ranges = {k: float(strip_common_float_suffixes(v)) for k, v in self.ranges.items()}
-            self.min_value = min(self.ranges.values())
-            self.max_value = max(self.ranges.values())
+            float_ranges = {
+                k: float(strip_common_float_suffixes(v)) for k, v in self.ranges.items()
+            }
+            self.min_value = min(float_ranges.values())
+            self.max_value = max(float_ranges.values())
 
-            sorted_values = sorted(self.ranges.values())
+            sorted_values = sorted(float_ranges.values())
             first_derivative_steps = set(
                 [round(abs(b - a), 8) for a, b in zip(sorted_values, sorted_values[1:])]
             )
@@ -235,9 +248,15 @@ class AudioProcessorParameter(object):
                 self.approximate_step_size = sum(first_derivative_steps) / len(
                     first_derivative_steps
                 )
-        elif len(self.ranges) == 2 and (TRUE_BOOLEANS & {v.lower() for v in self.ranges.values()}):
+            self.ranges = dict(float_ranges)
+        elif len(self.ranges) == 2 and (
+            TRUE_BOOLEANS & {(v.lower() if isinstance(v, str) else v) for v in self.ranges.values()}
+        ):
             self.type = bool
-            self.ranges = {k: v.lower() in TRUE_BOOLEANS for k, v in self.ranges.items()}
+            self.ranges = {
+                k: (v.lower() if isinstance(v, str) else v) in TRUE_BOOLEANS
+                for k, v in self.ranges.items()
+            }
             self.min_value = False
             self.max_value = True
             self.step_size = 1
@@ -307,7 +326,7 @@ class AudioProcessorParameter(object):
             except RuntimeError:
                 pass
         if hasattr(super(), "__getattr__"):
-            return super().__getattr__(name)
+            return super().__getattr__(name)  # type: ignore
         raise AttributeError("'{}' has no attribute '{}'".format(self.__class__.__name__, name))
 
     def __setattr__(self, name: str, value):
@@ -344,24 +363,24 @@ class AudioProcessorParameter(object):
             plugin_reported_raw_value = self.get_raw_value_for_text(str(new_value))
 
             closest_diff = None
-            closest_range_value = None
+            closest_range_value: Optional[Tuple[float, float]] = None
             for value, raw_value_range in self._value_to_raw_value_ranges.items():
                 diff = new_value - value
                 if closest_diff is None or abs(diff) < abs(closest_diff):
                     closest_range_value = raw_value_range
                     closest_diff = diff
 
-            expected_low, expected_high = closest_range_value
-            if (
-                plugin_reported_raw_value < expected_low
-                or plugin_reported_raw_value > expected_high
-            ):
-                # The plugin might have bad code in it when trying
-                # to parse one of the string values it gave to us.
-                # Let's use the range we had before:
-                return expected_low
-            else:
-                return plugin_reported_raw_value
+            if closest_range_value is not None:
+                expected_low, expected_high = closest_range_value
+                if (
+                    plugin_reported_raw_value < expected_low
+                    or plugin_reported_raw_value > expected_high
+                ):
+                    # The plugin might have bad code in it when trying
+                    # to parse one of the string values it gave to us.
+                    # Let's use the range we had before:
+                    return expected_low
+            return plugin_reported_raw_value
 
         elif self.type is str:
             if isinstance(new_value, (str, int, float, bool)):
@@ -421,18 +440,40 @@ def normalize_python_parameter_name(name: str) -> str:
     # Special case: some plugins expose parameters with "#"/"♯" or "b"/"♭" in their names.
     name = name.replace("#", "_sharp").replace("♯", "_sharp").replace("♭", "_flat")
     # Replace all non-alphanumeric characters with underscores
-    name = [
+    name_chars = [
         c if (c.isalpha() or c.isnumeric()) and c.isprintable() and ord(c) < 128 else "_"
         for c in name
     ]
     # Remove any double-underscores:
-    name = [a for a, b in zip(name, name[1:]) if a != b or b != "_"] + [name[-1]]
+    name_chars = [a for a, b in zip(name_chars, name_chars[1:]) if a != b or b != "_"] + [
+        name_chars[-1]
+    ]
     # Remove any leading or trailing underscores:
-    name = "".join(name).strip("_")
+    name = "".join(name_chars).strip("_")
     return name
 
 
 class ExternalPlugin(object):
+    # Don't actually define this here; this is only to appease MyPy.
+    def __init__(
+        self,
+        path_to_plugin_file: str,
+        parameter_values: Dict[str, Union[str, int, float, bool]] = {},
+        plugin_name: Optional[str] = None,
+    ) -> None:
+        ...
+
+    @classmethod
+    def get_plugin_names_for_file(cls, filename: str) -> List[str]:
+        ...
+
+    def show_editor(self) -> None:
+        ...
+
+    @property
+    def name(self) -> str:
+        ...
+
     def __set_initial_parameter_values__(
         self, parameter_values: Dict[str, Union[str, int, float, bool]] = {}
     ):
@@ -472,7 +513,7 @@ class ExternalPlugin(object):
                 self.__python_to_cpp_names__[parameter.python_name] = cpp_parameter.name
         return parameters
 
-    def _get_parameter_by_python_name(self, python_name: str) -> AudioProcessorParameter:
+    def _get_parameter_by_python_name(self, python_name: str) -> Optional[AudioProcessorParameter]:
         if not hasattr(self, "__python_parameter_cache__"):
             self.__python_parameter_cache__ = {}
         if not hasattr(self, "__python_to_cpp_names__"):
@@ -543,9 +584,9 @@ try:
                 raise TypeError(
                     "Expected a dictionary to be passed to parameter_values, but received a"
                     f" {type(parameter_values).__name__}. (If passing a plugin name, pass"
-                    ' "plugin_name=..." as a keyword argument instead.)'
+                    " \"plugin_name=...\" as a keyword argument instead.)"
                 )
-            super().__init__(path_to_plugin_file, plugin_name)
+            _VST3Plugin.__init__(self, path_to_plugin_file, plugin_name)
             self.__set_initial_parameter_values__(parameter_values)
 
 
@@ -567,9 +608,9 @@ try:
                 raise TypeError(
                     "Expected a dictionary to be passed to parameter_values, but received a"
                     f" {type(parameter_values).__name__}. (If passing a plugin name, pass"
-                    ' "plugin_name=..." as a keyword argument instead.)'
+                    " \"plugin_name=...\" as a keyword argument instead.)"
                 )
-            super().__init__(path_to_plugin_file, plugin_name)
+            _AudioUnitPlugin.__init__(self, path_to_plugin_file, plugin_name)
             self.__set_initial_parameter_values__(parameter_values)
 
 
@@ -579,28 +620,36 @@ except ImportError:
     pass
 
 
-AVAILABLE_PLUGIN_CLASSES = list(ExternalPlugin.__subclasses__())
+_AVAILABLE_PLUGIN_CLASSES: List[Type[ExternalPlugin]] = list(ExternalPlugin.__subclasses__())
 
 
-def load_plugin(*args, **kwargs):
-    if not AVAILABLE_PLUGIN_CLASSES:
+def load_plugin(
+    path_to_plugin_file: str,
+    parameter_values: Dict[str, Union[str, int, float, bool]] = {},
+    plugin_name: Union[str, None] = None,
+) -> ExternalPlugin:
+    if not _AVAILABLE_PLUGIN_CLASSES:
         raise ImportError(
             "Pedalboard found no supported external plugin types in this installation ({}).".format(
                 platform.system()
             )
         )
     exceptions = []
-    for plugin_class in AVAILABLE_PLUGIN_CLASSES:
+    for plugin_class in _AVAILABLE_PLUGIN_CLASSES:
         try:
-            return plugin_class(*args, **kwargs)
+            return plugin_class(
+                path_to_plugin_file=path_to_plugin_file,
+                parameter_values=parameter_values,
+                plugin_name=plugin_name,
+            )
         except ImportError as e:
             exceptions.append(e)
         except Exception:
             raise
     else:
-        tried_plugins = ", ".join([c.__name__ for c in AVAILABLE_PLUGIN_CLASSES])
+        tried_plugins = ", ".join([c.__name__ for c in _AVAILABLE_PLUGIN_CLASSES])
         # Good error messages are important, okay?
-        if len(AVAILABLE_PLUGIN_CLASSES) > 2:
+        if len(_AVAILABLE_PLUGIN_CLASSES) > 2:
             tried_plugins = ", or ".join(tried_plugins.rsplit(", ", 1))
         else:
             tried_plugins = " or ".join(tried_plugins.rsplit(", ", 1))
@@ -610,12 +659,8 @@ def load_plugin(*args, **kwargs):
                 "\n\t".join(
                     [
                         "{}: {}".format(klass.__name__, exception)
-                        for klass, exception in zip(AVAILABLE_PLUGIN_CLASSES, exceptions)
+                        for klass, exception in zip(_AVAILABLE_PLUGIN_CLASSES, exceptions)
                     ]
                 ),
             )
         )
-
-
-if AVAILABLE_PLUGIN_CLASSES:
-    update_wrapper(load_plugin, AVAILABLE_PLUGIN_CLASSES[0].__init__)
