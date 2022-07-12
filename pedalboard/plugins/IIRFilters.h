@@ -88,7 +88,7 @@ public:
             spec.sampleRate,
             clampCutoffFrequency(this->cutoffFrequencyHz, spec.sampleRate),
             this->Q, this->gainFactor);
-            
+
     IIRFilter<SampleType>::prepare(spec);
   }
 };
