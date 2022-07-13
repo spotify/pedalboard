@@ -233,9 +233,11 @@ Contributions to `pedalboard` are welcomed! See [CONTRIBUTING.md](https://github
 
 ### Can Pedalboard be used with live (real-time) audio?
 
-Technically, yes, Pedalboard could be used with live audio input/output. See [@stefanobazzi](https://github.com/stefanobazzi)'s [guitarboard](https://github.com/stefanobazzi/guitarboard) project for an example that uses the `python-sounddevice` library to wire Pedalboard up to live audio.
+Technically, yes, Pedalboard could be used with live audio input/output. See:
+ - [Pull request #98](https://github.com/spotify/pedalboard/pull/98), which contains an experimental live audio interface written in C++.
+ - [@stefanobazzi](https://github.com/stefanobazzi)'s [guitarboard](https://github.com/stefanobazzi/guitarboard) project for an example that uses the `python-sounddevice` library.
 
-However, there are a couple big caveats when talking about using Pedalboard in a live context. Python, as a language, is [garbage-collected](https://devguide.python.org/garbage_collector/), meaning that your code randomly pauses on a regular interval to clean up unused objects. In most programs, this is not an issue at all. However, for live audio, garbage collection can result in random pops, clicks, or audio drop-outs that are very difficult to prevent.
+However, there are a couple big caveats when talking about using Pedalboard in a live context. Python, as a language, is [garbage-collected](https://devguide.python.org/garbage_collector/), meaning that your code randomly pauses on a regular interval to clean up unused objects. In most programs, this is not an issue at all. However, for live audio, garbage collection can result in random pops, clicks, or audio drop-outs that are very difficult to prevent. Python's [Global Interpreter Lock](https://wiki.python.org/moin/GlobalInterpreterLock) also adds potentially-unbounded delays when switching threads, and most operating systems use a separate high-priority thread for audio processing; meaning that Python could block this thread and cause stuttering if _any_ Python objects are accessed or mutated in the audio thread.
 
 Note that if your application processes audio in a streaming fashion, but allows for large buffer sizes (multiple seconds of audio) or soft real-time requirements, Pedalboard can be used there without issue. Examples of this use case include streaming audio processing over the network, or processing data offline but chunk-by-chunk.
 
