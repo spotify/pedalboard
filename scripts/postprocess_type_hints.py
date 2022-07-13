@@ -8,6 +8,7 @@ Think of this as a more intelligent (or less intelligent) application of `git pa
 import os
 import io
 import re
+import difflib
 from pathlib import Path
 from collections import defaultdict
 import black
@@ -122,9 +123,12 @@ def main():
             with open(output_file_name, "r") as f:
                 existing = f.read()
                 if not matches_ignoring_whitespace(existing, output):
-                    error = "File that would be generated does not match existing file!\n"
+                    error = f"File that would be generated ({output_file_name}) "
+                    error += "does not match existing file!\n"
                     error += f"Existing file had {len(existing):,} bytes, "
-                    error += f"expected {len(output):,} bytes.\n"
+                    error += f"expected {len(output):,} bytes.\nDiff was:\n"
+                    diff = difflib.context_diff(existing.split("\n"), output.split("\n"))
+                    error += "\n".join([x.strip() for x in diff])
                     raise ValueError(error)
         else:
             with open(output_file_name, "w") as o:
