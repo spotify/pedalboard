@@ -1,5 +1,5 @@
 from __future__ import annotations
-import pedalboard_native
+import pedalboard_native  # type: ignore
 import typing
 import numpy
 

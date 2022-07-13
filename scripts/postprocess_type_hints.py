@@ -49,7 +49,7 @@ REPLACEMENTS = [
     (r"Resample\.Quality = Quality\.", "Resample.Quality = Resample.Quality."),
     (r": pedalboard_native\.Resample\.Quality", ": Resample.Quality"),
     (r": pedalboard_native\.LadderFilter\.Mode", ": LadderFilter.Mode"),
-    (r"import pedalboard_native(\.?.*?)", r"import pedalboard_native\1  # type: ignore"),
+    (r"import pedalboard_native(\.?.*)$", r"import pedalboard_native\1  # type: ignore"),
 ]
 
 REMOVE_INDENTED_BLOCKS_STARTING_WITH = [

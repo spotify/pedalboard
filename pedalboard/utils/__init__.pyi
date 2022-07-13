@@ -1,8 +1,8 @@
 from __future__ import annotations
-import pedalboard_native.utils
+import pedalboard_native.utils  # type: ignore
 import typing
 import numpy
-import pedalboard_native
+import pedalboard_native  # type: ignore
 
 _Shape = typing.Tuple[int, ...]
 
