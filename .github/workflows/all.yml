@@ -104,7 +104,7 @@ jobs:
       - name: Validate type stubs match postprocessing
         run: python3 -m scripts.postprocess_type_hints stubs_output pedalboard --check
       - name: Validate type stubs match runtime
-        run: python3 -m mypy.stubtest pedalboard --allowlist stubtest.allowlist --ignore-missing-stub
+        run: python3 -m mypy.stubtest pedalboard --allowlist stubtest.allowlist --ignore-missing-stub --ignore-unused-allowlist
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
