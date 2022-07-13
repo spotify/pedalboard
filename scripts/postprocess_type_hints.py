@@ -61,7 +61,7 @@ REPLACEMENTS = [
                 "    import typing_extensions",
                 "    _Literal = typing_extensions.Literal",
                 "else:",
-                "    _Literal = typing.Literal"
+                "    _Literal = typing.Literal",
             ]
         ),
     ),
@@ -77,8 +77,12 @@ LINES_TO_IGNORE_FOR_MATCH = {"from __future__ import annotations"}
 
 
 def stub_files_match(a: str, b: str) -> bool:
-    a = "".join([x for x in a.split() if x.strip() and x.strip() not in LINES_TO_IGNORE_FOR_MATCH])
-    b = "".join([x for x in b.split() if x.strip() and x.strip() not in LINES_TO_IGNORE_FOR_MATCH])
+    a = "".join(
+        [x for x in a.split("\n") if x.strip() and x.strip() not in LINES_TO_IGNORE_FOR_MATCH]
+    )
+    b = "".join(
+        [x for x in b.split("\n") if x.strip() and x.strip() not in LINES_TO_IGNORE_FOR_MATCH]
+    )
     return a == b
 
 
