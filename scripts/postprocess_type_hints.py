@@ -36,9 +36,9 @@ REPLACEMENTS = [
     # object is a superclass of `str`, which would make these declarations ambiguous:
     ("file_like: object", "file_like: typing.BinaryIO"),
     # "r" is the default file open/reading mode:
-    ("mode: str = 'r'", r'mode: _Literal["r"] = "r"'),
+    ("mode: str = 'r'", r'mode: typing_extensions.Literal["r"] = "r"'),
     # ... but when using "w", "w" needs to be specified explicitly (no default):
-    ("mode: str = 'w'", r'mode: _Literal["w"]'),
+    ("mode: str = 'w'", r'mode: typing_extensions.Literal["w"]'),
     # ndarrays need to be corrected as well:
     (r"numpy\.ndarray\[(.*?)\]", r"numpy.ndarray[typing.Any, numpy.dtype[\1]]"),
     # We return an ndarray with indeterminate type from read_raw,
@@ -53,17 +53,7 @@ REPLACEMENTS = [
     (
         # For Python 3.6 compatibility:
         r"import typing",
-        "\n".join(
-            [
-                "import sys",
-                "import typing",
-                "if sys.version_info < (3, 8):",
-                "    import typing_extensions",
-                "    _Literal = typing_extensions.Literal",
-                "else:",
-                "    _Literal = typing.Literal",
-            ]
-        ),
+        "\n".join(["import typing", "import typing_extensions"]),
     ),
 ]
 
