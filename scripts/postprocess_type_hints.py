@@ -57,10 +57,12 @@ REMOVE_INDENTED_BLOCKS_STARTING_WITH = [
     "class _AudioUnitPlugin(Plugin):"
 ]
 
+LINES_TO_IGNORE_FOR_MATCH = {"from __future__ import annotations"}
 
-def matches_ignoring_whitespace(a: str, b: str) -> bool:
-    a = "".join(a.split())
-    b = "".join(b.split())
+
+def stub_files_match(a: str, b: str) -> bool:
+    a = "".join([x for x in a.split() if x.strip() not in LINES_TO_IGNORE_FOR_MATCH])
+    b = "".join([x for x in b.split() if x.strip() not in LINES_TO_IGNORE_FOR_MATCH])
     return a == b
 
 
@@ -139,7 +141,7 @@ def main():
         if args.check:
             with open(output_file_name, "r") as f:
                 existing = f.read()
-                if not matches_ignoring_whitespace(existing, output):
+                if not stub_files_match(existing, output):
                     error = f"File that would be generated ({output_file_name}) "
                     error += "does not match existing file!\n"
                     error += f"Existing file had {len(existing):,} bytes, "
