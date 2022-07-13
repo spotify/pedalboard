@@ -698,14 +698,23 @@ private:
   int framesWritten = 0;
 };
 
-inline void init_writeable_audio_file(py::module &m) {
-  py::class_<WriteableAudioFile, AudioFile,
-             std::shared_ptr<WriteableAudioFile>>(
+inline py::class_<WriteableAudioFile, AudioFile,
+                  std::shared_ptr<WriteableAudioFile>>
+declare_writeable_audio_file(py::module &m) {
+  return py::class_<WriteableAudioFile, AudioFile,
+                    std::shared_ptr<WriteableAudioFile>>(
       m, "WriteableAudioFile",
       "An audio file writer interface, with native support for Ogg Vorbis, "
       "WAV, FLAC, and AIFF files on all operating systems. (Use "
       "pedalboard.io.get_supported_write_formats() to see which additional "
-      "formats are supported on the current platform.)")
+      "formats are supported on the current platform.)");
+}
+
+inline void init_writeable_audio_file(
+    py::module &m,
+    py::class_<WriteableAudioFile, AudioFile,
+               std::shared_ptr<WriteableAudioFile>> &pyWriteableAudioFile) {
+  pyWriteableAudioFile
       .def(py::init([](std::string filename, double sampleRate, int numChannels,
                        int bitDepth,
                        std::optional<std::variant<std::string, float>> quality)

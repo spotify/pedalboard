@@ -35,5 +35,5 @@ def test_bitcrush(bit_depth: float, fundamental_hz: float, sample_rate: float, n
 
     assert np.all(np.isfinite(output))
 
-    expected_output = np.around(sine_wave.astype(np.float64) * (2 ** bit_depth)) / (2 ** bit_depth)
+    expected_output = np.around(sine_wave.astype(np.float64) * (2**bit_depth)) / (2**bit_depth)
     np.testing.assert_allclose(output, expected_output, atol=0.01)

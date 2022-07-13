@@ -473,14 +473,24 @@ private:
   int currentPosition = 0;
 };
 
-inline void init_readable_audio_file(py::module &m) {
-  py::class_<ReadableAudioFile, AudioFile, std::shared_ptr<ReadableAudioFile>>(
+inline py::class_<ReadableAudioFile, AudioFile,
+                  std::shared_ptr<ReadableAudioFile>>
+declare_readable_audio_file(py::module &m) {
+  return py::class_<ReadableAudioFile, AudioFile,
+                    std::shared_ptr<ReadableAudioFile>>(
       m, "ReadableAudioFile",
       "An audio file reader interface, with native support for Ogg Vorbis, "
       "MP3, WAV, FLAC, and AIFF files on all operating systems. On some "
       "platforms, other formats may also be readable. (Use "
       "pedalboard.io.get_supported_read_formats() to see which formats are "
-      "supported on the current platform.)")
+      "supported on the current platform.)");
+}
+
+inline void init_readable_audio_file(
+    py::module &m,
+    py::class_<ReadableAudioFile, AudioFile, std::shared_ptr<ReadableAudioFile>>
+        &pyReadableAudioFile) {
+  pyReadableAudioFile
       .def(py::init([](std::string filename) -> ReadableAudioFile * {
              // This definition is only here to provide nice docstrings.
              throw std::runtime_error(

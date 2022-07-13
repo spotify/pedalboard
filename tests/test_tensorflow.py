@@ -22,6 +22,9 @@ import pedalboard
 
 
 @pytest.mark.skipif(
+    sys.version_info.minor <= 6, reason="TensorFlow not supported on Python 3.6 anymore."
+)
+@pytest.mark.skipif(
     sys.version_info.minor >= 10, reason="TensorFlow not supported on Python 3.10+ yet."
 )
 @pytest.mark.skipif(

@@ -33,14 +33,26 @@ namespace py = pybind11;
 
 namespace Pedalboard {
 
-inline void init_audio_file(py::module &m) {
+// For pybind11-stubgen to properly parse the docstrings,
+// we have to delcare all of the AudioFile subclasses first before using
+// their types (i.e.: as return types from `__new__`).
+// See:
+// https://pybind11.readthedocs.io/en/latest/advanced/misc.html#avoiding-cpp-types-in-docstrings
+inline py::class_<AudioFile, std::shared_ptr<AudioFile>>
+declare_audio_file(py::module &m) {
+  return py::class_<AudioFile, std::shared_ptr<AudioFile>>(
+      m, "AudioFile", "A base class for readable and writeable audio files.");
+}
+
+inline void init_audio_file(
+    py::class_<AudioFile, std::shared_ptr<AudioFile>> &pyAudioFile) {
   /**
    * Important note: any changes made to the function signatures here should
    * also be made to the constructor signatures of ReadableAudioFile and
    * WriteableAudioFile to keep a consistent interface!
    */
-  py::class_<AudioFile, std::shared_ptr<AudioFile>>(
-      m, "AudioFile", "A base class for readable and writeable audio files.")
+
+  pyAudioFile
       .def(py::init<>()) // Make this class effectively abstract; we can only
                          // instantiate subclasses via __new__.
       .def_static(

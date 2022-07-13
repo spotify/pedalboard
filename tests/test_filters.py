@@ -23,7 +23,7 @@ from .utils import generate_sine_at
 
 def rms(x: np.ndarray) -> float:
     if len(x.shape) == 1:
-        return np.sqrt(np.mean(x ** 2))
+        return np.sqrt(np.mean(x**2))
     else:
         return np.array([rms(channel) for channel in x])
 

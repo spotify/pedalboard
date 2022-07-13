@@ -68,6 +68,11 @@ namespace py = pybind11;
 using namespace Pedalboard;
 
 PYBIND11_MODULE(pedalboard_native, m) {
+  auto plugin = py::class_<Plugin, std::shared_ptr<Plugin>>(
+      m, "Plugin",
+      "A generic audio processing plugin. Base class of all "
+      "Pedalboard plugins.");
+
   m.def("process", process<float>,
         "Run a 32-bit floating point audio buffer through a list of Pedalboard "
         "plugins.",
@@ -95,58 +100,51 @@ PYBIND11_MODULE(pedalboard_native, m) {
         py::arg("input_array"), py::arg("sample_rate"), py::arg("plugin"),
         py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true);
 
-  auto plugin =
-      py::class_<Plugin, std::shared_ptr<Plugin>>(
-          m, "Plugin",
-          "A generic audio processing plugin. Base class of all "
-          "Pedalboard plugins.")
-          .def(py::init([]() {
-            throw py::type_error(
-                "Plugin is an abstract base class - don't instantiate this "
-                "directly, use its subclasses instead.");
-            // This will never be hit, but is required to provide a non-void
-            // type to return from this lambda or else the compiler can't do
-            // type inference.
-            return nullptr;
-          }))
-          .def(
-              "reset", &Plugin::reset,
-              "Clear any internal state kept by this plugin (e.g.: reverb "
-              "tails). The values of plugin parameters will remain unchanged. "
-              "For most plugins, this is a fast operation; for some, this will "
-              "cause a full re-instantiation of the plugin.")
-          .def(
-              "process",
-              [](std::shared_ptr<Plugin> self,
-                 const py::array_t<float, py::array::c_style> inputArray,
-                 double sampleRate, unsigned int bufferSize, bool reset) {
-                return process(inputArray, sampleRate, {self}, bufferSize,
-                               reset);
-              },
-              "Run a 32-bit floating point audio buffer through this plugin."
-              "(Note: if calling this multiple times with multiple plugins, "
-              "consider using pedalboard.process(...) instead.)",
-              py::arg("input_array"), py::arg("sample_rate"),
-              py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-              py::arg("reset") = true)
+  plugin
+      .def(py::init([]() {
+        throw py::type_error(
+            "Plugin is an abstract base class - don't instantiate this "
+            "directly, use its subclasses instead.");
+        // This will never be hit, but is required to provide a non-void
+        // type to return from this lambda or else the compiler can't do
+        // type inference.
+        return nullptr;
+      }))
+      .def("reset", &Plugin::reset,
+           "Clear any internal state kept by this plugin (e.g.: reverb "
+           "tails). The values of plugin parameters will remain unchanged. "
+           "For most plugins, this is a fast operation; for some, this will "
+           "cause a full re-instantiation of the plugin.")
+      .def(
+          "process",
+          [](std::shared_ptr<Plugin> self,
+             const py::array_t<float, py::array::c_style> inputArray,
+             double sampleRate, unsigned int bufferSize, bool reset) {
+            return process(inputArray, sampleRate, {self}, bufferSize, reset);
+          },
+          "Run a 32-bit floating point audio buffer through this plugin."
+          "(Note: if calling this multiple times with multiple plugins, "
+          "consider using pedalboard.process(...) instead.)",
+          py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
 
-          .def(
-              "process",
-              [](std::shared_ptr<Plugin> self,
-                 const py::array_t<double, py::array::c_style> inputArray,
-                 double sampleRate, unsigned int bufferSize, bool reset) {
-                const py::array_t<float, py::array::c_style> float32InputArray =
-                    inputArray.attr("astype")("float32");
-                return process(float32InputArray, sampleRate, {self},
-                               bufferSize, reset);
-              },
-              "Run a 64-bit floating point audio buffer through this plugin."
-              "(Note: if calling this multiple times with multiple plugins, "
-              "consider using pedalboard.process(...) instead.) The buffer "
-              "will be converted to 32-bit for processing.",
-              py::arg("input_array"), py::arg("sample_rate"),
-              py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-              py::arg("reset") = true);
+      .def(
+          "process",
+          [](std::shared_ptr<Plugin> self,
+             const py::array_t<double, py::array::c_style> inputArray,
+             double sampleRate, unsigned int bufferSize, bool reset) {
+            const py::array_t<float, py::array::c_style> float32InputArray =
+                inputArray.attr("astype")("float32");
+            return process(float32InputArray, sampleRate, {self}, bufferSize,
+                           reset);
+          },
+          "Run a 64-bit floating point audio buffer through this plugin."
+          "(Note: if calling this multiple times with multiple plugins, "
+          "consider using pedalboard.process(...) instead.) The buffer "
+          "will be converted to 32-bit for processing.",
+          py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+          py::arg("reset") = true);
   plugin.attr("__call__") = plugin.attr("process");
 
   init_plugin_container(m);
@@ -193,7 +191,12 @@ PYBIND11_MODULE(pedalboard_native, m) {
 
   // I/O helpers and utilities:
   py::module io = m.def_submodule("io");
-  init_audio_file(io);
-  init_readable_audio_file(io);
-  init_writeable_audio_file(io);
+
+  auto pyAudioFile = declare_audio_file(io);
+  auto pyReadableAudioFile = declare_readable_audio_file(io);
+  auto pyWriteableAudioFile = declare_writeable_audio_file(io);
+
+  init_audio_file(pyAudioFile);
+  init_readable_audio_file(io, pyReadableAudioFile);
+  init_writeable_audio_file(io, pyWriteableAudioFile);
 };
