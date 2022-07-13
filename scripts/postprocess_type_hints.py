@@ -51,6 +51,12 @@ REPLACEMENTS = [
 ]
 
 
+def matches_ignoring_whitespace(a: str, b: str) -> bool:
+    a = "".join(a.split())
+    b = "".join(b.split())
+    return a == b
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Post-process type hint files produced by pybind11-stubgen for Pedalboard."
@@ -114,8 +120,12 @@ def main():
 
         if args.check:
             with open(output_file_name, "r") as f:
-                if f.read() != output:
-                    raise ValueError("File that would be generated does not match existing file!")
+                existing = f.read()
+                if not matches_ignoring_whitespace(existing, output):
+                    error = "File that would be generated does not match existing file!\n"
+                    error += f"Existing file had {len(existing):,} bytes, "
+                    error += f"expected {len(output):,} bytes.\n"
+                    raise ValueError(error)
         else:
             with open(output_file_name, "w") as o:
                 o.write(output)
