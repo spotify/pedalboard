@@ -51,6 +51,12 @@ REPLACEMENTS = [
     (r": pedalboard_native\.LadderFilter\.Mode", ": LadderFilter.Mode"),
 ]
 
+REMOVE_INDENTED_BLOCKS_STARTING_WITH = [
+    # TODO(psobot): Add a conditional to _AudioUnitPlugin
+    # to ensure type stubs only show up on macOS:
+    "class _AudioUnitPlugin(Plugin):"
+]
+
 
 def matches_ignoring_whitespace(a: str, b: str) -> bool:
     a = "".join(a.split())
@@ -100,8 +106,19 @@ def main():
         file_contents = io.StringIO()
         for source_file in source_files:
             with open(source_file) as f:
+                in_excluded_indented_block = False
                 for line in f:
                     if all(x not in line for x in OMIT_LINES_CONTAINING):
+                        if any(line.startswith(x) for x in REMOVE_INDENTED_BLOCKS_STARTING_WITH):
+                            in_excluded_indented_block = True
+                            continue
+
+                        if line.strip() and not line.startswith(" "):
+                            in_excluded_indented_block = False
+
+                        if in_excluded_indented_block:
+                            continue
+
                         for find, replace in REPLACEMENTS:
                             if re.findall(find, line):
                                 print(f"\tReplacing '{find}' with '{replace}'...")

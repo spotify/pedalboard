@@ -970,39 +970,6 @@ class _AudioProcessorParameter:
         """
     pass
 
-class _AudioUnitPlugin(Plugin):
-    """
-    A wrapper around any Apple Audio Unit audio effect plugin. Only available on macOS.
-    """
-
-    def __init__(
-        self, path_to_plugin_file: str, plugin_name: typing.Optional[str] = None
-    ) -> None: ...
-    def __repr__(self) -> str: ...
-    def _get_parameter(self, arg0: str) -> _AudioProcessorParameter: ...
-    @staticmethod
-    def get_plugin_names_for_file(arg0: str) -> typing.List[str]:
-        """
-        Return a list of plugin names contained within a given Audio Unit bundle (i.e.: a ".component"). If the provided file cannot be scanned, an ImportError will be raised.
-        """
-    def show_editor(self) -> None:
-        """
-        Show the UI of this plugin as a native window. This method will block until the window is closed or a KeyboardInterrupt is received.
-        """
-    @property
-    def _parameters(self) -> typing.List[_AudioProcessorParameter]:
-        """
-        :type: typing.List[_AudioProcessorParameter]
-        """
-    @property
-    def name(self) -> str:
-        """
-        The name of this plugin.
-
-        :type: str
-        """
-    pass
-
 class _VST3Plugin(Plugin):
     """
     A wrapper around any Steinberg® VST3 audio effect plugin. Note that plugins must already support the operating system currently in use (i.e.: if you're running Linux but trying to open a VST that does not support Linux, this will fail).
