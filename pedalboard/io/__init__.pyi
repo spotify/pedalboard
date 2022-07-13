@@ -4,9 +4,11 @@ import sys
 import typing
 
 if sys.version_info < (3, 8):
-    from typing_extensions import Literal
+    import typing_extensions
 
-    typing.Literal = Literal
+    _Literal = typing_extensions.Literal
+else:
+    _Literal = typing.Literal
 import numpy
 
 _Shape = typing.Tuple[int, ...]
@@ -28,14 +30,14 @@ class AudioFile:
     @staticmethod
     @typing.overload
     def __new__(
-        cls: object, file_like: typing.BinaryIO, mode: typing.Literal["r"] = "r"
+        cls: object, file_like: typing.BinaryIO, mode: _Literal["r"] = "r"
     ) -> ReadableAudioFile: ...
     @staticmethod
     @typing.overload
     def __new__(
         cls: object,
         file_like: typing.BinaryIO,
-        mode: typing.Literal["w"],
+        mode: _Literal["w"],
         samplerate: typing.Optional[float] = None,
         num_channels: int = 1,
         bit_depth: int = 16,
@@ -44,15 +46,13 @@ class AudioFile:
     ) -> WriteableAudioFile: ...
     @staticmethod
     @typing.overload
-    def __new__(
-        cls: object, filename: str, mode: typing.Literal["r"] = "r"
-    ) -> ReadableAudioFile: ...
+    def __new__(cls: object, filename: str, mode: _Literal["r"] = "r") -> ReadableAudioFile: ...
     @staticmethod
     @typing.overload
     def __new__(
         cls: object,
         filename: str,
-        mode: typing.Literal["w"],
+        mode: _Literal["w"],
         samplerate: typing.Optional[float] = None,
         num_channels: int = 1,
         bit_depth: int = 16,

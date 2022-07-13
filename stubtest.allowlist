@@ -11,3 +11,4 @@ pedalboard.utils.Chain
 pedalboard.utils.Mix
 pedalboard.utils.__all__
 pedalboard.version.__all__
+*AudioUnitPlugin*

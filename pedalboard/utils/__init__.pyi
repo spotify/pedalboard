@@ -4,9 +4,11 @@ import sys
 import typing
 
 if sys.version_info < (3, 8):
-    from typing_extensions import Literal
+    import typing_extensions
 
-    typing.Literal = Literal
+    _Literal = typing_extensions.Literal
+else:
+    _Literal = typing.Literal
 import numpy
 import pedalboard_native  # type: ignore
 
