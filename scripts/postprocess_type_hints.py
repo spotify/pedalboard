@@ -99,12 +99,12 @@ def main():
     args = parser.parse_args()
 
     output_file_to_source_files = defaultdict(list)
-    for source_path in Path(args.source_directory).rglob(os.path.join("**", "*.pyi")):
+    for source_path in Path(args.source_directory).rglob("*.pyi"):
         source_path = str(source_path)
         if any(x in source_path for x in OMIT_FILES):
             print(f"Skipping possible source file '{source_path}'...")
             continue
-        output_module_path = ["pedalboard"] + source_path.split(os.pathsep)[2:-1]
+        output_module_path = os.path.join(*(["pedalboard"] + source_path.split(os.path.sep)[2:-1]))
         if not source_path.endswith("__init__.pyi"):
             raise NotImplementedError("Not sure how to create stubs not at the module level.")
         output_file_name = os.path.join(output_module_path, "__init__.pyi")
@@ -133,7 +133,7 @@ def main():
 
                         for find, replace in REPLACEMENTS:
                             if re.findall(find, line):
-                                print(f"\tReplacing '{find}' with '{replace}'...")
+                                print(f"\tReplacing {repr(find)} with {repr(replace)}...")
                                 line = re.sub(find, replace, line)
                         file_contents.write(line)
                 print(f"\tRead {f.tell():,} bytes of stubs from {source_file}.")
