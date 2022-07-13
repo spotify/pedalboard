@@ -17,9 +17,9 @@ import argparse
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 OMIT_FILES = [
-    "pedalboard-stubs/__init__.pyi",
-    "pedalboard-stubs/pedalboard/__init__.pyi",
-    "pedalboard_native-stubs/_internal/__init__.pyi",
+    os.path.join("pedalboard-stubs", "__init__.pyi"),
+    os.path.join("pedalboard-stubs", "pedalboard", "__init__.pyi"),
+    os.path.join("pedalboard_native-stubs", "_internal", "__init__.pyi"),
 ]
 
 # Any lines containing any of these substrings will be omitted from the pedalboard_native stubs:
@@ -99,15 +99,15 @@ def main():
     args = parser.parse_args()
 
     output_file_to_source_files = defaultdict(list)
-    for source_path in Path(args.source_directory).rglob("**/*.pyi"):
+    for source_path in Path(args.source_directory).rglob(os.path.join("**", "*.pyi")):
         source_path = str(source_path)
         if any(x in source_path for x in OMIT_FILES):
             print(f"Skipping possible source file '{source_path}'...")
             continue
-        output_module_path = ["pedalboard"] + source_path.split("/")[2:-1]
+        output_module_path = ["pedalboard"] + source_path.split(os.pathsep)[2:-1]
         if not source_path.endswith("__init__.pyi"):
             raise NotImplementedError("Not sure how to create stubs not at the module level.")
-        output_file_name = "/".join(output_module_path + ["__init__.pyi"])
+        output_file_name = os.path.join(output_module_path, "__init__.pyi")
         output_file_to_source_files[output_file_name].append(source_path)
 
     for output_file_name, source_files in output_file_to_source_files.items():
