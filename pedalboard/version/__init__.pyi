@@ -1,6 +1,9 @@
 from __future__ import annotations
 import pedalboard.version
 import typing
+from typing_extensions import Literal
+
+typing.Literal = Literal
 
 __all__ = ["MAJOR", "MINOR", "PATCH"]
 

@@ -1,6 +1,9 @@
 from __future__ import annotations
 import pedalboard_native.utils  # type: ignore
 import typing
+from typing_extensions import Literal
+
+typing.Literal = Literal
 import numpy
 import pedalboard_native  # type: ignore
 

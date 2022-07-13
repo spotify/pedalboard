@@ -50,6 +50,13 @@ REPLACEMENTS = [
     (r": pedalboard_native\.Resample\.Quality", ": Resample.Quality"),
     (r": pedalboard_native\.LadderFilter\.Mode", ": LadderFilter.Mode"),
     (r"import pedalboard_native(\.?.*)$", r"import pedalboard_native\1  # type: ignore"),
+    (
+        # For Python 3.6 compatibility:
+        r"import typing",
+        "\n".join(
+            ["import typing", "from typing_extensions import Literal", "typing.Literal = Literal"]
+        ),
+    ),
 ]
 
 REMOVE_INDENTED_BLOCKS_STARTING_WITH = [
