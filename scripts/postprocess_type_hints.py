@@ -54,7 +54,13 @@ REPLACEMENTS = [
         # For Python 3.6 compatibility:
         r"import typing",
         "\n".join(
-            ["import typing", "from typing_extensions import Literal", "typing.Literal = Literal"]
+            [
+                "import sys",
+                "import typing",
+                "if sys.version_info < (3, 8):",
+                "    from typing_extensions import Literal",
+                "    typing.Literal = Literal",
+            ]
         ),
     ),
 ]

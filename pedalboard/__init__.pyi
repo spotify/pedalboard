@@ -1,9 +1,12 @@
 from __future__ import annotations
 import pedalboard_native  # type: ignore
+import sys
 import typing
-from typing_extensions import Literal
 
-typing.Literal = Literal
+if sys.version_info < (3, 8):
+    from typing_extensions import Literal
+
+    typing.Literal = Literal
 import numpy
 
 _Shape = typing.Tuple[int, ...]
