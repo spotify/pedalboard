@@ -47,7 +47,7 @@ public:
   }
 
   virtual int
-  process(const juce::dsp::ProcessContextReplacing<float> &context) {
+  process(const juce::dsp::ProcessContextReplacing<float> &context, juce::MidiBuffer &midiBuffer) {
     auto ioBlock = context.getOutputBlock();
 
     for (int i = 0; i < plugins.size(); i++) {
@@ -75,7 +75,7 @@ public:
           channelPointers, buffer.getNumChannels(), ioBlock.getNumSamples());
 
       juce::dsp::ProcessContextReplacing<float> subContext(subBlock);
-      int samplesRendered = plugin->process(subContext);
+      int samplesRendered = plugin->process(subContext, midiBuffer);
       samplesAvailablePerPlugin[i] += samplesRendered;
 
       if (samplesRendered < subBlock.getNumSamples()) {

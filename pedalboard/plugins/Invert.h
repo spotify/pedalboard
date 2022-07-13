@@ -25,7 +25,7 @@ namespace py = pybind11;
 namespace Pedalboard {
 template <typename SampleType> class Invert : public Plugin {
   virtual void prepare(const juce::dsp::ProcessSpec &spec) override {}
-  int process(const juce::dsp::ProcessContextReplacing<SampleType> &context)
+  int process(const juce::dsp::ProcessContextReplacing<SampleType> &context, juce::MidiBuffer &midiBuffer)
       override final {
     context.getOutputBlock().negate();
     return context.getOutputBlock().getNumSamples();

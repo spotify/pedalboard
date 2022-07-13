@@ -162,7 +162,7 @@ public:
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {}
 
   virtual int
-  process(const juce::dsp::ProcessContextReplacing<float> &context) {
+  process(const juce::dsp::ProcessContextReplacing<float> &context, juce::MidiBuffer &midiBuffer) {
     return context.getInputBlock().getNumSamples();
   }
 
@@ -235,7 +235,7 @@ public:
     plugin.prepare(subSpec);
   }
 
-  int process(const juce::dsp::ProcessContextReplacing<SampleType> &context)
+  int process(const juce::dsp::ProcessContextReplacing<SampleType> &context, juce::MidiBuffer &midiBuffer)
       override final {
     auto ioBlock = context.getOutputBlock();
 
@@ -322,7 +322,7 @@ public:
           processedSamplesInResampledBuffer, cleanSamplesToProcess);
       juce::dsp::ProcessContextReplacing<SampleType> subContext(subBlock);
 
-      int resampledSamplesOutput = plugin.process(subContext);
+      int resampledSamplesOutput = plugin.process(subContext, midiBuffer);
 
       if (resampledSamplesOutput < cleanSamplesToProcess) {
         // Move all remaining samples to the left of the buffer:

@@ -59,7 +59,7 @@ public:
   }
 
   int process(
-      const juce::dsp::ProcessContextReplacing<float> &context) override {
+      const juce::dsp::ProcessContextReplacing<float> &context, juce::MidiBuffer &midiBuffer) override {
     dspBlock.process(context);
     return context.getOutputBlock().getNumSamples();
   }

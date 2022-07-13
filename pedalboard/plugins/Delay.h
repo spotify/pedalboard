@@ -61,7 +61,7 @@ public:
   virtual void reset() override { this->getDSP().reset(); }
 
   virtual int process(
-      const juce::dsp::ProcessContextReplacing<SampleType> &context) override {
+      const juce::dsp::ProcessContextReplacing<SampleType> &context, juce::MidiBuffer &midiBuffer) override {
     // TODO: More advanced mixing rules than "linear?"
     SampleType dryVolume = 1.0f - getMix();
     SampleType wetVolume = getMix();

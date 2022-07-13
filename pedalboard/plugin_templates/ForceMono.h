@@ -41,7 +41,7 @@ public:
   }
 
   virtual int
-  process(const juce::dsp::ProcessContextReplacing<SampleType> &context) {
+  process(const juce::dsp::ProcessContextReplacing<SampleType> &context, juce::MidiBuffer &midiBuffer) {
     auto ioBlock = context.getOutputBlock();
 
     // Mix all channels to mono first, if necessary.
@@ -62,7 +62,7 @@ public:
     juce::dsp::AudioBlock<SampleType> monoBlock =
         ioBlock.getSingleChannelBlock(0);
     juce::dsp::ProcessContextReplacing<SampleType> subContext(monoBlock);
-    int samplesProcessed = plugin.process(monoBlock);
+    int samplesProcessed = plugin.process(monoBlock, midiBuffer);
 
     // Copy the mono signal back out to all other channels:
     if (ioBlock.getNumChannels() > 1) {
@@ -98,11 +98,11 @@ public:
   }
 
   virtual int
-  process(const juce::dsp::ProcessContextReplacing<float> &context) {
+  process(const juce::dsp::ProcessContextReplacing<float> &context, juce::MidiBuffer &midiBuffer) {
     if (context.getInputBlock().getNumChannels() != 1) {
       throw std::runtime_error("Expected mono input!");
     }
-    return AddLatency::process(context);
+    return AddLatency::process(context, midiBuffer);
   }
 };
 

@@ -36,7 +36,7 @@ public:
   virtual void reset() override {}
 
   virtual int process(
-      const juce::dsp::ProcessContextReplacing<SampleType> &context) override {
+      const juce::dsp::ProcessContextReplacing<SampleType> &context, juce::MidiBuffer &midiBuffer) override {
     auto block = context.getOutputBlock();
 
     block.multiplyBy(scaleFactor);

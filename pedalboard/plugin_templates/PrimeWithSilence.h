@@ -54,11 +54,11 @@ public:
   }
 
   virtual int
-  process(const juce::dsp::ProcessContextReplacing<float> &context) override {
+  process(const juce::dsp::ProcessContextReplacing<float> &context, juce::MidiBuffer &midiBuffer) override {
     this->getDSP().process(context);
 
     // Context now has a delayed signal in it:
-    int samplesProcessed = plugin.process(context);
+    int samplesProcessed = plugin.process(context, midiBuffer);
     samplesOutput += samplesProcessed;
 
     return std::max(
@@ -103,7 +103,7 @@ public:
   }
 
   virtual int
-  process(const juce::dsp::ProcessContextReplacing<float> &context) {
+  process(const juce::dsp::ProcessContextReplacing<float> &context, juce::MidiBuffer &midiBuffer) {
     auto inputBlock = context.getInputBlock();
 
     for (int i = 0; i < inputBlock.getNumSamples(); i++) {
@@ -130,7 +130,7 @@ public:
       seenSilentSamples++;
     }
 
-    return AddLatency::process(context);
+    return AddLatency::process(context, midiBuffer);
   }
 
   virtual void reset() {

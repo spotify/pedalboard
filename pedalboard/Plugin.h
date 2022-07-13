@@ -46,7 +46,7 @@ public:
    * (i.e.: they should come last).
    */
   virtual int
-  process(const juce::dsp::ProcessContextReplacing<float> &context) = 0;
+  process(const juce::dsp::ProcessContextReplacing<float> &context, juce::MidiBuffer &midiBuffer) = 0;
 
   /**
    * Reset this plugin's state, clearing any internal buffers or delay lines.

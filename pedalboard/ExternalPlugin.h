@@ -643,7 +643,7 @@ public:
       {
         juce::dsp::AudioBlock<float> block(audioBuffer);
         juce::dsp::ProcessContextReplacing<float> context(block);
-        process(context);
+        process(context, emptyMidiBuffer);
       }
     }
 
@@ -666,7 +666,7 @@ public:
       }
       juce::dsp::AudioBlock<float> block(audioBuffer);
       juce::dsp::ProcessContextReplacing<float> context(block);
-      process(context);
+      process(context, emptyMidiBuffer);
     }
 
     auto signalVolume = audioBuffer.getMagnitude(0, bufferSize);
@@ -679,7 +679,7 @@ public:
     {
       juce::dsp::AudioBlock<float> block(audioBuffer);
       juce::dsp::ProcessContextReplacing<float> context(block);
-      process(context);
+      process(context, emptyMidiBuffer);
     }
 
     auto magnitudeOfSilentBuffer = audioBuffer.getMagnitude(0, bufferSize);
@@ -753,10 +753,10 @@ public:
   }
 
   int process(
-      const juce::dsp::ProcessContextReplacing<float> &context) override {
+      const juce::dsp::ProcessContextReplacing<float> &context, juce::MidiBuffer &midiBuffer) override {
 
     if (pluginInstance) {
-      juce::MidiBuffer emptyMidiBuffer;
+      ;
       if (context.usesSeparateInputAndOutputBlocks()) {
         throw std::runtime_error("Not implemented yet - "
                                  "no support for using separate "
@@ -813,7 +813,7 @@ public:
                                            channelPointers.size(),
                                            outputBlock.getNumSamples());
 
-      pluginInstance->processBlock(audioBuffer, emptyMidiBuffer);
+      pluginInstance->processBlock(audioBuffer, midiBuffer);
       samplesProvided += outputBlock.getNumSamples();
 
       // To compensate for any latency added by the plugin,
