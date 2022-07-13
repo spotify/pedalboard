@@ -1,14 +1,7 @@
 from __future__ import annotations
 import pedalboard_native.utils  # type: ignore
-import sys
 import typing
-
-if sys.version_info < (3, 8):
-    import typing_extensions
-
-    _Literal = typing_extensions.Literal
-else:
-    _Literal = typing.Literal
+import typing_extensions
 import numpy
 import pedalboard_native  # type: ignore
 
