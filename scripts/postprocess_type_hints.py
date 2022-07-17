@@ -36,25 +36,29 @@ REPLACEMENTS = [
     # object is a superclass of `str`, which would make these declarations ambiguous:
     ("file_like: object", "file_like: typing.BinaryIO"),
     # "r" is the default file open/reading mode:
-    ("mode: str = 'r'", r'mode: typing_extensions.Literal["r"] = "r"'),
+    ("mode: str = 'r'", r'mode: Literal["r"] = "r"'),
     # ... but when using "w", "w" needs to be specified explicitly (no default):
-    ("mode: str = 'w'", r'mode: typing_extensions.Literal["w"]'),
+    ("mode: str = 'w'", r'mode: Literal["w"]'),
     # ndarrays need to be corrected as well:
     (r"numpy\.ndarray\[(.*?)\]", r"numpy.ndarray[typing.Any, numpy.dtype[\1]]"),
-    # We return an ndarray with indeterminate type from read_raw,
-    # which is represented by a py::handle object.
-    # Type this as a numpy.ndarray with no type arguments:
-    ("-> handle:", "-> numpy.ndarray:"),
     # None of our enums are properly detected by pybind11-stubgen:
-    (r"Resample\.Quality = Quality\.", "Resample.Quality = Resample.Quality."),
-    (r": pedalboard_native\.Resample\.Quality", ": Resample.Quality"),
-    (r": pedalboard_native\.LadderFilter\.Mode", ": LadderFilter.Mode"),
+    (
+        r"def __init__\(self, quality: Resample\.Quality = Quality\.(.*)\) -> None:",
+        r"def __init__(self, quality: Resample.Quality = Resample.Quality.\1) -> None:",
+    ),
+    (r": pedalboard_native\.Resample\.Quality", ": Quality"),
+    (r": pedalboard_native\.LadderFilter\.Mode", ": Mode"),
+    # (r" = Mode\.(.*?)([,)]?)", " = \1\2"),
     (r"import pedalboard_native(\.?.*)$", r"import pedalboard_native\1  # type: ignore"),
     (
         # For Python 3.6 compatibility:
         r"import typing",
-        "\n".join(["import typing", "import typing_extensions"]),
+        "\n".join(
+            ["import typing", "from typing_extensions import Literal", "from enum import Enum"]
+        ),
     ),
+    # Remove type hints in docstrings, added unnecessarily by pybind11-stubgen
+    (r".*?:type:.*$", ""),
 ]
 
 REMOVE_INDENTED_BLOCKS_STARTING_WITH = [
@@ -62,6 +66,11 @@ REMOVE_INDENTED_BLOCKS_STARTING_WITH = [
     # to ensure type stubs only show up on macOS:
     "class _AudioUnitPlugin(Plugin):"
 ]
+
+# .pyi files usually don't care about dependent types being present in order in the file;
+# but if we want to use Sphinx, our Python files need to be both lexically and semantically
+# valid as regular Python files. So...
+INDENTED_BLOCKS_TO_MOVE_TO_END = ["class GSMFullRateCompressor"]
 
 LINES_TO_IGNORE_FOR_MATCH = {"from __future__ import annotations"}
 
@@ -76,7 +85,7 @@ def stub_files_match(a: str, b: str) -> bool:
     return a == b
 
 
-def main():
+def main(args=None):
     parser = argparse.ArgumentParser(
         description="Post-process type hint files produced by pybind11-stubgen for Pedalboard."
     )
@@ -96,7 +105,7 @@ def main():
             " generate."
         ),
     )
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     output_file_to_source_files = defaultdict(list)
     for source_path in Path(args.source_directory).rglob("*.pyi"):
@@ -104,7 +113,12 @@ def main():
         if any(x in source_path for x in OMIT_FILES):
             print(f"Skipping possible source file '{source_path}'...")
             continue
-        output_module_path = os.path.join(*(["pedalboard"] + source_path.split(os.path.sep)[2:-1]))
+        output_module_path = os.path.join(
+            *(
+                ["pedalboard"]
+                + source_path.replace(args.source_directory, "").split(os.path.sep)[2:-1]
+            )
+        )
         if not source_path.endswith("__init__.pyi"):
             raise NotImplementedError("Not sure how to create stubs not at the module level.")
         output_file_name = os.path.join(output_module_path, "__init__.pyi")
@@ -116,27 +130,39 @@ def main():
         print(f"Writing stub file {output_file_name}...")
 
         file_contents = io.StringIO()
+        end_of_file_contents = io.StringIO()
         for source_file in source_files:
             with open(source_file) as f:
                 in_excluded_indented_block = False
+                in_moved_indented_block = False
                 for line in f:
                     if all(x not in line for x in OMIT_LINES_CONTAINING):
                         if any(line.startswith(x) for x in REMOVE_INDENTED_BLOCKS_STARTING_WITH):
                             in_excluded_indented_block = True
                             continue
-
-                        if line.strip() and not line.startswith(" "):
+                        elif any(line.startswith(x) for x in INDENTED_BLOCKS_TO_MOVE_TO_END):
+                            in_moved_indented_block = True
+                        elif line.strip() and not line.startswith(" "):
                             in_excluded_indented_block = False
+                            in_moved_indented_block = False
 
                         if in_excluded_indented_block:
                             continue
 
                         for find, replace in REPLACEMENTS:
-                            if re.findall(find, line):
-                                print(f"\tReplacing {repr(find)} with {repr(replace)}...")
+                            results = re.findall(find, line)
+                            if results:
                                 line = re.sub(find, replace, line)
-                        file_contents.write(line)
+
+                        if in_moved_indented_block:
+                            end_of_file_contents.write(line)
+                        else:
+                            file_contents.write(line)
                 print(f"\tRead {f.tell():,} bytes of stubs from {source_file}.")
+
+        # Append end-of-file contents at the end:
+        file_contents.write("\n")
+        file_contents.write(end_of_file_contents.getvalue())
 
         # Run black:
         try:
