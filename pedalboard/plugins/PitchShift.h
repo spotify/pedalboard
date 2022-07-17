@@ -60,7 +60,11 @@ public:
 
 inline void init_pitch_shift(py::module &m) {
   py::class_<PitchShift, Plugin, std::shared_ptr<PitchShift>>(
-      m, "PitchShift", "Shift pitch without affecting audio duration.")
+      m, "PitchShift",
+      "A pitch shifting effect that can change the pitch of audio without "
+      "affecting its duration.\n\nThis effect uses `Chris Cannam's wonderful "
+      "*Rubber Band* library <https://breakfastquay.com/rubberband/>`_ audio "
+      "stretching library.")
       .def(py::init([](double scale) {
              auto plugin = std::make_unique<PitchShift>();
              plugin->setSemitones(scale);

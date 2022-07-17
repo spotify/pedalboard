@@ -28,30 +28,24 @@ namespace py = pybind11;
 
 namespace Pedalboard {
 
-/**
- * Non-float32 overload.
- */
-template <typename SampleType>
-py::array_t<float>
-process(const py::array_t<SampleType, py::array::c_style> inputArray,
-        double sampleRate, const std::vector<std::shared_ptr<Plugin>> plugins,
-        unsigned int bufferSize, bool reset) {
-  const py::array_t<float, py::array::c_style> float32InputArray =
-      inputArray.attr("astype")("float32");
-  return process(float32InputArray, sampleRate, plugins, bufferSize, reset);
-}
+py::array_t<float> process(py::array inputArray, double sampleRate,
+                           const std::vector<std::shared_ptr<Plugin>> plugins,
+                           unsigned int bufferSize, bool reset) {
+  py::array_t<float, py::array::c_style> float32InputArray;
+  switch (inputArray.dtype().char_()) {
+  case 'f':
+    float32InputArray =
+        py::array_t<float, py::array::c_style>(inputArray.release(), false);
+    break;
+  case 'd':
+    float32InputArray = inputArray.attr("astype")("float32");
+    break;
+  default:
+    throw py::type_error("Pedalboard only supports 32-bit and 64-bit floating "
+                         "point audio for processing.");
+  }
 
-/**
- * Single-plugin overload.
- */
-template <typename SampleType>
-py::array_t<float>
-processSingle(const py::array_t<SampleType, py::array::c_style> inputArray,
-              double sampleRate, std::shared_ptr<Plugin> plugin,
-              unsigned int bufferSize, bool reset) {
-  std::vector<std::shared_ptr<Plugin>> plugins{plugin};
-  return process<SampleType>(inputArray, sampleRate, plugins, bufferSize,
-                             reset);
+  return process(float32InputArray, sampleRate, plugins, bufferSize, reset);
 }
 
 inline int process(juce::AudioBuffer<float> &ioBuffer,
@@ -184,11 +178,10 @@ inline int process(juce::AudioBuffer<float> &ioBuffer,
  * Pedalboard plugins at a given sample rate.
  * Only supports float processing, not double, at the moment.
  */
-template <>
 py::array_t<float>
-process<float>(const py::array_t<float, py::array::c_style> inputArray,
-               double sampleRate, std::vector<std::shared_ptr<Plugin>> plugins,
-               unsigned int bufferSize, bool reset) {
+process(const py::array_t<float, py::array::c_style> inputArray,
+        double sampleRate, std::vector<std::shared_ptr<Plugin>> plugins,
+        unsigned int bufferSize, bool reset) {
   const ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
   juce::AudioBuffer<float> ioBuffer = copyPyArrayIntoJuceBuffer(inputArray);
   int totalOutputLatencySamples;

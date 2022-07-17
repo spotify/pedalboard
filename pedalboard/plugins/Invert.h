@@ -36,7 +36,14 @@ template <typename SampleType> class Invert : public Plugin {
 inline void init_invert(py::module &m) {
   py::class_<Invert<float>, Plugin, std::shared_ptr<Invert<float>>>(
       m, "Invert",
-      "Flip the polarity of the signal. This effect is not audible on its own.")
+      "Flip the polarity of the signal. This effect is not audible on its own "
+      "and takes no parameters. This effect is mathematically identical to "
+      "``def invert(x): return -x``.\n"
+      "\n"
+      "Inverting a signal may be useful to cancel out signals in many cases; "
+      "for instance, ``Invert`` can be used with the ``Mix`` plugin to remove "
+      "the original signal from an effects chain that contains multiple "
+      "signals.")
       .def(py::init([]() { return std::make_unique<Invert<float>>(); }))
       .def("__repr__", [](const Invert<float> &plugin) {
         std::ostringstream ss;

@@ -4,6 +4,7 @@ import argparse
 import inspect
 import typing
 import shutil
+import difflib
 import importlib
 from tempfile import TemporaryDirectory
 from contextlib import contextmanager
@@ -12,9 +13,11 @@ from pybind11_stubgen import ClassStubsGenerator, StubsGenerator
 from pybind11_stubgen import main as pybind11_stubgen_main
 from .postprocess_type_hints import main as postprocess_type_hints_main
 from mypy.stubtest import test_stubs, parse_options as mypy_parse_options
-from sphinx.ext.apidoc import main as sphinx_apidoc_main
 import sphinx.ext.autodoc.importer
 from sphinx.cmd.build import main as sphinx_build_main
+
+
+MAX_DIFF_LINE_LENGTH = 150
 
 
 def patch_pybind11_stubgen():
@@ -164,6 +167,20 @@ def isolated_imports(only: typing.Set[str] = {}):
             del sys.modules[module_name]
 
 
+def remove_non_public_files(output_dir: str):
+    shutil.rmtree(os.path.join(output_dir, ".doctrees"))
+    os.unlink(os.path.join(output_dir, ".buildinfo"))
+
+
+def trim_diff_line(x: str) -> str:
+    x = x.strip()
+    if len(x) > MAX_DIFF_LINE_LENGTH:
+        suffix = f" [plus {len(x) - MAX_DIFF_LINE_LENGTH:,} more characters]"
+        return x[: MAX_DIFF_LINE_LENGTH - len(suffix)] + suffix
+    else:
+        return x
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate type stub files (.pyi) and Sphinx documentation for Pedalboard."
@@ -172,15 +189,22 @@ def main():
         "--docs-output-dir", default="docs", help="Output directory for documentation HTML files."
     )
     parser.add_argument(
-        "--docs-input-dir", default="docs/source", help="Input directory for Sphinx."
-    )
-    parser.add_argument(
-        "--clean", action="store_true", help="If set, clear cache directories in between builds."
+        "--docs-input-dir",
+        default=os.path.join("docs", "source"),
+        help="Input directory for Sphinx.",
     )
     parser.add_argument(
         "--skip-regenerating-type-hints",
         action="store_true",
         help="If set, don't bother regenerating or reprocessing type hint files.",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help=(
+            "If set, compare the existing files with those that would have been generated if this"
+            " script were re-run."
+        ),
     )
     args = parser.parse_args()
 
@@ -199,35 +223,84 @@ def main():
             # Post-process the type hints generaetd by pybind11_stubgen; we can't patch
             # everything easily, so we do string manipulation after-the-fact and run ``black``.
             print("Postprocessing generated type hints...")
-            postprocess_type_hints_main([tempdir, "pedalboard"])
+            postprocess_type_hints_main(
+                [tempdir, "pedalboard"] + (["--check"] if args.check else [])
+            )
 
             # Run mypy.stubtest to ensure that the results are correct and nothing got missed:
-            print("Running `mypy.stubtest` to validate stubs match...")
-            mypy_stubtest_args = mypy_parse_options(
-                [
-                    "pedalboard",
-                    "--allowlist",
-                    "stubtest.allowlist",
-                    "--ignore-missing-stub",
-                    "--ignore-unused-allowlist",
-                ]
-            )
-            test_stubs(mypy_stubtest_args)
-
-    if args.clean:
-        for filename in os.listdir(args.docs_input_dir):
-            if not filename.startswith(os.path.split(args.docs_output_dir)[-1]):
-                print(f"Clearing docs output file ({filename})...")
-            # shutil.rmtree(docs_output_dir, ignore_errors=True)
+            if sys.version_info > (3, 6):
+                print("Running `mypy.stubtest` to validate stubs match...")
+                test_stubs(
+                    mypy_parse_options(
+                        [
+                            "pedalboard",
+                            "--allowlist",
+                            "stubtest.allowlist",
+                            "--ignore-missing-stub",
+                            "--ignore-unused-allowlist",
+                        ]
+                    )
+                )
 
     # Why is this necessary? I don't know, but without it, things fail.
     print(f"Importing numpy to ensure a successful Pedalboard import...")
     import numpy
 
     print(f"Running Sphinx...")
-    sphinx_build_main(["-b", "html", os.path.join("docs", "source"), os.path.join("docs")])
+    if args.check:
+        missing_files = []
+        mismatched_files = []
+        with TemporaryDirectory() as tempdir:
+            sphinx_build_main(["-b", "html", args.docs_input_dir, tempdir])
+            remove_non_public_files(tempdir)
 
-    print("Done!")
+            for (dirpath, _dirnames, filenames) in os.walk(tempdir):
+                prefix = dirpath.replace(tempdir, "").lstrip(os.path.sep)
+                for filename in filenames:
+                    expected_path = os.path.join(tempdir, prefix, filename)
+                    actual_path = os.path.join(args.docs_output_dir, prefix, filename)
+                    if not os.path.isfile(actual_path):
+                        missing_files.append(os.path.join(prefix, filename))
+                    else:
+                        with open(expected_path, "rb") as e, open(actual_path, "rb") as a:
+                            if e.read() != a.read():
+                                mismatched_files.append(os.path.join(prefix, filename))
+            if missing_files or mismatched_files:
+                error_lines = []
+                if missing_files:
+                    error_lines.append(
+                        f"{len(missing_files):,} file(s) were expected in {args.docs_output_dir},"
+                        " but not found:"
+                    )
+                    for missing_file in missing_files:
+                        error_lines.append(f"\t{missing_file}")
+                if mismatched_files:
+                    error_lines.append(
+                        f"{len(mismatched_files):,} file(s) in {args.docs_output_dir} did not match"
+                        " expected values:"
+                    )
+                    for mismatched_file in mismatched_files:
+                        expected_path = os.path.join(tempdir, mismatched_file)
+                        actual_path = os.path.join(args.docs_output_dir, mismatched_file)
+                        try:
+                            with open(expected_path) as e, open(actual_path) as a:
+                                diff = difflib.context_diff(
+                                    e.readlines(),
+                                    a.readlines(),
+                                    os.path.join("expected", mismatched_file),
+                                    os.path.join("actual", mismatched_file),
+                                )
+                            error_lines.append("\n".join([trim_diff_line(x) for x in diff]))
+                        except UnicodeDecodeError:
+                            error_lines.append(
+                                f"Binary file {mismatched_file} does not match expected contents."
+                            )
+                raise ValueError("\n".join(error_lines))
+        print("Done! Generated type stubs and documentation are valid.")
+    else:
+        sphinx_build_main(["-b", "html", args.docs_input_dir, args.docs_output_dir])
+        remove_non_public_files(args.docs_output_dir)
+        print(f"Done! Commit the contents of `{args.docs_output_dir} to Git.`")
 
 
 if __name__ == "__main__":

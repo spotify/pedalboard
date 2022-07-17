@@ -49,7 +49,12 @@ private:
 
 inline void init_distortion(py::module &m) {
   py::class_<Distortion<float>, Plugin, std::shared_ptr<Distortion<float>>>(
-      m, "Distortion", "Apply soft distortion with a tanh waveshaper.")
+      m, "Distortion",
+      "A distortion effect, which applies a non-linear (``tanh``, or "
+      "hyperbolic tangent) waveshaping function to apply harmonically pleasing "
+      "distortion to a signal.\n\nThis plugin produces a signal that is "
+      "roughly equivalent to running: ``def distortion(x): return tanh(x * "
+      "db_to_gain(drive_db))``")
       .def(py::init([](float drive_db) {
              auto plugin = std::make_unique<Distortion<float>>();
              plugin->setDriveDecibels(drive_db);

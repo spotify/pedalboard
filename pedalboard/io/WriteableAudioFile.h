@@ -379,6 +379,31 @@ public:
     }
   }
 
+  /**
+   * A generic type-dispatcher for all writes.
+   * pybind11 supports dispatch here, but both pybind11-stubgen
+   * and Sphinx currently (2022-07-16) struggle with how to render
+   * docstrings of overloaded functions, so we don't overload.
+   */
+  void write(py::array inputArray) {
+    switch (inputArray.dtype().char_()) {
+    case 'f':
+      return write<float>(py::array_t<float>(inputArray.release(), false));
+    case 'd':
+      return write<double>(py::array_t<double>(inputArray.release(), false));
+    case 'b':
+      return write<int8_t>(py::array_t<int8_t>(inputArray.release(), false));
+    case 'h':
+      return write<int16_t>(py::array_t<int16_t>(inputArray.release(), false));
+    case 'i':
+      return write<int32_t>(py::array_t<int32_t>(inputArray.release(), false));
+    default:
+      throw py::type_error(
+          "Writing audio requires an array with a datatype of int8, "
+          "int16, int32, float32, or float64.");
+    }
+  }
+
   template <typename SampleType>
   void write(py::array_t<SampleType, py::array::c_style> inputArray) {
     const juce::ScopedLock scopedLock(objectLock);
@@ -795,62 +820,19 @@ inline void init_writeable_audio_file(
           py::arg("format") = py::none())
       .def(
           "write",
-          [](WriteableAudioFile &file, py::array_t<char> samples) {
-            file.write<char>(samples);
+          [](WriteableAudioFile &file, py::array samples) {
+            file.write(samples);
           },
           py::arg("samples").noconvert(),
-          "Encode an array of int8 (8-bit signed integer) audio data and write "
+          "Encode an array of audio data and write "
           "it to this file. The number of channels in the array must match the "
           "number of channels used to open the file. The array may contain "
           "audio in any shape. If the file's bit depth or format does not "
-          "match this data type, the audio will be automatically converted.")
-      .def(
-          "write",
-          [](WriteableAudioFile &file, py::array_t<short> samples) {
-            file.write<short>(samples);
-          },
-          py::arg("samples").noconvert(),
-          "Encode an array of int16 (16-bit signed integer) audio data and "
-          "write it to this file. The number of channels in the array must "
-          "match the number of channels used to open the file. The array may "
-          "contain audio in any shape. If the file's bit depth or format does "
-          "not match this data type, the audio will be automatically "
-          "converted.")
-      .def(
-          "write",
-          [](WriteableAudioFile &file, py::array_t<int> samples) {
-            file.write<int>(samples);
-          },
-          py::arg("samples").noconvert(),
-          "Encode an array of int32 (32-bit signed integer) audio data and "
-          "write it to this file. The number of channels in the array must "
-          "match the number of channels used to open the file. The array may "
-          "contain audio in any shape. If the file's bit depth or format does "
-          "not match this data type, the audio will be automatically "
-          "converted.")
-      .def(
-          "write",
-          [](WriteableAudioFile &file, py::array_t<float> samples) {
-            file.write<float>(samples);
-          },
-          py::arg("samples").noconvert(),
-          "Encode an array of float32 (32-bit floating-point) audio data and "
-          "write it to this file. The number of channels in the array must "
-          "match the number of channels used to open the file. The array may "
-          "contain audio in any shape. If the file's bit depth or format does "
-          "not match this data type, the audio will be automatically "
-          "converted.")
-      .def(
-          "write",
-          [](WriteableAudioFile &file, py::array_t<double> samples) {
-            file.write<double>(samples);
-          },
-          py::arg("samples").noconvert(),
-          "Encode an array of float64 (64-bit floating-point) audio data and "
-          "write it to this file. The number of channels in the array must "
-          "match the number of channels used to open the file. The array may "
-          "contain audio in any shape. No supported formats support float64 "
-          "natively, so the audio will be converted automatically.")
+          "match the provided data type, the audio will be automatically "
+          "converted.\n\n"
+          "Arrays of type int8, int16, int32, float32, and float64 are "
+          "supported. If an array of an unsupported ``dtype`` is provided, a "
+          "``TypeError`` will be raised.")
       .def("flush", &WriteableAudioFile::flush,
            "Attempt to flush this audio file's contents to disk. Not all "
            "formats support flushing, so this may throw a RuntimeError. (If "
@@ -907,7 +889,13 @@ inline void init_writeable_audio_file(
       .def_property_readonly(
           "quality", &WriteableAudioFile::getQuality,
           "The quality setting used to write this file. For many "
-          "formats, this may be None.");
+          "formats, this may be ``None``.\n\nQuality options differ based on "
+          "the audio codec used in the file. Most codecs specify a number of "
+          "bits per second in 16- or 32-bit-per-second increments (128 kbps, "
+          "160 kbps, etc). Some codecs provide string-like options for "
+          "variable bit-rate encoding (i.e. \"V0\" through \"V9\" for MP3). "
+          "The strings ``\"best\"``, ``\"worst\"``, ``\"fastest\"``, and "
+          "``\"smallest\"`` will also work for any codec.");
 
   m.def("get_supported_write_formats", []() {
     // JUCE doesn't support writing other formats out-of-the-box on all

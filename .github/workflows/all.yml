@@ -99,14 +99,8 @@ jobs:
         if: runner.os == 'Windows'
       - name: Build pedalboard locally
         run: python setup.py install
-      - name: Generate native type stubs
-        run: pybind11-stubgen -o stubs_output pedalboard pedalboard_native --no-setup-py
-      - name: Validate type stubs match postprocessing
-        run: python3 -m scripts.postprocess_type_hints stubs_output pedalboard --check
-      - name: Validate type stubs match runtime
-        # Numpy doesn't have typing support for 3.6. Also, 3.6 is deprecated.
-        if: matrix.python-version != '3.6'
-        run: python3 -m mypy.stubtest pedalboard --allowlist stubtest.allowlist --ignore-missing-stub --ignore-unused-allowlist
+      - name: Generate type stubs and documentation, and validate they match
+        run: python3 -m scripts.generate_type_stubs_and_docs --check
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}

@@ -41,7 +41,75 @@ namespace Pedalboard {
 inline py::class_<AudioFile, std::shared_ptr<AudioFile>>
 declare_audio_file(py::module &m) {
   return py::class_<AudioFile, std::shared_ptr<AudioFile>>(
-      m, "AudioFile", "A base class for readable and writeable audio files.");
+      m, "AudioFile",
+      R"(A base class for readable and writeable audio files.
+
+:class:`AudioFile` may be used just like a regular Python ``open``
+function call, to open an audio file for reading (with the default ``"r"`` mode)
+or for writing (with the ``"w"`` mode).
+
+Unlike a typical ``open`` call:
+ - :class:`AudioFile` objects can only be created in read (``"r"``) or write (``"w"``) mode.
+   All audio files are binary (so a trailing ``b`` would be redundant) and appending to an
+   existing audio file is not possible.
+ - If opening an audio file in write mode (``"w"``), one additional argument is required:
+   the sample rate of the file.
+ - A file-like object can be provided to :class:`AudioFile`, allowing for reading and
+   writing to in-memory streams or buffers. The provided file-like object must be seekable
+   and must be opened in binary mode (i.e.: ``io.BinaryIO`` instead of ``io.StringIO``, 
+   if using the `io` package).
+
+
+Examples
+--------
+
+Opening an audio file on disk::
+
+   with AudioFile("my_file.mp3") as f:
+       first_ten_seconds = f.read(int(f.samplerate * 10))
+
+
+Opening a file-like object::
+
+   ogg_buffer: io.BytesIO = get_audio_buffer(...)
+   with AudioFile(ogg_buffer) as f:
+       first_ten_seconds = f.read(int(f.samplerate * 10))
+
+
+Writing an audio file on disk::
+
+   with AudioFile("white_noise.wav", "w", samplerate=44100, num_channels=2) as f:
+       f.write(np.random.rand(2, 44100))
+
+
+Writing encoded audio to a file-like object::
+
+   wav_buffer = io.BytesIO()
+   with AudioFile(wav_buffer, "w", samplerate=44100, num_channels=2) as f:
+       f.write(np.random.rand(2, 44100))
+   wav_buffer.getvalue()  # do something with the file-like object
+
+
+Writing to an audio file while also specifying quality options for the codec::
+
+   with AudioFile(
+       "white_noise.mp3",
+       "w",
+       samplerate=44100,
+       num_channels=2,
+       quality=160,  # kilobits per second
+   ) as f:
+       f.write(np.random.rand(2, 44100))
+
+
+Re-encoding a WAV file as an MP3 in four lines of Python::
+
+   with AudioFile("input.wav") as i:
+       with AudioFile("output.mp3", "w", i.samplerate, i.num_channels) as o:
+           while i.tell() < i.frames:
+               o.write(i.read(1024))
+
+)");
 }
 
 inline void init_audio_file(
@@ -68,7 +136,8 @@ inline void init_audio_file(
                                    "read mode (\"r\") or write mode (\"w\").");
             }
           },
-          py::arg("cls"), py::arg("filename"), py::arg("mode") = "r")
+          py::arg("cls"), py::arg("filename"), py::arg("mode") = "r",
+          "Open an audio file for reading.")
       .def_static(
           "__new__",
           [](const py::object *, py::object filelike, std::string mode) {
@@ -91,7 +160,11 @@ inline void init_audio_file(
                                    "read mode (\"r\") or write mode (\"w\").");
             }
           },
-          py::arg("cls"), py::arg("file_like"), py::arg("mode") = "r")
+          py::arg("cls"), py::arg("file_like"), py::arg("mode") = "r",
+          "Open a file-like object for reading. The provided object must have "
+          "``read``, ``seek``, ``tell``, and ``seekable`` methods, and must "
+          "return binary data (i.e.: ``open(..., \"w\")`` or ``io.BinaryIO``, "
+          "etc.).")
       .def_static(
           "__new__",
           [](const py::object *, std::string filename, std::string mode,

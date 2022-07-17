@@ -496,7 +496,8 @@ inline void init_resample(py::module &m) {
           "then upsamples it back to the original sample rate. Various quality "
           "settings will produce audible distortion and aliasing effects.");
 
-  py::enum_<ResamplingQuality>(resample, "Quality")
+  py::enum_<ResamplingQuality>(
+      resample, "Quality", "Indicates a specific resampling algorithm to use.")
       .value("ZeroOrderHold", ResamplingQuality::ZeroOrderHold,
              "The lowest quality and fastest resampling method, with lots of "
              "audible artifacts.")
@@ -554,11 +555,18 @@ inline void init_resample(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("target_sample_rate",
-                    &Resample<Passthrough<float>, float>::getTargetSampleRate,
-                    &Resample<Passthrough<float>, float>::setTargetSampleRate)
+      .def_property(
+          "target_sample_rate",
+          &Resample<Passthrough<float>, float>::getTargetSampleRate,
+          &Resample<Passthrough<float>, float>::setTargetSampleRate,
+          "The sample rate to resample the input audio to. This value may be a "
+          "floating-point number, in which case a floating-point sampling rate "
+          "will be used. Note that the output of this plugin will still be at "
+          "the original sample rate; this is merely the sample rate used for "
+          "quality reduction.")
       .def_property("quality", &Resample<Passthrough<float>, float>::getQuality,
-                    &Resample<Passthrough<float>, float>::setQuality);
+                    &Resample<Passthrough<float>, float>::setQuality,
+                    "The resampling algorithm used to resample the audio.");
 }
 
 /**

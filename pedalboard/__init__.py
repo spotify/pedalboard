@@ -14,11 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from pedalboard_native import *  # noqa: F403, F401
 from pedalboard_native.utils import *  # noqa: F403, F401
 from .pedalboard import Pedalboard, _AVAILABLE_PLUGIN_CLASSES, load_plugin  # noqa: F401
 from .version import __version__  # noqa: F401
 
-for klass in _AVAILABLE_PLUGIN_CLASSES:
-    vars()[klass.__name__] = klass
+for _klass in _AVAILABLE_PLUGIN_CLASSES:
+    vars()[_klass.__name__] = _klass

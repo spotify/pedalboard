@@ -574,6 +574,17 @@ try:
     from pedalboard_native import _VST3Plugin
 
     class VST3Plugin(_VST3Plugin, ExternalPlugin):
+        """
+        A wrapper around third-party, non-Pedalboard audio effects
+        plugins in Steinberg GmbH's VST3® format.
+
+        VST3® plugins are supported on macOS, Windows, and Linux.
+        However, VST3® plugin files are not cross-compatible with
+        different operating systems; a platform-specific build of each plugin
+        is required to load that plugin on a given platform. (For example:
+        a Windows VST3 plugin bundle will not load on Linux or macOS.)
+        """
+
         def __init__(
             self,
             path_to_plugin_file: str,
@@ -597,6 +608,20 @@ try:
     from pedalboard_native import _AudioUnitPlugin
 
     class AudioUnitPlugin(_AudioUnitPlugin, ExternalPlugin):
+        """
+        A wrapper around third-party, non-Pedalboard audio effects
+        plugins in Apple's Audio Unit format.
+
+        Audio Unit plugins are only supported on macOS. This class will be
+        unavailable on non-macOS platforms. Plugin files must be installed
+        in the appropriate system-wide path for them to be
+        loadable (usually ``/Library/Audio/Plug-Ins/Components/`` or
+        ``~/Library/Audio/Plug-Ins/Components/``).
+
+        For a plugin wrapper that works on Windows and Linux as well,
+        see :class:`pedalboard.VST3Plugin`.
+        """
+
         def __init__(
             self,
             path_to_plugin_file: str,
@@ -626,6 +651,37 @@ def load_plugin(
     parameter_values: Dict[str, Union[str, int, float, bool]] = {},
     plugin_name: Union[str, None] = None,
 ) -> ExternalPlugin:
+    """
+    Load an audio plugin.
+
+    Two plugin formats are supported:
+     - VST3® format is supported on macOS, Windows, and Linux
+     - Audio Units are supported on macOS
+
+    Args:
+        path_to_plugin_file (str): The path of a VST3® or Audio Unit plugin file or bundle.
+
+        parameter_values (Dict[str, Union[str, int, float, bool]]):
+            An optional dictionary of initial values to provide to the plugin
+            after loading. Keys in this dictionary are expected to match the
+            parameter names reported by the plugin, but normalized to strings
+            that can be used as Python identifiers. (These are the same
+            identifiers that are used as keys in the ``.parameters`` dictionary
+            of a loaded plugin.)
+
+        plugin_name (Optional[str]):
+            An optional plugin name that can be used to load a specific plugin
+            from a multi-plugin package. If a package is loaded but a
+            ``plugin_name`` is not provided, an exception will be thrown.
+
+    Returns:
+        an instance of :class:`pedalboard.VST3Plugin`` or :class:`pedalboard.AudioUnitPlugin`
+
+    Throws:
+        ``ImportError``: if the plugin cannot be found or loaded
+
+        ``RuntimeError``: if the plugin file contains more than one plugin, but no ``plugin_name`` was provided
+    """
     if not _AVAILABLE_PLUGIN_CLASSES:
         raise ImportError(
             "Pedalboard found no supported external plugin types in this installation ({}).".format(
