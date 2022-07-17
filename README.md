@@ -34,8 +34,8 @@ Internally at Spotify, `pedalboard` is used for [data augmentation](https://en.w
    - Releases Python's Global Interpreter Lock (GIL) to allow use of multiple CPU cores
      - No need to use `multiprocessing`!
    - Even when only using one thread:
-     - Processes audio up to **300x** faster than [pySoX](https://github.com/rabitt/pysox) for single transforms, and 2-5x faster<sup>[1](https://github.com/iCorv/pedalboard_with_tfdata)</sup> than [SoxBindings](https://github.com/pseeth/soxbindings)
-     - Reads audio files up to **4x** faster than [`librosa.load`](https://librosa.org/doc/main/generated/librosa.load.html) (in many cases)
+     - Processes audio up to **300x** faster than [pySoX](https://github.com/rabitt/pysox) for single transforms, and 2-5x faster than [SoxBindings](https://github.com/pseeth/soxbindings) (via [iCorv](https://github.com/iCorv/pedalboard_with_tfdata))
+     - Reads audio files up to **4x** faster than [librosa.load](https://librosa.org/doc/main/generated/librosa.load.html) (in many cases)
  - Tested compatibility with TensorFlow - can be used in `tf.data` pipelines!
 
 ## Installation
@@ -65,31 +65,9 @@ If you are new to Python, follow [INSTALLATION.md](https://github.com/spotify/pe
   - Tested automatically on GitHub with VSTs
   - Platform wheels available for `amd64` (x86-64, Intel/AMD)
 
-#### Plugin Compatibility
-
-`pedalboard` allows loading VST3® and Audio Unit plugins, which could contain _any_ code.
-Most plugins that have been tested work just fine with `pedalboard`, but some plugins may
-not work with `pedalboard`; at worst, some may even crash the Python interpreter without
-warning and with no ability to catch the error. For an ever-growing compatibility list,
-see [COMPATIBILITY.md](COMPATIBILITY.md).
-
-Most audio plugins are "well-behaved" and conform to a set of conventions for how audio
-plugins are supposed to work, but many do not conform to the VST3® or Audio Unit
-specifications. `pedalboard` attempts to detect some common programming errors in plugins
-and can work around many issues, including automatically detecting plugins that don't
-clear their internal state when asked. Even so, plugins can misbehave without `pedalboard`
-noticing.
-
-If audio is being rendered incorrectly or if audio is "leaking" from one `process()` call
-to the next in an undesired fashion, try:
-
-1. Passing silence to the plugin in between calls to `process()`, to ensure that any
-   reverb tails or other internal state has time to fade to silence
-1. Reloading the plugin every time audio is processed (with `pedalboard.load_plugin`)
-
 ## Examples
 
-### Quick Start
+### Quick start
 
 ```python
 from pedalboard import Pedalboard, Chorus, Reverb
@@ -220,80 +198,13 @@ board = Pedalboard([
 ```
 
 For more examples, see:
- - [the `examples` folder of this repository](https://github.com/spotify/pedalboard/tree/master/examples)
- - [the _Pedalboard Demo_ Colab notebook](https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_lOfG99Xs3qWVrhch)
+ - [the "examples" folder of this repository](https://github.com/spotify/pedalboard/tree/master/examples)
+ - [the "Pedalboard Demo" Colab notebook](https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_lOfG99Xs3qWVrhch)
  - [an interactive web demo on Hugging Face Spaces and Gradio](https://huggingface.co/spaces/akhaliq/pedalboard) (via [@AK391](https://github.com/AK391)) 
 
 ## Contributing
 
 Contributions to `pedalboard` are welcomed! See [CONTRIBUTING.md](https://github.com/spotify/pedalboard/blob/master/CONTRIBUTING.md) for details.
-
-## Frequently Asked Questions
-
-
-### Can Pedalboard be used with live (real-time) audio?
-
-Technically, yes, Pedalboard could be used with live audio input/output. See:
- - [Pull request #98](https://github.com/spotify/pedalboard/pull/98), which contains an experimental live audio interface written in C++.
- - [@stefanobazzi](https://github.com/stefanobazzi)'s [guitarboard](https://github.com/stefanobazzi/guitarboard) project for an example that uses the `python-sounddevice` library.
-
-However, there are a couple big caveats when talking about using Pedalboard in a live context. Python, as a language, is [garbage-collected](https://devguide.python.org/garbage_collector/), meaning that your code randomly pauses on a regular interval to clean up unused objects. In most programs, this is not an issue at all. However, for live audio, garbage collection can result in random pops, clicks, or audio drop-outs that are very difficult to prevent. Python's [Global Interpreter Lock](https://wiki.python.org/moin/GlobalInterpreterLock) also adds potentially-unbounded delays when switching threads, and most operating systems use a separate high-priority thread for audio processing; meaning that Python could block this thread and cause stuttering if _any_ Python objects are accessed or mutated in the audio thread.
-
-Note that if your application processes audio in a streaming fashion, but allows for large buffer sizes (multiple seconds of audio) or soft real-time requirements, Pedalboard can be used there without issue. Examples of this use case include streaming audio processing over the network, or processing data offline but chunk-by-chunk.
-
-### Does Pedalboard support changing a plugin's parameters over time?
-
-Yes! While there's no built-in function for this, it is possible to
-vary the parameters of a plugin over time manually:
-
-```python
-from pedalboard.io import AudioFile
-from pedalboard import Pedalboard, Compressor, Reverb
-from tqdm import tqdm
-
-board = Pedalboard([Compressor(), Reverb()])
-reverb = board[1]
-
-# Smaller step sizes would give a smoother transition,
-# at the expense of processing speed
-step_size_in_samples = 100
-
-# Manually step through the audio _n_ samples at a time, reading in chunks:
-with AudioFile("sample.wav") as af:
-
-    # Open the output audio file so that we can directly write audio as we process, saving memory:
-    with AudioFile(
-        "sample-processed-output.wav", "w", af.samplerate, num_channels=af.num_channels
-    ) as o:
-
-        # Create a progress bar to show processing speed in real-time:
-        with tqdm(total=af.frames, unit=' samples') as pbar:
-            for i in range(0, af.frames, step_size_in_samples):
-                chunk = af.read(step_size_in_samples)
-
-                # Set the reverb's "wet" parameter to be equal to the
-                # percentage through the track (i.e.: make a ramp from 0% to 100%)
-                percentage_through_track = i / af.frames
-                reverb.wet_level = percentage_through_track
-
-                # Update our progress bar with the number of samples received:
-                pbar.update(chunk.shape[1])
-
-                # Process this chunk of audio, setting `reset` to `False`
-                # to ensure that reverb tails aren't cut off
-                output = board.process(chunk, af.samplerate, reset=False)
-                o.write(output)
-```
-
-With this technique, it's possible to automate any parameter. Usually, using a step size of somewhere between 100 and 1,000 (2ms to 22ms at a 44.1kHz sample rate) is small enough to avoid hearing any audio artifacts, but big enough to avoid slowing down the code dramatically.
-
-### Can Pedalboard be used with VST instruments, instead of effects?
-
-Not yet! The underlying framework (JUCE) supports VST and AU instruments just fine, but Pedalboard itself would have to be modified to support instruments.
-
-### Can Pedalboard plugins accept MIDI?
-
-Not yet, either - although the underlying framework (JUCE) supports passing MIDI to plugins, so this would also be possible to add.
 
 ## License
 `pedalboard` is Copyright 2021-2022 Spotify AB.
@@ -303,7 +214,7 @@ Not yet, either - although the underlying framework (JUCE) supports passing MIDI
  - The core audio processing code is pulled from [JUCE 6](https://juce.com/), which is [dual-licensed under a commercial license and the GPLv3](https://juce.com/juce-6-licence).
  - The [VST3 SDK](https://github.com/steinbergmedia/vst3sdk), bundled with JUCE, is owned by [Steinberg® Media Technologies GmbH](https://www.steinberg.net/en/home.html) and licensed under the GPLv3.
  - The `PitchShift` plugin uses [the Rubber Band Library](https://github.com/breakfastquay/rubberband), which is [dual-licensed under a commercial license](https://breakfastquay.com/technology/license.html) and the GPLv2 (or newer).
- - The `MP3Compressor` plugin uses [`libmp3lame` from the LAME project](https://lame.sourceforge.io/), which is [licensed under the LGPLv2](https://github.com/lameproject/lame/blob/master/README) and [upgraded to the GPLv3 for inclusion in this project (as permitted by the LGPLv2)](https://www.gnu.org/licenses/gpl-faq.html#AllCompatibility).
- - The `GSMFullRateCompressor` plugin uses [`libgsm`](http://quut.com/gsm/), which is [licensed under the ISC license](https://github.com/timothytylee/libgsm/blob/master/COPYRIGHT) and [compatible with the GPLv3](https://www.gnu.org/licenses/license-list.en.html#ISC).
+ - The `MP3Compressor` plugin uses [libmp3lame from the LAME project](https://lame.sourceforge.io/), which is [licensed under the LGPLv2](https://github.com/lameproject/lame/blob/master/README) and [upgraded to the GPLv3 for inclusion in this project (as permitted by the LGPLv2)](https://www.gnu.org/licenses/gpl-faq.html#AllCompatibility).
+ - The `GSMFullRateCompressor` plugin uses [libgsm](http://quut.com/gsm/), which is [licensed under the ISC license](https://github.com/timothytylee/libgsm/blob/master/COPYRIGHT) and [compatible with the GPLv3](https://www.gnu.org/licenses/license-list.en.html#ISC).
 
 _VST is a registered trademark of Steinberg Media Technologies GmbH._
