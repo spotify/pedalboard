@@ -21,6 +21,6 @@ mypy
 
 # For documentation:
 sphinx
+sphinx-copybutton
 m2r2
-imgmath
 furo
