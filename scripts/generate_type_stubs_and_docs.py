@@ -244,7 +244,7 @@ def main():
 
     # Why is this necessary? I don't know, but without it, things fail.
     print("Importing numpy to ensure a successful Pedalboard import...")
-    import numpy
+    import numpy  # noqa
 
     print("Running Sphinx...")
     if args.check:
