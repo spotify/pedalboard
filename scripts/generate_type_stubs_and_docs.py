@@ -206,6 +206,15 @@ def main():
             " script were re-run."
         ),
     )
+    parser.add_argument(
+        "--skip-comparing",
+        nargs="*",
+        default=["searchindex.js"],
+        help=(
+            "If set and if --check is passed, the provided filenames will be ignored when comparing"
+            " expected file contents against actual file contents."
+        ),
+    )
     args = parser.parse_args()
 
     patch_pybind11_stubgen()
@@ -257,6 +266,9 @@ def main():
             for (dirpath, _dirnames, filenames) in os.walk(tempdir):
                 prefix = dirpath.replace(tempdir, "").lstrip(os.path.sep)
                 for filename in filenames:
+                    if filename in args.skip_comparing:
+                        print(f"Skipping comparison of file: {filename}")
+                        continue
                     expected_path = os.path.join(tempdir, prefix, filename)
                     actual_path = os.path.join(args.docs_output_dir, prefix, filename)
                     if not os.path.isfile(actual_path):
