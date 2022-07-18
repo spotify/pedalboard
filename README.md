@@ -18,7 +18,7 @@
 
 ## Features 
 
- - Built-in audio I/O utilities ([`pedalboard.io`](https://spotify.github.io/pedalboard/reference/pedalboard.io.html))
+ - Built-in audio I/O utilities ([pedalboard.io](https://spotify.github.io/pedalboard/reference/pedalboard.io.html))
    - Support for reading and writing AIFF, FLAC, MP3, OGG, and WAV files on all platforms with no dependencies
    - Additional support for reading AAC, AC3, WMA, and other formats depending on platform
  - Built-in support for a number of basic audio transformations, including:
@@ -29,7 +29,7 @@
    - Pitch effects: `PitchShift`
    - Lossy compression: `GSMFullRateCompressor`, `MP3Compressor`
    - Quality reduction: `Resample`, `Bitcrush`
- - Supports VST3® plugins on macOS, Windows, and Linux ([`pedalboard.load_plugin`](https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.load_plugin))
+ - Supports VST3® plugins on macOS, Windows, and Linux ([pedalboard.load_plugin](https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.load_plugin))
  - Supports Audio Units on macOS
  - Strong thread-safety, memory usage, and speed guarantees
    - Releases Python's Global Interpreter Lock (GIL) to allow use of multiple CPU cores
