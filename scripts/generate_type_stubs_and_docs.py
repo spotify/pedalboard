@@ -53,7 +53,7 @@ def patch_pybind11_stubgen():
                 self.enum_values.append(value_object.value)
                 self.enum_docstrings.append(docstring)
 
-        def to_lines(self):  # type: () -> List[str]
+        def to_lines(self):
             result = [
                 "class {class_name}(Enum):{doc_string}".format(
                     class_name=self.klass.__name__,
@@ -243,10 +243,10 @@ def main():
                 )
 
     # Why is this necessary? I don't know, but without it, things fail.
-    print(f"Importing numpy to ensure a successful Pedalboard import...")
+    print("Importing numpy to ensure a successful Pedalboard import...")
     import numpy
 
-    print(f"Running Sphinx...")
+    print("Running Sphinx...")
     if args.check:
         missing_files = []
         mismatched_files = []

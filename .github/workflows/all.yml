@@ -100,6 +100,7 @@ jobs:
       - name: Build pedalboard locally
         run: python setup.py install
       - name: Generate type stubs and documentation, and validate they match
+        if: matrix.python-version != '3.6'
         run: python3 -m scripts.generate_type_stubs_and_docs --check
       - name: Install VSTs for testing
         env:
@@ -107,10 +108,10 @@ jobs:
           GCS_READER_SERVICE_ACCOUNT_KEY: ${{ secrets.GCS_READER_SERVICE_ACCOUNT_KEY }}
         run: python ./tests/download_test_plugins.py
       - name: Run tests
-        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.6'
+        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.8'
         run: pytest -v --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard
       - name: Run tests with coverage reporting
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.6'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8'
         run: |
           pytest -v --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard \
           && coverage json --fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} \
@@ -118,7 +119,7 @@ jobs:
           && jq -r 'if .totals.percent_covered > ${{ env.MINIMUM_COVERAGE_PERCENTAGE }} then "COVERAGE_COLOR=green" else "COVERAGE_COLOR=red" end' coverage.json >> $GITHUB_ENV
       - name: Create coverage badge
         uses: schneegans/dynamic-badges-action@v1.1.0
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.6' && github.event_name == 'release' && github.event.action == 'published'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8' && github.event_name == 'release' && github.event.action == 'published'
         with:
           auth: ${{ secrets.COVERAGE_GIST_SECRET }}
           gistID: 8736467e9952991ef44a67915ee7c762

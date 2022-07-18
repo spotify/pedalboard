@@ -680,7 +680,8 @@ def load_plugin(
     Throws:
         ``ImportError``: if the plugin cannot be found or loaded
 
-        ``RuntimeError``: if the plugin file contains more than one plugin, but no ``plugin_name`` was provided
+        ``RuntimeError``: if the plugin file contains more than one plugin,
+        but no ``plugin_name`` was provided
     """
     if not _AVAILABLE_PLUGIN_CLASSES:
         raise ImportError(
