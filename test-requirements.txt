@@ -20,7 +20,7 @@ pybind11-stubgen
 mypy
 
 # For documentation:
-sphinx
+sphinx==4.4.0
 sphinx-copybutton
 m2r2
-furo
+furo==2022.06.21

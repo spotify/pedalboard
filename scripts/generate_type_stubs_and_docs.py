@@ -300,7 +300,7 @@ def main():
     else:
         sphinx_build_main(["-b", "html", args.docs_input_dir, args.docs_output_dir])
         remove_non_public_files(args.docs_output_dir)
-        print(f"Done! Commit the contents of `{args.docs_output_dir} to Git.`")
+        print(f"Done! Commit the contents of `{args.docs_output_dir}` to Git.")
 
 
 if __name__ == "__main__":
