@@ -396,6 +396,10 @@ public:
     case 'h':
       return write<int16_t>(py::array_t<int16_t>(inputArray.release(), false));
     case 'i':
+#ifdef JUCE_WINDOWS
+    // On 64-bit Windows, int32 is a "long".
+    case 'l':
+#endif
       return write<int32_t>(py::array_t<int32_t>(inputArray.release(), false));
     default:
       throw py::type_error(
