@@ -1,4 +1,6 @@
-"""This module provides classes and functions for reading and writing audio files."""
+"""This module provides classes and functions for reading and writing audio files.
+
+*Introduced in v0.5.1.*"""
 from __future__ import annotations
 import pedalboard_native.io  # type: ignore
 import typing

@@ -714,7 +714,7 @@ class Resample(Plugin):
 
 class Reverb(Plugin):
     """
-    A simple reverb effect. Uses a simple stereo reverb algorithm, based on the technique and tunings used in `FreeVerb <https://ccrma.stanford.edu/~jos/pasp/Freeverb.html>`.
+    A simple reverb effect. Uses a simple stereo reverb algorithm, based on the technique and tunings used in `FreeVerb <https://ccrma.stanford.edu/~jos/pasp/Freeverb.html>_`.
     """
 
     def __init__(
