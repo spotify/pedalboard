@@ -59,7 +59,7 @@ jobs:
       MINIMUM_COVERAGE_PERCENTAGE: 89
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11.0-beta.4']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11.0-beta.3']
         # TODO: Switch back to macos-latest once https://github.com/actions/python-versions/pull/114 is fixed
         os: [ubuntu-18.04, ubuntu-latest, windows-latest, macos-10.15]
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}

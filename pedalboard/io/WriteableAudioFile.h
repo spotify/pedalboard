@@ -400,7 +400,8 @@ public:
     default:
       throw py::type_error(
           "Writing audio requires an array with a datatype of int8, "
-          "int16, int32, float32, or float64.");
+          "int16, int32, float32, or float64. (Got: " +
+          py::str(inputArray.attr("dtype")).cast<std::string>() + ")");
     }
   }
 
