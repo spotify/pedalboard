@@ -152,9 +152,9 @@ class ReadableAudioFile(AudioFile):
     Pedalboard.)
 
     .. note::
-        This class will probably not be used directly: the :class:`AudioFile` class's
-        ``__new__`` operator will return an instance of :class:`ReadableAudioFile` when
-        provided the ``"r"`` mode as its second argument (the default).
+        You probably don't want to use this class directly: passing the
+        same arguments to :class:`AudioFile` will work too, and allows using
+        :class:`AudioFile` just like you'd use ``open(...)`` in Python.
     """
 
     def __enter__(self) -> ReadableAudioFile:
@@ -302,14 +302,13 @@ class WriteableAudioFile(AudioFile):
             Some formats, like MP3, support more advanced options like ``V2`` (as
             specified by `the LAME encoder <https://lame.sourceforge.io/>`_) which
             may be passed as a string. The strings ``"best"``, ``"worst"``,
-            ``"fastest"``, and ``"smallest"`` will also work for any codec.
+            ``"fastest"``, and ``"slowest"`` will also work for any codec.
 
     .. note::
-        This class will probably not be used directly: the :class:`AudioFile` class's
-        ``__new__`` operator will return an instance of :class:`WriteableAudioFile` when
-        provided the ``"w"`` mode as its second argument. All of the parameters accepted
-        by the :class:`WriteableAudioFile` constructor will be accepted by
-        :class:`AudioFile` as well.
+        You probably don't want to use this class directly: all of the parameters
+        accepted by the :class:`WriteableAudioFile` constructor will be accepted by
+        :class:`AudioFile` as well, as long as the ``"w"`` mode is passed as the
+        second argument.
     """
 
     def __enter__(self) -> WriteableAudioFile: ...
@@ -402,7 +401,7 @@ class WriteableAudioFile(AudioFile):
         """
         The quality setting used to write this file. For many formats, this may be ``None``.
 
-        Quality options differ based on the audio codec used in the file. Most codecs specify a number of bits per second in 16- or 32-bit-per-second increments (128 kbps, 160 kbps, etc). Some codecs provide string-like options for variable bit-rate encoding (i.e. "V0" through "V9" for MP3). The strings ``"best"``, ``"worst"``, ``"fastest"``, and ``"smallest"`` will also work for any codec.
+        Quality options differ based on the audio codec used in the file. Most codecs specify a number of bits per second in 16- or 32-bit-per-second increments (128 kbps, 160 kbps, etc). Some codecs provide string-like options for variable bit-rate encoding (i.e. "V0" through "V9" for MP3). The strings ``"best"``, ``"worst"``, ``"fastest"``, and ``"slowest"`` will also work for any codec.
 
 
         """

@@ -305,9 +305,9 @@ contents may be encoded with a compression algorithm unsupported by
 Pedalboard.)</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>This class will probably not be used directly: the <a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> class’s
-<code class="docutils literal notranslate"><span class="pre">__new__</span></code> operator will return an instance of <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> when
-provided the <code class="docutils literal notranslate"><span class="pre">&quot;r&quot;</span></code> mode as its second argument (the default).</p>
+<p>You probably don’t want to use this class directly: passing the
+same arguments to <a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> will work too, and allows using
+<a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> just like you’d use <code class="docutils literal notranslate"><span class="pre">open(...)</span></code> in Python.</p>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.close">
@@ -427,17 +427,16 @@ usually indicate the number of kilobits per second used by the codec.
 Some formats, like MP3, support more advanced options like <code class="docutils literal notranslate"><span class="pre">V2</span></code> (as
 specified by <a class="reference external" href="https://lame.sourceforge.io/">the LAME encoder</a>) which
 may be passed as a string. The strings <code class="docutils literal notranslate"><span class="pre">&quot;best&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;worst&quot;</span></code>,
-<code class="docutils literal notranslate"><span class="pre">&quot;fastest&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;smallest&quot;</span></code> will also work for any codec.</p></li>
+<code class="docutils literal notranslate"><span class="pre">&quot;fastest&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;slowest&quot;</span></code> will also work for any codec.</p></li>
 </ul>
 </dd>
 </dl>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>This class will probably not be used directly: the <a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> class’s
-<code class="docutils literal notranslate"><span class="pre">__new__</span></code> operator will return an instance of <a class="reference internal" href="#pedalboard.io.WriteableAudioFile" title="pedalboard.io.WriteableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">WriteableAudioFile</span></code></a> when
-provided the <code class="docutils literal notranslate"><span class="pre">&quot;w&quot;</span></code> mode as its second argument. All of the parameters accepted
-by the <a class="reference internal" href="#pedalboard.io.WriteableAudioFile" title="pedalboard.io.WriteableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">WriteableAudioFile</span></code></a> constructor will be accepted by
-<a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> as well.</p>
+<p>You probably don’t want to use this class directly: all of the parameters
+accepted by the <a class="reference internal" href="#pedalboard.io.WriteableAudioFile" title="pedalboard.io.WriteableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">WriteableAudioFile</span></code></a> constructor will be accepted by
+<a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> as well, as long as the <code class="docutils literal notranslate"><span class="pre">&quot;w&quot;</span></code> mode is passed as the
+second argument.</p>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile.close">
@@ -486,7 +485,7 @@ by the <a class="reference internal" href="#pedalboard.io.WriteableAudioFile" ti
 <dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile.quality">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">quality</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.quality" title="Permalink to this definition">#</a></dt>
 <dd><p>The quality setting used to write this file. For many formats, this may be <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
-<p>Quality options differ based on the audio codec used in the file. Most codecs specify a number of bits per second in 16- or 32-bit-per-second increments (128 kbps, 160 kbps, etc). Some codecs provide string-like options for variable bit-rate encoding (i.e. “V0” through “V9” for MP3). The strings <code class="docutils literal notranslate"><span class="pre">&quot;best&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;worst&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;fastest&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;smallest&quot;</span></code> will also work for any codec.</p>
+<p>Quality options differ based on the audio codec used in the file. Most codecs specify a number of bits per second in 16- or 32-bit-per-second increments (128 kbps, 160 kbps, etc). Some codecs provide string-like options for variable bit-rate encoding (i.e. “V0” through “V9” for MP3). The strings <code class="docutils literal notranslate"><span class="pre">&quot;best&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;worst&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;fastest&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;slowest&quot;</span></code> will also work for any codec.</p>
 </dd></dl>
 
 <dl class="py property">
