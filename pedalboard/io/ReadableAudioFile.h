@@ -290,7 +290,7 @@ public:
     return buffer;
   }
 
-  py::handle readRaw(long long numSamples) {
+  py::array readRaw(long long numSamples) {
     if (numSamples == 0)
       throw std::domain_error(
           "ReadableAudioFile will not read an entire file at once, due to the "
@@ -303,15 +303,15 @@ public:
       throw std::runtime_error("I/O operation on a closed file.");
 
     if (reader->usesFloatingPointData) {
-      return read(numSamples).release();
+      return read(numSamples);
     } else {
       switch (reader->bitsPerSample) {
       case 32:
-        return readInteger<int>(numSamples).release();
+        return readInteger<int>(numSamples);
       case 16:
-        return readInteger<short>(numSamples).release();
+        return readInteger<short>(numSamples);
       case 8:
-        return readInteger<char>(numSamples).release();
+        return readInteger<char>(numSamples);
       default:
         throw std::runtime_error("Not sure how to read " +
                                  std::to_string(reader->bitsPerSample) +
@@ -442,7 +442,7 @@ public:
     return !isClosed();
   }
 
-  std::string getFilename() const { return filename; }
+  std::optional<std::string> getFilename() const { return filename; }
 
   PythonInputStream *getPythonInputStream() const {
     if (!filename.empty()) {
@@ -477,13 +477,36 @@ inline py::class_<ReadableAudioFile, AudioFile,
                   std::shared_ptr<ReadableAudioFile>>
 declare_readable_audio_file(py::module &m) {
   return py::class_<ReadableAudioFile, AudioFile,
-                    std::shared_ptr<ReadableAudioFile>>(
-      m, "ReadableAudioFile",
-      "An audio file reader interface, with native support for Ogg Vorbis, "
-      "MP3, WAV, FLAC, and AIFF files on all operating systems. On some "
-      "platforms, other formats may also be readable. (Use "
-      "pedalboard.io.get_supported_read_formats() to see which formats are "
-      "supported on the current platform.)");
+                    std::shared_ptr<ReadableAudioFile>>(m, "ReadableAudioFile",
+                                                        R"(
+A class that wraps an audio file for reading, with native support for Ogg Vorbis,
+MP3, WAV, FLAC, and AIFF files on all operating systems. Other formats may also
+be readable depending on the operating system and installed system libraries:
+
+ - macOS: ``.3g2``, ``.3gp``, ``.aac``, ``.ac3``, ``.adts``, ``.aif``,
+   ``.aifc``, ``.aiff``, ``.amr``, ``.au``, ``.bwf``, ``.caf``,
+   ``.ec3``, ``.flac``, ``.latm``, ``.loas``, ``.m4a``, ``.m4b``,
+   ``.m4r``, ``.mov``, ``.mp1``, ``.mp2``, ``.mp3``, ``.mp4``,
+   ``.mpa``, ``.mpeg``, ``.ogg``, ``.qt``, ``.sd2``,
+   ``.snd``, ``.w64``, ``.wav``, ``.xhe``
+ - Windows: ``.aif``, ``.aiff``, ``.flac``, ``.mp3``, ``.ogg``,
+   ``.wav``, ``.wma``
+ - Linux: ``.aif``, ``.aiff``, ``.flac``, ``.mp3``, ``.ogg``,
+   ``.wav``
+
+Use :meth:`pedalboard.io.get_supported_read_formats()` to see which
+formats or file extensions are supported on the current platform.
+
+(Note that although an audio file may have a certain file extension, its
+contents may be encoded with a compression algorithm unsupported by
+Pedalboard.)
+
+.. note::
+    You probably don't want to use this class directly: passing the
+    same arguments to :class:`AudioFile` will work too, and allows using
+    :class:`AudioFile` just like you'd use ``open(...)`` in Python.
+
+)");
 }
 
 inline void init_readable_audio_file(
@@ -528,34 +551,53 @@ inline void init_readable_audio_file(
       .def(
           "read", &ReadableAudioFile::read, py::arg("num_frames") = 0,
           "Read the given number of frames (samples in each channel) from this "
-          "audio file at the current position. Audio samples are returned in "
-          "the shape (channels, samples); i.e.: a stereo audio file will have "
-          "shape (2, <length>). Returned data is always in float32 format.")
+          "audio file at its current position.\n\n``num_frames`` is a required "
+          "argument, as audio files can be deceptively large. (Consider that "
+          "an hour-long ``.ogg`` file may be only a handful of megabytes on "
+          "disk, but may decompress to nearly a gigabyte in memory.) Audio "
+          "files should be read in chunks, rather than all at once, to avoid "
+          "hard-to-debug memory problems and out-of-memory crashes.\n\nAudio "
+          "samples are returned as a multi-dimensional :class:`numpy.array` "
+          "with the shape ``(channels, samples)``; i.e.: a stereo audio file "
+          "will have shape ``(2, <length>)``. Returned data is always in the "
+          "``float32`` datatype.\n\nFor most (but not all) audio files, the "
+          "minimum possible sample value will be ``-1.0f`` and the maximum "
+          "sample value will be ``+1.0f``.")
       .def(
           "read_raw", &ReadableAudioFile::readRaw, py::arg("num_frames") = 0,
           "Read the given number of frames (samples in each channel) from this "
-          "audio file at the current position. Audio samples are returned in "
-          "the shape (channels, samples); i.e.: a stereo audio file will have "
-          "shape (2, <length>). Returned data is in the raw format stored by "
-          "the underlying file (one of int8, int16, int32, or float32).")
+          "audio file at the current position.\n\nAudio samples are returned "
+          "as a multi-dimensional :class:`numpy.array` with the shape "
+          "``(channels, samples)``; i.e.: a stereo audio file "
+          "will have shape ``(2, <length>)``. Returned data is in the raw "
+          "format stored by the underlying file (one of ``int8``, ``int16``, "
+          "``int32``, or ``float32``).")
       .def("seekable", &ReadableAudioFile::isSeekable,
            "Returns True if this file is currently open and calls to seek() "
            "will work.")
       .def("seek", &ReadableAudioFile::seek, py::arg("position"),
-           "Seek this file to the provided location in frames.")
+           "Seek this file to the provided location in frames. Future reads "
+           "will start from this position.")
       .def("tell", &ReadableAudioFile::tell,
-           "Fetch the position in this audio file, in frames.")
+           "Return the current position of the read pointer in this audio "
+           "file, in frames. This value will increase as :meth:`read` is "
+           "called, and may decrease if :meth:`seek` is called.")
       .def("close", &ReadableAudioFile::close,
            "Close this file, rendering this object unusable.")
-      .def("__enter__", &ReadableAudioFile::enter)
-      .def("__exit__", &ReadableAudioFile::exit)
+      .def("__enter__", &ReadableAudioFile::enter,
+           "Use this :class:`ReadableAudioFile` as a context manager, "
+           "automatically closing the file and releasing resources when the "
+           "context manager exits.")
+      .def("__exit__", &ReadableAudioFile::exit,
+           "Stop using this :class:`ReadableAudioFile` as a context manager, "
+           "close the file, release its resources.")
       .def("__repr__",
            [](const ReadableAudioFile &file) {
              std::ostringstream ss;
              ss << "<pedalboard.io.ReadableAudioFile";
 
-             if (!file.getFilename().empty()) {
-               ss << " filename=\"" << file.getFilename() << "\"";
+             if (file.getFilename() && !file.getFilename()->empty()) {
+               ss << " filename=\"" << *file.getFilename() << "\"";
              } else if (PythonInputStream *stream =
                             file.getPythonInputStream()) {
                ss << " file_like=" << stream->getRepresentation();
@@ -573,27 +615,34 @@ inline void init_readable_audio_file(
              ss << ">";
              return ss.str();
            })
-      .def_property_readonly("name", &ReadableAudioFile::getFilename,
-                             "The name of this file.")
       .def_property_readonly(
-          "closed", &ReadableAudioFile::isClosed,
-          "If this file has been closed, this property will be True.")
+          "name", &ReadableAudioFile::getFilename,
+          "The name of this file.\n\nIf this :class:`ReadableAudioFile` was "
+          "opened from a file-like object, this will be ``None``.")
+      .def_property_readonly("closed", &ReadableAudioFile::isClosed,
+                             "True iff this file is closed (and no longer "
+                             "usable), False otherwise.")
       .def_property_readonly("samplerate", &ReadableAudioFile::getSampleRate,
                              "The sample rate of this file in samples "
                              "(per channel) per second (Hz).")
       .def_property_readonly("num_channels", &ReadableAudioFile::getNumChannels,
                              "The number of channels in this file.")
-      .def_property_readonly("frames", &ReadableAudioFile::getLengthInSamples,
-                             "The total number of frames (samples per "
-                             "channel) in this file.")
       .def_property_readonly(
-          "duration", &ReadableAudioFile::getDuration,
-          "The duration of this file (frames divided by sample rate).")
+          "frames", &ReadableAudioFile::getLengthInSamples,
+          "The total number of frames (samples per "
+          "channel) in this file.\n\nFor example, if this "
+          "file contains 10 seconds of stereo audio at sample "
+          "rate of 44,100 Hz, ``frames`` will return ``441,000``.")
+      .def_property_readonly("duration", &ReadableAudioFile::getDuration,
+                             "The duration of this file in seconds (``frames`` "
+                             "divided by ``samplerate``).")
       .def_property_readonly(
           "file_dtype", &ReadableAudioFile::getFileDatatype,
-          "The data type stored natively by this file. Note that read(...) "
-          "will always return a float32 array, regardless of the value of this "
-          "property.");
+          "The data type (``\"int16\"``, ``\"float32\"``, etc) stored "
+          "natively by this file.\n\nNote that :meth:`read` will always "
+          "return a ``float32`` array, regardless of the value of this "
+          "property. Use :meth:`read_raw` to read data from the file in its "
+          "``file_dtype``.");
 
   m.def("get_supported_read_formats", []() {
     juce::AudioFormatManager manager;

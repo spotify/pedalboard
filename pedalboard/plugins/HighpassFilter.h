@@ -49,8 +49,9 @@ inline void init_highpass(py::module &m) {
              std::shared_ptr<HighpassFilter<float>>>(
       m, "HighpassFilter",
       "Apply a first-order high-pass filter with a roll-off of 6dB/octave. "
-      "The cutoff frequency will be attenuated by -3dB (i.e.: 0.707x as "
-      "loud).")
+      "The cutoff frequency will be attenuated by -3dB (i.e.: "
+      R"(:math:`\\frac{1}{\\sqrt{2}}` as loud, expressed as a gain factor))"
+      " and lower frequencies will be attenuated by a further 6dB per octave.)")
       .def(py::init([](float cutoff_frequency_hz) {
              auto plugin = std::make_unique<HighpassFilter<float>>();
              plugin->setCutoffFrequencyHz(cutoff_frequency_hz);

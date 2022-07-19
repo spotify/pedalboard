@@ -38,6 +38,12 @@ bool isInteger(double value) {
   return modf(value, &intpart) == 0.0;
 }
 
+// Per-format overrides for the "worst"/"best"/"fastest"/"slowest"
+static inline std::map<std::string, std::pair<std::string, std::string>>
+    MIN_MAX_QUALITY_OPTIONS = {
+        {"MP3", {"V9 (smallest)", "V0 (best)"}},
+};
+
 int determineQualityOptionIndex(juce::AudioFormat *format,
                                 const std::string inputString) {
   // Detect the quality level to use based on the string passed in:
@@ -47,6 +53,28 @@ int determineQualityOptionIndex(juce::AudioFormat *format,
   std::string qualityString = juce::String(inputString).trim().toStdString();
 
   if (!qualityString.empty()) {
+    if (inputString == "worst" || inputString == "best" ||
+        inputString == "slowest" || inputString == "fastest") {
+
+      const std::string formatName = format->getFormatName().toStdString();
+
+      if (MIN_MAX_QUALITY_OPTIONS.count(formatName) == 1) {
+        auto minMaxOptions = MIN_MAX_QUALITY_OPTIONS[formatName];
+        if (inputString == "worst" || inputString == "fastest") {
+          return possibleQualityOptions.indexOf(minMaxOptions.first);
+        } else {
+          return possibleQualityOptions.indexOf(minMaxOptions.second);
+        }
+      } else {
+        if (inputString == "worst" || inputString == "fastest" ||
+            possibleQualityOptions.isEmpty()) {
+          return 0;
+        } else {
+          return possibleQualityOptions.size() - 1;
+        }
+      }
+    }
+
     if (!possibleQualityOptions.size()) {
       throw std::domain_error("Unable to parse provided quality value (" +
                               qualityString + "). " +
@@ -379,6 +407,36 @@ public:
     }
   }
 
+  /**
+   * A generic type-dispatcher for all writes.
+   * pybind11 supports dispatch here, but both pybind11-stubgen
+   * and Sphinx currently (2022-07-16) struggle with how to render
+   * docstrings of overloaded functions, so we don't overload.
+   */
+  void write(py::array inputArray) {
+    switch (inputArray.dtype().char_()) {
+    case 'f':
+      return write<float>(py::array_t<float>(inputArray.release(), false));
+    case 'd':
+      return write<double>(py::array_t<double>(inputArray.release(), false));
+    case 'b':
+      return write<int8_t>(py::array_t<int8_t>(inputArray.release(), false));
+    case 'h':
+      return write<int16_t>(py::array_t<int16_t>(inputArray.release(), false));
+    case 'i':
+#ifdef JUCE_WINDOWS
+    // On 64-bit Windows, int32 is a "long".
+    case 'l':
+#endif
+      return write<int32_t>(py::array_t<int32_t>(inputArray.release(), false));
+    default:
+      throw py::type_error(
+          "Writing audio requires an array with a datatype of int8, "
+          "int16, int32, float32, or float64. (Got: " +
+          py::str(inputArray.attr("dtype")).cast<std::string>() + ")");
+    }
+  }
+
   template <typename SampleType>
   void write(py::array_t<SampleType, py::array::c_style> inputArray) {
     const juce::ScopedLock scopedLock(objectLock);
@@ -702,12 +760,53 @@ inline py::class_<WriteableAudioFile, AudioFile,
                   std::shared_ptr<WriteableAudioFile>>
 declare_writeable_audio_file(py::module &m) {
   return py::class_<WriteableAudioFile, AudioFile,
-                    std::shared_ptr<WriteableAudioFile>>(
-      m, "WriteableAudioFile",
-      "An audio file writer interface, with native support for Ogg Vorbis, "
-      "WAV, FLAC, and AIFF files on all operating systems. (Use "
-      "pedalboard.io.get_supported_write_formats() to see which additional "
-      "formats are supported on the current platform.)");
+                    std::shared_ptr<WriteableAudioFile>>(m,
+                                                         "WriteableAudioFile",
+                                                         R"(
+A class that wraps an audio file for writing, with native support for Ogg Vorbis,
+MP3, WAV, FLAC, and AIFF files on all operating systems. 
+
+Use :meth:`pedalboard.io.get_supported_write_formats()` to see which
+formats or file extensions are supported on the current platform.
+
+Args:
+    filename_or_file_like:
+        The path to an output file to write to, or a seekable file-like
+        binary object (like ``io.BytesIO``) to write to.
+
+    samplerate:
+        The sample rate of the audio that will be written to this file.
+        All calls to the :meth:`write` method will assume this sample rate
+        is used.
+
+    num_channels:
+        The number of channels in the audio that will be written to this file.
+        All calls to the :meth:`write` method will expect audio with this many
+        channels, and will throw an exception if the audio does not contain
+        this number of channels.
+
+    bit_depth:
+        The bit depth (number of bits per sample) that will be written
+        to this file. Used for raw formats like WAV and AIFF. Will have no effect
+        on compressed formats like MP3 or Ogg Vorbis.
+
+    quality:
+        An optional string or number that indicates the quality level to use
+        for the given audio compression codec. Different codecs have different
+        compression quality values; numeric values like ``128`` and ``256`` will
+        usually indicate the number of kilobits per second used by the codec.
+        Some formats, like MP3, support more advanced options like ``V2`` (as
+        specified by `the LAME encoder <https://lame.sourceforge.io/>`_) which
+        may be passed as a string. The strings ``"best"``, ``"worst"``,
+        ``"fastest"``, and ``"slowest"`` will also work for any codec.
+
+.. note::
+    You probably don't want to use this class directly: all of the parameters
+    accepted by the :class:`WriteableAudioFile` constructor will be accepted by
+    :class:`AudioFile` as well, as long as the ``"w"`` mode is passed as the
+    second argument.
+
+)");
 }
 
 inline void init_writeable_audio_file(
@@ -795,62 +894,19 @@ inline void init_writeable_audio_file(
           py::arg("format") = py::none())
       .def(
           "write",
-          [](WriteableAudioFile &file, py::array_t<char> samples) {
-            file.write<char>(samples);
+          [](WriteableAudioFile &file, py::array samples) {
+            file.write(samples);
           },
           py::arg("samples").noconvert(),
-          "Encode an array of int8 (8-bit signed integer) audio data and write "
+          "Encode an array of audio data and write "
           "it to this file. The number of channels in the array must match the "
           "number of channels used to open the file. The array may contain "
           "audio in any shape. If the file's bit depth or format does not "
-          "match this data type, the audio will be automatically converted.")
-      .def(
-          "write",
-          [](WriteableAudioFile &file, py::array_t<short> samples) {
-            file.write<short>(samples);
-          },
-          py::arg("samples").noconvert(),
-          "Encode an array of int16 (16-bit signed integer) audio data and "
-          "write it to this file. The number of channels in the array must "
-          "match the number of channels used to open the file. The array may "
-          "contain audio in any shape. If the file's bit depth or format does "
-          "not match this data type, the audio will be automatically "
-          "converted.")
-      .def(
-          "write",
-          [](WriteableAudioFile &file, py::array_t<int> samples) {
-            file.write<int>(samples);
-          },
-          py::arg("samples").noconvert(),
-          "Encode an array of int32 (32-bit signed integer) audio data and "
-          "write it to this file. The number of channels in the array must "
-          "match the number of channels used to open the file. The array may "
-          "contain audio in any shape. If the file's bit depth or format does "
-          "not match this data type, the audio will be automatically "
-          "converted.")
-      .def(
-          "write",
-          [](WriteableAudioFile &file, py::array_t<float> samples) {
-            file.write<float>(samples);
-          },
-          py::arg("samples").noconvert(),
-          "Encode an array of float32 (32-bit floating-point) audio data and "
-          "write it to this file. The number of channels in the array must "
-          "match the number of channels used to open the file. The array may "
-          "contain audio in any shape. If the file's bit depth or format does "
-          "not match this data type, the audio will be automatically "
-          "converted.")
-      .def(
-          "write",
-          [](WriteableAudioFile &file, py::array_t<double> samples) {
-            file.write<double>(samples);
-          },
-          py::arg("samples").noconvert(),
-          "Encode an array of float64 (64-bit floating-point) audio data and "
-          "write it to this file. The number of channels in the array must "
-          "match the number of channels used to open the file. The array may "
-          "contain audio in any shape. No supported formats support float64 "
-          "natively, so the audio will be converted automatically.")
+          "match the provided data type, the audio will be automatically "
+          "converted.\n\n"
+          "Arrays of type int8, int16, int32, float32, and float64 are "
+          "supported. If an array of an unsupported ``dtype`` is provided, a "
+          "``TypeError`` will be raised.")
       .def("flush", &WriteableAudioFile::flush,
            "Attempt to flush this audio file's contents to disk. Not all "
            "formats support flushing, so this may throw a RuntimeError. (If "
@@ -907,7 +963,13 @@ inline void init_writeable_audio_file(
       .def_property_readonly(
           "quality", &WriteableAudioFile::getQuality,
           "The quality setting used to write this file. For many "
-          "formats, this may be None.");
+          "formats, this may be ``None``.\n\nQuality options differ based on "
+          "the audio codec used in the file. Most codecs specify a number of "
+          "bits per second in 16- or 32-bit-per-second increments (128 kbps, "
+          "160 kbps, etc). Some codecs provide string-like options for "
+          "variable bit-rate encoding (i.e. \"V0\" through \"V9\" for MP3). "
+          "The strings ``\"best\"``, ``\"worst\"``, ``\"fastest\"``, and "
+          "``\"slowest\"`` will also work for any codec.");
 
   m.def("get_supported_write_formats", []() {
     // JUCE doesn't support writing other formats out-of-the-box on all

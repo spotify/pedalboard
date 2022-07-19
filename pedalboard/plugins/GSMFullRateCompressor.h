@@ -149,10 +149,12 @@ inline void init_gsm_full_rate_compressor(py::module &m) {
   py::class_<GSMFullRateCompressor, Plugin,
              std::shared_ptr<GSMFullRateCompressor>>(
       m, "GSMFullRateCompressor",
-      "Apply an GSM Full Rate compressor to emulate the sound of a GSM Full "
-      "Rate (\"2G\") cellular "
-      "phone connection. This plugin internally resamples the input audio to "
-      "8kHz.")
+      "An audio degradation/compression plugin that applies the GSM \"Full "
+      "Rate\" compression algorithm to emulate the sound of a "
+      "2G cellular phone connection. This plugin internally resamples the "
+      "input audio to a fixed sample rate of 8kHz (required by the GSM Full "
+      "Rate codec), although the quality of the resampling algorithm "
+      "can be specified.")
       .def(py::init([](ResamplingQuality quality) {
              auto plugin = std::make_unique<GSMFullRateCompressor>();
              plugin->getNestedPlugin().setQuality(quality);

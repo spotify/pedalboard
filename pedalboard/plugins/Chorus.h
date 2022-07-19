@@ -23,9 +23,20 @@ namespace py = pybind11;
 #include "../JucePlugin.h"
 
 namespace Pedalboard {
+
+#define TO_STRING(s) _TO_STRING(s)
+#define _TO_STRING(s) #s
+#define CHORUS_MIN_RATE_HZ 0
+#define CHORUS_MAX_RATE_HZ 100
+
 template <typename SampleType>
 class Chorus : public JucePlugin<juce::dsp::Chorus<SampleType>> {
-  DEFINE_DSP_SETTER_AND_GETTER(SampleType, Rate, {});
+  DEFINE_DSP_SETTER_AND_GETTER(SampleType, Rate, {
+    if (value < CHORUS_MIN_RATE_HZ || value > CHORUS_MAX_RATE_HZ) {
+      throw std::range_error("Rate must be between " TO_STRING(
+          CHORUS_MIN_RATE_HZ) " Hz and " TO_STRING(CHORUS_MAX_RATE_HZ) " Hz.");
+    }
+  });
   DEFINE_DSP_SETTER_AND_GETTER(SampleType, Depth, {});
   DEFINE_DSP_SETTER_AND_GETTER(SampleType, CentreDelay, {});
   DEFINE_DSP_SETTER_AND_GETTER(SampleType, Feedback, {});
@@ -39,10 +50,10 @@ class Chorus : public JucePlugin<juce::dsp::Chorus<SampleType>> {
 inline void init_chorus(py::module &m) {
   py::class_<Chorus<float>, Plugin, std::shared_ptr<Chorus<float>>>(
       m, "Chorus",
-      "A basic chorus effect. This audio effect can be controlled via the "
+      "A basic chorus effect.\n\nThis audio effect can be controlled via the "
       "speed and depth of the LFO controlling the frequency response, a mix "
       "control, a feedback control, and the centre delay of the modulation. "
-      "\n"
+      "\n\n"
       "Note: To get classic chorus sounds try to use a centre delay time "
       "around 7-8 ms with a low feeback volume and a low depth. This effect "
       "can also be used as a flanger with a lower centre delay time and a "
@@ -73,7 +84,12 @@ inline void init_chorus(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("rate_hz", &Chorus<float>::getRate, &Chorus<float>::setRate)
+      .def_property(
+          "rate_hz", &Chorus<float>::getRate, &Chorus<float>::setRate,
+          "The speed of the chorus effect's low-frequency oscillator (LFO), in "
+          "Hertz. This value must be between " TO_STRING(
+              CHORUS_MIN_RATE_HZ) " Hz and " TO_STRING(CHORUS_MAX_RATE_HZ) " Hz"
+                                                                           ".")
       .def_property("depth", &Chorus<float>::getDepth, &Chorus<float>::setDepth)
       .def_property("centre_delay_ms", &Chorus<float>::getCentreDelay,
                     &Chorus<float>::setCentreDelay)

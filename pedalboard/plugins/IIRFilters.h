@@ -123,9 +123,9 @@ inline void init_iir_filters(py::module &m) {
   py::class_<HighShelfFilter<float>, Plugin,
              std::shared_ptr<HighShelfFilter<float>>>(
       m, "HighShelfFilter",
-      "Apply a high shelf filter with variable Q and gain. Frequencies above "
-      "the cutoff frequency will be boosted (or cut) by the provided gain "
-      "value.")
+      "A high shelf filter plugin with variable Q and gain, as would be used "
+      "in an equalizer. Frequencies above the cutoff frequency will be boosted "
+      "(or cut) by the provided gain (in decibels).")
       .def(py::init([](float cutoffFrequencyHz, float gaindB, float Q) {
              auto plugin = std::make_unique<HighShelfFilter<float>>();
              plugin->setCutoffFrequencyHz(cutoffFrequencyHz);
@@ -157,9 +157,9 @@ inline void init_iir_filters(py::module &m) {
   py::class_<LowShelfFilter<float>, Plugin,
              std::shared_ptr<LowShelfFilter<float>>>(
       m, "LowShelfFilter",
-      "Apply a low shelf filter with variable Q and gain. Frequencies below "
-      "the cutoff frequency will be boosted (or cut) by the provided gain "
-      "value.")
+      "A low shelf filter with variable Q and gain, as would be used in an "
+      "equalizer. Frequencies below the cutoff frequency will be boosted (or "
+      "cut) by the provided gain value.")
       .def(py::init([](float cutoffFrequencyHz, float gaindB, float Q) {
              auto plugin = std::make_unique<LowShelfFilter<float>>();
              plugin->setCutoffFrequencyHz(cutoffFrequencyHz);
@@ -190,9 +190,9 @@ inline void init_iir_filters(py::module &m) {
 
   py::class_<PeakFilter<float>, Plugin, std::shared_ptr<PeakFilter<float>>>(
       m, "PeakFilter",
-      "Apply a peak (or notch) filter with variable Q and gain. Frequencies "
-      "around the cutoff frequency will be boosted (or cut) by the provided "
-      "gain value.")
+      "A peak (or notch) filter with variable Q and gain, as would be used in "
+      "an equalizer. Frequencies around the cutoff frequency will be boosted "
+      "(or cut) by the provided gain value.")
       .def(py::init([](float cutoffFrequencyHz, float gaindB, float Q) {
              auto plugin = std::make_unique<PeakFilter<float>>();
              plugin->setCutoffFrequencyHz(cutoffFrequencyHz);

@@ -1081,9 +1081,14 @@ inline void init_external_plugins(py::module &m) {
           [](std::string filename) {
             return getPluginNamesForFile<juce::AudioUnitPluginFormat>(filename);
           },
+          py::arg("filename"),
           "Return a list of plugin names contained within a given Audio Unit "
-          "bundle (i.e.: a \".component\"). If the provided file cannot be "
-          "scanned, an ImportError will be raised.")
+          "bundle (i.e.: a ``.component`` file). If the provided file cannot "
+          "be "
+          "scanned, an ``ImportError`` will be raised.\n\nNote that most Audio "
+          "Units have a single plugin inside, but this method can be useful to "
+          "determine if multiple plugins are present in one bundle, and if so, "
+          "what their names are.")
       .def_property_readonly_static(
           "installed_plugins",
           [](py::object /* cls */) {
@@ -1098,7 +1103,7 @@ inline void init_external_plugins(py::module &m) {
           [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
             return plugin.getName().toStdString();
           },
-          "The name of this plugin.")
+          "The name of this plugin, as reported by the plugin itself.")
       .def_property_readonly(
           "_parameters",
           &ExternalPlugin<juce::AudioUnitPluginFormat>::getParameters,

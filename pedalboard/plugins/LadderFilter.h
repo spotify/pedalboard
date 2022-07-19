@@ -59,23 +59,38 @@ class LadderFilter : public JucePlugin<juce::dsp::LadderFilter<SampleType>> {
 
 inline void init_ladderfilter(py::module &m) {
   py::class_<LadderFilter<float>, Plugin, std::shared_ptr<LadderFilter<float>>>
-      ladderFilter(m, "LadderFilter",
-                   "Multi-mode audio filter based on the classic Moog "
-                   "synthesizer ladder filter.");
+      ladderFilter(
+          m, "LadderFilter",
+          "A multi-mode audio filter based on the classic Moog "
+          "synthesizer ladder filter, invented by Dr. Bob Moog in "
+          "1968.\n\nDepending on the filter's mode, frequencies above, "
+          "below, or on both sides of the cutoff frequency will be "
+          "attenuated. Higher values for the ``resonance`` parameter "
+          "may cause peaks in the frequency response around the "
+          "cutoff frequency.");
 
-  py::enum_<juce::dsp::LadderFilterMode>(ladderFilter, "Mode")
+  py::enum_<juce::dsp::LadderFilterMode>(
+      ladderFilter, "Mode", "The type of filter architecture to use.")
       .value("LPF12", juce::dsp::LadderFilterMode::LPF12,
-             "low-pass 12 dB/octave")
-      .value("HPF12", juce::dsp::LadderFilterMode::HPF12,
-             "high-pass 12 dB/octave")
+             "A low-pass filter with 12 dB of attenuation per octave above the "
+             "cutoff frequency.")
+      .value(
+          "HPF12", juce::dsp::LadderFilterMode::HPF12,
+          "A high-pass filter with 12 dB of attenuation per octave below the "
+          "cutoff frequency.")
       .value("BPF12", juce::dsp::LadderFilterMode::BPF12,
-             "band-pass 12 dB/octave")
+             "A band-pass filter with 12 dB of attenuation per octave on both "
+             "sides of the cutoff frequency.")
       .value("LPF24", juce::dsp::LadderFilterMode::LPF24,
-             "low-pass 24 dB/octave")
-      .value("HPF24", juce::dsp::LadderFilterMode::HPF24,
-             "high-pass 24 dB/octave")
+             "A low-pass filter with 24 dB of attenuation per octave above the "
+             "cutoff frequency.")
+      .value(
+          "HPF24", juce::dsp::LadderFilterMode::HPF24,
+          "A high-pass filter with 24 dB of attenuation per octave below the "
+          "cutoff frequency.")
       .value("BPF24", juce::dsp::LadderFilterMode::BPF24,
-             "band-pass 24 dB/octave")
+             "A band-pass filter with 24 dB of attenuation per octave on both "
+             "sides of the cutoff frequency.")
       .export_values();
 
   ladderFilter

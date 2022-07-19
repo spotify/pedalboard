@@ -59,7 +59,7 @@ jobs:
       MINIMUM_COVERAGE_PERCENTAGE: 89
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11.0-beta.3']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10']
         # TODO: Switch back to macos-latest once https://github.com/actions/python-versions/pull/114 is fixed
         os: [ubuntu-18.04, ubuntu-latest, windows-latest, macos-10.15]
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
@@ -99,24 +99,20 @@ jobs:
         if: runner.os == 'Windows'
       - name: Build pedalboard locally
         run: python setup.py install
-      - name: Generate native type stubs
-        run: pybind11-stubgen -o stubs_output pedalboard pedalboard_native --no-setup-py
-      - name: Validate type stubs match postprocessing
-        run: python3 -m scripts.postprocess_type_hints stubs_output pedalboard --check
-      - name: Validate type stubs match runtime
-        # Numpy doesn't have typing support for 3.6. Also, 3.6 is deprecated.
-        if: matrix.python-version != '3.6'
-        run: python3 -m mypy.stubtest pedalboard --allowlist stubtest.allowlist --ignore-missing-stub --ignore-unused-allowlist
+      - name: Generate type stubs and documentation, and validate they match
+        # Only validate documentation on macOS, as Linux and Windows have a subset of the classes
+        if: matrix.python-version != '3.6' && startsWith(matrix.os, 'macos')
+        run: python3 -m scripts.generate_type_stubs_and_docs --check
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
           GCS_READER_SERVICE_ACCOUNT_KEY: ${{ secrets.GCS_READER_SERVICE_ACCOUNT_KEY }}
         run: python ./tests/download_test_plugins.py
       - name: Run tests
-        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.6'
+        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.8'
         run: pytest -v --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard
       - name: Run tests with coverage reporting
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.6'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8'
         run: |
           pytest -v --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard \
           && coverage json --fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} \
@@ -124,7 +120,7 @@ jobs:
           && jq -r 'if .totals.percent_covered > ${{ env.MINIMUM_COVERAGE_PERCENTAGE }} then "COVERAGE_COLOR=green" else "COVERAGE_COLOR=red" end' coverage.json >> $GITHUB_ENV
       - name: Create coverage badge
         uses: schneegans/dynamic-badges-action@v1.1.0
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.6' && github.event_name == 'release' && github.event.action == 'published'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8' && github.event_name == 'release' && github.event.action == 'published'
         with:
           auth: ${{ secrets.COVERAGE_GIST_SECRET }}
           gistID: 8736467e9952991ef44a67915ee7c762

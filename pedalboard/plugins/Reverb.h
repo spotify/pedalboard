@@ -79,9 +79,9 @@ public:
 inline void init_reverb(py::module &m) {
   py::class_<Reverb, Plugin, std::shared_ptr<Reverb>>(
       m, "Reverb",
-      "Performs a simple reverb effect on a stream of audio data. This is a "
-      "simple stereo reverb, based on the technique and tunings used in "
-      "FreeVerb.")
+      "A simple reverb effect. Uses a simple stereo reverb algorithm, based on "
+      "the technique and tunings used in `FreeVerb "
+      "<https://ccrma.stanford.edu/~jos/pasp/Freeverb.html>_`.")
       .def(py::init([](float roomSize, float damping, float wetLevel,
                        float dryLevel, float width, float freezeMode) {
              auto plugin = std::make_unique<Reverb>();
