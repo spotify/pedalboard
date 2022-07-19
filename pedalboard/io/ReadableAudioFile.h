@@ -501,9 +501,11 @@ formats or file extensions are supported on the current platform.
 contents may be encoded with a compression algorithm unsupported by
 Pedalboard.)
 
-This class will probably not be used directly: the :class:`AudioFile` class's
-``__new__`` operator will return an instance of :class:`ReadableAudioFile` when
-provided the ``"r"`` mode as its second argument (the default).
+.. note::
+    You probably don't want to use this class directly: passing the
+    same arguments to :class:`AudioFile` will work too, and allows using
+    :class:`AudioFile` just like you'd use ``open(...)`` in Python.
+
 )");
 }
 

@@ -151,9 +151,10 @@ class ReadableAudioFile(AudioFile):
     contents may be encoded with a compression algorithm unsupported by
     Pedalboard.)
 
-    This class will probably not be used directly: the :class:`AudioFile` class's
-    ``__new__`` operator will return an instance of :class:`ReadableAudioFile` when
-    provided the ``"r"`` mode as its second argument (the default).
+    .. note::
+        This class will probably not be used directly: the :class:`AudioFile` class's
+        ``__new__`` operator will return an instance of :class:`ReadableAudioFile` when
+        provided the ``"r"`` mode as its second argument (the default).
     """
 
     def __enter__(self) -> ReadableAudioFile:
@@ -266,7 +267,49 @@ class ReadableAudioFile(AudioFile):
 
 class WriteableAudioFile(AudioFile):
     """
-    An audio file writer interface, with native support for Ogg Vorbis, WAV, FLAC, and AIFF files on all operating systems. (Use pedalboard.io.get_supported_write_formats() to see which additional formats are supported on the current platform.)
+    A class that wraps an audio file for writing, with native support for Ogg Vorbis,
+    MP3, WAV, FLAC, and AIFF files on all operating systems.
+
+    Use :meth:`pedalboard.io.get_supported_write_formats()` to see which
+    formats or file extensions are supported on the current platform.
+
+    Args:
+        filename_or_file_like:
+            The path to an output file to write to, or a seekable file-like
+            binary object (like ``io.BytesIO``) to write to.
+
+        samplerate:
+            The sample rate of the audio that will be written to this file.
+            All calls to the :meth:`write` method will assume this sample rate
+            is used.
+
+        num_channels:
+            The number of channels in the audio that will be written to this file.
+            All calls to the :meth:`write` method will expect audio with this many
+            channels, and will throw an exception if the audio does not contain
+            this number of channels.
+
+        bit_depth:
+            The bit depth (number of bits per sample) that will be written
+            to this file. Used for raw formats like WAV and AIFF. Will have no effect
+            on compressed formats like MP3 or Ogg Vorbis.
+
+        quality:
+            An optional string or number that indicates the quality level to use
+            for the given audio compression codec. Different codecs have different
+            compression quality values; numeric values like ``128`` and ``256`` will
+            usually indicate the number of kilobits per second used by the codec.
+            Some formats, like MP3, support more advanced options like ``V2`` (as
+            specified by `the LAME encoder <https://lame.sourceforge.io/>`_) which
+            may be passed as a string. The strings ``"best"``, ``"worst"``,
+            ``"fastest"``, and ``"smallest"`` will also work for any codec.
+
+    .. note::
+        This class will probably not be used directly: the :class:`AudioFile` class's
+        ``__new__`` operator will return an instance of :class:`WriteableAudioFile` when
+        provided the ``"w"`` mode as its second argument. All of the parameters accepted
+        by the :class:`WriteableAudioFile` constructor will be accepted by
+        :class:`AudioFile` as well.
     """
 
     def __enter__(self) -> WriteableAudioFile: ...
