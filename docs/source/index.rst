@@ -20,3 +20,4 @@ Documentation
    compatibility
    internals
    license
+   GitHub Repo <http://github.com/spotify/pedalboard>

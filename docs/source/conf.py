@@ -37,6 +37,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinx_copybutton",
+    "sphinxext.opengraph",
     "m2r2",
 ]
 
@@ -68,7 +69,7 @@ html_theme = "furo"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 
-html_title = f"{project} {release}"
+html_title = f"{project} {release} Documentation"
 html_favicon = "_static/favicon.ico"
 html_logo = "pedalboard_logo_small.png"
 
@@ -97,3 +98,10 @@ html_theme_options = {
         },
     ],
 }
+
+ogp_site_url = "https://spotify.github.io/pedalboard/"
+ogp_image = (
+    "https://repository-images.githubusercontent.com/383471193/0f79b949-9b91-4436-bfc4-05d30ef384cc"
+)
+ogp_image_alt = "🎛 🔊 Documentation for Pedalboard: A Python library for working with audio."
+ogp_site_name = html_title

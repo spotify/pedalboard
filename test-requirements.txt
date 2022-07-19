@@ -24,3 +24,4 @@ sphinx==4.4.0; python_version > '3.6'
 sphinx-copybutton; python_version > '3.6'
 m2r2; python_version > '3.6'
 furo==2022.06.21; python_version > '3.6'
+sphinxext-opengraph
