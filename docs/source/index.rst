@@ -1,3 +1,6 @@
+:og:title: Pedalboard Documentation
+:og:description: 🎛 🔊 Documentation for Pedalboard: A Python library for working with audio.
+
 .. mdinclude:: ../../README.md
    :end-line: 68
 
