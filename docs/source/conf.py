@@ -22,7 +22,9 @@ copyright = "2022, Spotify AB"
 author = "Peter Sobot"
 
 # The full version, including alpha/beta/rc tags
-release = "v0.5.5"
+from pedalboard.version import MAJOR, MINOR, PATCH
+
+release = f"v{MAJOR}.{MINOR}.{PATCH}"
 
 
 # -- General configuration ---------------------------------------------------
