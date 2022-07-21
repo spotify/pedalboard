@@ -281,7 +281,12 @@ public:
         for (int c = 0; c < numChannels; c++) {
           juce::FloatVectorOperations::convertFixedToFloat(
               channelPointers[c], (const int *)channelPointers[c], scaleFactor,
+#ifdef LINUXX
+              static_cast<size_t>(numSamples));
+#else
               numSamples);
+#endif
+	  //https://github.com/Tencent/rapidjson/issues/873
         }
       }
     }
