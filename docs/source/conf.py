@@ -1,3 +1,5 @@
+from pedalboard.version import MAJOR, MINOR, PATCH
+
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full
@@ -22,8 +24,6 @@ copyright = "2022, Spotify AB"
 author = "Peter Sobot"
 
 # The full version, including alpha/beta/rc tags
-from pedalboard.version import MAJOR, MINOR, PATCH
-
 release = f"v{MAJOR}.{MINOR}.{PATCH}"
 
 
