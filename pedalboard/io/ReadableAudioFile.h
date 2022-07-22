@@ -286,7 +286,6 @@ public:
 #else
               numSamples);
 #endif
-	  //https://github.com/Tencent/rapidjson/issues/873
         }
       }
     }
