@@ -120,7 +120,14 @@ public:
 };
 
 inline void init_iir_filters(py::module &m) {
-  py::class_<HighShelfFilter<float>, Plugin,
+  py::class_<IIRFilter<float>, Plugin, std::shared_ptr<IIRFilter<float>>>(
+      m, "IIRFilter",
+      "An abstract class that implements various kinds of infinite impulse "
+      "response (IIR) filter designs. This should not be used directly; use "
+      ":class:`HighShelfFilter`, :class:`LowShelfFilter`, or "
+      ":class:`PeakFilter` directly instead.");
+
+  py::class_<HighShelfFilter<float>, IIRFilter<float>,
              std::shared_ptr<HighShelfFilter<float>>>(
       m, "HighShelfFilter",
       "A high shelf filter plugin with variable Q and gain, as would be used "
@@ -154,7 +161,7 @@ inline void init_iir_filters(py::module &m) {
       .def_property("q", &HighShelfFilter<float>::getQ,
                     &HighShelfFilter<float>::setQ);
 
-  py::class_<LowShelfFilter<float>, Plugin,
+  py::class_<LowShelfFilter<float>, IIRFilter<float>,
              std::shared_ptr<LowShelfFilter<float>>>(
       m, "LowShelfFilter",
       "A low shelf filter with variable Q and gain, as would be used in an "
@@ -188,7 +195,8 @@ inline void init_iir_filters(py::module &m) {
       .def_property("q", &LowShelfFilter<float>::getQ,
                     &LowShelfFilter<float>::setQ);
 
-  py::class_<PeakFilter<float>, Plugin, std::shared_ptr<PeakFilter<float>>>(
+  py::class_<PeakFilter<float>, IIRFilter<float>,
+             std::shared_ptr<PeakFilter<float>>>(
       m, "PeakFilter",
       "A peak (or notch) filter with variable Q and gain, as would be used in "
       "an equalizer. Frequencies around the cutoff frequency will be boosted "

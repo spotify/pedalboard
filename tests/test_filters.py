@@ -125,3 +125,24 @@ def test_q_factor(filter_type, fundamental_hz, sample_rate, num_channels, gain_d
     np.testing.assert_allclose(
         rms(filtered) / rms(sine_wave), db_to_gain(gain_db), rtol=0.1, atol=0.1
     )
+
+
+@pytest.mark.parametrize(
+    "klass",
+    [
+        HighpassFilter,
+        LowpassFilter,
+        HighShelfFilter,
+        LowShelfFilter,
+        PeakFilter,
+    ],
+)
+def test_getters_and_setters(klass):
+    """
+    If any plugins don't inherit from `Plugin` directly on the C++ side,
+    property access will fail. This test makes sure all attributes are accessible.
+    """
+    plugin = klass()
+    for x in dir(plugin):
+        if not x.startswith("_"):
+            getattr(plugin, x)
