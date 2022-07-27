@@ -681,6 +681,40 @@ or buffer, set <code class="docutils literal notranslate"><span class="pre">rese
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="pedalboard.IIRFilter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">IIRFilter</span></span><a class="headerlink" href="#pedalboard.IIRFilter" title="Permalink to this definition">#</a></dt>
+<dd><p>An abstract class that implements various kinds of infinite impulse response (IIR) filter designs. This should not be used directly; use <a class="reference internal" href="#pedalboard.HighShelfFilter" title="pedalboard.HighShelfFilter"><code class="xref py py-class docutils literal notranslate"><span class="pre">HighShelfFilter</span></code></a>, <a class="reference internal" href="#pedalboard.LowShelfFilter" title="pedalboard.LowShelfFilter"><code class="xref py py-class docutils literal notranslate"><span class="pre">LowShelfFilter</span></code></a>, or <a class="reference internal" href="#pedalboard.PeakFilter" title="pedalboard.PeakFilter"><code class="xref py py-class docutils literal notranslate"><span class="pre">PeakFilter</span></code></a> directly instead.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.IIRFilter.process">
+<span class="sig-name descname"><span class="pre">process</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_array</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8192</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.IIRFilter.process" title="Permalink to this definition">#</a></dt>
+<dd><p>Run a 32-bit or 64-bit floating point audio buffer through this plugin.
+(If calling this multiple times with multiple plugins, consider creating a
+<a class="reference internal" href="#pedalboard.Pedalboard" title="pedalboard.Pedalboard"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.Pedalboard</span></code></a> object instead.)</p>
+<p>The returned array may contain up to (but not more than) the same number of
+samples as were provided. If fewer samples were returned than expected, the
+plugin has likely buffered audio inside itself. To receive the remaining
+audio, pass another audio buffer into <code class="docutils literal notranslate"><span class="pre">process</span></code> with <code class="docutils literal notranslate"><span class="pre">reset</span></code> set to
+<code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+<p>If the provided buffer uses a 64-bit datatype, it will be converted to 32-bit
+for processing.</p>
+<p>The provided <code class="docutils literal notranslate"><span class="pre">buffer_size</span></code> argument will be used to control the size of
+each chunk of audio provided to the plugin. Higher buffer sizes may speed up
+processing at the expense of memory usage.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">reset</span></code> flag determines if all of the plugins should be reset before
+processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
+If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
+or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.IIRFilter.reset">
+<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.IIRFilter.reset" title="Permalink to this definition">#</a></dt>
+<dd><p>Clear any internal state stored by this plugin (e.g.: reverb tails, delay lines, LFO state, etc). The values of plugin parameters will remain unchanged.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.Invert">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Invert</span></span><a class="headerlink" href="#pedalboard.Invert" title="Permalink to this definition">#</a></dt>
 <dd><p>Flip the polarity of the signal. This effect is not audible on its own and takes no parameters. This effect is mathematically identical to <code class="docutils literal notranslate"><span class="pre">def</span> <span class="pre">invert(x):</span> <span class="pre">return</span> <span class="pre">-x</span></code>.</p>
@@ -1474,7 +1508,7 @@ but no <code class="docutils literal notranslate"><span class="pre">plugin_name<
         <div class="bottom-of-page">
           <div class="left-details">
             <div class="copyright">
-                Copyright &#169; 2022, Spotify AB
+                Copyright &#169; 2021-2022, Spotify AB
             </div>
             Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
             
