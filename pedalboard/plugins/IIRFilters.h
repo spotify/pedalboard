@@ -125,7 +125,13 @@ inline void init_iir_filters(py::module &m) {
       "An abstract class that implements various kinds of infinite impulse "
       "response (IIR) filter designs. This should not be used directly; use "
       ":class:`HighShelfFilter`, :class:`LowShelfFilter`, or "
-      ":class:`PeakFilter` directly instead.");
+      ":class:`PeakFilter` directly instead.")
+      .def(py::init([]() {
+        throw std::runtime_error(
+            "IIRFilter is not designed to be instantiated directly: "
+            "use HighShelfFilter, LowShelfFilter, or PeakFilter instead.");
+        return nullptr;
+      }));
 
   py::class_<HighShelfFilter<float>, IIRFilter<float>,
              std::shared_ptr<HighShelfFilter<float>>>(

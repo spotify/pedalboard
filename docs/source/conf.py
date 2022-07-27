@@ -19,8 +19,10 @@ from pedalboard.version import MAJOR, MINOR, PATCH
 
 # -- Project information -----------------------------------------------------
 
+import datetime
+
 project = "Pedalboard"
-copyright = "2022, Spotify AB"
+copyright = f"2021-{datetime.date.today().year}, Spotify AB"
 author = "Peter Sobot"
 
 # The full version, including alpha/beta/rc tags

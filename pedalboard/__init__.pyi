@@ -21,6 +21,7 @@ __all__ = [
     "Gain",
     "HighShelfFilter",
     "HighpassFilter",
+    "IIRFilter",
     "Invert",
     "LadderFilter",
     "Limiter",
@@ -261,7 +262,30 @@ class Gain(Plugin):
         pass
     pass
 
-class HighShelfFilter(Plugin):
+class IIRFilter(Plugin):
+    """
+    An abstract class that implements various kinds of infinite impulse response (IIR) filter designs. This should not be used directly; use :class:`HighShelfFilter`, :class:`LowShelfFilter`, or :class:`PeakFilter` directly instead.
+    """
+
+    def __init__(self) -> None: ...
+    pass
+
+class HighpassFilter(Plugin):
+    """
+    Apply a first-order high-pass filter with a roll-off of 6dB/octave. The cutoff frequency will be attenuated by -3dB (i.e.: :math:`\\frac{1}{\\sqrt{2}}` as loud, expressed as a gain factor) and lower frequencies will be attenuated by a further 6dB per octave.)
+    """
+
+    def __init__(self, cutoff_frequency_hz: float = 50) -> None: ...
+    def __repr__(self) -> str: ...
+    @property
+    def cutoff_frequency_hz(self) -> float:
+        """ """
+    @cutoff_frequency_hz.setter
+    def cutoff_frequency_hz(self, arg1: float) -> None:
+        pass
+    pass
+
+class HighShelfFilter(IIRFilter, Plugin):
     """
     A high shelf filter plugin with variable Q and gain, as would be used in an equalizer. Frequencies above the cutoff frequency will be boosted (or cut) by the provided gain (in decibels).
     """
@@ -287,21 +311,6 @@ class HighShelfFilter(Plugin):
         """ """
     @q.setter
     def q(self, arg1: float) -> None:
-        pass
-    pass
-
-class HighpassFilter(Plugin):
-    """
-    Apply a first-order high-pass filter with a roll-off of 6dB/octave. The cutoff frequency will be attenuated by -3dB (i.e.: :math:`\\frac{1}{\\sqrt{2}}` as loud, expressed as a gain factor) and lower frequencies will be attenuated by a further 6dB per octave.)
-    """
-
-    def __init__(self, cutoff_frequency_hz: float = 50) -> None: ...
-    def __repr__(self) -> str: ...
-    @property
-    def cutoff_frequency_hz(self) -> float:
-        """ """
-    @cutoff_frequency_hz.setter
-    def cutoff_frequency_hz(self, arg1: float) -> None:
         pass
     pass
 
@@ -413,7 +422,7 @@ class Limiter(Plugin):
         pass
     pass
 
-class LowShelfFilter(Plugin):
+class LowShelfFilter(IIRFilter, Plugin):
     """
     A low shelf filter with variable Q and gain, as would be used in an equalizer. Frequencies below the cutoff frequency will be boosted (or cut) by the provided gain value.
     """
@@ -515,7 +524,7 @@ class NoiseGate(Plugin):
         pass
     pass
 
-class PeakFilter(Plugin):
+class PeakFilter(IIRFilter, Plugin):
     """
     A peak (or notch) filter with variable Q and gain, as would be used in an equalizer. Frequencies around the cutoff frequency will be boosted (or cut) by the provided gain value.
     """
