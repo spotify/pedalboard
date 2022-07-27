@@ -14,7 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pedalboard_native import *  # noqa: F403, F401
+try:
+    from pedalboard_native import *  # noqa: F403, F401
+except ImportError as _e:
+    if "DLL load failed" in str(_e):
+        # On Windows, we get an obtuse "DLL load failed" if the
+        # MSVC++ redistributable library isn't installed
+        raise ImportError(
+            "Pedalboard failed to load its native code. Hint: try installing the Microsoft Visual"
+            " C++ Redistributable."
+        )
+    else:
+        raise
 from pedalboard_native.utils import *  # noqa: F403, F401
 from .pedalboard import Pedalboard, _AVAILABLE_PLUGIN_CLASSES, load_plugin  # noqa: F401
 from .version import __version__  # noqa: F401

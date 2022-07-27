@@ -454,13 +454,6 @@ public:
 
     juce::String loadError;
     {
-      if (foundPluginDescription.numInputChannels == 0) {
-        throw std::invalid_argument(
-            "Plugin '" + foundPluginDescription.name.toStdString() +
-            "' does not accept audio input. It may be an instrument plug-in "
-            "and not an audio effect processor.");
-      }
-
       std::lock_guard<std::mutex> lock(EXTERNAL_PLUGIN_MUTEX);
       pluginInstance = pluginFormatManager.createPluginInstance(
           foundPluginDescription, ExternalLoadSampleRate,
