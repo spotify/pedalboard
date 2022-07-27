@@ -257,6 +257,8 @@ jobs:
           # Also testing any pypy versions fails, as TensorFlow isn't pypy compatible.
           CIBW_TEST_SKIP: "*manylinux* *pp* *-macosx_universal2:arm64"
           CIBW_PRERELEASE_PYTHONS: true
+          # Use the minimum macOS deployment target that has C++17 support:
+          MACOSX_DEPLOYMENT_TARGET: "10.13"
       - uses: actions/upload-artifact@v2
         with:
           # TODO(psobot): Don't upload wheels for prerelease Python versions: 3.11
