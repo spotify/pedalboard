@@ -180,20 +180,20 @@ jobs:
     strategy:
       matrix:
         include:
-        - { os: macos-10.15, build: cp36-macosx_x86_64 }
-        - { os: macos-10.15, build: cp37-macosx_x86_64 }
-        - { os: macos-10.15, build: cp38-macosx_x86_64 }
-        - { os: macos-10.15, build: cp39-macosx_x86_64 }
-        - { os: macos-10.15, build: cp310-macosx_x86_64 }
-        # - { os: macos-10.15, build: cp311-macosx_x86_64 }
-        - { os: macos-10.15, build: cp38-macosx_universal2 }
-        - { os: macos-10.15, build: cp39-macosx_universal2 }
-        - { os: macos-10.15, build: cp310-macosx_universal2 }
-        # - { os: macos-10.15, build: cp311-macosx_universal2 }
-        - { os: macos-10.15, build: cp38-macosx_arm64 }
-        - { os: macos-10.15, build: cp39-macosx_arm64 }
-        - { os: macos-10.15, build: cp310-macosx_arm64 }
-        # - { os: macos-10.15, build: cp311-macosx_arm64 }
+        - { os: macos-12, build: cp36-macosx_x86_64 }
+        - { os: macos-12, build: cp37-macosx_x86_64 }
+        - { os: macos-12, build: cp38-macosx_x86_64 }
+        - { os: macos-12, build: cp39-macosx_x86_64 }
+        - { os: macos-12, build: cp310-macosx_x86_64 }
+        # - { os: macos-12, build: cp311-macosx_x86_64 }
+        - { os: macos-12, build: cp38-macosx_universal2 }
+        - { os: macos-12, build: cp39-macosx_universal2 }
+        - { os: macos-12, build: cp310-macosx_universal2 }
+        # - { os: macos-12, build: cp311-macosx_universal2 }
+        - { os: macos-12, build: cp38-macosx_arm64 }
+        - { os: macos-12, build: cp39-macosx_arm64 }
+        - { os: macos-12, build: cp310-macosx_arm64 }
+        # - { os: macos-12, build: cp311-macosx_arm64 }
         - { os: macos-10.15, build: pp37-macosx_x86_64 }
         - { os: macos-10.15, build: pp38-macosx_x86_64 }
         - { os: macos-10.15, build: pp39-macosx_x86_64 }
