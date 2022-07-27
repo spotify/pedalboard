@@ -56,7 +56,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     env:
-      MINIMUM_COVERAGE_PERCENTAGE: 89
+      MINIMUM_COVERAGE_PERCENTAGE: 80
     strategy:
       matrix:
         python-version: ['3.6', '3.7', '3.8', '3.9', '3.10']
