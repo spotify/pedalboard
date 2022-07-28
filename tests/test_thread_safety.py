@@ -28,7 +28,7 @@ for plugin_class in pedalboard.Plugin.__subclasses__():
     try:
         plugin_class()
         TESTABLE_PLUGINS.append(plugin_class)
-    except Exception as e:
+    except Exception:
         pass
 
 

@@ -1,6 +1,7 @@
 /**
- * LAME's MP3 decoding routines are not thread-safe, and the functions that would need to be called to make
- * them thread-safe from user code are `static` (i.e.: private) to the C file that contains them.
+ * LAME's MP3 decoding routines are not thread-safe, and the functions that
+ * would need to be called to make them thread-safe from user code are `static`
+ * (i.e.: private) to the C file that contains them.
  */
 
 #include "lame/include/lame.h"
