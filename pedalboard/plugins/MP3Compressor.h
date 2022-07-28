@@ -20,6 +20,7 @@
 
 extern "C" {
 #include <lame.h>
+#include <lame_overrides.h>
 }
 
 namespace Pedalboard {
@@ -257,10 +258,10 @@ public:
     auto ioBlock = context.getOutputBlock();
 
     if (mp3BufferBytesFilled > 0) {
-      int samplesDecoded =
-          hip_decode(decoder.getContext(), (unsigned char *)mp3Buffer.getData(),
-                     mp3BufferBytesFilled, outputBuffer.getWritePointerAtEnd(0),
-                     outputBuffer.getWritePointerAtEnd(1));
+      int samplesDecoded = hip_decode_threadsafe(
+          decoder.getContext(), (unsigned char *)mp3Buffer.getData(),
+          mp3BufferBytesFilled, outputBuffer.getWritePointerAtEnd(0),
+          outputBuffer.getWritePointerAtEnd(1));
 
       outputBuffer.incrementSampleCountBy(samplesDecoded);
       mp3BufferBytesFilled = 0;
@@ -297,7 +298,8 @@ public:
 
       // Decode frames from the buffer as soon as we get them:
       if (mp3BufferBytesFilled > 0) {
-        int samplesDecoded = hip_decode(
+
+        int samplesDecoded = hip_decode_threadsafe(
             decoder.getContext(), (unsigned char *)mp3Buffer.getData(),
             mp3BufferBytesFilled, outputBuffer.getWritePointerAtEnd(0),
             outputBuffer.getWritePointerAtEnd(1));

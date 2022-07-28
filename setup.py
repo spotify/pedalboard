@@ -90,6 +90,9 @@ ALL_CPPFLAGS.extend(
 )
 ALL_SOURCE_PATHS += list(Path("vendors/rubberband/single").glob("*.cpp"))
 
+ALL_SOURCE_PATHS += list(Path("vendors").glob("*.c"))
+ALL_INCLUDES += ["vendors/"]
+
 # LAME/mpglib:
 LAME_FLAGS = ["-DHAVE_MPGLIB"]
 LAME_CONFIG_FILE = str(Path("vendors/lame_config.h").resolve())
