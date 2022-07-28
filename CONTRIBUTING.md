@@ -20,9 +20,23 @@ python3 setup.py build develop
 
 Then, you can `import pedalboard` from Python (or run the tests with `tox`) to test out your local changes.
 
-> If you're on macOS, you can try to compile a debug build _faster_ by using [Ccache](https://ccache.dev/) (`brew install ccache`):
+> If you're on macOS or linux, you can try to compile a debug build _faster_ by using [Ccache](https://ccache.dev/)
+> ## Mac 
+> `brew install ccache`
 > ```shell
-> rm -rf build && CC="ccache clang" CXX="ccache clang++" DEBUG=1 python3 setup.py build -j8 develop
+> rm -rf build && CC="ccache clang" CXX="ccache clang++" DEBUG=1 python3 -j8 -m pip install -e .
+> ```
+> ## Linux
+> e.g.
+> ```shell
+> sudo yum install ccache
+> ```
+> ```shell
+> rm -rf build && CC="ccache gcc" CXX="ccache_g++" DEBUG=1 python3 setup.py build -j8 develop
+> ```
+> or
+> ```shell
+> rm -rf build && CC="ccache clang" CXX="ccache_clang++" DEBUG=1 python3 setup.py build -j8 develop
 > ```
 > Note that `ccache` may or may not work out-of-the-box on other platforms - see https://github.com/spotify/pedalboard/issues/62 for more information.
 
