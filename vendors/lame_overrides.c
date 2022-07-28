@@ -6,8 +6,9 @@
 
 #include "lame_overrides.h"
 
-#include "lame/libmp3lame/encoder.h"
 #include "lame/libmp3lame/machine.h"
+
+#include "lame/libmp3lame/encoder.h"
 
 #include "lame/libmp3lame/util.h"
 #include "lame/mpglib/interface.h"
