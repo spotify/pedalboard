@@ -32,11 +32,11 @@ Then, you can `import pedalboard` from Python (or run the tests with `tox`) to t
 > sudo yum install ccache
 > ```
 > ```shell
-> rm -rf build && CC="ccache gcc" CXX="ccache_g++" DEBUG=1 python3 setup.py build -j8 develop
+> rm -rf build && CC="ccache gcc" CXX="scripts/ccache_g++" DEBUG=1 python3 setup.py build -j8 develop
 > ```
 > or
 > ```shell
-> rm -rf build && CC="ccache clang" CXX="ccache_clang++" DEBUG=1 python3 setup.py build -j8 develop
+> rm -rf build && CC="ccache clang" CXX="scripts/ccache_clang++" DEBUG=1 python3 setup.py build -j8 develop
 > ```
 > Note that `ccache` may or may not work out-of-the-box on other platforms - see https://github.com/spotify/pedalboard/issues/62 for more information.
 
