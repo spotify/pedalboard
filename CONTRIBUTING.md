@@ -141,3 +141,20 @@ terms of the [LICENSE](https://github.com/spotify/pedalboard/blob/master/LICENSE
 # Code of Conduct
 
 Read our [Code of Conduct](CODE_OF_CONDUCT.md) for the project.
+
+## Troubleshooting
+
+### Building the project
+
+* During building if you see a message like `ModuleNotFoundError: No module named 'pybind11'` then you will need to update your version of pip
+```shell
+pip install --upgrade pip
+```
+
+* If you see an error like `Failed to establish a new connection: [Errno -2] Name or service not known'` then this indicates you may have network issues. It is worth making sure the you do not have the environent variable PIP_INDEX_URL set.
+
+* If you see an error `fatal error: Python.h: No such file or directory` then you will need to install the python development packages for your system. You will need to find correct package for your OS or distro.
+
+### Testing
+
+* If tox throws error regarding `AttributeError: 'NoneType' object has no attribute 'group'` update to version 4 or set ignore_basepython_conflict=true in tox.ini under the tox section or install using pip and not a package manager
