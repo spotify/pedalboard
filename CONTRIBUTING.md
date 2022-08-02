@@ -2,6 +2,15 @@
 
 We'd love to get patches from you!
 
+## Prerequisites
+
+[Python 3.6](https://www.python.org/downloads/) or higher installed.
+
+A C++ compiler, e.g. GCC or XCode.
+
+### Linux Prerequisites
+Freetype2 - Installed as a development package.
+
 ## Getting Started
 
 To get your environment set up to build `pedalboard`, you'll need a working C++ compiler on your machine (`xcode-select --install` on macOS should do it). Try:
