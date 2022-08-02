@@ -4,18 +4,24 @@ We'd love to get patches from you!
 
 ## Getting Started
 
+### Cloning pedalbaord
+
 To get your environment set up to build `pedalboard`, you'll need a working C++ compiler on your machine (`xcode-select --install` on macOS should do it). Try:
 
 ```shell
 git clone --recurse-submodules --shallow-submodules git@github.com:spotify/pedalboard.git
 cd pedalboard
-pip3 install pybind11
-pip3 install .
 ```
+
+### Virtual environment
+
+In order to not pollute your system python environement it is recommended that you use a virtual environment when building `pedalbaord`. Refer to INSTALLATION.md for instructions on how to set up a virtual environment
+
+### Building `pedalboard`
 
 To compile a debug build of `pedalboard` that allows using a debugger (like gdb or lldb), use the following command to build the package locally and install a symbolic link for debugging:
 ```shell
-python3 setup.py build develop
+python3 -m pip install -ve .
 ```
 
 Then, you can `import pedalboard` from Python (or run the tests with `tox`) to test out your local changes.
@@ -24,7 +30,7 @@ Then, you can `import pedalboard` from Python (or run the tests with `tox`) to t
 > ## macOS
 > ```shell
 > brew install ccache
-> rm -rf build && CC="ccache clang" CXX="ccache clang++" DEBUG=1 python3 -j8 -m pip install -e .
+> rm -rf build && CC="ccache clang" CXX="ccache clang++" DEBUG=1 python3 -m pip install -ve .
 > ```
 > ## Linux
 > e.g.
@@ -32,10 +38,10 @@ Then, you can `import pedalboard` from Python (or run the tests with `tox`) to t
 > sudo yum install ccache  # or apt, if on a Debian
 > 
 > # If using GCC:
-> rm -rf build && CC="ccache gcc" CXX="scripts/ccache_g++" DEBUG=1 python3 setup.py build -j8 develop
+> rm -rf build && CC="ccache gcc" CXX="scripts/ccache_g++" DEBUG=1 python3 -m pip install -ve .
 > 
 > # ...or if using Clang:
-> rm -rf build && CC="ccache clang" CXX="scripts/ccache_clang++" DEBUG=1 python3 setup.py build -j8 develop
+> rm -rf build && CC="ccache clang" CXX="scripts/ccache_clang++" DEBUG=1 python3 -m pip install -ve .
 > ```
 
 By default, [all `.cpp` and `.mm` files in the `pedalboard` directory (or subdirectories)](https://github.com/spotify/pedalboard/blob/master/setup.py#L129) will be automatically compiled by `setup.py`.
