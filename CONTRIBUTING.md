@@ -155,6 +155,8 @@ pip install --upgrade pip
 
 * If you see an error `fatal error: Python.h: No such file or directory` then you will need to install the python development packages for your system. You will need to find correct package for your OS or distro.
 
+* If you see a build failure with the error `fatal error: lame/include/lame.h: No such file or directory` then you likely have not cloned all the git submodules. From the root of the project run `git submodule update --init`
+
 ### Testing
 
 * If tox throws error regarding `AttributeError: 'NoneType' object has no attribute 'group'` update to version 4 or set ignore_basepython_conflict=true in tox.ini under the tox section or install using pip and not a package manager
