@@ -21,7 +21,7 @@ In order to not pollute your system python environement it is recommended that y
 
 To compile a debug build of `pedalboard` that allows using a debugger (like gdb or lldb), use the following command to build the package locally and install a symbolic link for debugging:
 ```shell
-python3 -m pip install -e .
+python3 -m pip install -ve .
 ```
 
 Then, you can `import pedalboard` from Python (or run the tests with `tox`) to test out your local changes.
@@ -30,7 +30,7 @@ Then, you can `import pedalboard` from Python (or run the tests with `tox`) to t
 > ## macOS
 > ```shell
 > brew install ccache
-> rm -rf build && CC="ccache clang" CXX="ccache clang++" DEBUG=1 python3 -m pip install -e .
+> rm -rf build && CC="ccache clang" CXX="ccache clang++" DEBUG=1 python3 -m pip install -ve .
 > ```
 > ## Linux
 > e.g.
@@ -38,10 +38,10 @@ Then, you can `import pedalboard` from Python (or run the tests with `tox`) to t
 > sudo yum install ccache  # or apt, if on a Debian
 > 
 > # If using GCC:
-> rm -rf build && CC="ccache gcc" CXX="scripts/ccache_g++" DEBUG=1 python3 -m pip install -e .
+> rm -rf build && CC="ccache gcc" CXX="scripts/ccache_g++" DEBUG=1 python3 -m pip install -ve .
 > 
 > # ...or if using Clang:
-> rm -rf build && CC="ccache clang" CXX="scripts/ccache_clang++" DEBUG=1 python3 -m pip install -e .
+> rm -rf build && CC="ccache clang" CXX="scripts/ccache_clang++" DEBUG=1 python3 -m pip install -ve .
 > ```
 
 By default, [all `.cpp` and `.mm` files in the `pedalboard` directory (or subdirectories)](https://github.com/spotify/pedalboard/blob/master/setup.py#L129) will be automatically compiled by `setup.py`.
