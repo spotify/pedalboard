@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#
+# ccache_g++ 
+#
+# This script is a shim to allow the passing of the ccache command in to the
+# CXX environmental variable on linux, which increases the speed of compilation 
+
+$(ccache g++ $@)
