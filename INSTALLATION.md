@@ -18,7 +18,7 @@ You can set up a virtual environment by navigating to your project directory in 
 ```
 # Create a virtual environment
 python3 -m pip install --user virtualenv 
-python3 -m venv env
+python3 -m venv .venv
 
 # Activate the virtual environment
 source env/bin/activate
