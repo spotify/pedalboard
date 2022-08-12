@@ -298,3 +298,14 @@ def test_empty_list_is_valid_constructor_arg(cls):
 @pytest.mark.parametrize("cls", [Mix, Chain, Pedalboard])
 def test_no_arg_constructor(cls):
     assert len(cls()) == 0
+
+
+@pytest.mark.parametrize("cls", [Mix, Chain, Pedalboard])
+def test_none_as_argument(cls):
+    container = cls([None])
+    assert len(container) == 1
+    assert container[0] is None
+    sample_rate = 44100
+    noise = np.random.rand(int(NUM_SECONDS * sample_rate))
+    output = container(noise, sample_rate)
+    np.testing.assert_allclose(noise, output)

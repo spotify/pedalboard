@@ -34,8 +34,11 @@ public:
   virtual ~Chain(){};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {
-    for (auto plugin : plugins)
-      plugin->prepare(spec);
+    for (auto plugin : plugins) {
+      if (plugin) {
+        plugin->prepare(spec);
+      }
+    }
     lastSpec = spec;
   }
 
@@ -56,14 +59,20 @@ public:
   }
 
   virtual void reset() {
-    for (auto plugin : plugins)
-      plugin->reset();
+    for (auto plugin : plugins) {
+      if (plugin) {
+        plugin->reset();
+      }
+    }
   }
 
   virtual int getLatencyHint() {
     int hint = 0;
-    for (auto plugin : plugins)
-      hint += plugin->getLatencyHint();
+    for (auto plugin : plugins) {
+      if (plugin) {
+        hint += plugin->getLatencyHint();
+      }
+    }
     return hint;
   }
 };
