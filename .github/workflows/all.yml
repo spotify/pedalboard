@@ -14,7 +14,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.11.0-rc1']
         os: [ubuntu-latest]
     name: Lint Python
     steps:
@@ -59,7 +59,7 @@ jobs:
       MINIMUM_COVERAGE_PERCENTAGE: 80
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11.0-rc1']
         # TODO: Switch back to macos-latest once https://github.com/actions/python-versions/pull/114 is fixed
         os: [ubuntu-18.04, ubuntu-latest, windows-latest, macos-12]
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
@@ -133,7 +133,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11.0-rc1']
         os: [ubuntu-latest]
     name: Test with Python ${{ matrix.python-version }} + Address Sanitizer
     steps:
@@ -185,15 +185,15 @@ jobs:
         - { os: macos-12, build: cp38-macosx_x86_64 }
         - { os: macos-12, build: cp39-macosx_x86_64 }
         - { os: macos-12, build: cp310-macosx_x86_64 }
-        # - { os: macos-12, build: cp311-macosx_x86_64 }
+        - { os: macos-12, build: cp311-macosx_x86_64 }
         - { os: macos-12, build: cp38-macosx_universal2 }
         - { os: macos-12, build: cp39-macosx_universal2 }
         - { os: macos-12, build: cp310-macosx_universal2 }
-        # - { os: macos-12, build: cp311-macosx_universal2 }
+        - { os: macos-12, build: cp311-macosx_universal2 }
         - { os: macos-12, build: cp38-macosx_arm64 }
         - { os: macos-12, build: cp39-macosx_arm64 }
         - { os: macos-12, build: cp310-macosx_arm64 }
-        # - { os: macos-12, build: cp311-macosx_arm64 }
+        - { os: macos-12, build: cp311-macosx_arm64 }
         - { os: macos-12, build: pp37-macosx_x86_64 }
         - { os: macos-12, build: pp38-macosx_x86_64 }
         - { os: macos-12, build: pp39-macosx_x86_64 }
@@ -201,7 +201,11 @@ jobs:
         - { os: windows-latest, build: cp37-win_amd64 }
         - { os: windows-latest, build: cp38-win_amd64 }
         - { os: windows-latest, build: cp39-win_amd64 }
+        - { os: windows-latest, build: cp39-win_arm64 }
         - { os: windows-latest, build: cp310-win_amd64 }
+        - { os: windows-latest, build: cp310-win_arm64 }
+        - { os: windows-latest, build: cp311-win_amd64 }
+        - { os: windows-latest, build: cp311-win_arm64 }
         - { os: windows-latest, build: pp37-win_amd64 }
         - { os: windows-latest, build: pp38-win_amd64 }
         - { os: windows-latest, build: pp39-win_amd64 }
@@ -231,9 +235,9 @@ jobs:
       # Used to host cibuildwheel, so version doesn't really matter
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.8"
+          python-version: "3.10"
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel>=2.0.0a4
+        run: python -m pip install cibuildwheel>=2.9.0
       - name: Set up QEMU for aarch64 on Linux
         if: runner.os == 'Linux'
         uses: docker/setup-qemu-action@v1
@@ -255,15 +259,9 @@ jobs:
           # so we can't run post-wheel-build tests there.
           # Also testing any pypy versions fails, as TensorFlow isn't pypy compatible.
           CIBW_TEST_SKIP: "*manylinux* *pp* *-macosx_universal2:arm64"
-          CIBW_PRERELEASE_PYTHONS: true
           # Use the minimum macOS deployment target that has C++17 support:
           MACOSX_DEPLOYMENT_TARGET: "10.13"
       - uses: actions/upload-artifact@v2
-        with:
-          # TODO(psobot): Don't upload wheels for prerelease Python versions: 3.11
-          path: |
-            ./wheelhouse/*.whl
-            !./wheelhouse/*cp311*.whl
 
   upload-pypi:
     needs: [build-wheels]
