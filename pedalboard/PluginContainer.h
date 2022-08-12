@@ -42,6 +42,10 @@ public:
   std::vector<std::shared_ptr<Plugin>> getAllPlugins() {
     std::vector<std::shared_ptr<Plugin>> flatList;
     for (auto plugin : plugins) {
+      if (!plugin) {
+        continue;
+      }
+
       flatList.push_back(plugin);
       if (auto *pluginContainer =
               dynamic_cast<PluginContainer *>(plugin.get())) {

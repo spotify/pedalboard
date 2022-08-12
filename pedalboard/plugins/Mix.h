@@ -35,8 +35,11 @@ public:
   virtual ~Mix(){};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {
-    for (auto plugin : plugins)
-      plugin->prepare(spec);
+    for (auto plugin : plugins) {
+      if (plugin) {
+        plugin->prepare(spec);
+      }
+    }
 
     int maximumBufferSize = getLatencyHint() + spec.maximumBlockSize;
     for (auto &buffer : pluginBuffers)
@@ -75,7 +78,12 @@ public:
           channelPointers, buffer.getNumChannels(), ioBlock.getNumSamples());
 
       juce::dsp::ProcessContextReplacing<float> subContext(subBlock);
-      int samplesRendered = plugin->process(subContext);
+
+      int samplesRendered = subBlock.getNumSamples();
+
+      if (plugin) {
+        samplesRendered = plugin->process(subContext);
+      }
       samplesAvailablePerPlugin[i] += samplesRendered;
 
       if (samplesRendered < subBlock.getNumSamples()) {
@@ -135,16 +143,23 @@ public:
   }
 
   virtual void reset() {
-    for (auto plugin : plugins)
-      plugin->reset();
+    for (auto plugin : plugins) {
+      if (plugin) {
+        plugin->reset();
+      }
+    }
+
     for (auto buffer : pluginBuffers)
       buffer.clear();
   }
 
   virtual int getLatencyHint() {
     int maxHint = 0;
-    for (auto plugin : plugins)
-      maxHint = std::max(maxHint, plugin->getLatencyHint());
+    for (auto plugin : plugins) {
+      if (plugin) {
+        maxHint = std::max(maxHint, plugin->getLatencyHint());
+      }
+    }
     return maxHint;
   }
 
