@@ -14,7 +14,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.11.0-rc1']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.11.0-rc.1']
         os: [ubuntu-latest]
     name: Lint Python
     steps:
@@ -59,7 +59,7 @@ jobs:
       MINIMUM_COVERAGE_PERCENTAGE: 80
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11.0-rc1']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11.0-rc.1']
         # TODO: Switch back to macos-latest once https://github.com/actions/python-versions/pull/114 is fixed
         os: [ubuntu-18.04, ubuntu-latest, windows-latest, macos-12]
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
@@ -133,7 +133,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11.0-rc1']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11.0-rc.1']
         os: [ubuntu-latest]
     name: Test with Python ${{ matrix.python-version }} + Address Sanitizer
     steps:
