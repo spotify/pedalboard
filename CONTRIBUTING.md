@@ -154,21 +154,31 @@ terms of the [LICENSE](https://github.com/spotify/pedalboard/blob/master/LICENSE
 
 Read our [Code of Conduct](CODE_OF_CONDUCT.md) for the project.
 
-## Troubleshooting
+# Troubleshooting
 
-### Building the project
+## Building the project
 
-* During building if you see a message like `ModuleNotFoundError: No module named 'pybind11'` then you will need to update your version of pip
+### `ModuleNotFoundError: No module named 'pybind11'`
+
+Try updating your version of `pip`:
 ```shell
 pip install --upgrade pip
 ```
 
-* If you see an error like `Failed to establish a new connection: [Errno -2] Name or service not known'` then this indicates you may have network issues. It is worth making sure the you do not have the environent variable PIP_INDEX_URL set.
+### `Failed to establish a new connection: [Errno -2] Name or service not known'`
+You may have networking issues. Check to make sure you do not have the `PIP_INDEX_URL` environment variable set (or that it points to a valid index).
 
-* If you see an error `fatal error: Python.h: No such file or directory` then you will need to install the python development packages for your system. You will need to find correct package for your OS or distro.
+### `fatal error: Python.h: No such file or directory`
+Ensure you have the Python development packages installed.
+You will need to find correct package for your operating system. (i.e.: `python-dev`, `python-devel`, etc.)
 
-* If you see a build failure with the error `fatal error: lame/include/lame.h: No such file or directory` then you likely have not cloned all the git submodules. From the root of the project run `git submodule update --init`
+### `fatal error: lame/include/lame.h: No such file or directory`
+Ensure that all Git submodules have been updated:
+```shell
+git submodule update --init
+```
 
-### Testing
-
-* If tox throws error regarding `AttributeError: 'NoneType' object has no attribute 'group'` update to version 4 or set ignore_basepython_conflict=true in tox.ini under the tox section or install using pip and not a package manager
+### `AttributeError: 'NoneType' object has no attribute 'group'`
+- Ensure that you have Tox version 4 or greater installed
+- _or_ set `ignore_basepython_conflict=true` in `tox.ini`
+- _or_ install Tox using `pip` and not your system package manager
