@@ -49,6 +49,13 @@ def test_plugin_can_be_garbage_collected(plugin_path: str):
     # Once we delete that parameter, the plugin should be releasable
     del param
     gc.collect()
-    assert not _plugin_ref()
+
+    # Do this dance because calling gc.get_referrers with None would return a huge amount:
+    referrers = None
+    if _plugin_ref() is not None:
+        referrers = gc.get_referrers(_plugin_ref())
+
+    assert _plugin_ref() is None, f"Expected plugin to have no referrers, but found: {referrers}"
+
     assert set(dir(initial_value)).issubset(set(dir(value)))
     assert value == initial_value  # value should still not change
