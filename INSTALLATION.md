@@ -18,10 +18,10 @@ You can set up a virtual environment by navigating to your project directory in 
 ```
 # Create a virtual environment
 python3 -m pip install --user virtualenv 
-python3 -m venv env
+python3 -m venv .venv
 
 # Activate the virtual environment
-source env/bin/activate
+source .venv/bin/activate
 ```
 
 Note: Windows commands are available [here](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/).
@@ -70,7 +70,7 @@ You'll want an IDE to build, run, and debug your code. [Thonny](https://thonny.o
 
 Open a new Python file in your IDE and save it to your project directory. 
 
-Note: creating a virtual environment will create a new directory (env) within your project directory. Save your .py file in the project directory. 
+Note: creating a virtual environment will create a new directory (.venv) within your project directory. Save your .py file in the project directory. 
 
 You can now refer to the [interactive demo](https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_lOfG99Xs3qWVrhch#scrollTo=J3MBH6-5yz97) to understand how audio and effects are called.
 
