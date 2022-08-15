@@ -153,3 +153,32 @@ terms of the [LICENSE](https://github.com/spotify/pedalboard/blob/master/LICENSE
 # Code of Conduct
 
 Read our [Code of Conduct](CODE_OF_CONDUCT.md) for the project.
+
+# Troubleshooting
+
+## Building the project
+
+### `ModuleNotFoundError: No module named 'pybind11'`
+
+Try updating your version of `pip`:
+```shell
+pip install --upgrade pip
+```
+
+### `Failed to establish a new connection: [Errno -2] Name or service not known'`
+You may have networking issues. Check to make sure you do not have the `PIP_INDEX_URL` environment variable set (or that it points to a valid index).
+
+### `fatal error: Python.h: No such file or directory`
+Ensure you have the Python development packages installed.
+You will need to find correct package for your operating system. (i.e.: `python-dev`, `python-devel`, etc.)
+
+### `fatal error: lame/include/lame.h: No such file or directory`
+Ensure that all Git submodules have been updated:
+```shell
+git submodule update --init
+```
+
+### `AttributeError: 'NoneType' object has no attribute 'group'`
+- Ensure that you have Tox version 4 or greater installed
+- _or_ set `ignore_basepython_conflict=true` in `tox.ini`
+- _or_ install Tox using `pip` and not your system package manager
