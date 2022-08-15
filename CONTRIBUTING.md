@@ -2,18 +2,19 @@
 
 We'd love to get patches from you!
 
-## Prerequisites
-
-[Python 3.6](https://www.python.org/downloads/) or higher installed.
-
-A C++ compiler, e.g. GCC or XCode.
-
-### Linux Prerequisites
-Freetype2 - Installed as a development package.
-
 ## Getting Started
 
-To get your environment set up to build `pedalboard`, you'll need a working C++ compiler on your machine (`xcode-select --install` on macOS should do it). Try:
+### Prerequisites
+
+To compile Pedalboard from scratch, the following packages will need to be installed:
+
+- [Python 3.7](https://www.python.org/downloads/) or higher.
+- A C++ compiler, e.g. `gcc`, `clang`, etc.
+  - On macOS, a working Xcode installation should provide this.
+- On Linux:
+  - FreeType 2 (`libfreetype2-dev` or `freetype2-devel`)
+
+### Building Pedalboard
 
 ```shell
 git clone --recurse-submodules --shallow-submodules git@github.com:spotify/pedalboard.git
