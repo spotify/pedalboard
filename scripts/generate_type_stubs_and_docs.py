@@ -209,7 +209,7 @@ def main():
     parser.add_argument(
         "--skip-comparing",
         nargs="*",
-        default=["searchindex.js"],
+        default=["searchindex.js", "pygments.css"],
         help=(
             "If set and if --check is passed, the provided filenames will be ignored when comparing"
             " expected file contents against actual file contents."
