@@ -992,8 +992,7 @@ inline void init_external_plugins(py::module &m) {
       "A wrapper around any Steinberg® VST3 audio effect plugin. Note that "
       "plugins must already support the operating system currently in use "
       "(i.e.: if you're running Linux but trying to open a VST that does not "
-      "support Linux, this will fail).",
-      py::dynamic_attr())
+      "support Linux, this will fail).")
       .def(py::init([](std::string &pathToPluginFile,
                        std::optional<std::string> pluginName) {
              return std::make_unique<ExternalPlugin<juce::VST3PluginFormat>>(
@@ -1051,8 +1050,7 @@ inline void init_external_plugins(py::module &m) {
              std::shared_ptr<ExternalPlugin<juce::AudioUnitPluginFormat>>>(
       m, "_AudioUnitPlugin",
       "A wrapper around any Apple Audio Unit audio effect plugin. Only "
-      "available on macOS.",
-      py::dynamic_attr())
+      "available on macOS.")
       .def(py::init([](std::string &pathToPluginFile,
                        std::optional<std::string> pluginName) {
              return std::make_unique<
