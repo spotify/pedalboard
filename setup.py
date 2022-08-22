@@ -325,6 +325,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
     ext_modules=[pedalboard_cpp],
     install_requires=['numpy'],
