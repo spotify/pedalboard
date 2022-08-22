@@ -101,7 +101,8 @@ jobs:
         run: python setup.py install
       - name: Generate type stubs and documentation, and validate they match
         # Only validate documentation on macOS, as Linux and Windows have a subset of the classes
-        if: matrix.python-version != '3.6' && startsWith(matrix.os, 'macos')
+        # TODO: 3.11.0-rc1 doesn't include type hints when generating type stubs.
+        if: matrix.python-version != '3.6' && matrix.python-version != '3.11.0-rc.1' && startsWith(matrix.os, 'macos')
         run: python3 -m scripts.generate_type_stubs_and_docs --check
       - name: Install VSTs for testing
         env:
