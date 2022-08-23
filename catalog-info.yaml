@@ -1,0 +1,7 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: pedalboard
+spec:
+  type: library
+  owner: miq
