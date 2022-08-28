@@ -40,10 +40,10 @@ inline void init_noisegate(py::module &m) {
       .def(py::init([](float thresholddB, float ratio, float attackMs,
                        float releaseMs) {
              auto plugin = std::make_unique<NoiseGate<float>>();
-             plugin->getDSP().setThreshold(thresholddB);
-             plugin->getDSP().setRatio(ratio);
-             plugin->getDSP().setAttack(attackMs);
-             plugin->getDSP().setRelease(releaseMs);
+             plugin->setThreshold(thresholddB);
+             plugin->setRatio(ratio);
+             plugin->setAttack(attackMs);
+             plugin->setRelease(releaseMs);
              return plugin;
            }),
            py::arg("threshold_db") = -100.0, py::arg("ratio") = 10,
