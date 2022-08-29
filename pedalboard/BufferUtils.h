@@ -149,25 +149,28 @@ py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> juceBuffer,
   // channel is still the same on every iteration of the loop.
   T *outputBasePointer = static_cast<T *>(outputInfo.ptr);
 
-  switch (channelLayout) {
-  case ChannelLayout::Interleaved:
-    for (unsigned int i = 0; i < numChannels; i++) {
-      const T *channelBuffer = juceBuffer.getReadPointer(i, offsetSamples);
-      // We're interleaving the data here, so we can't use copyFrom.
-      for (unsigned int j = 0; j < outputSampleCount; j++) {
-        outputBasePointer[j * numChannels + i] = channelBuffer[j];
+  if (juceBuffer.getNumSamples() > 0) {
+    switch (channelLayout) {
+    case ChannelLayout::Interleaved:
+      for (unsigned int i = 0; i < numChannels; i++) {
+        const T *channelBuffer = juceBuffer.getReadPointer(i, offsetSamples);
+        // We're interleaving the data here, so we can't use copyFrom.
+        for (unsigned int j = 0; j < outputSampleCount; j++) {
+          outputBasePointer[j * numChannels + i] = channelBuffer[j];
+        }
       }
+      break;
+    case ChannelLayout::NotInterleaved:
+      for (unsigned int i = 0; i < numChannels; i++) {
+        const T *channelBuffer = juceBuffer.getReadPointer(i, offsetSamples);
+        std::copy(channelBuffer, channelBuffer + outputSampleCount,
+                  &outputBasePointer[outputSampleCount * i]);
+      }
+      break;
+    default:
+      throw std::runtime_error(
+          "Internal error: got unexpected channel layout.");
     }
-    break;
-  case ChannelLayout::NotInterleaved:
-    for (unsigned int i = 0; i < numChannels; i++) {
-      const T *channelBuffer = juceBuffer.getReadPointer(i, offsetSamples);
-      std::copy(channelBuffer, channelBuffer + outputSampleCount,
-                &outputBasePointer[outputSampleCount * i]);
-    }
-    break;
-  default:
-    throw std::runtime_error("Internal error: got unexpected channel layout.");
   }
 
   return outputArray;

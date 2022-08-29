@@ -63,6 +63,7 @@ namespace py = pybind11;
 
 #include "io/AudioFileInit.h"
 #include "io/ReadableAudioFile.h"
+#include "io/StreamResampler.h"
 #include "io/WriteableAudioFile.h"
 
 using namespace Pedalboard;
@@ -199,7 +200,7 @@ or buffer, set ``reset`` to ``False``.
   // I/O helpers and utilities:
   py::module io = m.def_submodule("io");
   io.doc() = "This module provides classes and functions for reading and "
-             "writing audio files.\n\n*Introduced in v0.5.1.*";
+             "writing audio files or streams.\n\n*Introduced in v0.5.1.*";
 
   auto pyAudioFile = declare_audio_file(io);
   auto pyReadableAudioFile = declare_readable_audio_file(io);
@@ -208,4 +209,6 @@ or buffer, set ``reset`` to ``False``.
   init_audio_file(pyAudioFile);
   init_readable_audio_file(io, pyReadableAudioFile);
   init_writeable_audio_file(io, pyWriteableAudioFile);
+
+  init_stream_resampler(io);
 };

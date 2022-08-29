@@ -1,0 +1,266 @@
+/*
+ * pedalboard
+ * Copyright 2022 Spotify AB
+ *
+ * Licensed under the GNU Public License, Version 3.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.gnu.org/licenses/gpl-3.0.html
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+#pragma once
+
+#include "../BufferUtils.h"
+#include "../plugin_templates/Resample.h"
+#include <mutex>
+
+namespace Pedalboard {
+
+template <typename SampleType = float> class StreamResampler {
+public:
+  StreamResampler(float sourceSampleRate, float targetSampleRate,
+                  int numChannels, ResamplingQuality quality)
+      : sourceSampleRate(sourceSampleRate), targetSampleRate(targetSampleRate),
+        numChannels(numChannels), quality(quality) {
+    overflowSamples.resize(numChannels);
+    resamplers.resize(numChannels);
+
+    for (int i = 0; i < numChannels; i++) {
+      resamplers[i].setQuality(quality);
+      resamplers[i].reset();
+    }
+
+    resamplerRatio = sourceSampleRate / targetSampleRate;
+    inputLatency = resamplers[0].getBaseLatency() / resamplerRatio;
+
+    outputSamplesToSkip = inputLatency;
+  }
+
+  juce::AudioBuffer<SampleType> process(juce::AudioBuffer<SampleType> _input) {
+    std::scoped_lock lock(mutex);
+
+    // TODO: Don't copy the entire input buffer multiple times here!
+    juce::AudioBuffer<SampleType> input = prependWith(_input, overflowSamples);
+    double expectedResampledSamples = input.getNumSamples() / resamplerRatio;
+    juce::AudioBuffer<SampleType> output(input.getNumChannels(),
+                                         (int)expectedResampledSamples);
+
+    for (size_t c = 0; c < input.getNumChannels(); c++) {
+      if (input.getNumSamples() > 0) {
+        long long inputSamplesConsumed = resamplers[c].process(
+            resamplerRatio, input.getReadPointer(c), output.getWritePointer(c),
+            (int)expectedResampledSamples);
+
+        for (int i = inputSamplesConsumed; i < input.getNumSamples(); i++) {
+          overflowSamples[c].push_back(input.getReadPointer(c)[i]);
+        }
+      }
+    }
+
+    // Chop off the first _n_ samples if necessary:
+    if (outputSamplesToSkip > 0) {
+      long long intOutputSamplesToSkip = std::round(outputSamplesToSkip);
+      if (intOutputSamplesToSkip) {
+        outputSamplesToSkip -= intOutputSamplesToSkip;
+
+        int newNumOutputSamples =
+            output.getNumSamples() - intOutputSamplesToSkip;
+        if (newNumOutputSamples <= 0) {
+          return juce::AudioBuffer<SampleType>(input.getNumChannels(), 0);
+        }
+
+        juce::AudioBuffer<SampleType> choppedOutput(input.getNumChannels(),
+                                                    newNumOutputSamples);
+        for (int c = 0; c < numChannels; c++) {
+          choppedOutput.copyFrom(c, 0, output, c, intOutputSamplesToSkip,
+                                 newNumOutputSamples);
+        }
+
+        return choppedOutput;
+      }
+    }
+
+    return output;
+  }
+
+  void reset() {
+    std::scoped_lock lock(mutex);
+
+    for (auto &r : resamplers) {
+      r.reset();
+    }
+    outputSamplesToSkip = inputLatency;
+    for (auto &overflowBuffer : overflowSamples) {
+      overflowBuffer.clear();
+    }
+  }
+
+  int getNumChannels() const { return numChannels; }
+  float getSourceSampleRate() const { return sourceSampleRate; }
+  float getTargetSampleRate() const { return targetSampleRate; }
+  ResamplingQuality getQuality() const { return quality; }
+
+  double getLatency() const { return inputLatency; }
+
+  ChannelLayout setLastChannelLayout(ChannelLayout last) {
+    lastChannelLayout = last;
+  }
+
+  ChannelLayout getLastChannelLayout() const { return lastChannelLayout; }
+
+private:
+  juce::AudioBuffer<SampleType>
+  prependWith(juce::AudioBuffer<SampleType> &input,
+              std::vector<std::vector<SampleType>> &toPrepend) {
+    int prependSize = toPrepend[0].size();
+    juce::AudioBuffer<SampleType> output(input.getNumChannels(),
+                                         input.getNumSamples() + prependSize);
+
+    for (int c = 0; c < input.getNumChannels(); c++) {
+      SampleType *channelPointer = output.getWritePointer(c);
+      for (int i = 0; i < prependSize; i++) {
+        channelPointer[i] = toPrepend[c][i];
+      }
+      toPrepend[c].clear();
+
+      output.copyFrom(c, prependSize, input, c, 0, input.getNumSamples());
+    }
+
+    return output;
+  }
+
+  float sourceSampleRate;
+  float targetSampleRate;
+  ResamplingQuality quality;
+  std::vector<VariableQualityResampler> resamplers;
+
+  double resamplerRatio = 1.0;
+  std::vector<std::vector<SampleType>> overflowSamples;
+  double inputLatency = 0;
+  int numChannels;
+  double outputSamplesToSkip;
+
+  // A mutex to gate access to this processor, as its internals may not be
+  // thread-safe.
+  std::mutex mutex;
+
+  ChannelLayout lastChannelLayout = ChannelLayout::NotInterleaved;
+};
+
+inline void init_stream_resampler(py::module &m) {
+  py::class_<StreamResampler<float>, std::shared_ptr<StreamResampler<float>>>
+      resampler(
+          m, "StreamResampler",
+          "A streaming resampler that can change the sample rate of multiple "
+          "chunks of audio in series, while using constant memory.\n\nFor a "
+          "resampling plug-in that can be used in :class:`Pedalboard` objects, "
+          "see :class:`pedalboard.Resample`.\n\n*Introduced in v0.6.0.*");
+
+  resampler.def(
+      py::init([](float sourceSampleRate, float targetSampleRate,
+                  int numChannels, ResamplingQuality quality) {
+        return std::make_unique<StreamResampler<float>>(
+            sourceSampleRate, targetSampleRate, numChannels, quality);
+      }),
+      py::arg("source_sample_rate"), py::arg("target_sample_rate"),
+      py::arg("num_channels"),
+      py::arg("quality") = ResamplingQuality::WindowedSinc,
+      "Create a new StreamResampler, capable of resampling a "
+      "potentially-unbounded audio stream with a constant amount of memory. "
+      "The source sample rate, target sample rate, quality, or number of "
+      "channels cannot be changed once the resampler is instantiated.");
+
+  resampler.def("__repr__", [](const StreamResampler<float> &resampler) {
+    std::ostringstream ss;
+    ss << "<pedalboard.io.StreamResampler";
+
+    ss << " source_sample_rate=" << resampler.getSourceSampleRate();
+    ss << " target_sample_rate=" << resampler.getTargetSampleRate();
+    ss << " num_channels=" << resampler.getNumChannels();
+    ss << " quality=";
+
+    switch (resampler.getQuality()) {
+    case ResamplingQuality::ZeroOrderHold:
+      ss << "ZeroOrderHold";
+      break;
+    case ResamplingQuality::Linear:
+      ss << "Linear";
+      break;
+    case ResamplingQuality::CatmullRom:
+      ss << "CatmullRom";
+      break;
+    case ResamplingQuality::Lagrange:
+      ss << "Lagrange";
+      break;
+    case ResamplingQuality::WindowedSinc:
+      ss << "WindowedSinc";
+      break;
+    default:
+      ss << "unknown";
+      break;
+    }
+
+    ss << " at " << &resampler;
+    ss << ">";
+    return ss.str();
+  });
+
+  resampler.def(
+      "process",
+      [](StreamResampler<float> &resampler,
+         std::optional<py::array_t<float, py::array::c_style>> input) {
+        juce::AudioBuffer<float> inputBuffer(resampler.getNumChannels(),
+                                             resampler.getLatency());
+        if (input) {
+          resampler.setLastChannelLayout(detectChannelLayout(*input));
+          inputBuffer = copyPyArrayIntoJuceBuffer(*input);
+        } else {
+          inputBuffer.clear();
+        }
+
+        juce::AudioBuffer<float> output;
+        {
+          py::gil_scoped_release release;
+          output = resampler.process(inputBuffer);
+        }
+
+        return copyJuceBufferIntoPyArray(output,
+                                         resampler.getLastChannelLayout(), 0);
+      },
+      py::arg("input") = py::none(),
+      "Resample audio. The returned buffer may be smaller than the provided "
+      "buffer depending on the quality method used. Call :meth:`process()` "
+      "without any arguments to flush the internal buffers and return all "
+      "remaining audio.");
+
+  resampler.def("reset", &StreamResampler<float>::reset,
+                "Used to reset the internal state of this resampler. Call this "
+                "method when resampling a new audio stream to prevent audio "
+                "from leaking between streams.");
+
+  resampler.def_property_readonly("num_channels",
+                                  &StreamResampler<float>::getNumChannels,
+                                  "The number of channels expected to be "
+                                  "passed in every call to :meth:`process()`.");
+  resampler.def_property_readonly(
+      "source_sample_rate", &StreamResampler<float>::getSourceSampleRate,
+      "The source sample rate of the input audio that this resampler expects "
+      "to be passed to :meth:`process()`.");
+
+  resampler.def_property_readonly(
+      "target_sample_rate", &StreamResampler<float>::getTargetSampleRate,
+      "The sample rate of the audio that this resampler will return from "
+      ":meth:`process()`.");
+
+  resampler.def_property_readonly(
+      "quality", &StreamResampler<float>::getQuality,
+      "The resampling algorithm used by this resampler.");
+}
+
+} // namespace Pedalboard

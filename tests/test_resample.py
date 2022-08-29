@@ -85,7 +85,6 @@ def test_resample_invariant_to_buffer_size(
         np.testing.assert_allclose(a, b)
 
 
-@pytest.mark.parametrize("fundamental_hz", [440])
 @pytest.mark.parametrize("sample_rate_multiple", [1, 2, 3, 4, 20])
 @pytest.mark.parametrize("sample_rate", [8000, 44100, 48000])
 @pytest.mark.parametrize("buffer_size", [1, 32, 128, 8192, 1_000_000])
@@ -93,7 +92,6 @@ def test_resample_invariant_to_buffer_size(
 @pytest.mark.parametrize("num_channels", [1, 2])
 @pytest.mark.parametrize("plugin_class", [Resample, ResampleWithLatency])
 def test_identical_noise_with_zero_order_hold(
-    fundamental_hz: float,
     sample_rate_multiple: float,
     sample_rate: float,
     buffer_size: int,
@@ -142,7 +140,6 @@ def test_quality_can_change(
     fundamental_hz: float = 440,
     sample_rate: float = 8000,
     buffer_size: int = 96000,
-    duration: float = DURATIONS[0],
 ):
     sine_wave = generate_sine_at(sample_rate, fundamental_hz, num_channels=num_channels)
 
