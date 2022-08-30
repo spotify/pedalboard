@@ -1,8 +1,9 @@
-"""This module provides classes and functions for reading and writing audio files.
+"""This module provides classes and functions for reading and writing audio files or streams.
 
 *Introduced in v0.5.1.*"""
 from __future__ import annotations
-import pedalboard_native.io  # type: ignore
+import pedalboard_native.io  # type: ignore  # type: ignore
+import pedalboard  # type: ignore
 import typing
 from typing_extensions import Literal
 from enum import Enum
@@ -13,6 +14,7 @@ _Shape = typing.Tuple[int, ...]
 __all__ = [
     "AudioFile",
     "ReadableAudioFile",
+    "StreamResampler",
     "WriteableAudioFile",
     "get_supported_read_formats",
     "get_supported_write_formats",
@@ -260,6 +262,73 @@ class ReadableAudioFile(AudioFile):
     def samplerate(self) -> float:
         """
         The sample rate of this file in samples (per channel) per second (Hz).
+
+
+        """
+    pass
+
+class StreamResampler:
+    """
+    A streaming resampler that can change the sample rate of multiple chunks of audio in series, while using constant memory.
+
+    For a resampling plug-in that can be used in :class:`Pedalboard` objects, see :class:`pedalboard.Resample`.
+
+    *Introduced in v0.6.0.*
+    """
+
+    def __init__(
+        self,
+        source_sample_rate: float,
+        target_sample_rate: float,
+        num_channels: int,
+        quality: pedalboard.Resample.Quality = pedalboard.Resample.Quality.WindowedSinc,
+    ) -> None:
+        """
+        Create a new StreamResampler, capable of resampling a potentially-unbounded audio stream with a constant amount of memory. The source sample rate, target sample rate, quality, or number of channels cannot be changed once the resampler is instantiated.
+        """
+    def __repr__(self) -> str: ...
+    def process(
+        self, input: typing.Optional[numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]] = None
+    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+        """
+        Resample a 32-bit floating-point audio buffer. The returned buffer may be smaller than the provided buffer depending on the quality method used. Call :meth:`process()` without any arguments to flush the internal buffers and return all remaining audio.
+        """
+    def reset(self) -> None:
+        """
+        Used to reset the internal state of this resampler. Call this method when resampling a new audio stream to prevent audio from leaking between streams.
+        """
+    @property
+    def input_latency(self) -> float:
+        """
+        The number of samples (in the input sample rate) that must be supplied before this resampler will begin returning output.
+
+
+        """
+    @property
+    def num_channels(self) -> int:
+        """
+        The number of channels expected to be passed in every call to :meth:`process()`.
+
+
+        """
+    @property
+    def quality(self) -> pedalboard.Resample.Quality:
+        """
+        The resampling algorithm used by this resampler.
+
+
+        """
+    @property
+    def source_sample_rate(self) -> float:
+        """
+        The source sample rate of the input audio that this resampler expects to be passed to :meth:`process()`.
+
+
+        """
+    @property
+    def target_sample_rate(self) -> float:
+        """
+        The sample rate of the audio that this resampler will return from :meth:`process()`.
 
 
         """

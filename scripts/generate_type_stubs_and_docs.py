@@ -6,6 +6,7 @@ import typing
 import shutil
 import difflib
 import importlib
+import traceback
 from tempfile import TemporaryDirectory
 from contextlib import contextmanager
 
@@ -119,6 +120,7 @@ def patch_sphinx(module_names_to_combine: typing.Set[str]):
                 pyi_module = import_stub(".", modname)
             except Exception as e:
                 print(f"Failed to import stub module: {e}")
+                traceback.print_exc()
                 raise
             # Remove the stub module from the module cache:
             temp_module_holding_area = {}
@@ -168,8 +170,14 @@ def isolated_imports(only: typing.Set[str] = {}):
 
 
 def remove_non_public_files(output_dir: str):
-    shutil.rmtree(os.path.join(output_dir, ".doctrees"))
-    os.unlink(os.path.join(output_dir, ".buildinfo"))
+    try:
+        shutil.rmtree(os.path.join(output_dir, ".doctrees"))
+    except Exception:
+        pass
+    try:
+        os.unlink(os.path.join(output_dir, ".buildinfo"))
+    except Exception:
+        pass
 
 
 def trim_diff_line(x: str) -> str:

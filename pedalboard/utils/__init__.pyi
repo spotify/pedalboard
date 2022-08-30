@@ -1,10 +1,12 @@
 from __future__ import annotations
-import pedalboard_native.utils  # type: ignore
+import pedalboard_native.utils  # type: ignore  # type: ignore
+import pedalboard  # type: ignore
 import typing
 from typing_extensions import Literal
 from enum import Enum
 import numpy
-import pedalboard_native  # type: ignore
+import pedalboard_native  # type: ignore  # type: ignore
+import pedalboard  # type: ignore
 
 _Shape = typing.Tuple[int, ...]
 

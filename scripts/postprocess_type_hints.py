@@ -42,14 +42,19 @@ REPLACEMENTS = [
     # ndarrays need to be corrected as well:
     (r"numpy\.ndarray\[(.*?)\]", r"numpy.ndarray[typing.Any, numpy.dtype[\1]]"),
     # None of our enums are properly detected by pybind11-stubgen:
-    (
-        r"def __init__\(self, quality: Resample\.Quality = Quality\.(.*)\) -> None:",
-        r"def __init__(self, quality: Resample.Quality = Resample.Quality.\1) -> None:",
-    ),
-    (r": pedalboard_native\.Resample\.Quality", ": Quality"),
+    (r"= Quality\.", "= pedalboard_native.Resample.Quality."),
+    (r"pedalboard_native.Resample", "pedalboard.Resample", "pedalboard.io"),
     (r": pedalboard_native\.LadderFilter\.Mode", ": Mode"),
-    # (r" = Mode\.(.*?)([,)]?)", " = \1\2"),
     (r"import pedalboard_native(\.?.*)$", r"import pedalboard_native\1  # type: ignore"),
+    (
+        r"import pedalboard_native(\.?.*)$",
+        "\n".join(
+            [
+                r"import pedalboard_native\1  # type: ignore",
+                r"import pedalboard  # type: ignore",
+            ]
+        ),
+    ),
     (
         # For Python 3.6 compatibility:
         r"import typing",
@@ -132,6 +137,7 @@ def main(args=None):
         file_contents = io.StringIO()
         end_of_file_contents = io.StringIO()
         for source_file in source_files:
+            module_name = output_file_name.replace("__init__.pyi", "").replace("/", ".").rstrip(".")
             with open(source_file) as f:
                 in_excluded_indented_block = False
                 in_moved_indented_block = False
@@ -149,7 +155,14 @@ def main(args=None):
                         if in_excluded_indented_block:
                             continue
 
-                        for find, replace in REPLACEMENTS:
+                        for _tuple in REPLACEMENTS:
+                            if len(_tuple) == 2:
+                                find, replace = _tuple
+                                only_in_module = None
+                            else:
+                                find, replace, only_in_module = _tuple
+                            if only_in_module and only_in_module != module_name:
+                                continue
                             results = re.findall(find, line)
                             if results:
                                 line = re.sub(find, replace, line)
