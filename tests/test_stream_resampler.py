@@ -118,15 +118,6 @@ def test_reset(
         axis=1,
     )
 
-    output_without_reset = np.concatenate(
-        [
-            resampler.process(sine_wave[:, i : i + buffer_size])
-            for i in range(0, sine_wave.shape[1], buffer_size)
-        ]
-        + [resampler.process(None)],
-        axis=1,
-    )
-
     resampler.reset()
     output_with_reset = np.concatenate(
         [
@@ -137,14 +128,24 @@ def test_reset(
         axis=1,
     )
 
-    num_samples = min(
-        output_with_reset.shape[1], original_output.shape[1], output_without_reset.shape[1]
-    )
+    num_samples = min(output_with_reset.shape[1], original_output.shape[1])
 
     np.testing.assert_allclose(original_output[:, :num_samples], output_with_reset[:, :num_samples])
 
-    if quality != Resample.Quality.ZeroOrderHold:
-        with pytest.raises(AssertionError):
-            np.testing.assert_allclose(
-                original_output[:, :num_samples], output_without_reset[:, :num_samples]
-            )
+
+@pytest.mark.parametrize("sample_rate", [123.45, 8000, 11025, 22050, 44100, 48000, 96000])
+@pytest.mark.parametrize(
+    "target_sample_rate", [123.45, 8000, 11025, 12345.67, 22050, 44100, 48000, 96000]
+)
+@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+def test_input_latency(sample_rate: float, target_sample_rate: float, quality: Resample.Quality):
+    resampler = StreamResampler(sample_rate, target_sample_rate, 1, quality)
+    assert (
+        resampler.process(np.random.rand(int(resampler.input_latency)).astype(np.float32)).shape[1]
+        == 0
+    )
+    np.testing.assert_allclose(
+        resampler.process().shape[1],
+        resampler.input_latency * target_sample_rate / sample_rate,
+        atol=1.5,
+    )

@@ -37,12 +37,21 @@ public:
     }
 
     resamplerRatio = sourceSampleRate / targetSampleRate;
-    inputLatency = resamplers[0].getBaseLatency() / resamplerRatio;
+    inputLatency = resamplers[0].getBaseLatency();
+    outputLatency = inputLatency / resamplerRatio;
 
-    outputSamplesToSkip = inputLatency;
+    outputSamplesToSkip = outputLatency;
   }
 
   juce::AudioBuffer<SampleType> process(juce::AudioBuffer<SampleType> _input) {
+    if (_input.getNumChannels() != numChannels) {
+      throw std::domain_error(
+          "Expected " + std::to_string(numChannels) +
+          "-channel input, but was provided a buffer with " +
+          std::to_string(_input.getNumChannels()) + " channels and " +
+          std::to_string(_input.getNumSamples()) + " samples.");
+    }
+
     std::scoped_lock lock(mutex);
 
     // TODO: Don't copy the entire input buffer multiple times here!
@@ -95,7 +104,7 @@ public:
     for (auto &r : resamplers) {
       r.reset();
     }
-    outputSamplesToSkip = inputLatency;
+    outputSamplesToSkip = outputLatency;
     for (auto &overflowBuffer : overflowSamples) {
       overflowBuffer.clear();
     }
@@ -106,7 +115,8 @@ public:
   float getTargetSampleRate() const { return targetSampleRate; }
   ResamplingQuality getQuality() const { return quality; }
 
-  double getLatency() const { return inputLatency; }
+  double getInputLatency() const { return inputLatency; }
+  double getOutputLatency() const { return outputLatency; }
 
   ChannelLayout setLastChannelLayout(ChannelLayout last) {
     lastChannelLayout = last;
@@ -143,6 +153,7 @@ private:
   double resamplerRatio = 1.0;
   std::vector<std::vector<SampleType>> overflowSamples;
   double inputLatency = 0;
+  double outputLatency = 0;
   int numChannels;
   double outputSamplesToSkip;
 
@@ -215,12 +226,13 @@ inline void init_stream_resampler(py::module &m) {
       "process",
       [](StreamResampler<float> &resampler,
          std::optional<py::array_t<float, py::array::c_style>> input) {
-        juce::AudioBuffer<float> inputBuffer(resampler.getNumChannels(),
-                                             resampler.getLatency());
+        juce::AudioBuffer<float> inputBuffer;
         if (input) {
           resampler.setLastChannelLayout(detectChannelLayout(*input));
-          inputBuffer = copyPyArrayIntoJuceBuffer(*input);
+          inputBuffer = convertPyArrayIntoJuceBuffer(*input);
         } else {
+          inputBuffer = juce::AudioBuffer<float>(
+              resampler.getNumChannels(), (int)resampler.getInputLatency());
           inputBuffer.clear();
         }
 
@@ -234,10 +246,10 @@ inline void init_stream_resampler(py::module &m) {
                                          resampler.getLastChannelLayout(), 0);
       },
       py::arg("input") = py::none(),
-      "Resample audio. The returned buffer may be smaller than the provided "
-      "buffer depending on the quality method used. Call :meth:`process()` "
-      "without any arguments to flush the internal buffers and return all "
-      "remaining audio.");
+      "Resample a 32-bit floating-point audio buffer. The returned buffer may "
+      "be smaller than the provided buffer depending on the quality method "
+      "used. Call :meth:`process()` without any arguments to flush the "
+      "internal buffers and return all remaining audio.");
 
   resampler.def("reset", &StreamResampler<float>::reset,
                 "Used to reset the internal state of this resampler. Call this "
@@ -261,6 +273,11 @@ inline void init_stream_resampler(py::module &m) {
   resampler.def_property_readonly(
       "quality", &StreamResampler<float>::getQuality,
       "The resampling algorithm used by this resampler.");
+
+  resampler.def_property_readonly(
+      "input_latency", &StreamResampler<float>::getInputLatency,
+      "The number of samples (in the input sample rate) that must be supplied "
+      "before this resampler will begin returning output.");
 }
 
 } // namespace Pedalboard
