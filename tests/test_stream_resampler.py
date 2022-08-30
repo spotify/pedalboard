@@ -133,10 +133,8 @@ def test_reset(
     np.testing.assert_allclose(original_output[:, :num_samples], output_with_reset[:, :num_samples])
 
 
-@pytest.mark.parametrize("sample_rate", [123.45, 8000, 11025, 22050, 44100, 48000, 96000])
-@pytest.mark.parametrize(
-    "target_sample_rate", [123.45, 8000, 11025, 12345.67, 22050, 44100, 48000, 96000]
-)
+@pytest.mark.parametrize("sample_rate", [123.45, 8000, 11025, 22050, 44100, 48000])
+@pytest.mark.parametrize("target_sample_rate", [123.45, 8000, 11025, 12345.67, 22050, 44100, 48000])
 @pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
 def test_input_latency(sample_rate: float, target_sample_rate: float, quality: Resample.Quality):
     resampler = StreamResampler(sample_rate, target_sample_rate, 1, quality)

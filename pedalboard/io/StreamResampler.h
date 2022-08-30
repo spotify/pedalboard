@@ -118,9 +118,7 @@ public:
   double getInputLatency() const { return inputLatency; }
   double getOutputLatency() const { return outputLatency; }
 
-  ChannelLayout setLastChannelLayout(ChannelLayout last) {
-    lastChannelLayout = last;
-  }
+  void setLastChannelLayout(ChannelLayout last) { lastChannelLayout = last; }
 
   ChannelLayout getLastChannelLayout() const { return lastChannelLayout; }
 
