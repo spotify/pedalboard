@@ -24,7 +24,7 @@ namespace Pedalboard {
 
 template <typename SampleType = float> class StreamResampler {
 public:
-  StreamResampler(float sourceSampleRate, float targetSampleRate,
+  StreamResampler(double sourceSampleRate, double targetSampleRate,
                   int numChannels, ResamplingQuality quality)
       : sourceSampleRate(sourceSampleRate), targetSampleRate(targetSampleRate),
         numChannels(numChannels), quality(quality) {
@@ -43,20 +43,48 @@ public:
     outputSamplesToSkip = outputLatency;
   }
 
-  juce::AudioBuffer<SampleType> process(juce::AudioBuffer<SampleType> _input) {
-    if (_input.getNumChannels() != numChannels) {
+  juce::AudioBuffer<SampleType>
+  process(std::optional<juce::AudioBuffer<SampleType>> &_input,
+          int maxSamplesToFlush = 5000) {
+    if (_input && _input->getNumChannels() != numChannels) {
       throw std::domain_error(
           "Expected " + std::to_string(numChannels) +
           "-channel input, but was provided a buffer with " +
-          std::to_string(_input.getNumChannels()) + " channels and " +
-          std::to_string(_input.getNumSamples()) + " samples.");
+          std::to_string(_input->getNumChannels()) + " channels and " +
+          std::to_string(_input->getNumSamples()) + " samples.");
     }
 
     std::scoped_lock lock(mutex);
 
+    juce::AudioBuffer<SampleType> input;
+    bool isFlushing = false;
+    int numNewInputSamples = 0;
+
+    double expectedResampledSamples;
+    if (_input) {
+      input = prependWith(*_input, overflowSamples);
+      numNewInputSamples = input.getNumSamples();
+      expectedResampledSamples =
+          ((double)input.getNumSamples() / sourceSampleRate) * targetSampleRate;
+    } else {
+      isFlushing = true;
+      int samplesToFlush = std::min(maxSamplesToFlush, inputSamplesBuffered);
+      expectedResampledSamples =
+          ((double)samplesToFlush / sourceSampleRate) * targetSampleRate;
+
+      // Apply this remainder to account for rounding:
+      if (outputSamplesToSkip < 0) {
+        expectedResampledSamples -= outputSamplesToSkip;
+      }
+
+      input = juce::AudioBuffer<float>(numChannels, samplesToFlush);
+      inputSamplesBuffered -= samplesToFlush;
+      input.clear();
+      input = prependWith(input, overflowSamples);
+    }
+
     // TODO: Don't copy the entire input buffer multiple times here!
-    juce::AudioBuffer<SampleType> input = prependWith(_input, overflowSamples);
-    double expectedResampledSamples = input.getNumSamples() / resamplerRatio;
+
     juce::AudioBuffer<SampleType> output(input.getNumChannels(),
                                          (int)expectedResampledSamples);
 
@@ -66,8 +94,16 @@ public:
             resamplerRatio, input.getReadPointer(c), output.getWritePointer(c),
             (int)expectedResampledSamples);
 
-        for (int i = inputSamplesConsumed; i < input.getNumSamples(); i++) {
-          overflowSamples[c].push_back(input.getReadPointer(c)[i]);
+        if (!isFlushing) {
+          for (int i = inputSamplesConsumed; i < input.getNumSamples(); i++) {
+            overflowSamples[c].push_back(input.getReadPointer(c)[i]);
+          }
+          if (c == 0) {
+            inputSamplesBuffered += inputSamplesConsumed;
+            if (inputSamplesBuffered > inputLatency) {
+              inputSamplesBuffered = inputLatency;
+            }
+          }
         }
       }
     }
@@ -104,6 +140,8 @@ public:
     for (auto &r : resamplers) {
       r.reset();
     }
+
+    inputSamplesBuffered = 0;
     outputSamplesToSkip = outputLatency;
     for (auto &overflowBuffer : overflowSamples) {
       overflowBuffer.clear();
@@ -111,12 +149,14 @@ public:
   }
 
   int getNumChannels() const { return numChannels; }
-  float getSourceSampleRate() const { return sourceSampleRate; }
-  float getTargetSampleRate() const { return targetSampleRate; }
+  double getSourceSampleRate() const { return sourceSampleRate; }
+  double getTargetSampleRate() const { return targetSampleRate; }
   ResamplingQuality getQuality() const { return quality; }
 
   double getInputLatency() const { return inputLatency; }
   double getOutputLatency() const { return outputLatency; }
+
+  int getInputSamplesBuffered() const { return inputSamplesBuffered; }
 
   void setLastChannelLayout(ChannelLayout last) { lastChannelLayout = last; }
 
@@ -143,8 +183,8 @@ private:
     return output;
   }
 
-  float sourceSampleRate;
-  float targetSampleRate;
+  double sourceSampleRate;
+  double targetSampleRate;
   ResamplingQuality quality;
   std::vector<VariableQualityResampler> resamplers;
 
@@ -152,8 +192,9 @@ private:
   std::vector<std::vector<SampleType>> overflowSamples;
   double inputLatency = 0;
   double outputLatency = 0;
-  int numChannels;
-  double outputSamplesToSkip;
+  int inputSamplesBuffered = 0;
+  int numChannels = 1;
+  double outputSamplesToSkip = 0.0;
 
   // A mutex to gate access to this processor, as its internals may not be
   // thread-safe.
@@ -224,14 +265,10 @@ inline void init_stream_resampler(py::module &m) {
       "process",
       [](StreamResampler<float> &resampler,
          std::optional<py::array_t<float, py::array::c_style>> input) {
-        juce::AudioBuffer<float> inputBuffer;
+        std::optional<juce::AudioBuffer<float>> inputBuffer;
         if (input) {
           resampler.setLastChannelLayout(detectChannelLayout(*input));
           inputBuffer = convertPyArrayIntoJuceBuffer(*input);
-        } else {
-          inputBuffer = juce::AudioBuffer<float>(
-              resampler.getNumChannels(), (int)resampler.getInputLatency());
-          inputBuffer.clear();
         }
 
         juce::AudioBuffer<float> output;

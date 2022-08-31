@@ -198,7 +198,7 @@ public:
     }
   }
 
-  py::array_t<float> read(long long numSamples) {
+  py::array_t<float, py::array::c_style> read(long long numSamples) {
     if (numSamples == 0)
       throw std::domain_error(
           "ReadableAudioFile will not read an entire file at once, due to the "

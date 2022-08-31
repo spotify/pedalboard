@@ -128,9 +128,7 @@ def test_reset(
         axis=1,
     )
 
-    num_samples = min(output_with_reset.shape[1], original_output.shape[1])
-
-    np.testing.assert_allclose(original_output[:, :num_samples], output_with_reset[:, :num_samples])
+    np.testing.assert_allclose(original_output, output_with_reset)
 
 
 @pytest.mark.parametrize("sample_rate", [123.45, 8000, 11025, 22050, 44100, 48000])
@@ -138,12 +136,27 @@ def test_reset(
 @pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
 def test_input_latency(sample_rate: float, target_sample_rate: float, quality: Resample.Quality):
     resampler = StreamResampler(sample_rate, target_sample_rate, 1, quality)
-    assert (
-        resampler.process(np.random.rand(int(resampler.input_latency)).astype(np.float32)).shape[1]
-        == 0
+    _input = np.random.rand(int(resampler.input_latency)).astype(np.float32)
+    outputs = [resampler.process(_input), resampler.process(), resampler.process()]
+    assert outputs[0].shape[1] == 0
+    assert outputs[1].shape[1] <= np.ceil(
+        (resampler.input_latency / sample_rate) * target_sample_rate
     )
-    np.testing.assert_allclose(
-        resampler.process().shape[1],
-        resampler.input_latency * target_sample_rate / sample_rate,
-        atol=1.5,
+    assert outputs[2].shape[1] == 0
+
+
+@pytest.mark.parametrize("sample_rate", [123.45, 8000, 11025, 22050, 44100, 48000])
+@pytest.mark.parametrize("target_sample_rate", [123.45, 8000, 11025, 12345.67, 22050, 44100, 48000])
+@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+def test_returned_sample_count(
+    sample_rate: float, target_sample_rate: float, quality
+) -> np.ndarray:
+    input_signal = np.linspace(0, sample_rate, int(sample_rate), dtype=np.float32)
+    resampler = StreamResampler(sample_rate, target_sample_rate, 1, quality)
+    outputs = [resampler.process(input_signal), resampler.process(None)]
+    output = np.concatenate(outputs, axis=1)
+    expected_num_samples = int(target_sample_rate * (input_signal.shape[-1] / sample_rate))
+    assert output.shape[1] == expected_num_samples, (
+        f"{output.shape[1]:,} samples were output by resampler (in chunks:"
+        f" {[o.shape[1] for o in outputs]}) when {expected_num_samples:,} were expected."
     )

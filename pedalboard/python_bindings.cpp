@@ -63,6 +63,7 @@ namespace py = pybind11;
 
 #include "io/AudioFileInit.h"
 #include "io/ReadableAudioFile.h"
+#include "io/ResampledReadableAudioFile.h"
 #include "io/StreamResampler.h"
 #include "io/WriteableAudioFile.h"
 
@@ -204,10 +205,12 @@ or buffer, set ``reset`` to ``False``.
 
   auto pyAudioFile = declare_audio_file(io);
   auto pyReadableAudioFile = declare_readable_audio_file(io);
+  auto pyResampledReadableAudioFile = declare_resampled_readable_audio_file(io);
   auto pyWriteableAudioFile = declare_writeable_audio_file(io);
 
   init_audio_file(pyAudioFile);
   init_readable_audio_file(io, pyReadableAudioFile);
+  init_resampled_readable_audio_file(io, pyResampledReadableAudioFile);
   init_writeable_audio_file(io, pyWriteableAudioFile);
 
   init_stream_resampler(io);
