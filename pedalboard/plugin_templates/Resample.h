@@ -144,6 +144,29 @@ public:
     }
   }
 
+  double getSubSamplePosition() const noexcept {
+    // Unfortunately, std::visit cannot be used here due to macOS version
+    // issues: https://stackoverflow.com/q/52310835/679081
+    if (auto *i =
+            std::get_if<juce::Interpolators::ZeroOrderHold>(&interpolator)) {
+      return i->getSubSamplePosition();
+    } else if (auto *i =
+                   std::get_if<juce::Interpolators::Linear>(&interpolator)) {
+      return i->getSubSamplePosition();
+    } else if (auto *i = std::get_if<juce::Interpolators::CatmullRom>(
+                   &interpolator)) {
+      return i->getSubSamplePosition();
+    } else if (auto *i =
+                   std::get_if<juce::Interpolators::Lagrange>(&interpolator)) {
+      return i->getSubSamplePosition();
+    } else if (auto *i = std::get_if<juce::Interpolators::WindowedSinc>(
+                   &interpolator)) {
+      return i->getSubSamplePosition();
+    } else {
+      throw std::runtime_error("Unknown resampler quality!");
+    }
+  }
+
 private:
   std::variant<juce::Interpolators::ZeroOrderHold, juce::Interpolators::Linear,
                juce::Interpolators::CatmullRom, juce::Interpolators::Lagrange,

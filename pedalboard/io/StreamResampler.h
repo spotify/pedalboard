@@ -45,7 +45,7 @@ public:
 
   juce::AudioBuffer<SampleType>
   process(std::optional<juce::AudioBuffer<SampleType>> &_input,
-          int maxSamplesToFlush = 5000) {
+          double maxSamplesToReturn = 1e40) {
     if (_input && _input->getNumChannels() != numChannels) {
       throw std::domain_error(
           "Expected " + std::to_string(numChannels) +
@@ -60,17 +60,19 @@ public:
     bool isFlushing = false;
     int numNewInputSamples = 0;
 
-    double expectedResampledSamples;
+    double expectedResampledSamples = maxSamplesToReturn;
     if (_input) {
       input = prependWith(*_input, overflowSamples);
       numNewInputSamples = input.getNumSamples();
-      expectedResampledSamples =
-          ((double)input.getNumSamples() / sourceSampleRate) * targetSampleRate;
+      expectedResampledSamples = std::min(
+          ((double)input.getNumSamples() / sourceSampleRate) * targetSampleRate,
+          expectedResampledSamples);
     } else {
       isFlushing = true;
-      int samplesToFlush = std::min(maxSamplesToFlush, inputSamplesBuffered);
-      expectedResampledSamples =
-          ((double)samplesToFlush / sourceSampleRate) * targetSampleRate;
+      int samplesToFlush = inputSamplesBufferedInResampler;
+      expectedResampledSamples = std::min(
+          ((double)samplesToFlush / sourceSampleRate) * targetSampleRate,
+          expectedResampledSamples);
 
       // Apply this remainder to account for rounding:
       if (outputSamplesToSkip < 0) {
@@ -78,7 +80,7 @@ public:
       }
 
       input = juce::AudioBuffer<float>(numChannels, samplesToFlush);
-      inputSamplesBuffered -= samplesToFlush;
+      inputSamplesBufferedInResampler -= samplesToFlush;
       input.clear();
       input = prependWith(input, overflowSamples);
     }
@@ -99,9 +101,9 @@ public:
             overflowSamples[c].push_back(input.getReadPointer(c)[i]);
           }
           if (c == 0) {
-            inputSamplesBuffered += inputSamplesConsumed;
-            if (inputSamplesBuffered > inputLatency) {
-              inputSamplesBuffered = inputLatency;
+            inputSamplesBufferedInResampler += inputSamplesConsumed;
+            if (inputSamplesBufferedInResampler > inputLatency) {
+              inputSamplesBufferedInResampler = inputLatency;
             }
           }
         }
@@ -141,7 +143,7 @@ public:
       r.reset();
     }
 
-    inputSamplesBuffered = 0;
+    inputSamplesBufferedInResampler = 0;
     outputSamplesToSkip = outputLatency;
     for (auto &overflowBuffer : overflowSamples) {
       overflowBuffer.clear();
@@ -156,7 +158,45 @@ public:
   double getInputLatency() const { return inputLatency; }
   double getOutputLatency() const { return outputLatency; }
 
-  int getInputSamplesBuffered() const { return inputSamplesBuffered; }
+  int getBufferedInputSamples() const {
+    return inputSamplesBufferedInResampler;
+  }
+
+  // TODO: Rename me!
+  int getOverflowSamples() const { return overflowSamples[0].size(); }
+
+  /**
+   * Advance the internal state of this resampler, as if the given
+   * number of silent samples had been provided.
+   *
+   * Note that this method will only affect the sub-sample position stored by
+   * the resampler, but will not clear all of the samples buffered internally.
+   */
+  void advanceResamplerState(int numOutputSamples) {
+    double newSubSamplePos = 1.0;
+    int numOutputSamplesToProduce = numOutputSamples;
+
+    // TODO: Find a closed-form expression that produces the same result as
+    // this to make this O(1) instead of O(n)!
+    while (numOutputSamplesToProduce > 0) {
+      while (newSubSamplePos >= 1.0) {
+        newSubSamplePos -= 1.0;
+      }
+
+      newSubSamplePos += resamplerRatio;
+      --numOutputSamplesToProduce;
+    }
+
+    float zero = 0.0;
+    for (auto &resampler : resamplers) {
+      // This effectively sets the new subsample position:
+      resampler.process(newSubSamplePos, &zero, &zero, 1);
+    }
+  }
+
+  double getSubSamplePosition() const {
+    return resamplers[0].getSubSamplePosition();
+  }
 
   void setLastChannelLayout(ChannelLayout last) { lastChannelLayout = last; }
 
@@ -192,7 +232,7 @@ private:
   std::vector<std::vector<SampleType>> overflowSamples;
   double inputLatency = 0;
   double outputLatency = 0;
-  int inputSamplesBuffered = 0;
+  int inputSamplesBufferedInResampler = 0;
   int numChannels = 1;
   double outputSamplesToSkip = 0.0;
 

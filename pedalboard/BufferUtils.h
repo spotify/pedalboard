@@ -51,27 +51,37 @@ detectChannelLayout(const py::array_t<T, py::array::c_style> inputArray) {
 }
 
 template <typename T>
-juce::AudioBuffer<T>
-copyPyArrayIntoJuceBuffer(const py::array_t<T, py::array::c_style> inputArray) {
+juce::AudioBuffer<T> copyPyArrayIntoJuceBuffer(
+    const py::array_t<T, py::array::c_style> inputArray,
+    std::optional<ChannelLayout> providedChannelLayout = {}) {
   // Numpy/Librosa convention is (num_samples, num_channels)
   py::buffer_info inputInfo = inputArray.request();
 
   unsigned int numChannels = 0;
   unsigned int numSamples = 0;
-  ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
+
+  ChannelLayout inputChannelLayout;
+  if (providedChannelLayout) {
+    inputChannelLayout = *providedChannelLayout;
+  } else {
+    inputChannelLayout = detectChannelLayout(inputArray);
+  }
 
   if (inputInfo.ndim == 1) {
     numSamples = inputInfo.shape[0];
     numChannels = 1;
   } else if (inputInfo.ndim == 2) {
     // Try to auto-detect the channel layout from the shape
-    if (inputInfo.shape[1] < inputInfo.shape[0]) {
-      numSamples = inputInfo.shape[0];
-      numChannels = inputInfo.shape[1];
-    } else if (inputInfo.shape[0] < inputInfo.shape[1]) {
+    switch (inputChannelLayout) {
+    case ChannelLayout::NotInterleaved:
       numSamples = inputInfo.shape[1];
       numChannels = inputInfo.shape[0];
-    } else {
+      break;
+    case ChannelLayout::Interleaved:
+      numSamples = inputInfo.shape[0];
+      numChannels = inputInfo.shape[1];
+      break;
+    default:
       throw std::runtime_error("Unable to determine shape of audio input!");
     }
   } else {
@@ -120,7 +130,7 @@ copyPyArrayIntoJuceBuffer(const py::array_t<T, py::array::c_style> inputArray) {
  */
 template <typename T>
 const juce::AudioBuffer<T> convertPyArrayIntoJuceBuffer(
-    const py::array_t<T, py::array::c_style> inputArray) {
+    const py::array_t<T, py::array::c_style> &inputArray) {
   ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
 
   switch (inputChannelLayout) {
@@ -172,7 +182,7 @@ const juce::AudioBuffer<T> convertPyArrayIntoJuceBuffer(
 }
 
 template <typename T>
-py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> juceBuffer,
+py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> &juceBuffer,
                                          ChannelLayout channelLayout,
                                          int offsetSamples, int ndim = 2) {
   unsigned int numChannels = juceBuffer.getNumChannels();

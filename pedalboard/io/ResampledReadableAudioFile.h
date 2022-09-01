@@ -47,7 +47,8 @@ public:
   double getSampleRate() const { return resampler.getTargetSampleRate(); }
 
   long getLengthInSamples() const {
-    return (long)(audioFile->getDuration() * resampler.getTargetSampleRate());
+    return (long)std::ceil(audioFile->getDuration() *
+                           resampler.getTargetSampleRate());
   }
 
   double getDuration() const { return audioFile->getDuration(); }
@@ -59,69 +60,106 @@ public:
   std::string getFileDatatype() const { return audioFile->getFileDatatype(); }
 
   py::array_t<float> read(long long numSamples) {
+    printf("\nResampledReadableAudioFile asking for %d samples.\n", numSamples);
     const juce::ScopedLock scopedLock(objectLock);
 
     double durationSeconds =
         (double)numSamples / resampler.getTargetSampleRate();
-    long long numSamplesInSourceSampleRate =
-        (long long)std::ceil(durationSeconds * audioFile->getSampleRate());
+    long long inputSamplesRequired =
+        (long long)(durationSeconds * audioFile->getSampleRate());
 
-    numSamplesInSourceSampleRate +=
-        (resampler.getInputLatency() - resampler.getInputSamplesBuffered());
+    long long samplesInResampledBuffer = 0;
+    juce::AudioBuffer<float> resampledBuffer(audioFile->getNumChannels(),
+                                             numSamples);
 
-    juce::AudioBuffer<float> sourceSamples = copyPyArrayIntoJuceBuffer(
-        audioFile->read(numSamplesInSourceSampleRate));
+    while (samplesInResampledBuffer < numSamples) {
+      std::optional<juce::AudioBuffer<float>> resamplerInput;
 
-    juce::AudioBuffer<float> resampledBuffer;
-    {
-      py::gil_scoped_release release;
-      std::optional<juce::AudioBuffer<float>> resamplerInput = {sourceSamples};
-      resampledBuffer = resampler.process(resamplerInput);
-      if (resampledBuffer.getNumSamples() < numSamples) {
-        // Flush the resampler to produce the expected new number of output
-        // samples:
-        long long numSamplesMissing =
-            numSamples - resampledBuffer.getNumSamples();
-        long long numSamplesMissingInSourceSampleRate = std::ceil(
-            ((double)numSamplesMissing / resampler.getTargetSampleRate()) *
-            audioFile->getSampleRate());
+      juce::AudioBuffer<float> sourceSamples;
+      if (inputSamplesRequired > 0) {
+        sourceSamples =
+            copyPyArrayIntoJuceBuffer(audioFile->read(inputSamplesRequired),
+                                      {ChannelLayout::NotInterleaved});
+        printf("Read %d samples from source file, position now %d\n",
+               sourceSamples.getNumSamples(), audioFile->tell());
 
-        resamplerInput = {};
-        juce::AudioBuffer<float> flushedOutput = resampler.process(
-            resamplerInput, numSamplesMissingInSourceSampleRate);
-
-        int startSample = resampledBuffer.getNumSamples();
-        resampledBuffer.setSize(resampledBuffer.getNumChannels(),
-                                resampledBuffer.getNumSamples() +
-                                    flushedOutput.getNumSamples(),
-                                /* keepExistingContent */ true);
-
-        for (int c = 0; c < resampledBuffer.getNumChannels(); c++) {
-          resampledBuffer.copyFrom(c, startSample, flushedOutput, c, 0,
-                                   flushedOutput.getNumSamples());
+        if (sourceSamples.getNumSamples() == 0) {
+          printf("Flushing resampler, asking for up to %d samples\n",
+                 numSamples - samplesInResampledBuffer);
+          resamplerInput = {};
+        } else {
+          resamplerInput =
+              std::optional<juce::AudioBuffer<float>>(sourceSamples);
+          printf("Passing %d input samples to resampler, asking for up to %d "
+                 "samples\n",
+                 sourceSamples.getNumSamples(),
+                 numSamples - samplesInResampledBuffer);
         }
+      } else {
+        sourceSamples =
+            juce::AudioBuffer<float>(audioFile->getNumChannels(), 0);
+        resamplerInput = std::optional<juce::AudioBuffer<float>>(sourceSamples);
+        printf("Passing %d input samples to resampler, asking for up to %d "
+               "samples\n",
+               sourceSamples.getNumSamples(),
+               numSamples - samplesInResampledBuffer);
       }
+
+      // TODO: Provide an alternative interface to write to the output buffer
+
+      juce::AudioBuffer<float> newResampledSamples = resampler.process(
+          resamplerInput, numSamples - samplesInResampledBuffer);
+
+      printf("Resampler returned %d samples.\n",
+             newResampledSamples.getNumSamples());
+
+      if (!resamplerInput && newResampledSamples.getNumSamples() == 0) {
+        printf(
+            "Flushed resampler and got nothing back, trimming buffer to %d.\n",
+            samplesInResampledBuffer);
+        resampledBuffer.setSize(resampledBuffer.getNumChannels(),
+                                samplesInResampledBuffer,
+                                /* keepExistingContent */ true);
+        break;
+      }
+
+      int startSample = samplesInResampledBuffer;
+
+      for (int c = 0; c < resampledBuffer.getNumChannels(); c++) {
+        resampledBuffer.copyFrom(c, startSample, newResampledSamples, c, 0,
+                                 newResampledSamples.getNumSamples());
+      }
+      samplesInResampledBuffer += newResampledSamples.getNumSamples();
+
+      // TODO: Tune this carefully to avoid unnecessary calls to read()
+      // Too large, and we buffer too much audio using too much memory
+      // Too short, and we slow down
+      inputSamplesRequired = 1;
     }
 
+    positionInTargetSampleRate += resampledBuffer.getNumSamples();
+
+    printf("ResampledReadableAudioFile returning %d samples.\n",
+           resampledBuffer.getNumSamples());
     return copyJuceBufferIntoPyArray(resampledBuffer,
                                      ChannelLayout::NotInterleaved, 0);
   }
 
   void seek(long long targetPosition) {
-    double targetPositionSeconds =
-        (double)targetPosition / (double)resampler.getTargetSampleRate();
-    // TODO: Account for resampler latency here!
-    audioFile->seek(
-        (long long)(targetPositionSeconds * audioFile->getSampleRate()));
+    // TODO: This could be done much more efficiently by
+    // only seeking as far back as we need to to prime the resampler.
+    // That logic is _very_ tricky to write correctly, though.
+    audioFile->seek(0);
+    resampler.reset();
+    positionInTargetSampleRate = 0;
+
+    long long chunkSize = 1024 * 1024;
+    for (long long i = 0; i < targetPosition; i += chunkSize) {
+      this->read(std::min(chunkSize, targetPosition - i));
+    }
   }
 
-  long long tell() const {
-    // TODO: Account for resampler latency here!
-    double currentPositionSeconds =
-        (double)audioFile->tell() / (double)audioFile->getSampleRate();
-    return (long long)(currentPositionSeconds *
-                       resampler.getTargetSampleRate());
-  }
+  long long tell() const { return positionInTargetSampleRate; }
 
   void close() { audioFile->close(); }
 
@@ -149,6 +187,7 @@ public:
 private:
   std::shared_ptr<ReadableAudioFile> audioFile;
   StreamResampler<float> resampler;
+  long long positionInTargetSampleRate = 0;
   juce::CriticalSection objectLock;
 };
 
@@ -160,7 +199,7 @@ declare_resampled_readable_audio_file(py::module &m) {
       m, "ResampledReadableAudioFile",
       R"(
 A class that wraps an audio file for reading, while resampling
-the audio stream to a new sample rate during reading.
+the audio stream to a new sample rate.
 )");
 }
 
