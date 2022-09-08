@@ -209,10 +209,10 @@ jobs:
         - { os: windows-latest, build: pp39-win_amd64 }
         - { os: ubuntu-latest, build: cp36-manylinux_x86_64 }
         - { os: ubuntu-latest, build: cp36-manylinux_aarch64 }
-        - { os: ubuntu-latest, build: cp36-manylinux_aarch32 }
+        - { os: ubuntu-latest, build: cp36-manylinux_armv7 }
         - { os: ubuntu-latest, build: cp37-manylinux_x86_64 }
         - { os: ubuntu-latest, build: cp37-manylinux_aarch64 }
-        - { os: ubuntu-latest, build: cp37-manylinux_aarch32 }
+        - { os: ubuntu-latest, build: cp37-manylinux_armv7 }
         - { os: ubuntu-latest, build: cp38-manylinux_x86_64 }
         - { os: ubuntu-latest, build: cp38-manylinux_aarch64 }
         - { os: ubuntu-latest, build: cp39-manylinux_x86_64 }
@@ -250,7 +250,7 @@ jobs:
           CIBW_TEST_COMMAND: "pytest {project}/tests"
           CIBW_BUILD: ${{ matrix.build }}
           CIBW_ARCHS: auto64
-          CIBW_ARCHS_LINUX: auto64 aarch64 aarch32 # x86-64, 64-bit Arm, and 32-bit Arm (for Raspberry Pi)
+          CIBW_ARCHS_LINUX: auto64 aarch64 armv7 # x86-64, 64-bit Arm, and 32-bit Arm (for Raspberry Pi)
           CIBW_ARCHS_MACOS: x86_64 universal2 arm64 # Support Apple Silicon
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
           CIBW_ENVIRONMENT: NPY_BLAS_ORDER="" NPY_LAPACK_ORDER=""
