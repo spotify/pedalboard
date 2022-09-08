@@ -176,12 +176,6 @@ def test_returned_sample_count(
     expected_output = np.concatenate(
         [resampler.process(input_signal), resampler.process(None)], axis=-1
     )
-    # expected_num_samples = int(target_sample_rate * (input_signal.shape[-1] / sample_rate))
-    # print("expected_output", expected_output)
-    # assert expected_output.shape[1] == expected_num_samples, (
-    #     f"{expected_output.shape[1]:,} samples were output by resampler when processed all at once"
-    #     f" when {expected_num_samples:,} were expected."
-    # )
 
     resampler.reset()
     outputs = []
