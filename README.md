@@ -21,6 +21,7 @@
  - Built-in audio I/O utilities ([pedalboard.io](https://spotify.github.io/pedalboard/reference/pedalboard.io.html))
    - Support for reading and writing AIFF, FLAC, MP3, OGG, and WAV files on all platforms with no dependencies
    - Additional support for reading AAC, AC3, WMA, and other formats depending on platform
+   - Support for on-the-fly resampling of audio files and streams with `O(1)` memory usage
  - Built-in support for a number of basic audio transformations, including:
    - Guitar-style effects: `Chorus`, `Distortion`, `Phaser`
    - Loudness and dynamic range effects: `Compressor`, `Gain`, `Limiter`
@@ -75,7 +76,7 @@ from pedalboard import Pedalboard, Chorus, Reverb
 from pedalboard.io import AudioFile
 
 # Read in a whole audio file:
-with AudioFile('some-file.wav', 'r') as f:
+with AudioFile('some-file.wav') as f:
   audio = f.read(f.frames)
   samplerate = f.samplerate
 
@@ -97,9 +98,10 @@ with AudioFile('processed-output.wav', 'w', samplerate, effected.shape[0]) as f:
 from pedalboard import *
 from pedalboard.io import AudioFile
 
-with AudioFile('guitar-input.wav', 'r') as f:
+# Read in a whole file, resampling to our desired sample rate:
+samplerate = 44100.0
+with AudioFile('guitar-input.wav').resampled_to(samplerate) as f:
   audio = f.read(f.frames)
-  samplerate = f.samplerate
 
 # Make a pretty interesting sounding guitar pedalboard:
 board = Pedalboard([

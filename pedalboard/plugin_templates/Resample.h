@@ -19,7 +19,6 @@
 #include "../JuceHeader.h"
 #include "../Plugin.h"
 #include "../plugins/AddLatency.h"
-#include <mutex>
 
 namespace Pedalboard {
 

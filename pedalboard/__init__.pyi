@@ -2,7 +2,8 @@
 
 For audio I/O classes (i.e.: reading and writing audio files), see ``pedalboard.io``."""
 from __future__ import annotations
-import pedalboard_native  # type: ignore
+import pedalboard_native  # type: ignore  # type: ignore
+import pedalboard  # type: ignore
 import typing
 from typing_extensions import Literal
 from enum import Enum
@@ -687,7 +688,9 @@ class Resample(Plugin):
         The highest quality and slowest resampling method, with no audible artifacts.
         """
     def __init__(
-        self, target_sample_rate: float = 8000.0, quality: Resample.Quality = Quality.WindowedSinc
+        self,
+        target_sample_rate: float = 8000.0,
+        quality: Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc,
     ) -> None: ...
     def __repr__(self) -> str: ...
     @property
@@ -714,11 +717,11 @@ class Resample(Plugin):
         """
         The sample rate to resample the input audio to. This value may be a floating-point number, in which case a floating-point sampling rate will be used. Note that the output of this plugin will still be at the original sample rate; this is merely the sample rate used for quality reduction.
         """
-    CatmullRom: Quality  # value = <Quality.CatmullRom: 2>
-    Lagrange: Quality  # value = <Quality.Lagrange: 3>
-    Linear: Quality  # value = <Quality.Linear: 1>
-    WindowedSinc: Quality  # value = <Quality.WindowedSinc: 4>
-    ZeroOrderHold: Quality  # value = <Quality.ZeroOrderHold: 0>
+    CatmullRom: pedalboard_native.Resample.Quality  # value = <Quality.CatmullRom: 2>
+    Lagrange: pedalboard_native.Resample.Quality  # value = <Quality.Lagrange: 3>
+    Linear: pedalboard_native.Resample.Quality  # value = <Quality.Linear: 1>
+    WindowedSinc: pedalboard_native.Resample.Quality  # value = <Quality.WindowedSinc: 4>
+    ZeroOrderHold: pedalboard_native.Resample.Quality  # value = <Quality.ZeroOrderHold: 0>
     pass
 
 class Reverb(Plugin):
@@ -947,7 +950,9 @@ class GSMFullRateCompressor(Plugin):
     An audio degradation/compression plugin that applies the GSM "Full Rate" compression algorithm to emulate the sound of a 2G cellular phone connection. This plugin internally resamples the input audio to a fixed sample rate of 8kHz (required by the GSM Full Rate codec), although the quality of the resampling algorithm can be specified.
     """
 
-    def __init__(self, quality: Resample.Quality = Resample.Quality.WindowedSinc) -> None: ...
+    def __init__(
+        self, quality: Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc
+    ) -> None: ...
     def __repr__(self) -> str: ...
     @property
     def quality(self) -> Resample.Quality:

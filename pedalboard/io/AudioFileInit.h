@@ -76,6 +76,12 @@ Opening a file-like object::
        first_ten_seconds = f.read(int(f.samplerate * 10))
 
 
+Opening an audio file on disk, while resampling on-the-fly::
+
+    with AudioFile("my_file.mp3").resampled_to(22_050) as f:
+       first_ten_seconds = f.read(int(f.samplerate * 10))
+
+
 Writing an audio file on disk::
 
    with AudioFile("white_noise.wav", "w", samplerate=44100, num_channels=2) as f:

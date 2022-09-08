@@ -51,27 +51,37 @@ detectChannelLayout(const py::array_t<T, py::array::c_style> inputArray) {
 }
 
 template <typename T>
-juce::AudioBuffer<T>
-copyPyArrayIntoJuceBuffer(const py::array_t<T, py::array::c_style> inputArray) {
+juce::AudioBuffer<T> copyPyArrayIntoJuceBuffer(
+    const py::array_t<T, py::array::c_style> inputArray,
+    std::optional<ChannelLayout> providedChannelLayout = {}) {
   // Numpy/Librosa convention is (num_samples, num_channels)
   py::buffer_info inputInfo = inputArray.request();
 
   unsigned int numChannels = 0;
   unsigned int numSamples = 0;
-  ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
+
+  ChannelLayout inputChannelLayout;
+  if (providedChannelLayout) {
+    inputChannelLayout = *providedChannelLayout;
+  } else {
+    inputChannelLayout = detectChannelLayout(inputArray);
+  }
 
   if (inputInfo.ndim == 1) {
     numSamples = inputInfo.shape[0];
     numChannels = 1;
   } else if (inputInfo.ndim == 2) {
     // Try to auto-detect the channel layout from the shape
-    if (inputInfo.shape[1] < inputInfo.shape[0]) {
-      numSamples = inputInfo.shape[0];
-      numChannels = inputInfo.shape[1];
-    } else if (inputInfo.shape[0] < inputInfo.shape[1]) {
+    switch (inputChannelLayout) {
+    case ChannelLayout::NotInterleaved:
       numSamples = inputInfo.shape[1];
       numChannels = inputInfo.shape[0];
-    } else {
+      break;
+    case ChannelLayout::Interleaved:
+      numSamples = inputInfo.shape[0];
+      numChannels = inputInfo.shape[1];
+      break;
+    default:
       throw std::runtime_error("Unable to determine shape of audio input!");
     }
   } else {
@@ -114,8 +124,73 @@ copyPyArrayIntoJuceBuffer(const py::array_t<T, py::array::c_style> inputArray) {
   return ioBuffer;
 }
 
+/**
+ * Convert a Python array into a const JUCE AudioBuffer, avoiding copying the
+ * data if provided in the appropriate format.
+ */
 template <typename T>
-py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> juceBuffer,
+const juce::AudioBuffer<T> convertPyArrayIntoJuceBuffer(
+    const py::array_t<T, py::array::c_style> &inputArray,
+    std::optional<ChannelLayout> providedLayout = {}) {
+  ChannelLayout inputChannelLayout;
+  if (providedLayout) {
+    inputChannelLayout = *providedLayout;
+  } else {
+    inputChannelLayout = detectChannelLayout(inputArray);
+  }
+
+  switch (inputChannelLayout) {
+  case ChannelLayout::Interleaved:
+    return copyPyArrayIntoJuceBuffer(inputArray);
+  case ChannelLayout::NotInterleaved: {
+    // Return a JUCE AudioBuffer that just points to the original PyArray:
+    py::buffer_info inputInfo = inputArray.request();
+
+    unsigned int numChannels = 0;
+    unsigned int numSamples = 0;
+
+    if (inputInfo.ndim == 1) {
+      numSamples = inputInfo.shape[0];
+      numChannels = 1;
+    } else if (inputInfo.ndim == 2) {
+      switch (inputChannelLayout) {
+      case ChannelLayout::NotInterleaved:
+        numSamples = inputInfo.shape[1];
+        numChannels = inputInfo.shape[0];
+        break;
+      case ChannelLayout::Interleaved:
+        numSamples = inputInfo.shape[0];
+        numChannels = inputInfo.shape[1];
+        break;
+      default:
+        throw std::runtime_error("Unable to determine shape of audio input!");
+      }
+    } else {
+      throw std::runtime_error(
+          "Number of input dimensions must be 1 or 2 (got " +
+          std::to_string(inputInfo.ndim) + ").");
+    }
+
+    if (numChannels == 0) {
+      throw std::runtime_error("No channels passed!");
+    } else if (numChannels > 2) {
+      throw std::runtime_error("More than two channels received!");
+    }
+
+    T **channelPointers = (T **)alloca(numChannels * sizeof(T *));
+    for (int c = 0; c < numChannels; c++) {
+      channelPointers[c] = static_cast<T *>(inputInfo.ptr) + (c * numSamples);
+    }
+
+    return juce::AudioBuffer<T>(channelPointers, numChannels, numSamples);
+  }
+  default:
+    throw std::runtime_error("Internal error: got unexpected channel layout.");
+  }
+}
+
+template <typename T>
+py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> &juceBuffer,
                                          ChannelLayout channelLayout,
                                          int offsetSamples, int ndim = 2) {
   unsigned int numChannels = juceBuffer.getNumChannels();
@@ -149,25 +224,28 @@ py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> juceBuffer,
   // channel is still the same on every iteration of the loop.
   T *outputBasePointer = static_cast<T *>(outputInfo.ptr);
 
-  switch (channelLayout) {
-  case ChannelLayout::Interleaved:
-    for (unsigned int i = 0; i < numChannels; i++) {
-      const T *channelBuffer = juceBuffer.getReadPointer(i, offsetSamples);
-      // We're interleaving the data here, so we can't use copyFrom.
-      for (unsigned int j = 0; j < outputSampleCount; j++) {
-        outputBasePointer[j * numChannels + i] = channelBuffer[j];
+  if (juceBuffer.getNumSamples() > 0) {
+    switch (channelLayout) {
+    case ChannelLayout::Interleaved:
+      for (unsigned int i = 0; i < numChannels; i++) {
+        const T *channelBuffer = juceBuffer.getReadPointer(i, offsetSamples);
+        // We're interleaving the data here, so we can't use copyFrom.
+        for (unsigned int j = 0; j < outputSampleCount; j++) {
+          outputBasePointer[j * numChannels + i] = channelBuffer[j];
+        }
       }
+      break;
+    case ChannelLayout::NotInterleaved:
+      for (unsigned int i = 0; i < numChannels; i++) {
+        const T *channelBuffer = juceBuffer.getReadPointer(i, offsetSamples);
+        std::copy(channelBuffer, channelBuffer + outputSampleCount,
+                  &outputBasePointer[outputSampleCount * i]);
+      }
+      break;
+    default:
+      throw std::runtime_error(
+          "Internal error: got unexpected channel layout.");
     }
-    break;
-  case ChannelLayout::NotInterleaved:
-    for (unsigned int i = 0; i < numChannels; i++) {
-      const T *channelBuffer = juceBuffer.getReadPointer(i, offsetSamples);
-      std::copy(channelBuffer, channelBuffer + outputSampleCount,
-                &outputBasePointer[outputSampleCount * i]);
-    }
-    break;
-  default:
-    throw std::runtime_error("Internal error: got unexpected channel layout.");
   }
 
   return outputArray;

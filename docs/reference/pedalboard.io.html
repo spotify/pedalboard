@@ -10,9 +10,9 @@
   
 <meta property="og:url" content="https://spotify.github.io/pedalboard/reference/pedalboard.io.html" />
   
-<meta property="og:site_name" content="Pedalboard v0.5.10 Documentation" />
+<meta property="og:site_name" content="Pedalboard v0.6.0 Documentation" />
   
-<meta property="og:description" content="This module provides classes and functions for reading and writing audio files. Introduced in v0.5.1." />
+<meta property="og:description" content="This module provides classes and functions for reading and writing audio files or streams. Introduced in v0.5.1." />
   
 <meta property="og:image" content="https://repository-images.githubusercontent.com/383471193/0f79b949-9b91-4436-bfc4-05d30ef384cc" />
   
@@ -20,7 +20,7 @@
   <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Examples" href="../examples.html" /><link rel="prev" title="The pedalboard API" href="pedalboard.html" />
 
     <link rel="shortcut icon" href="../_static/favicon.ico"/><meta name="generator" content="sphinx-4.4.0, furo 2022.06.21"/>
-        <title>The pedalboard.io API - Pedalboard v0.5.10 Documentation</title>
+        <title>The pedalboard.io API - Pedalboard v0.6.0 Documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=40978830699223671f4072448e654b5958f38b89" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
@@ -138,7 +138,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">Pedalboard v0.5.10 Documentation</div></a>
+      <a href="../index.html"><div class="brand">Pedalboard v0.6.0 Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -164,7 +164,7 @@
     <img class="sidebar-logo" src="../_static/pedalboard_logo_small.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">Pedalboard v0.5.10 Documentation</span>
+  <span class="sidebar-brand-text">Pedalboard v0.6.0 Documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
@@ -218,7 +218,7 @@
         <article role="main">
           <section id="module-pedalboard.io">
 <span id="the-pedalboard-io-api"></span><h1>The <code class="docutils literal notranslate"><span class="pre">pedalboard.io</span></code> API<a class="headerlink" href="#module-pedalboard.io" title="Permalink to this headline">#</a></h1>
-<p>This module provides classes and functions for reading and writing audio files.</p>
+<p>This module provides classes and functions for reading and writing audio files or streams.</p>
 <p><em>Introduced in v0.5.1.</em></p>
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.io.AudioFile">
@@ -257,6 +257,11 @@ if using the <cite>io</cite> package).</p></li>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ogg_buffer</span><span class="p">:</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span> <span class="o">=</span> <span class="n">get_audio_buffer</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
 <span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="n">ogg_buffer</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
     <span class="n">first_ten_seconds</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">*</span> <span class="mi">10</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Opening an audio file on disk, while resampling on-the-fly:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;my_file.mp3&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">resampled_to</span><span class="p">(</span><span class="mi">22_050</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+   <span class="n">first_ten_seconds</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">*</span> <span class="mi">10</span><span class="p">))</span>
 </pre></div>
 </div>
 <p>Writing an audio file on disk:</p>
@@ -347,6 +352,13 @@ same arguments to <a class="reference internal" href="#pedalboard.io.AudioFile" 
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.resampled_to">
+<span class="sig-name descname"><span class="pre">resampled_to</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quality</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="pedalboard.html#pedalboard.Resample.Quality" title="pedalboard.Resample.Quality"><span class="pre">pedalboard.Resample.Quality</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">Quality.WindowedSinc</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><span class="pre">pedalboard.io.ResampledReadableAudioFile</span></a></span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.resampled_to" title="Permalink to this definition">#</a></dt>
+<dd><p>Return a <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a> that will automatically resample this <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> to the provided <cite>target_sample_rate</cite>, using a constant amount of memory.</p>
+<p><em>Introduced in v0.6.0.</em></p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.seek">
 <span class="sig-name descname"><span class="pre">seek</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.seek" title="Permalink to this definition">#</a></dt>
 <dd><p>Seek this file to the provided location in frames. Future reads will start from this position.</p>
@@ -407,6 +419,167 @@ same arguments to <a class="reference internal" href="#pedalboard.io.AudioFile" 
 <dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.samplerate">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">samplerate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.samplerate" title="Permalink to this definition">#</a></dt>
 <dd><p>The sample rate of this file in samples (per channel) per second (Hz).</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.io.</span></span><span class="sig-name descname"><span class="pre">ResampledReadableAudioFile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">audio_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><span class="pre">pedalboard.io.ReadableAudioFile</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resampling_quality</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="pedalboard.html#pedalboard.Resample.Quality" title="pedalboard.Resample.Quality"><span class="pre">pedalboard.Resample.Quality</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">Quality.WindowedSinc</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile" title="Permalink to this definition">#</a></dt>
+<dd><p>A class that wraps an audio file for reading, while resampling
+the audio stream on-the-fly to a new sample rate.</p>
+<p><em>Introduced in v0.6.0.</em></p>
+<p>Reading, seeking, and all other basic file I/O operations are supported (except for
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">read_raw()</span></code>).</p>
+<p><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a> should usually
+be used via the <code class="xref py py-meth docutils literal notranslate"><span class="pre">resampled_to()</span></code> method on <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;my_file.mp3&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">resampled_to</span><span class="p">(</span><span class="mi">22_050</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">samplerate</span> <span class="c1"># =&gt; 22050</span>
+    <span class="n">first_ten_seconds</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">*</span> <span class="mi">10</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Fractional (real-valued, non-integer) sample rates are supported.</p>
+<p>Under the hood, <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a> uses a stateful
+<a class="reference internal" href="#pedalboard.io.StreamResampler" title="pedalboard.io.StreamResampler"><code class="xref py py-class docutils literal notranslate"><span class="pre">StreamResampler</span></code></a> instance, which uses a constant amount of
+memory to resample potentially-unbounded streams of audio. The audio
+output by <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a> will always be identical
+to the result obtained by passing the entire audio file through a
+<a class="reference internal" href="#pedalboard.io.StreamResampler" title="pedalboard.io.StreamResampler"><code class="xref py py-class docutils literal notranslate"><span class="pre">StreamResampler</span></code></a>, with the added benefits of allowing chunked
+reads, seeking through files, and using a constant amount of memory.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.close" title="Permalink to this definition">#</a></dt>
+<dd><p>Close this file, rendering this object unusable. Note that the <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> instance that is wrapped by this object will not be closed, and will remain usable.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.read">
+<span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.read" title="Permalink to this definition">#</a></dt>
+<dd><p>Read the given number of frames (samples in each channel, at the target sample rate) from this audio file at its current position, automatically resampling on-the-fly to <code class="docutils literal notranslate"><span class="pre">target_sample_rate</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">num_frames</span></code> is a required argument, as audio files can be deceptively large. (Consider that an hour-long <code class="docutils literal notranslate"><span class="pre">.ogg</span></code> file may be only a handful of megabytes on disk, but may decompress to nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid hard-to-debug memory problems and out-of-memory crashes.</p>
+<p>Audio samples are returned as a multi-dimensional <code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.array</span></code> with the shape <code class="docutils literal notranslate"><span class="pre">(channels,</span> <span class="pre">samples)</span></code>; i.e.: a stereo audio file will have shape <code class="docutils literal notranslate"><span class="pre">(2,</span> <span class="pre">&lt;length&gt;)</span></code>. Returned data is always in the <code class="docutils literal notranslate"><span class="pre">float32</span></code> datatype.</p>
+<p>For most (but not all) audio files, the minimum possible sample value will be <code class="docutils literal notranslate"><span class="pre">-1.0f</span></code> and the maximum sample value will be <code class="docutils literal notranslate"><span class="pre">+1.0f</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.seek">
+<span class="sig-name descname"><span class="pre">seek</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.seek" title="Permalink to this definition">#</a></dt>
+<dd><p>Seek this file to the provided location in frames at the target sample rate. Future reads will start from this position.</p>
+<p>As of version 0.6.1, this method operates in linear time with respect to the seek length (i.e.: the file is seeked to the start and pushed through the resampler) to ensure that the resampled audio output is accurate. This may be optimized in a future version of Pedalboard.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.seekable">
+<span class="sig-name descname"><span class="pre">seekable</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.seekable" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns True if this file is currently open and calls to seek() will work.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.tell">
+<span class="sig-name descname"><span class="pre">tell</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.tell" title="Permalink to this definition">#</a></dt>
+<dd><p>Return the current position of the read pointer in this audio file, in frames at the target sample rate. This value will increase as <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.read" title="pedalboard.io.ResampledReadableAudioFile.read"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read()</span></code></a> is called, and may decrease if <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.seek" title="pedalboard.io.ResampledReadableAudioFile.seek"><code class="xref py py-meth docutils literal notranslate"><span class="pre">seek()</span></code></a> is called.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.closed">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">closed</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.closed" title="Permalink to this definition">#</a></dt>
+<dd><p>True iff either this file or its wrapped <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> instance are closed (and no longer usable), False otherwise.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.duration">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">duration</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.duration" title="Permalink to this definition">#</a></dt>
+<dd><p>The duration of this file in seconds (<code class="docutils literal notranslate"><span class="pre">frames</span></code> divided by <code class="docutils literal notranslate"><span class="pre">samplerate</span></code>).</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.file_dtype">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">file_dtype</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.file_dtype" title="Permalink to this definition">#</a></dt>
+<dd><p>The data type (<code class="docutils literal notranslate"><span class="pre">&quot;int16&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;float32&quot;</span></code>, etc) stored natively by this file.</p>
+<p>Note that <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.read" title="pedalboard.io.ResampledReadableAudioFile.read"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read()</span></code></a> will always return a <code class="docutils literal notranslate"><span class="pre">float32</span></code> array, regardless of the value of this property.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.frames">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">frames</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.frames" title="Permalink to this definition">#</a></dt>
+<dd><p>The total number of frames (samples per channel) in this file, at the target sample rate.</p>
+<p>For example, if this file contains 10 seconds of stereo audio at sample rate of 44,100 Hz, and <code class="docutils literal notranslate"><span class="pre">target_sample_rate</span></code> is 22,050 Hz, <code class="docutils literal notranslate"><span class="pre">frames</span></code> will return <code class="docutils literal notranslate"><span class="pre">22,050</span></code>.</p>
+<p>Note that different <code class="docutils literal notranslate"><span class="pre">resampling_quality</span></code> values used for resampling may cause <code class="docutils literal notranslate"><span class="pre">frames</span></code> to differ by ± 1 from its expected value.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.name" title="Permalink to this definition">#</a></dt>
+<dd><p>The name of this file.</p>
+<p>If the <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> wrapped by this <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a> was opened from a file-like object, this will be <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.num_channels">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_channels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.num_channels" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of channels in this file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.resampling_quality">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">resampling_quality</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="pedalboard.html#pedalboard.Resample.Quality" title="pedalboard.Resample.Quality"><span class="pre">pedalboard.Resample.Quality</span></a></em><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.resampling_quality" title="Permalink to this definition">#</a></dt>
+<dd><p>The resampling algorithm used to resample from the original file’s sample rate to the <code class="docutils literal notranslate"><span class="pre">target_sample_rate</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.samplerate">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">samplerate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.samplerate" title="Permalink to this definition">#</a></dt>
+<dd><p>The sample rate of this file in samples (per channel) per second (Hz). This will be equal to the <code class="docutils literal notranslate"><span class="pre">target_sample_rate</span></code> parameter passed when this object was created.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.io.</span></span><span class="sig-name descname"><span class="pre">StreamResampler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quality</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="pedalboard.html#pedalboard.Resample.Quality" title="pedalboard.Resample.Quality"><span class="pre">pedalboard.Resample.Quality</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">Quality.WindowedSinc</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.io.StreamResampler" title="Permalink to this definition">#</a></dt>
+<dd><p>A streaming resampler that can change the sample rate of multiple chunks of audio in series, while using constant memory.</p>
+<p>For a resampling plug-in that can be used in <code class="xref py py-class docutils literal notranslate"><span class="pre">Pedalboard</span></code> objects, see <a class="reference internal" href="pedalboard.html#pedalboard.Resample" title="pedalboard.Resample"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.Resample</span></code></a>.</p>
+<p><em>Introduced in v0.6.0.</em></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler.process">
+<span class="sig-name descname"><span class="pre">process</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.io.StreamResampler.process" title="Permalink to this definition">#</a></dt>
+<dd><p>Resample a 32-bit floating-point audio buffer. The returned buffer may be smaller than the provided buffer depending on the quality method used. Call <a class="reference internal" href="#pedalboard.io.StreamResampler.process" title="pedalboard.io.StreamResampler.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> without any arguments to flush the internal buffers and return all remaining audio.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler.reset">
+<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.io.StreamResampler.reset" title="Permalink to this definition">#</a></dt>
+<dd><p>Used to reset the internal state of this resampler. Call this method when resampling a new audio stream to prevent audio from leaking between streams.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler.input_latency">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">input_latency</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#pedalboard.io.StreamResampler.input_latency" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of samples (in the input sample rate) that must be supplied before this resampler will begin returning output.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler.num_channels">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_channels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#pedalboard.io.StreamResampler.num_channels" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of channels expected to be passed in every call to <a class="reference internal" href="#pedalboard.io.StreamResampler.process" title="pedalboard.io.StreamResampler.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler.quality">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">quality</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="pedalboard.html#pedalboard.Resample.Quality" title="pedalboard.Resample.Quality"><span class="pre">pedalboard.Resample.Quality</span></a></em><a class="headerlink" href="#pedalboard.io.StreamResampler.quality" title="Permalink to this definition">#</a></dt>
+<dd><p>The resampling algorithm used by this resampler.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler.source_sample_rate">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">source_sample_rate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#pedalboard.io.StreamResampler.source_sample_rate" title="Permalink to this definition">#</a></dt>
+<dd><p>The source sample rate of the input audio that this resampler expects to be passed to <a class="reference internal" href="#pedalboard.io.StreamResampler.process" title="pedalboard.io.StreamResampler.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler.target_sample_rate">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">target_sample_rate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#pedalboard.io.StreamResampler.target_sample_rate" title="Permalink to this definition">#</a></dt>
+<dd><p>The sample rate of the audio that this resampler will return from <a class="reference internal" href="#pedalboard.io.StreamResampler.process" title="pedalboard.io.StreamResampler.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a>.</p>
 </dd></dl>
 
 </dd></dl>

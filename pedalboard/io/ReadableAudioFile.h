@@ -198,7 +198,7 @@ public:
     }
   }
 
-  py::array_t<float> read(long long numSamples) {
+  py::array_t<float, py::array::c_style> read(long long numSamples) {
     if (numSamples == 0)
       throw std::domain_error(
           "ReadableAudioFile will not read an entire file at once, due to the "
@@ -509,6 +509,8 @@ Pedalboard.)
 )");
 }
 
+class ResampledReadableAudioFile;
+
 inline void init_readable_audio_file(
     py::module &m,
     py::class_<ReadableAudioFile, AudioFile, std::shared_ptr<ReadableAudioFile>>
@@ -642,7 +644,20 @@ inline void init_readable_audio_file(
           "natively by this file.\n\nNote that :meth:`read` will always "
           "return a ``float32`` array, regardless of the value of this "
           "property. Use :meth:`read_raw` to read data from the file in its "
-          "``file_dtype``.");
+          "``file_dtype``.")
+      .def(
+          "resampled_to",
+          [](std::shared_ptr<ReadableAudioFile> file, double targetSampleRate,
+             ResamplingQuality quality) {
+            return std::make_shared<ResampledReadableAudioFile>(
+                file, targetSampleRate, quality);
+          },
+          py::arg("target_sample_rate"),
+          py::arg("quality") = ResamplingQuality::WindowedSinc,
+          "Return a :class:`ResampledReadableAudioFile` that will "
+          "automatically resample this :class:`ReadableAudioFile` to the "
+          "provided `target_sample_rate`, using a constant amount of "
+          "memory.\n\n*Introduced in v0.6.0.*");
 
   m.def("get_supported_read_formats", []() {
     juce::AudioFormatManager manager;

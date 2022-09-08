@@ -10,7 +10,7 @@
   
 <meta property="og:url" content="https://spotify.github.io/pedalboard/examples.html" />
   
-<meta property="og:site_name" content="Pedalboard v0.5.10 Documentation" />
+<meta property="og:site_name" content="Pedalboard v0.6.0 Documentation" />
   
 <meta property="og:description" content="Quick start: Making a guitar-style pedalboard: Using VST3® or Audio Unit plugins: Creating parallel effects chains: This example creates a delayed pitch-shift effect by running multiple Pedalboards..." />
   
@@ -20,7 +20,7 @@
   <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Frequently Asked Questions" href="faq.html" /><link rel="prev" title="The pedalboard.io API" href="reference/pedalboard.io.html" />
 
     <link rel="shortcut icon" href="_static/favicon.ico"/><meta name="generator" content="sphinx-4.4.0, furo 2022.06.21"/>
-        <title>Examples - Pedalboard v0.5.10 Documentation</title>
+        <title>Examples - Pedalboard v0.6.0 Documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?digest=40978830699223671f4072448e654b5958f38b89" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css" />
@@ -138,7 +138,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">Pedalboard v0.5.10 Documentation</div></a>
+      <a href="index.html"><div class="brand">Pedalboard v0.6.0 Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -164,7 +164,7 @@
     <img class="sidebar-logo" src="_static/pedalboard_logo_small.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">Pedalboard v0.5.10 Documentation</span>
+  <span class="sidebar-brand-text">Pedalboard v0.6.0 Documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
@@ -224,7 +224,7 @@
 <span class="kn">from</span> <span class="nn">pedalboard.io</span> <span class="kn">import</span> <span class="n">AudioFile</span>
 
 <span class="c1"># Read in a whole audio file:</span>
-<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;some-file.wav&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;some-file.wav&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
   <span class="n">audio</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span>
   <span class="n">samplerate</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">samplerate</span>
 
@@ -246,9 +246,10 @@
 <span class="kn">from</span> <span class="nn">pedalboard</span> <span class="kn">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">pedalboard.io</span> <span class="kn">import</span> <span class="n">AudioFile</span>
 
-<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;guitar-input.wav&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="c1"># Read in a whole file, resampling to our desired sample rate:</span>
+<span class="n">samplerate</span> <span class="o">=</span> <span class="mf">44100.0</span>
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;guitar-input.wav&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">resampled_to</span><span class="p">(</span><span class="n">samplerate</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
   <span class="n">audio</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span>
-  <span class="n">samplerate</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">samplerate</span>
 
 <span class="c1"># Make a pretty interesting sounding guitar pedalboard:</span>
 <span class="n">board</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span>
