@@ -130,8 +130,14 @@ juce::AudioBuffer<T> copyPyArrayIntoJuceBuffer(
  */
 template <typename T>
 const juce::AudioBuffer<T> convertPyArrayIntoJuceBuffer(
-    const py::array_t<T, py::array::c_style> &inputArray) {
-  ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
+    const py::array_t<T, py::array::c_style> &inputArray,
+    std::optional<ChannelLayout> providedLayout = {}) {
+  ChannelLayout inputChannelLayout;
+  if (providedLayout) {
+    inputChannelLayout = *providedLayout;
+  } else {
+    inputChannelLayout = detectChannelLayout(inputArray);
+  }
 
   switch (inputChannelLayout) {
   case ChannelLayout::Interleaved:
@@ -147,14 +153,16 @@ const juce::AudioBuffer<T> convertPyArrayIntoJuceBuffer(
       numSamples = inputInfo.shape[0];
       numChannels = 1;
     } else if (inputInfo.ndim == 2) {
-      // Try to auto-detect the channel layout from the shape
-      if (inputInfo.shape[1] < inputInfo.shape[0]) {
-        numSamples = inputInfo.shape[0];
-        numChannels = inputInfo.shape[1];
-      } else if (inputInfo.shape[0] < inputInfo.shape[1]) {
+      switch (inputChannelLayout) {
+      case ChannelLayout::NotInterleaved:
         numSamples = inputInfo.shape[1];
         numChannels = inputInfo.shape[0];
-      } else {
+        break;
+      case ChannelLayout::Interleaved:
+        numSamples = inputInfo.shape[0];
+        numChannels = inputInfo.shape[1];
+        break;
+      default:
         throw std::runtime_error("Unable to determine shape of audio input!");
       }
     } else {

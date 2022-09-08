@@ -36,6 +36,22 @@ def expected_output(
 QUALITIES = [v[0] for v in Resample.Quality.__entries.values()]
 
 
+def test_read_resampled_constructor():
+    sine_wave = generate_sine_at(44100, 440, num_seconds=1, num_channels=1).astype(np.float32)
+
+    read_buffer = BytesIO()
+    read_buffer.name = "test.wav"
+    with AudioFile(read_buffer, "w", 44100, 1, bit_depth=32) as f:
+        f.write(sine_wave)
+
+    with AudioFile(BytesIO(read_buffer.getvalue())) as f:
+        with f.resampled_to(22050) as r:
+            assert isinstance(r, ResampledReadableAudioFile)
+        assert r.closed
+        assert not f.closed
+    assert f.closed
+
+
 @pytest.mark.parametrize("fundamental_hz", [440])
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [123.45, 8000, 11025, 12345.67, 22050, 44100, 48000])
@@ -61,12 +77,7 @@ def test_read_resampled(
         f.write(sine_wave)
 
     with AudioFile(BytesIO(read_buffer.getvalue())).resampled_to(target_sample_rate, quality) as f:
-        assert f.frames == expected_sine_wave.shape[-1], (
-            f"Expected {expected_sine_wave.shape[-1]:,} frames, but found"
-            f" {f.frames:,} ({f.duration:.2f} seconds at {f.samplerate} Hz)"
-        )
         actual = f.read(f.frames)
-        assert actual.shape[1] == f.frames
         np.testing.assert_allclose(expected_sine_wave, actual)
 
 
@@ -85,7 +96,7 @@ def test_tell_resampled(sample_rate: float, target_sample_rate: float, chunk_siz
     with AudioFile(BytesIO(read_buffer.getvalue())).resampled_to(target_sample_rate, quality) as f:
         for i in range(0, f.frames, chunk_size):
             assert f.tell() == i
-            if f.read(chunk_size).shape[1] < chunk_size:
+            if f.read(chunk_size).shape[-1] < chunk_size:
                 break
 
 
@@ -110,9 +121,13 @@ def test_seek_resampled(sample_rate: float, target_sample_rate: float, quality):
 
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67, 22050, 44100, 48000])
+@pytest.mark.parametrize("chunk_size", [1, 4, 5, 10, 100])
 @pytest.mark.parametrize("quality", QUALITIES)
-def test_read_size_resampled(sample_rate: float, target_sample_rate: float, quality):
+def test_read_resampled_in_chunks(
+    sample_rate: float, target_sample_rate: float, chunk_size: int, quality
+):
     signal = np.linspace(1, sample_rate, sample_rate).astype(np.float32)
+    expected_signal = expected_output(signal, sample_rate, target_sample_rate, 1, quality)
 
     read_buffer = BytesIO()
     read_buffer.name = "test.wav"
@@ -120,15 +135,35 @@ def test_read_size_resampled(sample_rate: float, target_sample_rate: float, qual
         f.write(signal)
 
     with AudioFile(BytesIO(read_buffer.getvalue())).resampled_to(target_sample_rate, quality) as f:
-        chunk_size = 40
         samples_received = 0
-        while f.tell() < f.frames:
-            expected = min(chunk_size, f.frames - f.tell())
+        while f.tell() < expected_signal.shape[-1]:
+            expected_num_frames = min(chunk_size, expected_signal.shape[-1] - f.tell())
             pos = f.tell()
             output = f.read(chunk_size)
-            output_size = output.shape[1]
-            samples_received += output_size
-            assert output_size >= expected, (
-                f"Read of {expected:,} samples from {pos:,} (of {f.frames:,}) returned"
-                f" {output_size:,}. In total, received {samples_received:,} samples."
+            output_size = output.shape[-1]
+            assert output_size == expected_num_frames
+
+            np.testing.assert_allclose(
+                expected_signal[:, samples_received : samples_received + output_size],
+                output,
+                err_msg=f"Output mismatch from {pos:,} to {f.tell():,} of {f.frames:,} samples.",
             )
+
+            samples_received += output_size
+        assert samples_received == f.tell()
+
+
+@pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])
+@pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67, 22050, 44100, 48000])
+@pytest.mark.parametrize("quality", QUALITIES)
+def test_frame_count(sample_rate: float, target_sample_rate: float, quality):
+    signal = np.linspace(1, sample_rate, sample_rate).astype(np.float32)
+    expected_signal = expected_output(signal, sample_rate, target_sample_rate, 1, quality)
+
+    read_buffer = BytesIO()
+    read_buffer.name = "test.wav"
+    with AudioFile(read_buffer, "w", sample_rate, 1, bit_depth=32) as f:
+        f.write(signal)
+
+    with AudioFile(BytesIO(read_buffer.getvalue())).resampled_to(target_sample_rate, quality) as f:
+        assert f.frames == expected_signal.shape[-1]

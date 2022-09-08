@@ -14,6 +14,7 @@ _Shape = typing.Tuple[int, ...]
 __all__ = [
     "AudioFile",
     "ReadableAudioFile",
+    "ResampledReadableAudioFile",
     "StreamResampler",
     "WriteableAudioFile",
     "get_supported_read_formats",
@@ -198,6 +199,14 @@ class ReadableAudioFile(AudioFile):
 
         Audio samples are returned as a multi-dimensional :class:`numpy.array` with the shape ``(channels, samples)``; i.e.: a stereo audio file will have shape ``(2, <length>)``. Returned data is in the raw format stored by the underlying file (one of ``int8``, ``int16``, ``int32``, or ``float32``).
         """
+    def resampled_to(
+        self,
+        target_sample_rate: float,
+        quality: pedalboard.Resample.Quality = pedalboard.Resample.Quality.WindowedSinc,
+    ) -> ResampledReadableAudioFile:
+        """
+        Return a :class:`ResampledReadableAudioFile` that will automatically resample this :class:`ReadableAudioFile` to the provided `target_sample_rate`, using a constant amount of memory.
+        """
     def seek(self, position: int) -> None:
         """
         Seek this file to the provided location in frames. Future reads will start from this position.
@@ -248,6 +257,117 @@ class ReadableAudioFile(AudioFile):
         The name of this file.
 
         If this :class:`ReadableAudioFile` was opened from a file-like object, this will be ``None``.
+
+
+        """
+    @property
+    def num_channels(self) -> int:
+        """
+        The number of channels in this file.
+
+
+        """
+    @property
+    def samplerate(self) -> float:
+        """
+        The sample rate of this file in samples (per channel) per second (Hz).
+
+
+        """
+    pass
+
+class ResampledReadableAudioFile(AudioFile):
+    """
+    A class that wraps an audio file for reading, while resampling
+    the audio stream to a new sample rate.
+    """
+
+    def __enter__(self) -> ResampledReadableAudioFile:
+        """
+        Use this :class:`ResampledReadableAudioFile` as a context manager, automatically closing the file and releasing resources when the context manager exits.
+        """
+    def __exit__(self, arg0: object, arg1: object, arg2: object) -> None:
+        """
+        Stop using this :class:`ResampledReadableAudioFile` as a context manager, close the file, release its resources.
+        """
+    def __init__(
+        self,
+        audio_file: ReadableAudioFile,
+        target_sample_rate: float,
+        quality: pedalboard.Resample.Quality,
+    ) -> None: ...
+    @staticmethod
+    def __new__(
+        cls: object,
+        audio_file: ReadableAudioFile,
+        target_sample_rate: float,
+        quality: pedalboard.Resample.Quality,
+    ) -> ResampledReadableAudioFile: ...
+    def __repr__(self) -> str: ...
+    def close(self) -> None:
+        """
+        Close this file, rendering this object unusable.
+        """
+    def read(self, num_frames: int = 0) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+        """
+        Read the given number of frames (samples in each channel) from this audio file at its current position.
+
+        ``num_frames`` is a required argument, as audio files can be deceptively large. (Consider that an hour-long ``.ogg`` file may be only a handful of megabytes on disk, but may decompress to nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid hard-to-debug memory problems and out-of-memory crashes.
+
+        Audio samples are returned as a multi-dimensional :class:`numpy.array` with the shape ``(channels, samples)``; i.e.: a stereo audio file will have shape ``(2, <length>)``. Returned data is always in the ``float32`` datatype.
+
+        For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the maximum sample value will be ``+1.0f``.
+        """
+    def seek(self, position: int) -> None:
+        """
+        Seek this file to the provided location in frames. Future reads will start from this position.
+        """
+    def seekable(self) -> bool:
+        """
+        Returns True if this file is currently open and calls to seek() will work.
+        """
+    def tell(self) -> int:
+        """
+        Return the current position of the read pointer in this audio file, in frames. This value will increase as :meth:`read` is called, and may decrease if :meth:`seek` is called.
+        """
+    @property
+    def closed(self) -> bool:
+        """
+        True iff this file is closed (and no longer usable), False otherwise.
+
+
+        """
+    @property
+    def duration(self) -> float:
+        """
+        The duration of this file in seconds (``frames`` divided by ``samplerate``).
+
+
+        """
+    @property
+    def file_dtype(self) -> str:
+        """
+        The data type (``"int16"``, ``"float32"``, etc) stored natively by this file.
+
+        Note that :meth:`read` will always return a ``float32`` array, regardless of the value of this property.
+
+
+        """
+    @property
+    def frames(self) -> int:
+        """
+        The total number of frames (samples per channel) in this file.
+
+        For example, if this file contains 10 seconds of stereo audio at sample rate of 44,100 Hz, ``frames`` will return ``441,000``.
+
+
+        """
+    @property
+    def name(self) -> typing.Optional[str]:
+        """
+        The name of this file.
+
+        If this :class:`ResampledReadableAudioFile` was opened from a file-like object, this will be ``None``.
 
 
         """

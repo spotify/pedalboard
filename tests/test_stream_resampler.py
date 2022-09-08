@@ -33,7 +33,7 @@ TOLERANCE_PER_QUALITY = {
 @pytest.mark.parametrize("fundamental_hz", [440])
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67, 22050, 44100, 48000])
-@pytest.mark.parametrize("buffer_size", [256, 8192, 1_000_000])
+@pytest.mark.parametrize("buffer_size", [4, 256, 8192, 1_000_000])
 @pytest.mark.parametrize("num_channels", [1, 2])
 @pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
 def test_stream_resample(
@@ -142,21 +142,62 @@ def test_input_latency(sample_rate: float, target_sample_rate: float, quality: R
     assert outputs[1].shape[1] <= np.ceil(
         (resampler.input_latency / sample_rate) * target_sample_rate
     )
-    assert outputs[2].shape[1] == 0
 
 
 @pytest.mark.parametrize("sample_rate", [123.45, 8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [123.45, 8000, 11025, 12345.67, 22050, 44100, 48000])
 @pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
-def test_returned_sample_count(
-    sample_rate: float, target_sample_rate: float, quality
-) -> np.ndarray:
-    input_signal = np.linspace(0, sample_rate, int(sample_rate), dtype=np.float32)
+def test_flush(sample_rate: float, target_sample_rate: float, quality: Resample.Quality):
     resampler = StreamResampler(sample_rate, target_sample_rate, 1, quality)
-    outputs = [resampler.process(input_signal), resampler.process(None)]
+    _input = np.random.rand(int(sample_rate)).astype(np.float32)
+    # Accept input...
+    first_output = resampler.process(_input)
+    # ...then flush the resampler:
+    resampler.process()
+    # ...then make sure that nothing else comes out after a second flush:
+    assert resampler.process().shape[-1] == 0
+    # Then allow more input to be processed:
+    second_output = resampler.process(_input)
+
+    np.testing.assert_allclose(first_output, second_output)
+
+
+@pytest.mark.parametrize("sample_rate", [123.45, 8000, 11025, 22050, 44100, 48000])
+@pytest.mark.parametrize("target_sample_rate", [123.45, 8000, 11025, 12345.67, 22050, 44100, 48000])
+@pytest.mark.parametrize("chunk_size", [1, 4, 256, 8192, 1_000_000])
+@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+def test_returned_sample_count(
+    sample_rate: float, target_sample_rate: float, chunk_size: int, quality
+) -> np.ndarray:
+    input_signal = np.linspace(0, sample_rate, 3, dtype=np.float32)
+    resampler = StreamResampler(sample_rate, target_sample_rate, 1, quality)
+
+    print("input", input_signal)
+    expected_output = np.concatenate(
+        [resampler.process(input_signal), resampler.process(None)], axis=-1
+    )
+    # expected_num_samples = int(target_sample_rate * (input_signal.shape[-1] / sample_rate))
+    # print("expected_output", expected_output)
+    # assert expected_output.shape[1] == expected_num_samples, (
+    #     f"{expected_output.shape[1]:,} samples were output by resampler when processed all at once"
+    #     f" when {expected_num_samples:,} were expected."
+    # )
+
+    resampler.reset()
+    outputs = []
+    for i in range(0, input_signal.shape[-1], chunk_size):
+        outputs.append(resampler.process(input_signal[..., i : i + chunk_size]))
+    outputs.append(resampler.process(None))
+
     output = np.concatenate(outputs, axis=1)
-    expected_num_samples = int(target_sample_rate * (input_signal.shape[-1] / sample_rate))
-    assert output.shape[1] == expected_num_samples, (
+
+    for i, (e, a) in enumerate(zip(expected_output[0], output[0])):
+        assert e == a, (
+            f"First mismatch at index {i}:\nExpected: [..., {expected_output[0][i - 2: i + 2]},"
+            f" ...]\nActual:   [..., {output[0][i - 2: i + 2]}, ...]"
+        )
+
+    assert output.shape[1] == expected_output.shape[1], (
         f"{output.shape[1]:,} samples were output by resampler (in chunks:"
-        f" {[o.shape[1] for o in outputs]}) when {expected_num_samples:,} were expected."
+        f" {[o.shape[1] for o in outputs]}) when {expected_output.shape[1]:,} were expected."
     )

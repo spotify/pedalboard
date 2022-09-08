@@ -60,33 +60,25 @@ public:
     bool isFlushing = false;
     int numNewInputSamples = 0;
 
-    double expectedResampledSamples = maxSamplesToReturn;
     if (_input) {
       input = prependWith(*_input, overflowSamples);
       numNewInputSamples = input.getNumSamples();
-      expectedResampledSamples = std::min(
-          ((double)input.getNumSamples() / sourceSampleRate) * targetSampleRate,
-          expectedResampledSamples);
     } else {
       isFlushing = true;
-      int samplesToFlush = inputSamplesBufferedInResampler;
-      expectedResampledSamples = std::min(
-          ((double)samplesToFlush / sourceSampleRate) * targetSampleRate,
-          expectedResampledSamples);
-
-      // Apply this remainder to account for rounding:
-      if (outputSamplesToSkip < 0) {
-        expectedResampledSamples -= outputSamplesToSkip;
-      }
+      int samplesToFlush = inputLatency;
 
       input = juce::AudioBuffer<float>(numChannels, samplesToFlush);
-      inputSamplesBufferedInResampler -= samplesToFlush;
+      inputSamplesBufferedInResampler = 0;
       input.clear();
       input = prependWith(input, overflowSamples);
     }
 
-    // TODO: Don't copy the entire input buffer multiple times here!
+    double expectedResampledSamples =
+        std::max(0.0, ((totalSamplesInput + input.getNumSamples()) *
+                       targetSampleRate / sourceSampleRate) -
+                          totalSamplesOutput);
 
+    // TODO: Don't copy the entire input buffer multiple times here!
     juce::AudioBuffer<SampleType> output(input.getNumChannels(),
                                          (int)expectedResampledSamples);
 
@@ -95,6 +87,13 @@ public:
         long long inputSamplesConsumed = resamplers[c].process(
             resamplerRatio, input.getReadPointer(c), output.getWritePointer(c),
             (int)expectedResampledSamples);
+
+        if (c == 0) {
+          if (!isFlushing) {
+            totalSamplesInput += inputSamplesConsumed;
+          }
+          totalSamplesOutput += (int)expectedResampledSamples;
+        }
 
         if (!isFlushing) {
           for (int i = inputSamplesConsumed; i < input.getNumSamples(); i++) {
@@ -112,13 +111,17 @@ public:
 
     // Chop off the first _n_ samples if necessary:
     if (outputSamplesToSkip > 0) {
-      long long intOutputSamplesToSkip = std::round(outputSamplesToSkip);
+      long long intOutputSamplesToSkip = (int)std::round(outputSamplesToSkip);
       if (intOutputSamplesToSkip) {
-        outputSamplesToSkip -= intOutputSamplesToSkip;
+        outputSamplesToSkip -=
+            std::min(intOutputSamplesToSkip, (long long)output.getNumSamples());
 
         int newNumOutputSamples =
             output.getNumSamples() - intOutputSamplesToSkip;
         if (newNumOutputSamples <= 0) {
+          if (isFlushing) {
+            reset_unlocked();
+          }
           return juce::AudioBuffer<SampleType>(input.getNumChannels(), 0);
         }
 
@@ -129,8 +132,15 @@ public:
                                  newNumOutputSamples);
         }
 
+        if (isFlushing) {
+          reset_unlocked();
+        }
         return choppedOutput;
       }
+    }
+
+    if (isFlushing) {
+      reset_unlocked();
     }
 
     return output;
@@ -138,7 +148,10 @@ public:
 
   void reset() {
     std::scoped_lock lock(mutex);
+    reset_unlocked();
+  }
 
+  void reset_unlocked() {
     for (auto &r : resamplers) {
       r.reset();
     }
@@ -148,6 +161,9 @@ public:
     for (auto &overflowBuffer : overflowSamples) {
       overflowBuffer.clear();
     }
+
+    totalSamplesInput = 0;
+    totalSamplesOutput = 0;
   }
 
   int getNumChannels() const { return numChannels; }
@@ -200,7 +216,9 @@ public:
 
   void setLastChannelLayout(ChannelLayout last) { lastChannelLayout = last; }
 
-  ChannelLayout getLastChannelLayout() const { return lastChannelLayout; }
+  std::optional<ChannelLayout> getLastChannelLayout() const {
+    return lastChannelLayout;
+  }
 
 private:
   juce::AudioBuffer<SampleType>
@@ -232,6 +250,10 @@ private:
   std::vector<std::vector<SampleType>> overflowSamples;
   double inputLatency = 0;
   double outputLatency = 0;
+
+  long long totalSamplesInput = 0;
+  long long totalSamplesOutput = 0;
+
   int inputSamplesBufferedInResampler = 0;
   int numChannels = 1;
   double outputSamplesToSkip = 0.0;
@@ -240,7 +262,7 @@ private:
   // thread-safe.
   std::mutex mutex;
 
-  ChannelLayout lastChannelLayout = ChannelLayout::NotInterleaved;
+  std::optional<ChannelLayout> lastChannelLayout = {};
 };
 
 inline void init_stream_resampler(py::module &m) {
@@ -307,8 +329,17 @@ inline void init_stream_resampler(py::module &m) {
          std::optional<py::array_t<float, py::array::c_style>> input) {
         std::optional<juce::AudioBuffer<float>> inputBuffer;
         if (input) {
-          resampler.setLastChannelLayout(detectChannelLayout(*input));
-          inputBuffer = convertPyArrayIntoJuceBuffer(*input);
+          std::optional<ChannelLayout> layout =
+              resampler.getLastChannelLayout();
+          if (!layout) {
+            try {
+              layout = detectChannelLayout(*input);
+              resampler.setLastChannelLayout(*layout);
+            } catch (...) {
+              // Use the last cached layout.
+            }
+          }
+          inputBuffer = convertPyArrayIntoJuceBuffer(*input, *layout);
         }
 
         juce::AudioBuffer<float> output;
@@ -318,7 +349,7 @@ inline void init_stream_resampler(py::module &m) {
         }
 
         return copyJuceBufferIntoPyArray(output,
-                                         resampler.getLastChannelLayout(), 0);
+                                         *resampler.getLastChannelLayout(), 0);
       },
       py::arg("input") = py::none(),
       "Resample a 32-bit floating-point audio buffer. The returned buffer may "
