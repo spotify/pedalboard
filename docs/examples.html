@@ -1,8 +1,8 @@
 <!doctype html>
-<html class="no-js" lang="en">
+<html class="no-js">
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
 <meta property="og:title" content="Examples" />
   
@@ -19,7 +19,7 @@
 <meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
   <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Frequently Asked Questions" href="faq.html" /><link rel="prev" title="The pedalboard.io API" href="reference/pedalboard.io.html" />
 
-    <link rel="shortcut icon" href="_static/favicon.ico"/><meta name="generator" content="sphinx-5.1.1, furo 2022.06.21"/>
+    <link rel="shortcut icon" href="_static/favicon.ico"/><meta name="generator" content="sphinx-4.4.0, furo 2022.06.21"/>
         <title>Examples - Pedalboard v0.6.0 Documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?digest=40978830699223671f4072448e654b5958f38b89" />
@@ -217,14 +217,14 @@
         </div>
         <article role="main">
           <section id="examples">
-<h1>Examples<a class="headerlink" href="#examples" title="Permalink to this heading">#</a></h1>
+<h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">#</a></h1>
 <section id="quick-start">
-<h2>Quick start<a class="headerlink" href="#quick-start" title="Permalink to this heading">#</a></h2>
+<h2>Quick start<a class="headerlink" href="#quick-start" title="Permalink to this headline">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pedalboard</span> <span class="kn">import</span> <span class="n">Pedalboard</span><span class="p">,</span> <span class="n">Chorus</span><span class="p">,</span> <span class="n">Reverb</span>
 <span class="kn">from</span> <span class="nn">pedalboard.io</span> <span class="kn">import</span> <span class="n">AudioFile</span>
 
 <span class="c1"># Read in a whole audio file:</span>
-<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;some-file.wav&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;some-file.wav&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
   <span class="n">audio</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span>
   <span class="n">samplerate</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">samplerate</span>
 
@@ -241,14 +241,15 @@
 </div>
 </section>
 <section id="making-a-guitar-style-pedalboard">
-<h2>Making a guitar-style pedalboard<a class="headerlink" href="#making-a-guitar-style-pedalboard" title="Permalink to this heading">#</a></h2>
+<h2>Making a guitar-style pedalboard<a class="headerlink" href="#making-a-guitar-style-pedalboard" title="Permalink to this headline">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Don&#39;t do import *! (It just makes this example smaller)</span>
 <span class="kn">from</span> <span class="nn">pedalboard</span> <span class="kn">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">pedalboard.io</span> <span class="kn">import</span> <span class="n">AudioFile</span>
 
-<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;guitar-input.wav&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="c1"># Read in a whole file, resampling to our desired sample rate:</span>
+<span class="n">samplerate</span> <span class="o">=</span> <span class="mf">44100.0</span>
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;guitar-input.wav&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">resampled_to</span><span class="p">(</span><span class="n">samplerate</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
   <span class="n">audio</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span>
-  <span class="n">samplerate</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">samplerate</span>
 
 <span class="c1"># Make a pretty interesting sounding guitar pedalboard:</span>
 <span class="n">board</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span>
@@ -279,7 +280,7 @@
 </div>
 </section>
 <section id="using-vst3-or-audio-unit-plugins">
-<h2>Using VST3® or Audio Unit plugins<a class="headerlink" href="#using-vst3-or-audio-unit-plugins" title="Permalink to this heading">#</a></h2>
+<h2>Using VST3® or Audio Unit plugins<a class="headerlink" href="#using-vst3-or-audio-unit-plugins" title="Permalink to this headline">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pedalboard</span> <span class="kn">import</span> <span class="n">Pedalboard</span><span class="p">,</span> <span class="n">Reverb</span><span class="p">,</span> <span class="n">load_plugin</span>
 <span class="kn">from</span> <span class="nn">pedalboard.io</span> <span class="kn">import</span> <span class="n">AudioFile</span>
 
@@ -311,7 +312,7 @@
 </div>
 </section>
 <section id="creating-parallel-effects-chains">
-<h2>Creating parallel effects chains<a class="headerlink" href="#creating-parallel-effects-chains" title="Permalink to this heading">#</a></h2>
+<h2>Creating parallel effects chains<a class="headerlink" href="#creating-parallel-effects-chains" title="Permalink to this headline">#</a></h2>
 <p>This example creates a delayed pitch-shift effect by running
 multiple Pedalboards in parallel on the same audio. <code class="docutils literal notranslate"><span class="pre">Pedalboard</span></code>
 objects are themselves <code class="docutils literal notranslate"><span class="pre">Plugin</span></code> objects, so you can nest them
@@ -437,7 +438,6 @@ as much as you like:</p>
 </div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
-    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <script src="_static/scripts/furo.js"></script>
     <script src="_static/clipboard.min.js"></script>

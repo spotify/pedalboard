@@ -57,6 +57,12 @@ class AudioFile:
            first_ten_seconds = f.read(int(f.samplerate * 10))
 
 
+    Opening an audio file on disk, while resampling on-the-fly::
+
+        with AudioFile("my_file.mp3").resampled_to(22_050) as f:
+           first_ten_seconds = f.read(int(f.samplerate * 10))
+
+
     Writing an audio file on disk::
 
        with AudioFile("white_noise.wav", "w", samplerate=44100, num_channels=2) as f:
@@ -206,6 +212,8 @@ class ReadableAudioFile(AudioFile):
     ) -> ResampledReadableAudioFile:
         """
         Return a :class:`ResampledReadableAudioFile` that will automatically resample this :class:`ReadableAudioFile` to the provided `target_sample_rate`, using a constant amount of memory.
+
+        *Introduced in v0.6.0.*
         """
     def seek(self, position: int) -> None:
         """
@@ -279,7 +287,31 @@ class ReadableAudioFile(AudioFile):
 class ResampledReadableAudioFile(AudioFile):
     """
     A class that wraps an audio file for reading, while resampling
-    the audio stream to a new sample rate.
+    the audio stream on-the-fly to a new sample rate.
+
+    *Introduced in v0.6.0.*
+
+    Reading, seeking, and all other basic file I/O operations are supported (except for
+    :meth:`read_raw`).
+
+    :class:`ResampledReadableAudioFile` should usually
+    be used via the :meth:`resampled_to` method on :class:`ReadableAudioFile`:
+
+    ::
+
+       with AudioFile("my_file.mp3").resampled_to(22_050) as f:
+           f.samplerate # => 22050
+           first_ten_seconds = f.read(int(f.samplerate * 10))
+
+    Fractional (real-valued, non-integer) sample rates are supported.
+
+    Under the hood, :class:`ResampledReadableAudioFile` uses a stateful
+    :class:`StreamResampler` instance, which uses a constant amount of
+    memory to resample potentially-unbounded streams of audio. The audio
+    output by :class:`ResampledReadableAudioFile` will always be identical
+    to the result obtained by passing the entire audio file through a
+    :class:`StreamResampler`, with the added benefits of allowing chunked
+    reads, seeking through files, and using a constant amount of memory.
     """
 
     def __enter__(self) -> ResampledReadableAudioFile:
@@ -294,23 +326,23 @@ class ResampledReadableAudioFile(AudioFile):
         self,
         audio_file: ReadableAudioFile,
         target_sample_rate: float,
-        quality: pedalboard.Resample.Quality,
+        resampling_quality: pedalboard.Resample.Quality = pedalboard.Resample.Quality.WindowedSinc,
     ) -> None: ...
     @staticmethod
     def __new__(
         cls: object,
         audio_file: ReadableAudioFile,
         target_sample_rate: float,
-        quality: pedalboard.Resample.Quality,
+        resampling_quality: pedalboard.Resample.Quality = pedalboard.Resample.Quality.WindowedSinc,
     ) -> ResampledReadableAudioFile: ...
     def __repr__(self) -> str: ...
     def close(self) -> None:
         """
-        Close this file, rendering this object unusable.
+        Close this file, rendering this object unusable. Note that the :class:`ReadableAudioFile` instance that is wrapped by this object will not be closed, and will remain usable.
         """
     def read(self, num_frames: int = 0) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
         """
-        Read the given number of frames (samples in each channel) from this audio file at its current position.
+        Read the given number of frames (samples in each channel, at the target sample rate) from this audio file at its current position, automatically resampling on-the-fly to ``target_sample_rate``.
 
         ``num_frames`` is a required argument, as audio files can be deceptively large. (Consider that an hour-long ``.ogg`` file may be only a handful of megabytes on disk, but may decompress to nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid hard-to-debug memory problems and out-of-memory crashes.
 
@@ -320,7 +352,9 @@ class ResampledReadableAudioFile(AudioFile):
         """
     def seek(self, position: int) -> None:
         """
-        Seek this file to the provided location in frames. Future reads will start from this position.
+        Seek this file to the provided location in frames at the target sample rate. Future reads will start from this position.
+
+        As of version 0.6.1, this method operates in linear time with respect to the seek length (i.e.: the file is seeked to the start and pushed through the resampler) to ensure that the resampled audio output is accurate. This may be optimized in a future version of Pedalboard.
         """
     def seekable(self) -> bool:
         """
@@ -328,12 +362,12 @@ class ResampledReadableAudioFile(AudioFile):
         """
     def tell(self) -> int:
         """
-        Return the current position of the read pointer in this audio file, in frames. This value will increase as :meth:`read` is called, and may decrease if :meth:`seek` is called.
+        Return the current position of the read pointer in this audio file, in frames at the target sample rate. This value will increase as :meth:`read` is called, and may decrease if :meth:`seek` is called.
         """
     @property
     def closed(self) -> bool:
         """
-        True iff this file is closed (and no longer usable), False otherwise.
+        True iff either this file or its wrapped :class:`ReadableAudioFile` instance are closed (and no longer usable), False otherwise.
 
 
         """
@@ -356,9 +390,11 @@ class ResampledReadableAudioFile(AudioFile):
     @property
     def frames(self) -> int:
         """
-        The total number of frames (samples per channel) in this file.
+        The total number of frames (samples per channel) in this file, at the target sample rate.
 
-        For example, if this file contains 10 seconds of stereo audio at sample rate of 44,100 Hz, ``frames`` will return ``441,000``.
+        For example, if this file contains 10 seconds of stereo audio at sample rate of 44,100 Hz, and ``target_sample_rate`` is 22,050 Hz, ``frames`` will return ``22,050``.
+
+        Note that different ``resampling_quality`` values used for resampling may cause ``frames`` to differ by ± 1 from its expected value.
 
 
         """
@@ -367,7 +403,7 @@ class ResampledReadableAudioFile(AudioFile):
         """
         The name of this file.
 
-        If this :class:`ResampledReadableAudioFile` was opened from a file-like object, this will be ``None``.
+        If the :class:`ReadableAudioFile` wrapped by this :class:`ResampledReadableAudioFile` was opened from a file-like object, this will be ``None``.
 
 
         """
@@ -379,9 +415,16 @@ class ResampledReadableAudioFile(AudioFile):
 
         """
     @property
+    def resampling_quality(self) -> pedalboard.Resample.Quality:
+        """
+        The resampling algorithm used to resample from the original file's sample rate to the ``target_sample_rate``.
+
+
+        """
+    @property
     def samplerate(self) -> float:
         """
-        The sample rate of this file in samples (per channel) per second (Hz).
+        The sample rate of this file in samples (per channel) per second (Hz). This will be equal to the ``target_sample_rate`` parameter passed when this object was created.
 
 
         """

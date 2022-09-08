@@ -656,7 +656,8 @@ inline void init_readable_audio_file(
           py::arg("quality") = ResamplingQuality::WindowedSinc,
           "Return a :class:`ResampledReadableAudioFile` that will "
           "automatically resample this :class:`ReadableAudioFile` to the "
-          "provided `target_sample_rate`, using a constant amount of memory.");
+          "provided `target_sample_rate`, using a constant amount of "
+          "memory.\n\n*Introduced in v0.6.0.*");
 
   m.def("get_supported_read_formats", []() {
     juce::AudioFormatManager manager;

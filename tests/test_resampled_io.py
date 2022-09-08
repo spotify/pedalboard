@@ -52,6 +52,19 @@ def test_read_resampled_constructor():
     assert f.closed
 
 
+def test_read_zero():
+    sine_wave = generate_sine_at(44100, 440, num_seconds=1, num_channels=1).astype(np.float32)
+
+    read_buffer = BytesIO()
+    read_buffer.name = "test.wav"
+    with AudioFile(read_buffer, "w", 44100, 1, bit_depth=32) as f:
+        f.write(sine_wave)
+
+    with AudioFile(BytesIO(read_buffer.getvalue())).resampled_to(22050) as f:
+        with pytest.raises(ValueError):
+            f.read()
+
+
 @pytest.mark.parametrize("fundamental_hz", [440])
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [123.45, 8000, 11025, 12345.67, 22050, 44100, 48000])

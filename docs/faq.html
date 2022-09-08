@@ -1,8 +1,8 @@
 <!doctype html>
-<html class="no-js" lang="en">
+<html class="no-js">
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
 <meta property="og:title" content="Frequently Asked Questions" />
   
@@ -19,7 +19,7 @@
 <meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
   <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Plugin Compatibility" href="compatibility.html" /><link rel="prev" title="Examples" href="examples.html" />
 
-    <link rel="shortcut icon" href="_static/favicon.ico"/><meta name="generator" content="sphinx-5.1.1, furo 2022.06.21"/>
+    <link rel="shortcut icon" href="_static/favicon.ico"/><meta name="generator" content="sphinx-4.4.0, furo 2022.06.21"/>
         <title>Frequently Asked Questions - Pedalboard v0.6.0 Documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?digest=40978830699223671f4072448e654b5958f38b89" />
@@ -217,9 +217,9 @@
         </div>
         <article role="main">
           <section id="frequently-asked-questions">
-<h1>Frequently Asked Questions<a class="headerlink" href="#frequently-asked-questions" title="Permalink to this heading">#</a></h1>
+<h1>Frequently Asked Questions<a class="headerlink" href="#frequently-asked-questions" title="Permalink to this headline">#</a></h1>
 <section id="can-pedalboard-be-used-with-live-real-time-audio">
-<h2>Can Pedalboard be used with live (real-time) audio?<a class="headerlink" href="#can-pedalboard-be-used-with-live-real-time-audio" title="Permalink to this heading">#</a></h2>
+<h2>Can Pedalboard be used with live (real-time) audio?<a class="headerlink" href="#can-pedalboard-be-used-with-live-real-time-audio" title="Permalink to this headline">#</a></h2>
 <p>Technically, yes, Pedalboard could be used with live audio input/output. See:</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://github.com/spotify/pedalboard/pull/98">Pull request #98</a>, which contains an experimental live audio interface written in C++.</p></li>
@@ -229,7 +229,7 @@
 <p>Note that if your application processes audio in a streaming fashion, but allows for large buffer sizes (multiple seconds of audio) or soft real-time requirements, Pedalboard can be used there without issue. Examples of this use case include streaming audio processing over the network, or processing data offline but chunk-by-chunk.</p>
 </section>
 <section id="does-pedalboard-support-changing-a-plugin-s-parameters-over-time">
-<h2>Does Pedalboard support changing a plugin’s parameters over time?<a class="headerlink" href="#does-pedalboard-support-changing-a-plugin-s-parameters-over-time" title="Permalink to this heading">#</a></h2>
+<h2>Does Pedalboard support changing a plugin’s parameters over time?<a class="headerlink" href="#does-pedalboard-support-changing-a-plugin-s-parameters-over-time" title="Permalink to this headline">#</a></h2>
 <p>Yes! While there’s no built-in function for this, it is possible to
 vary the parameters of a plugin over time manually:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pedalboard.io</span> <span class="kn">import</span> <span class="n">AudioFile</span>
@@ -273,11 +273,11 @@ vary the parameters of a plugin over time manually:</p>
 <p>With this technique, it’s possible to automate any parameter. Usually, using a step size of somewhere between 100 and 1,000 (2ms to 22ms at a 44.1kHz sample rate) is small enough to avoid hearing any audio artifacts, but big enough to avoid slowing down the code dramatically.</p>
 </section>
 <section id="can-pedalboard-be-used-with-vst-instruments-instead-of-effects">
-<h2>Can Pedalboard be used with VST instruments, instead of effects?<a class="headerlink" href="#can-pedalboard-be-used-with-vst-instruments-instead-of-effects" title="Permalink to this heading">#</a></h2>
+<h2>Can Pedalboard be used with VST instruments, instead of effects?<a class="headerlink" href="#can-pedalboard-be-used-with-vst-instruments-instead-of-effects" title="Permalink to this headline">#</a></h2>
 <p>Not yet! The underlying framework (JUCE) supports VST and AU instruments just fine, but Pedalboard itself would have to be modified to support instruments.</p>
 </section>
 <section id="can-pedalboard-plugins-accept-midi">
-<h2>Can Pedalboard plugins accept MIDI?<a class="headerlink" href="#can-pedalboard-plugins-accept-midi" title="Permalink to this heading">#</a></h2>
+<h2>Can Pedalboard plugins accept MIDI?<a class="headerlink" href="#can-pedalboard-plugins-accept-midi" title="Permalink to this headline">#</a></h2>
 <p>Not yet, either - although the underlying framework (JUCE) supports passing MIDI to plugins, so this would also be possible to add.</p>
 </section>
 </section>
@@ -364,7 +364,6 @@ vary the parameters of a plugin over time manually:</p>
 </div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
-    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <script src="_static/scripts/furo.js"></script>
     <script src="_static/clipboard.min.js"></script>
