@@ -210,10 +210,6 @@ public:
     }
   }
 
-  double getSubSamplePosition() const {
-    return resamplers[0].getSubSamplePosition();
-  }
-
   void setLastChannelLayout(ChannelLayout last) { lastChannelLayout = last; }
 
   std::optional<ChannelLayout> getLastChannelLayout() const {
