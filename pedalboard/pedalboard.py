@@ -220,10 +220,10 @@ class AudioProcessorParameter(object):
         self.ranges: Dict[Tuple[float, float], Union[str, float, bool]] = {}
 
         with self.__get_cpp_parameter() as cpp_parameter:
-            start_of_range: float = 0
-            text_value: Optional[str] = None
-
             for fetch_slow in (False, True):
+                start_of_range: float = 0
+                text_value: Optional[str] = None
+
                 self.ranges = {}
                 for x in range(0, search_steps + 1):
                     raw_value = x / search_steps
