@@ -42,7 +42,7 @@ class Pedalboard(Chain):
         )
 
 
-FLOAT_SUFFIXES_TO_IGNORE = set(["x", "%", "*", ",", ".", "hz"])
+FLOAT_SUFFIXES_TO_IGNORE = set(["x", "%", "*", ",", ".", "hz", "ms", "sec", "seconds"])
 
 
 def strip_common_float_suffixes(s: Union[float, str]) -> Union[float, str]:
@@ -176,6 +176,23 @@ PARAMETER_NAME_REGEXES_TO_IGNORE = set(
 TRUE_BOOLEANS = {"on", "yes", "true", "enabled"}
 
 
+def get_text_for_raw_value(
+    cpp_parameter: _AudioProcessorParameter, raw_value: float, slow: bool = False
+) -> Optional[str]:
+    # Some plugins don't respond properly to get_text_for_raw_value,
+    # but do respond when a parameter's raw value is changed.
+    # This helper method works around this issue.
+    if slow:
+        original_value = cpp_parameter.raw_value
+        try:
+            cpp_parameter.raw_value = raw_value
+            return cpp_parameter.string_value
+        finally:
+            cpp_parameter.raw_value = original_value
+    else:
+        return cpp_parameter.get_text_for_raw_value(raw_value)
+
+
 class AudioProcessorParameter(object):
     """
     The C++ version of this class (`_AudioProcessorParameter`) is owned
@@ -205,16 +222,24 @@ class AudioProcessorParameter(object):
         with self.__get_cpp_parameter() as cpp_parameter:
             start_of_range: float = 0
             text_value: Optional[str] = None
-            for x in range(0, search_steps + 1):
-                raw_value = x / search_steps
-                x_text_value = cpp_parameter.get_text_for_raw_value(raw_value)
-                if text_value is None:
-                    text_value = x_text_value
-                elif x_text_value != text_value:
-                    # End current range and start a new one
-                    self.ranges[(start_of_range, raw_value)] = text_value
-                    text_value = x_text_value
-                    start_of_range = raw_value
+
+            for fetch_slow in (False, True):
+                self.ranges = {}
+                for x in range(0, search_steps + 1):
+                    raw_value = x / search_steps
+                    x_text_value = get_text_for_raw_value(cpp_parameter, raw_value, fetch_slow)
+                    if text_value is None:
+                        text_value = x_text_value
+                    elif x_text_value != text_value:
+                        # End current range and start a new one
+                        self.ranges[(start_of_range, raw_value)] = text_value
+                        text_value = x_text_value
+                        start_of_range = raw_value
+                results_look_incorrect = not self.ranges or (
+                    len(self.ranges) == 1 and all(looks_like_float(v) for v in self.ranges.values())
+                )
+                if not results_look_incorrect:
+                    break
             if text_value is None:
                 raise NotImplementedError(
                     f"Plugin parameter '{parameter_name}' failed to return a valid string for its"
