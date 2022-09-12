@@ -420,6 +420,9 @@ def test_float_parameters(plugin_filename: str, parameter_name: str):
         _min, _max, _ = parameter_value.range
         step_size = parameter_value.step_size
         new_values = np.arange(_min, _max, step_size)
+        # Because sometimes np.arange(_min, _max) gives values _slightly outside_
+        # of [_min, _max] thanks to floating point:
+        new_values = [max(_min, min(_max, new_value)) for new_value in new_values]
 
     epsilon = parameter_value.step_size or parameter_value.approximate_step_size or 0.001
 
