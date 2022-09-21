@@ -42,6 +42,7 @@ namespace py = pybind11;
 #include "plugins/Bitcrush.h"
 #include "plugins/Chain.h"
 #include "plugins/Chorus.h"
+#include "plugins/Clipping.h"
 #include "plugins/Compressor.h"
 #include "plugins/Convolution.h"
 #include "plugins/Delay.h"
@@ -161,6 +162,7 @@ or buffer, set ``reset`` to ``False``.
   // Publicly accessible plugins:
   init_bitcrush(m);
   init_chorus(m);
+  init_clipping(m);
   init_compressor(m);
   init_convolution(m);
   init_delay(m);

@@ -23,3 +23,11 @@ def generate_sine_at(
         else:
             TEST_SINE_WAVE_CACHE[cache_key] = sine_wave
     return TEST_SINE_WAVE_CACHE[cache_key]
+
+
+def db_to_gain(db: float) -> float:
+    return 10.0 ** (db / 20.0)
+
+
+def gain_to_db(gain: float) -> float:
+    return 20 * np.log10(gain)

@@ -18,7 +18,7 @@
 import pytest
 import numpy as np
 from pedalboard import HighpassFilter, LowpassFilter, HighShelfFilter, LowShelfFilter, PeakFilter
-from .utils import generate_sine_at
+from .utils import generate_sine_at, db_to_gain
 
 
 def rms(x: np.ndarray) -> float:
@@ -26,14 +26,6 @@ def rms(x: np.ndarray) -> float:
         return np.sqrt(np.mean(x**2))
     else:
         return np.array([rms(channel) for channel in x])
-
-
-def db_to_gain(db: float) -> float:
-    return 10.0 ** (db / 20.0)
-
-
-def gain_to_db(gain: float) -> float:
-    return 20 * np.log10(gain)
 
 
 def octaves_between(a_hz: float, b_hz: float) -> float:
