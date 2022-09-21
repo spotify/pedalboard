@@ -23,8 +23,7 @@ namespace py = pybind11;
 #include "../JucePlugin.h"
 
 namespace Pedalboard {
-template <typename SampleType>
-class Clipping: public Plugin {
+template <typename SampleType> class Clipping : public Plugin {
 public:
   void setThresholdDecibels(const SampleType f) noexcept {
     thresholdDecibels = f;
@@ -40,24 +39,20 @@ public:
   virtual int process(
       const juce::dsp::ProcessContextReplacing<SampleType> &context) override {
     auto ioBlock = context.getOutputBlock();
-    
+
     for (int c = 0; c < ioBlock.getNumChannels(); c++) {
       SampleType *channelPointer = ioBlock.getChannelPointer(c);
 
       juce::FloatVectorOperations::clip(
-        channelPointer,
-        channelPointer,
-        negativeThresholdGain,
-        positiveThresholdGain,
-        ioBlock.getNumSamples()
-      );
+          channelPointer, channelPointer, negativeThresholdGain,
+          positiveThresholdGain, ioBlock.getNumSamples());
     }
 
     return context.getOutputBlock().getNumSamples();
   }
 
   virtual void reset() {}
-  
+
 private:
   SampleType thresholdDecibels;
 
