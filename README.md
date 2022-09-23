@@ -16,6 +16,8 @@
 
 `pedalboard` was built by [Spotify's Audio Intelligence Lab](https://research.atspotify.com/audio-intelligence/) to enable using studio-quality audio effects from within Python and TensorFlow. Internally at Spotify, `pedalboard` is used for [data augmentation](https://en.wikipedia.org/wiki/Data_augmentation) to improve machine learning models. `pedalboard` also helps in the process of content creation, making it possible to add effects to audio without using a Digital Audio Workstation.
 
+[![Documentation](https://img.shields.io/badge/Documentation-on%20github.io-brightgreen)](https://spotify.github.io/pedalboard)
+
 ## Features 
 
  - Built-in audio I/O utilities ([pedalboard.io](https://spotify.github.io/pedalboard/reference/pedalboard.io.html))
@@ -23,7 +25,7 @@
    - Additional support for reading AAC, AC3, WMA, and other formats depending on platform
    - Support for on-the-fly resampling of audio files and streams with `O(1)` memory usage
  - Built-in support for a number of basic audio transformations, including:
-   - Guitar-style effects: `Chorus`, `Distortion`, `Phaser`
+   - Guitar-style effects: `Chorus`, `Distortion`, `Phaser`, `Clipping`
    - Loudness and dynamic range effects: `Compressor`, `Gain`, `Limiter`
    - Equalizers and filters: `HighpassFilter`, `LadderFilter`, `LowpassFilter`
    - Spatial effects: `Convolution`, `Delay`, `Reverb`
