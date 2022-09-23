@@ -10,7 +10,7 @@
   
 <meta property="og:url" content="https://spotify.github.io/pedalboard/reference/pedalboard.html" />
   
-<meta property="og:site_name" content="Pedalboard v0.6.1 Documentation" />
+<meta property="og:site_name" content="Pedalboard v0.6.2 Documentation" />
   
 <meta property="og:description" content="This module provides classes and functions for adding effects to audio. Most classes in this module are subclasses of Plugin, each of which allows applying effects to an audio buffer or stream. For..." />
   
@@ -20,7 +20,7 @@
   <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="The pedalboard.io API" href="pedalboard.io.html" /><link rel="prev" title="Features" href="../index.html" />
 
     <link rel="shortcut icon" href="../_static/favicon.ico"/><meta name="generator" content="sphinx-4.4.0, furo 2022.06.21"/>
-        <title>The pedalboard API - Pedalboard v0.6.1 Documentation</title>
+        <title>The pedalboard API - Pedalboard v0.6.2 Documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=40978830699223671f4072448e654b5958f38b89" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
@@ -138,7 +138,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">Pedalboard v0.6.1 Documentation</div></a>
+      <a href="../index.html"><div class="brand">Pedalboard v0.6.2 Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -164,7 +164,7 @@
     <img class="sidebar-logo" src="../_static/pedalboard_logo_small.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">Pedalboard v0.6.1 Documentation</span>
+  <span class="sidebar-brand-text">Pedalboard v0.6.2 Documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
@@ -400,6 +400,40 @@ or buffer, set <code class="docutils literal notranslate"><span class="pre">rese
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.Chorus.reset">
 <span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.Chorus.reset" title="Permalink to this definition">#</a></dt>
+<dd><p>Clear any internal state stored by this plugin (e.g.: reverb tails, delay lines, LFO state, etc). The values of plugin parameters will remain unchanged.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pedalboard.Clipping">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Clipping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold_db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-</span> <span class="pre">6.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Clipping" title="Permalink to this definition">#</a></dt>
+<dd><p>A distortion plugin that adds hard distortion to the signal by clipping the signal at the provided threshold (in decibels).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.Clipping.process">
+<span class="sig-name descname"><span class="pre">process</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_array</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8192</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.Clipping.process" title="Permalink to this definition">#</a></dt>
+<dd><p>Run a 32-bit or 64-bit floating point audio buffer through this plugin.
+(If calling this multiple times with multiple plugins, consider creating a
+<a class="reference internal" href="#pedalboard.Pedalboard" title="pedalboard.Pedalboard"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.Pedalboard</span></code></a> object instead.)</p>
+<p>The returned array may contain up to (but not more than) the same number of
+samples as were provided. If fewer samples were returned than expected, the
+plugin has likely buffered audio inside itself. To receive the remaining
+audio, pass another audio buffer into <code class="docutils literal notranslate"><span class="pre">process</span></code> with <code class="docutils literal notranslate"><span class="pre">reset</span></code> set to
+<code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+<p>If the provided buffer uses a 64-bit datatype, it will be converted to 32-bit
+for processing.</p>
+<p>The provided <code class="docutils literal notranslate"><span class="pre">buffer_size</span></code> argument will be used to control the size of
+each chunk of audio provided to the plugin. Higher buffer sizes may speed up
+processing at the expense of memory usage.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">reset</span></code> flag determines if all of the plugins should be reset before
+processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
+If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
+or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.Clipping.reset">
+<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.Clipping.reset" title="Permalink to this definition">#</a></dt>
 <dd><p>Clear any internal state stored by this plugin (e.g.: reverb tails, delay lines, LFO state, etc). The values of plugin parameters will remain unchanged.</p>
 </dd></dl>
 
@@ -932,7 +966,7 @@ or buffer, set <code class="docutils literal notranslate"><span class="pre">rese
 <dt class="sig sig-object py" id="pedalboard.MP3Compressor">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">MP3Compressor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vbr_quality</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.MP3Compressor" title="Permalink to this definition">#</a></dt>
 <dd><p>An MP3 compressor plugin that runs the LAME MP3 encoder in real-time to add compression artifacts to the audio stream.</p>
-<p>Currently only supports variable bit-rate mode (VBR) and accepts a floating-point VBR quality value (between 0.0 and 12.0; lower is better).</p>
+<p>Currently only supports variable bit-rate mode (VBR) and accepts a floating-point VBR quality value (between 0.0 and 10.0; lower is better).</p>
 <p>Note that the MP3 format only supports 32kHz, 44.1kHz, and 48kHz audio; if an unsupported sample rate is provided, an exception will be thrown at processing time.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.MP3Compressor.process">

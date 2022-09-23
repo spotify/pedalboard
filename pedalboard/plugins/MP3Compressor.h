@@ -368,7 +368,7 @@ inline void init_mp3_compressor(py::module &m) {
       "An MP3 compressor plugin that runs the LAME MP3 encoder in real-time to "
       "add compression artifacts to the audio stream.\n\nCurrently only "
       "supports variable bit-rate mode (VBR) and accepts a floating-point VBR "
-      "quality value (between 0.0 and 12.0; lower is better).\n\nNote that the "
+      "quality value (between 0.0 and 10.0; lower is better).\n\nNote that the "
       "MP3 format only supports 32kHz, 44.1kHz, and 48kHz audio; if an "
       "unsupported sample rate is provided, an exception will be thrown at "
       "processing time.")

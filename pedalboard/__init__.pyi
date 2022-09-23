@@ -14,6 +14,7 @@ _Shape = typing.Tuple[int, ...]
 __all__ = [
     "Bitcrush",
     "Chorus",
+    "Clipping",
     "Compressor",
     "Convolution",
     "Delay",
@@ -139,6 +140,21 @@ class Chorus(Plugin):
         """
         The speed of the chorus effect's low-frequency oscillator (LFO), in Hertz. This value must be between 0 Hz and 100 Hz.
         """
+    pass
+
+class Clipping(Plugin):
+    """
+    A distortion plugin that adds hard distortion to the signal by clipping the signal at the provided threshold (in decibels).
+    """
+
+    def __init__(self, threshold_db: float = -6.0) -> None: ...
+    def __repr__(self) -> str: ...
+    @property
+    def threshold_db(self) -> float:
+        """ """
+    @threshold_db.setter
+    def threshold_db(self, arg1: float) -> None:
+        pass
     pass
 
 class Compressor(Plugin):
@@ -471,7 +487,7 @@ class MP3Compressor(Plugin):
     """
     An MP3 compressor plugin that runs the LAME MP3 encoder in real-time to add compression artifacts to the audio stream.
 
-    Currently only supports variable bit-rate mode (VBR) and accepts a floating-point VBR quality value (between 0.0 and 12.0; lower is better).
+    Currently only supports variable bit-rate mode (VBR) and accepts a floating-point VBR quality value (between 0.0 and 10.0; lower is better).
 
     Note that the MP3 format only supports 32kHz, 44.1kHz, and 48kHz audio; if an unsupported sample rate is provided, an exception will be thrown at processing time.
     """
