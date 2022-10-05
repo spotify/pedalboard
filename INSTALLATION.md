@@ -2,7 +2,7 @@
 
 `pedalboard` is a useful tool if you are an artist, musician, producer, or enthusiast getting started with Python and looking to add effects to audio files. 
 
-## Compatability
+## Compatibility
 
 For `pedalboard`, ensure you have [Python 3.6](https://www.python.org/downloads/) or higher. 
 
