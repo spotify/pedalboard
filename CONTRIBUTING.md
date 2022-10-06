@@ -194,7 +194,8 @@ git submodule update --init
 - _or_ install Tox using `pip` and not your system package manager
 
 ###`Package freetype2 was not found in the pkg-config search path.`
-- Either you do not have the package freetype2 installed or if you do not have access to freetype2 you could try installing freetype instead
+- Either you do not have the package freetype2 installed or you do not have access to freetype2 on your system. s
+- If you do not have access to freetype2 then you could try installing freetype package instead
 
 ###`Python.h: No such file or directory`
-- Install one of the packages python-dev python-devel python3-dev python3-devel, which ever one is available to your installation
+- Install one of the packages python-dev python-devel python3-dev python3-devel, which ever one is available to your installation.
