@@ -10,7 +10,7 @@
   
 <meta property="og:url" content="https://spotify.github.io/pedalboard/index.html" />
   
-<meta property="og:site_name" content="Pedalboard v0.6.2 Documentation" />
+<meta property="og:site_name" content="Pedalboard v0.6.3 Documentation" />
   
 <meta property="og:description" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
   
@@ -20,7 +20,7 @@
   <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="The pedalboard API" href="reference/pedalboard.html" />
 
     <link rel="shortcut icon" href="_static/favicon.ico"/><meta name="generator" content="sphinx-4.4.0, furo 2022.06.21"/>
-        <title>Pedalboard v0.6.2 Documentation</title>
+        <title>Pedalboard v0.6.3 Documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?digest=40978830699223671f4072448e654b5958f38b89" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css" />
@@ -138,7 +138,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="#"><div class="brand">Pedalboard v0.6.2 Documentation</div></a>
+      <a href="#"><div class="brand">Pedalboard v0.6.3 Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -164,7 +164,7 @@
     <img class="sidebar-logo" src="_static/pedalboard_logo_small.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">Pedalboard v0.6.2 Documentation</span>
+  <span class="sidebar-brand-text">Pedalboard v0.6.3 Documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
@@ -229,6 +229,7 @@
 <a class="reference external image-reference" href="https://github.com/spotify/pedalboard/stargazers"><img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/spotify/pedalboard?style=social" /></a>
 <p><code class="docutils literal notranslate"><span class="pre">pedalboard</span></code> is a Python library for working with audio: reading, writing, adding effects, and more. It supports most popular audio file formats and a number of common audio effects out of the box, and also allows the use of <a class="reference external" href="https://www.steinberg.net/en/company/technologies/vst3.html">VST3®</a> and <a class="reference external" href="https://en.wikipedia.org/wiki/Audio_Units">Audio Unit</a> formats for third-party plugins.</p>
 <p><code class="docutils literal notranslate"><span class="pre">pedalboard</span></code> was built by <a class="reference external" href="https://research.atspotify.com/audio-intelligence/">Spotify’s Audio Intelligence Lab</a> to enable using studio-quality audio effects from within Python and TensorFlow. Internally at Spotify, <code class="docutils literal notranslate"><span class="pre">pedalboard</span></code> is used for <a class="reference external" href="https://en.wikipedia.org/wiki/Data_augmentation">data augmentation</a> to improve machine learning models. <code class="docutils literal notranslate"><span class="pre">pedalboard</span></code> also helps in the process of content creation, making it possible to add effects to audio without using a Digital Audio Workstation.</p>
+<a class="reference external image-reference" href="https://spotify.github.io/pedalboard"><img alt="Documentation" src="https://img.shields.io/badge/Documentation-on%20github.io-brightgreen" /></a>
 <section id="features">
 <h1>Features<a class="headerlink" href="#features" title="Permalink to this headline">#</a></h1>
 <ul class="simple">
@@ -241,7 +242,7 @@
 </li>
 <li><p>Built-in support for a number of basic audio transformations, including:</p>
 <ul>
-<li><p>Guitar-style effects: <code class="docutils literal notranslate"><span class="pre">Chorus</span></code>, <code class="docutils literal notranslate"><span class="pre">Distortion</span></code>, <code class="docutils literal notranslate"><span class="pre">Phaser</span></code></p></li>
+<li><p>Guitar-style effects: <code class="docutils literal notranslate"><span class="pre">Chorus</span></code>, <code class="docutils literal notranslate"><span class="pre">Distortion</span></code>, <code class="docutils literal notranslate"><span class="pre">Phaser</span></code>, <code class="docutils literal notranslate"><span class="pre">Clipping</span></code></p></li>
 <li><p>Loudness and dynamic range effects: <code class="docutils literal notranslate"><span class="pre">Compressor</span></code>, <code class="docutils literal notranslate"><span class="pre">Gain</span></code>, <code class="docutils literal notranslate"><span class="pre">Limiter</span></code></p></li>
 <li><p>Equalizers and filters: <code class="docutils literal notranslate"><span class="pre">HighpassFilter</span></code>, <code class="docutils literal notranslate"><span class="pre">LadderFilter</span></code>, <code class="docutils literal notranslate"><span class="pre">LowpassFilter</span></code></p></li>
 <li><p>Spatial effects: <code class="docutils literal notranslate"><span class="pre">Convolution</span></code>, <code class="docutils literal notranslate"><span class="pre">Delay</span></code>, <code class="docutils literal notranslate"><span class="pre">Reverb</span></code></p></li>
