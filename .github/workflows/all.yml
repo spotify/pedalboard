@@ -14,7 +14,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        python-version: ['3.11.0-rc.2']
+        python-version: ['3.11.0']
         os: [ubuntu-latest]
     name: Lint Python
     steps:
@@ -59,7 +59,7 @@ jobs:
       MINIMUM_COVERAGE_PERCENTAGE: 80
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11.0-rc.2']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11.0']
         # TODO: Switch back to macos-latest once https://github.com/actions/python-versions/pull/114 is fixed
         os: [ubuntu-latest, windows-latest, macos-12]
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
@@ -99,11 +99,6 @@ jobs:
         if: runner.os == 'Windows'
       - name: Build pedalboard locally
         run: python setup.py install
-      - name: Generate type stubs and documentation, and validate they match
-        # Only validate documentation on macOS, as Linux and Windows have a subset of the classes
-        # TODO: 3.11.0-rc1 doesn't include type hints when generating type stubs.
-        if: matrix.python-version != '3.6' && matrix.python-version != '3.11.0-rc.1' && startsWith(matrix.os, 'macos')
-        run: python3 -m scripts.generate_type_stubs_and_docs --check
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
@@ -134,7 +129,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11.0-rc.2']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11.0']
         os: [ubuntu-latest]
     name: Test with Python ${{ matrix.python-version }} + Address Sanitizer
     steps:
