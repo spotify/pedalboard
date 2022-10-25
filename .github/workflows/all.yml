@@ -173,6 +173,36 @@ jobs:
           LD_PRELOAD=$(clang -print-file-name=libclang_rt.asan-x86_64.so) \
           pytest -v
 
+  test-docs:
+    runs-on: macos-12
+    continue-on-error: true
+    needs: [run-tests]
+    name: Ensure docs match auto-generated docs
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Install test dependencies
+        env:
+          # on macOS and with Python 3.10: building NumPy from source fails without these options:
+          NPY_BLAS_ORDER: ""
+          NPY_LAPACK_ORDER: ""
+        run: |
+          python -m pip install --upgrade pip
+          pip install wheel
+          pip install -r test-requirements.txt
+      - name: Build pedalboard locally
+        run: python setup.py install
+      - name: Generate type stubs and documentation, and validate they match
+        # Only validate documentation on macOS, as Linux and Windows have a subset of the classes
+        # TODO: 3.11.0-rc1 doesn't include type hints when generating type stubs.
+        run: python3 -m scripts.generate_type_stubs_and_docs --check
+
   build-wheels:
     needs: [lint-python, lint-cpp]
     runs-on: ${{ matrix.os }}
