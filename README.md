@@ -53,7 +53,7 @@ If you are new to Python, follow [INSTALLATION.md](https://github.com/spotify/pe
 
 ### Compatibility
 
-`pedalboard` is thoroughly tested with Python 3.6, 3.7, 3.8, 3.9, and 3.10 as well as experimental support for Python 3.11 and PyPy 3.7, 3.8, and 3.9.
+`pedalboard` is thoroughly tested with Python 3.6, 3.7, 3.8, 3.9, 3.10, and 3.11 as well as experimental support for PyPy 3.7, 3.8, and 3.9.
 
 - Linux
   - Tested heavily in production use cases at Spotify
