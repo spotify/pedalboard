@@ -93,6 +93,10 @@ with AudioFile('processed-output.wav', 'w', samplerate, effected.shape[0]) as f:
   f.write(effected)
 ```
 
+Preprocessing:
+
+Postprocessing:
+
 ### Making a guitar-style pedalboard
 
 ```python
@@ -132,6 +136,10 @@ with AudioFile('processed-output.wav', 'w', samplerate, effected.shape[0]) as f:
   f.write(effected)
 ```
 
+Preprocessing:
+
+Postprocessing:
+
 ### Using VST3® or Audio Unit plugins
 
 ```python
@@ -163,6 +171,10 @@ board = Pedalboard([vst, Reverb()])
 # ...and run that pedalboard with the same VST instance!
 effected = board(audio, samplerate)
 ```
+
+Preprocessing:
+
+Postprocessing:
 
 ### Creating parallel effects chains
 
@@ -201,6 +213,10 @@ board = Pedalboard([
   Reverb()
 ])
 ```
+
+Preprocessing:
+
+Postprocessing:
 
 For more examples, see:
  - [the "examples" folder of this repository](https://github.com/spotify/pedalboard/tree/master/examples)
