@@ -248,12 +248,7 @@ public:
                            "non-zero num_channels.");
     }
 
-    // Don't use registerBasicFormats(), as it'll register the wrong MP3 format:
-    formatManager.registerFormat(new juce::WavAudioFormat(), false);
-    formatManager.registerFormat(new juce::AiffAudioFormat(), false);
-    formatManager.registerFormat(new juce::FlacAudioFormat(), false);
-    formatManager.registerFormat(new juce::OggVorbisAudioFormat(), false);
-    formatManager.registerFormat(new LameMP3AudioFormat(), false);
+    registerPedalboardAudioFormats(formatManager, true, false);
 
     std::unique_ptr<juce::OutputStream> outputStream;
     juce::AudioFormat *format = nullptr;
@@ -971,14 +966,17 @@ inline void init_writeable_audio_file(
           "The strings ``\"best\"``, ``\"worst\"``, ``\"fastest\"``, and "
           "``\"slowest\"`` will also work for any codec.");
 
-  m.def("get_supported_write_formats", []() {
-    // JUCE doesn't support writing other formats out-of-the-box on all
-    // platforms, and there's no easy way to tell which formats are supported
-    // without attempting to create an AudioFileWriter object - so this list is
-    // hardcoded for now.
-    const std::vector<std::string> formats = {".aiff", ".flac", ".ogg", ".wav",
-                                              ".mp3"};
-    return formats;
-  });
+  m.def(
+      "get_supported_write_formats",
+      [](bool crossPlatformFormatsOnly = false) {
+        // JUCE doesn't support writing other formats out-of-the-box on all
+        // platforms, and there's no easy way to tell which formats are
+        // supported without attempting to create an AudioFileWriter object - so
+        // this list is hardcoded for now.
+        const std::vector<std::string> formats = {".aiff", ".flac", ".ogg",
+                                                  ".wav", ".mp3"};
+        return formats;
+      },
+      py::arg("cross_platform_formats_only") = false);
 }
 } // namespace Pedalboard

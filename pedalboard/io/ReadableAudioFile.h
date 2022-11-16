@@ -36,8 +36,11 @@ class ReadableAudioFile
     : public AudioFile,
       public std::enable_shared_from_this<ReadableAudioFile> {
 public:
-  ReadableAudioFile(std::string filename) : filename(filename) {
-    formatManager.registerBasicFormats();
+  ReadableAudioFile(std::string filename, bool crossPlatformFormatsOnly = false)
+      : filename(filename) {
+    registerPedalboardAudioFormats(formatManager, false,
+                                   crossPlatformFormatsOnly);
+
     juce::File file(filename);
 
     if (!file.existsAsFile()) {
@@ -69,8 +72,10 @@ public:
           "\" does not seem to be of a known or supported format.");
   }
 
-  ReadableAudioFile(std::unique_ptr<PythonInputStream> inputStream) {
-    formatManager.registerBasicFormats();
+  ReadableAudioFile(std::unique_ptr<PythonInputStream> inputStream,
+                    bool crossPlatformFormatsOnly = false) {
+    registerPedalboardAudioFormats(formatManager, false,
+                                   crossPlatformFormatsOnly);
 
     if (!inputStream->isSeekable()) {
       PythonException::raise();
@@ -239,7 +244,7 @@ public:
         PythonException::raise();
 
         if (!readResult) {
-          throw std::runtime_error("Failed to read from file.");
+          throwReadError(currentPosition, numSamples);
         }
       } else {
         // If the audio is stored in an integral format, read it as integers
@@ -251,7 +256,7 @@ public:
                                 currentPosition, numSamples);
         PythonException::raise();
         if (!readResult) {
-          throw std::runtime_error("Failed to read from file.");
+          throwReadError(currentPosition, numSamples);
         }
 
         // When converting 24-bit, 16-bit, or 8-bit data from int to float,
@@ -357,7 +362,7 @@ public:
                                               currentPosition, numSamples);
         PythonException::raise();
         if (!readResult) {
-          throw std::runtime_error("Failed to read from file.");
+          throwReadError(currentPosition, numSamples);
         }
       } else {
         // Read the file in smaller chunks, converting from int32 to the
@@ -465,6 +470,42 @@ public:
   }
 
 private:
+  void throwReadError(long long currentPosition, long long numSamples) {
+    std::ostringstream ss;
+    ss.imbue(std::locale(""));
+
+    ss << "Failed to read audio data";
+
+    if (getFilename() && !getFilename()->empty()) {
+      ss << " from file \"" << *getFilename() << "\"";
+    } else if (PythonInputStream *stream = getPythonInputStream()) {
+      ss << " from " << stream->getRepresentation();
+    }
+
+    ss << "."
+       << " Tried to read " << numSamples
+       << " frames of audio from frame offset " << currentPosition;
+
+    if (PythonInputStream *stream = getPythonInputStream()) {
+      ss << " but encountered invalid data near byte " << stream->getPosition();
+    }
+    ss << ".";
+
+    if (PythonInputStream *stream = getPythonInputStream()) {
+      if (stream->isExhausted()) {
+        ss << " The file may contain invalid data past or near its end. Try "
+              "reading fewer audio frames from the file.";
+      }
+    }
+
+    // In case any of the calls above to PythonInputStream cause an exception in
+    // Python, this line will re-raise those so that the Python exception is
+    // visible:
+    PythonException::raise();
+
+    throw std::runtime_error(ss.str());
+  }
+
   juce::AudioFormatManager formatManager;
   std::string filename;
   std::unique_ptr<juce::AudioFormatReader> reader;
@@ -495,7 +536,9 @@ be readable depending on the operating system and installed system libraries:
    ``.wav``
 
 Use :meth:`pedalboard.io.get_supported_read_formats()` to see which
-formats or file extensions are supported on the current platform.
+formats or file extensions are supported on the current platform. To use
+only audio format parsing libraries that are consistent on all platforms, pass
+``cross_platform_formats_only=True`` to this constructor.
 
 (Note that although an audio file may have a certain file extension, its
 contents may be encoded with a compression algorithm unsupported by
@@ -516,29 +559,35 @@ inline void init_readable_audio_file(
     py::class_<ReadableAudioFile, AudioFile, std::shared_ptr<ReadableAudioFile>>
         &pyReadableAudioFile) {
   pyReadableAudioFile
-      .def(py::init([](std::string filename) -> ReadableAudioFile * {
+      .def(py::init([](std::string filename,
+                       bool crossPlatformFormatsOnly) -> ReadableAudioFile * {
              // This definition is only here to provide nice docstrings.
              throw std::runtime_error(
                  "Internal error: __init__ should never be called, as this "
                  "class implements __new__.");
            }),
-           py::arg("filename"))
-      .def(py::init([](py::object filelike) -> ReadableAudioFile * {
+           py::arg("filename"), py::arg("cross_platform_formats_only") = false)
+      .def(py::init([](py::object filelike,
+                       bool crossPlatformFormatsOnly) -> ReadableAudioFile * {
              // This definition is only here to provide nice docstrings.
              throw std::runtime_error(
                  "Internal error: __init__ should never be called, as this "
                  "class implements __new__.");
            }),
-           py::arg("file_like"))
+           py::arg("file_like"), py::arg("cross_platform_formats_only") = false)
       .def_static(
           "__new__",
-          [](const py::object *, std::string filename) {
-            return std::make_shared<ReadableAudioFile>(filename);
+          [](const py::object *, std::string filename,
+             bool crossPlatformFormatsOnly) {
+            return std::make_shared<ReadableAudioFile>(
+                filename, crossPlatformFormatsOnly);
           },
-          py::arg("cls"), py::arg("filename"))
+          py::arg("cls"), py::arg("filename"),
+          py::arg("cross_platform_formats_only") = false)
       .def_static(
           "__new__",
-          [](const py::object *, py::object filelike) {
+          [](const py::object *, py::object filelike,
+             bool crossPlatformFormatsOnly) {
             if (!isReadableFileLike(filelike)) {
               throw py::type_error(
                   "Expected either a filename or a file-like object (with "
@@ -547,9 +596,11 @@ inline void init_readable_audio_file(
             }
 
             return std::make_shared<ReadableAudioFile>(
-                std::make_unique<PythonInputStream>(filelike));
+                std::make_unique<PythonInputStream>(filelike),
+                crossPlatformFormatsOnly);
           },
-          py::arg("cls"), py::arg("file_like"))
+          py::arg("cls"), py::arg("file_like"),
+          py::arg("cross_platform_formats_only") = false)
       .def(
           "read", &ReadableAudioFile::read, py::arg("num_frames") = 0,
           "Read the given number of frames (samples in each channel) from this "
@@ -659,31 +710,36 @@ inline void init_readable_audio_file(
           "provided `target_sample_rate`, using a constant amount of "
           "memory.\n\n*Introduced in v0.6.0.*");
 
-  m.def("get_supported_read_formats", []() {
-    juce::AudioFormatManager manager;
-    manager.registerBasicFormats();
+  m.def(
+      "get_supported_read_formats",
+      [](bool crossPlatformFormatsOnly) {
+        juce::AudioFormatManager manager;
+        registerPedalboardAudioFormats(manager, false,
+                                       crossPlatformFormatsOnly);
 
-    std::vector<std::string> formatNames(manager.getNumKnownFormats());
-    juce::StringArray extensions;
-    for (int i = 0; i < manager.getNumKnownFormats(); i++) {
-      auto *format = manager.getKnownFormat(i);
-      extensions.addArray(format->getFileExtensions());
-    }
+        std::vector<std::string> formatNames(manager.getNumKnownFormats());
+        juce::StringArray extensions;
+        for (int i = 0; i < manager.getNumKnownFormats(); i++) {
+          auto *format = manager.getKnownFormat(i);
+          extensions.addArray(format->getFileExtensions());
+        }
 
-    extensions.trim();
-    extensions.removeEmptyStrings();
-    extensions.removeDuplicates(true);
+        extensions.trim();
+        extensions.removeEmptyStrings();
+        extensions.removeDuplicates(true);
 
-    std::vector<std::string> output;
-    for (juce::String s : extensions) {
-      output.push_back(s.toStdString());
-    }
+        std::vector<std::string> output;
+        for (juce::String s : extensions) {
+          output.push_back(s.toStdString());
+        }
 
-    std::sort(
-        output.begin(), output.end(),
-        [](const std::string lhs, const std::string rhs) { return lhs < rhs; });
+        std::sort(output.begin(), output.end(),
+                  [](const std::string lhs, const std::string rhs) {
+                    return lhs < rhs;
+                  });
 
-    return output;
-  });
+        return output;
+      },
+      py::arg("cross_platform_formats_only") = false);
 }
 } // namespace Pedalboard
