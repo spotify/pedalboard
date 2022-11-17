@@ -49,7 +49,7 @@ jobs:
       - name: Check C++ Formatting
         uses: jidicula/clang-format-action@v4.4.1
         with:
-          clang-format-version: 11
+          clang-format-version: 14
           fallback-style: LLVM
 
   run-tests:
