@@ -46,6 +46,18 @@ FILENAMES_AND_SAMPLERATES = [
     if any(filename.endswith(extension) for extension in pedalboard.io.get_supported_read_formats())
 ]
 
+CROSS_PLATFORM_FILENAMES_AND_SAMPLERATES = [
+    (filename, samplerate)
+    for samplerate, filenames in TEST_AUDIO_FILES.items()
+    for filename in filenames
+    # On some platforms, not all extensions will be available.
+    if any(
+        filename.endswith(extension)
+        for extension in pedalboard.io.get_supported_read_formats(cross_platform_formats_only=True)
+    )
+]
+
+
 UNSUPPORTED_FILENAMES = [
     filename
     for filename in sum(TEST_AUDIO_FILES.values(), [])
@@ -142,9 +154,18 @@ def test_basic_formats_available_on_all_platforms(extension: str):
     assert extension in pedalboard.io.get_supported_read_formats()
 
 
-@pytest.mark.parametrize("audio_filename,samplerate", FILENAMES_AND_SAMPLERATES)
-def test_basic_read(audio_filename: str, samplerate: float):
-    af = pedalboard.io.AudioFile(audio_filename)
+@pytest.mark.parametrize(
+    "audio_filename,samplerate,cross_platform_formats_only",
+    [(a, s, False) for a, s in FILENAMES_AND_SAMPLERATES]
+    + [(a, s, True) for a, s in CROSS_PLATFORM_FILENAMES_AND_SAMPLERATES],
+)
+def test_basic_read(audio_filename: str, samplerate: float, cross_platform_formats_only: bool):
+    if cross_platform_formats_only:
+        af = pedalboard.io.ReadableAudioFile(
+            audio_filename, cross_platform_formats_only=cross_platform_formats_only
+        )
+    else:
+        af = pedalboard.io.AudioFile(audio_filename)
     assert af.samplerate == samplerate
     assert af.num_channels == 1
     if any(ext in audio_filename for ext in EXPECT_LENGTH_TO_BE_EXACT):
@@ -987,15 +1008,16 @@ def test_file_not_created_if_constructor_error_thrown(tmp_path: pathlib.Path):
 
 
 @pytest.mark.parametrize("cross_platform_formats_only", [True, False])
-def test_mp3_parsing_with_lyrics3(cross_platform_formats_only: bool):
+@pytest.mark.parametrize("lyric_data_length", [100, 1024, 1024 * 1024])
+def test_mp3_parsing_with_lyrics3(cross_platform_formats_only: bool, lyric_data_length: int):
     """
-    Lyrics3 is a non-standard extension to the MP3 format that appends lyric data after the last MP3 frame.
-    This data is not read by Pedalboard - but the MP3 parser used on Linux and Windows chokes if
-    it discovers "garbage" data past the end of the valid MP3 frames.
-    As of v0.6.4, we use a patched version of JUCE's MP3 parser to allow reading MP3 files
-    that contain Lyrics3 data.
+    Lyrics3 is a non-standard extension to the MP3 format that appends lyric data after the last
+    MP3 frame. This data is not read by Pedalboard - but the MP3 parser used on Linux and Windows
+    chokes if it discovers "garbage" data past the end of the valid MP3 frames. As of v0.6.4, we
+    use a patched version of JUCE's MP3 parser to allow reading MP3 files that contain Lyrics3
+    data.
     """
-    LYRICS3_TRAILING_DATA = b"LYRICSBEGININD0000200EAL00056Blahblahblahblahblahblah000085LYRICS200"
+    LYRICS3_TRAILING_DATA = b"LYRICSBEGIN" + (b"0" * lyric_data_length) + b"LYRICS200"
     stream = io.BytesIO()
     stream.name = "foo.mp3"
     input_audio = np.random.rand(44100)
