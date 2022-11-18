@@ -62,6 +62,10 @@ jobs:
         python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11.0']
         # TODO: Switch back to macos-latest once https://github.com/actions/python-versions/pull/114 is fixed
         os: [ubuntu-latest, windows-latest, macos-12]
+        exclude:
+        # macOS 12 and Python 3.11 seem to have issues installing Pedalboard when doing `setup.py install`.
+        - os: macos-12
+          python-version: "3.11.0"
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
