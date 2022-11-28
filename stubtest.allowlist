@@ -5,7 +5,7 @@ pedalboard.pedalboard.Dict
 pedalboard.pedalboard.Iterable
 pedalboard.pedalboard.List
 pedalboard.pedalboard.Plugin.__call__
-pedalboard.pedalboard.WeakTypeWrapper@91
+pedalboard.pedalboard.WeakTypeWrapper@\d+
 pedalboard.pedalboard._AudioProcessorParameter.__init__
 pedalboard.utils.Chain
 pedalboard.utils.Mix

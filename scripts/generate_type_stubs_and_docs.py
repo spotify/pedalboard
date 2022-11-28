@@ -9,6 +9,7 @@ import importlib
 import traceback
 from tempfile import TemporaryDirectory
 from contextlib import contextmanager
+from typing import List
 
 from pybind11_stubgen import ClassStubsGenerator, StubsGenerator
 from pybind11_stubgen import main as pybind11_stubgen_main
@@ -189,6 +190,15 @@ def trim_diff_line(x: str) -> str:
         return x
 
 
+def glob_matches(filename: str, globs: List[str]) -> bool:
+    for glob in globs:
+        if glob.startswith("*") and filename.lower().endswith(glob[1:].lower()):
+            return True
+        if glob in filename:
+            return True
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate type stub files (.pyi) and Sphinx documentation for Pedalboard."
@@ -217,10 +227,10 @@ def main():
     parser.add_argument(
         "--skip-comparing",
         nargs="*",
-        default=["searchindex.js", "pygments.css", "debug.css", "skeleton.css"],
+        default=["*.js", "*.css"],
         help=(
-            "If set and if --check is passed, the provided filenames will be ignored when comparing"
-            " expected file contents against actual file contents."
+            "If set and if --check is passed, the provided filenames (including '*' globs) will be"
+            " ignored when comparing expected file contents against actual file contents."
         ),
     )
     args = parser.parse_args()
@@ -274,7 +284,7 @@ def main():
             for (dirpath, _dirnames, filenames) in os.walk(tempdir):
                 prefix = dirpath.replace(tempdir, "").lstrip(os.path.sep)
                 for filename in filenames:
-                    if filename in args.skip_comparing:
+                    if glob_matches(filename, args.skip_comparing):
                         print(f"Skipping comparison of file: {filename}")
                         continue
                     expected_path = os.path.join(tempdir, prefix, filename)

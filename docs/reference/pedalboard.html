@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="no-js">
+<html class="no-js" lang="en">
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
@@ -10,7 +10,7 @@
   
 <meta property="og:url" content="https://spotify.github.io/pedalboard/reference/pedalboard.html" />
   
-<meta property="og:site_name" content="Pedalboard v0.6.4 Documentation" />
+<meta property="og:site_name" content="Pedalboard v0.6.5 Documentation" />
   
 <meta property="og:description" content="This module provides classes and functions for adding effects to audio. Most classes in this module are subclasses of Plugin, each of which allows applying effects to an audio buffer or stream. For..." />
   
@@ -19,8 +19,8 @@
 <meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
   <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="The pedalboard.io API" href="pedalboard.io.html" /><link rel="prev" title="Features" href="../index.html" />
 
-    <link rel="shortcut icon" href="../_static/favicon.ico"/><meta name="generator" content="sphinx-4.4.0, furo 2022.06.21"/>
-        <title>The pedalboard API - Pedalboard v0.6.4 Documentation</title>
+    <link rel="shortcut icon" href="../_static/favicon.ico"/><meta name="generator" content="sphinx-5.3.0, furo 2022.06.21"/>
+        <title>The pedalboard API - Pedalboard v0.6.5 Documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=40978830699223671f4072448e654b5958f38b89" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
@@ -138,7 +138,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">Pedalboard v0.6.4 Documentation</div></a>
+      <a href="../index.html"><div class="brand">Pedalboard v0.6.5 Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -149,7 +149,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -164,7 +164,7 @@
     <img class="sidebar-logo" src="../_static/pedalboard_logo_small.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">Pedalboard v0.6.4 Documentation</span>
+  <span class="sidebar-brand-text">Pedalboard v0.6.5 Documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
@@ -210,14 +210,14 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
         </div>
         <article role="main">
           <section id="module-pedalboard">
-<span id="the-pedalboard-api"></span><h1>The <code class="docutils literal notranslate"><span class="pre">pedalboard</span></code> API<a class="headerlink" href="#module-pedalboard" title="Permalink to this headline">#</a></h1>
+<span id="the-pedalboard-api"></span><h1>The <code class="docutils literal notranslate"><span class="pre">pedalboard</span></code> API<a class="headerlink" href="#module-pedalboard" title="Permalink to this heading">#</a></h1>
 <p>This module provides classes and functions for adding effects to audio. Most classes in this module are subclasses of <code class="docutils literal notranslate"><span class="pre">Plugin</span></code>, each of which allows applying effects to an audio buffer or stream.</p>
 <p>For audio I/O classes (i.e.: reading and writing audio files), see <code class="docutils literal notranslate"><span class="pre">pedalboard.io</span></code>.</p>
 <dl class="py class">
@@ -407,7 +407,7 @@ or buffer, set <code class="docutils literal notranslate"><span class="pre">rese
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.Clipping">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Clipping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold_db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-</span> <span class="pre">6.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Clipping" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Clipping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold_db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-6.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Clipping" title="Permalink to this definition">#</a></dt>
 <dd><p>A distortion plugin that adds hard distortion to the signal by clipping the signal at the provided threshold (in decibels).</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.Clipping.process">
@@ -579,7 +579,7 @@ or buffer, set <code class="docutils literal notranslate"><span class="pre">rese
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.GSMFullRateCompressor">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">GSMFullRateCompressor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">quality:</span> <span class="pre">pedalboard.Resample.Quality</span> <span class="pre">=</span> <span class="pre">&lt;Quality.WindowedSinc:</span> <span class="pre">4&gt;</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.GSMFullRateCompressor" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">GSMFullRateCompressor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">quality:</span> <span class="pre">~pedalboard.Resample.Quality</span> <span class="pre">=</span> <span class="pre">&lt;Quality.WindowedSinc:</span> <span class="pre">4&gt;</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.GSMFullRateCompressor" title="Permalink to this definition">#</a></dt>
 <dd><p>An audio degradation/compression plugin that applies the GSM “Full Rate” compression algorithm to emulate the sound of a 2G cellular phone connection. This plugin internally resamples the input audio to a fixed sample rate of 8kHz (required by the GSM Full Rate codec), although the quality of the resampling algorithm can be specified.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.GSMFullRateCompressor.process">
@@ -785,7 +785,7 @@ or buffer, set <code class="docutils literal notranslate"><span class="pre">rese
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.LadderFilter">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">LadderFilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pedalboard.LadderFilter.Mode" title="pedalboard.LadderFilter.Mode"><span class="pre">pedalboard.LadderFilter.Mode</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">Mode.LPF12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff_hz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resonance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drive</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.LadderFilter" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">LadderFilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pedalboard.LadderFilter.Mode" title="pedalboard.LadderFilter.Mode"><span class="pre">Mode</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">Mode.LPF12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff_hz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resonance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drive</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.LadderFilter" title="Permalink to this definition">#</a></dt>
 <dd><p>A multi-mode audio filter based on the classic Moog synthesizer ladder filter, invented by Dr. Bob Moog in 1968.</p>
 <p>Depending on the filter’s mode, frequencies above, below, or on both sides of the cutoff frequency will be attenuated. Higher values for the <code class="docutils literal notranslate"><span class="pre">resonance</span></code> parameter may cause peaks in the frequency response around the cutoff frequency.</p>
 <dl class="py class">
@@ -862,7 +862,7 @@ or buffer, set <code class="docutils literal notranslate"><span class="pre">rese
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.Limiter">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Limiter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold_db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-</span> <span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">release_ms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Limiter" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Limiter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold_db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">release_ms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Limiter" title="Permalink to this definition">#</a></dt>
 <dd><p>A simple limiter with standard threshold and release time controls, featuring two compressors and a hard clipper at 0 dB.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.Limiter.process">
@@ -1049,7 +1049,7 @@ or buffer, set <code class="docutils literal notranslate"><span class="pre">rese
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.NoiseGate">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">NoiseGate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold_db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-</span> <span class="pre">100.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attack_ms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">release_ms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.NoiseGate" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">NoiseGate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold_db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-100.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attack_ms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">release_ms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.NoiseGate" title="Permalink to this definition">#</a></dt>
 <dd><p>A simple noise gate with standard threshold, ratio, attack time and release time controls. Can be used as an expander if the ratio is low.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.NoiseGate.process">
@@ -1117,7 +1117,7 @@ or buffer, set <code class="docutils literal notranslate"><span class="pre">rese
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.Pedalboard">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Pedalboard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plugins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">pedalboard_native.Plugin</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Pedalboard" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Pedalboard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plugins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Plugin</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Pedalboard" title="Permalink to this definition">#</a></dt>
 <dd><p>A container for a chain of plugins, to use for processing audio.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.Pedalboard.append">
@@ -1261,7 +1261,7 @@ or buffer, set <code class="docutils literal notranslate"><span class="pre">rese
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.PluginContainer">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">PluginContainer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plugins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><span class="pre">pedalboard.Plugin</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.PluginContainer" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">PluginContainer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plugins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><span class="pre">Plugin</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.PluginContainer" title="Permalink to this definition">#</a></dt>
 <dd><p>A generic audio processing plugin that contains zero or more other plugins. Not intended for direct use.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.PluginContainer.process">
@@ -1295,7 +1295,7 @@ or buffer, set <code class="docutils literal notranslate"><span class="pre">rese
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.Resample">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Resample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_sample_rate:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">8000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quality:</span> <span class="pre">pedalboard.Resample.Quality</span> <span class="pre">=</span> <span class="pre">&lt;Quality.WindowedSinc:</span> <span class="pre">4&gt;</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Resample" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Resample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_sample_rate:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">8000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quality:</span> <span class="pre">~pedalboard.Resample.Quality</span> <span class="pre">=</span> <span class="pre">&lt;Quality.WindowedSinc:</span> <span class="pre">4&gt;</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Resample" title="Permalink to this definition">#</a></dt>
 <dd><p>A plugin that downsamples the input audio to the given sample rate, then upsamples it back to the original sample rate. Various quality settings will produce audible distortion and aliasing effects.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.Resample.Quality">
@@ -1363,7 +1363,7 @@ or buffer, set <code class="docutils literal notranslate"><span class="pre">rese
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pedalboard.Resample.quality">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">quality</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#pedalboard.Resample.Quality" title="pedalboard.Resample.Quality"><span class="pre">pedalboard.Resample.Quality</span></a></em><a class="headerlink" href="#pedalboard.Resample.quality" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">quality</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#pedalboard.Resample.Quality" title="pedalboard.Resample.Quality"><span class="pre">Quality</span></a></em><a class="headerlink" href="#pedalboard.Resample.quality" title="Permalink to this definition">#</a></dt>
 <dd><p>The resampling algorithm used to resample the audio.</p>
 </dd></dl>
 
@@ -1475,7 +1475,7 @@ or buffer, set <code class="docutils literal notranslate"><span class="pre">rese
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pedalboard.load_plugin">
-<span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">load_plugin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_to_plugin_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plugin_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pedalboard.pedalboard.ExternalPlugin</span></span></span><a class="headerlink" href="#pedalboard.load_plugin" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">load_plugin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_to_plugin_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plugin_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ExternalPlugin</span></span></span><a class="headerlink" href="#pedalboard.load_plugin" title="Permalink to this definition">#</a></dt>
 <dd><p>Load an audio plugin.</p>
 <dl class="simple">
 <dt>Two plugin formats are supported:</dt><dd><ul class="simple">
@@ -1564,8 +1564,219 @@ but no <code class="docutils literal notranslate"><span class="pre">plugin_name<
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            Contents
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">The <code class="docutils literal notranslate"><span class="pre">pedalboard</span></code> API</a><ul>
+<li><a class="reference internal" href="#pedalboard.AudioUnitPlugin"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.get_plugin_names_for_file"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.get_plugin_names_for_file()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.name"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.name</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.process"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.reset"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.reset()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.show_editor"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.show_editor()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Bitcrush"><code class="docutils literal notranslate"><span class="pre">Bitcrush</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Bitcrush.bit_depth"><code class="docutils literal notranslate"><span class="pre">Bitcrush.bit_depth</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Bitcrush.process"><code class="docutils literal notranslate"><span class="pre">Bitcrush.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Bitcrush.reset"><code class="docutils literal notranslate"><span class="pre">Bitcrush.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Chain"><code class="docutils literal notranslate"><span class="pre">Chain</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Chain.append"><code class="docutils literal notranslate"><span class="pre">Chain.append()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Chain.insert"><code class="docutils literal notranslate"><span class="pre">Chain.insert()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Chain.process"><code class="docutils literal notranslate"><span class="pre">Chain.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Chain.remove"><code class="docutils literal notranslate"><span class="pre">Chain.remove()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Chain.reset"><code class="docutils literal notranslate"><span class="pre">Chain.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Chorus"><code class="docutils literal notranslate"><span class="pre">Chorus</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Chorus.rate_hz"><code class="docutils literal notranslate"><span class="pre">Chorus.rate_hz</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Chorus.process"><code class="docutils literal notranslate"><span class="pre">Chorus.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Chorus.reset"><code class="docutils literal notranslate"><span class="pre">Chorus.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Clipping"><code class="docutils literal notranslate"><span class="pre">Clipping</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Clipping.process"><code class="docutils literal notranslate"><span class="pre">Clipping.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Clipping.reset"><code class="docutils literal notranslate"><span class="pre">Clipping.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Compressor"><code class="docutils literal notranslate"><span class="pre">Compressor</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Compressor.process"><code class="docutils literal notranslate"><span class="pre">Compressor.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Compressor.reset"><code class="docutils literal notranslate"><span class="pre">Compressor.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Convolution"><code class="docutils literal notranslate"><span class="pre">Convolution</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Convolution.process"><code class="docutils literal notranslate"><span class="pre">Convolution.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Convolution.reset"><code class="docutils literal notranslate"><span class="pre">Convolution.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Delay"><code class="docutils literal notranslate"><span class="pre">Delay</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Delay.process"><code class="docutils literal notranslate"><span class="pre">Delay.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Delay.reset"><code class="docutils literal notranslate"><span class="pre">Delay.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Distortion"><code class="docutils literal notranslate"><span class="pre">Distortion</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Distortion.process"><code class="docutils literal notranslate"><span class="pre">Distortion.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Distortion.reset"><code class="docutils literal notranslate"><span class="pre">Distortion.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.GSMFullRateCompressor"><code class="docutils literal notranslate"><span class="pre">GSMFullRateCompressor</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.GSMFullRateCompressor.process"><code class="docutils literal notranslate"><span class="pre">GSMFullRateCompressor.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.GSMFullRateCompressor.reset"><code class="docutils literal notranslate"><span class="pre">GSMFullRateCompressor.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Gain"><code class="docutils literal notranslate"><span class="pre">Gain</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Gain.process"><code class="docutils literal notranslate"><span class="pre">Gain.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Gain.reset"><code class="docutils literal notranslate"><span class="pre">Gain.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.HighShelfFilter"><code class="docutils literal notranslate"><span class="pre">HighShelfFilter</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.HighShelfFilter.process"><code class="docutils literal notranslate"><span class="pre">HighShelfFilter.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.HighShelfFilter.reset"><code class="docutils literal notranslate"><span class="pre">HighShelfFilter.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.HighpassFilter"><code class="docutils literal notranslate"><span class="pre">HighpassFilter</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.HighpassFilter.process"><code class="docutils literal notranslate"><span class="pre">HighpassFilter.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.HighpassFilter.reset"><code class="docutils literal notranslate"><span class="pre">HighpassFilter.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.IIRFilter"><code class="docutils literal notranslate"><span class="pre">IIRFilter</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.IIRFilter.process"><code class="docutils literal notranslate"><span class="pre">IIRFilter.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.IIRFilter.reset"><code class="docutils literal notranslate"><span class="pre">IIRFilter.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Invert"><code class="docutils literal notranslate"><span class="pre">Invert</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Invert.process"><code class="docutils literal notranslate"><span class="pre">Invert.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Invert.reset"><code class="docutils literal notranslate"><span class="pre">Invert.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.LadderFilter"><code class="docutils literal notranslate"><span class="pre">LadderFilter</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.LadderFilter.Mode"><code class="docutils literal notranslate"><span class="pre">LadderFilter.Mode</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.LadderFilter.Mode.LPF12"><code class="docutils literal notranslate"><span class="pre">LadderFilter.Mode.LPF12</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.LadderFilter.Mode.HPF12"><code class="docutils literal notranslate"><span class="pre">LadderFilter.Mode.HPF12</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.LadderFilter.Mode.BPF12"><code class="docutils literal notranslate"><span class="pre">LadderFilter.Mode.BPF12</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.LadderFilter.Mode.LPF24"><code class="docutils literal notranslate"><span class="pre">LadderFilter.Mode.LPF24</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.LadderFilter.Mode.HPF24"><code class="docutils literal notranslate"><span class="pre">LadderFilter.Mode.HPF24</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.LadderFilter.Mode.BPF24"><code class="docutils literal notranslate"><span class="pre">LadderFilter.Mode.BPF24</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.LadderFilter.process"><code class="docutils literal notranslate"><span class="pre">LadderFilter.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.LadderFilter.reset"><code class="docutils literal notranslate"><span class="pre">LadderFilter.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Limiter"><code class="docutils literal notranslate"><span class="pre">Limiter</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Limiter.process"><code class="docutils literal notranslate"><span class="pre">Limiter.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Limiter.reset"><code class="docutils literal notranslate"><span class="pre">Limiter.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.LowShelfFilter"><code class="docutils literal notranslate"><span class="pre">LowShelfFilter</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.LowShelfFilter.process"><code class="docutils literal notranslate"><span class="pre">LowShelfFilter.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.LowShelfFilter.reset"><code class="docutils literal notranslate"><span class="pre">LowShelfFilter.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.LowpassFilter"><code class="docutils literal notranslate"><span class="pre">LowpassFilter</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.LowpassFilter.process"><code class="docutils literal notranslate"><span class="pre">LowpassFilter.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.LowpassFilter.reset"><code class="docutils literal notranslate"><span class="pre">LowpassFilter.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.MP3Compressor"><code class="docutils literal notranslate"><span class="pre">MP3Compressor</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.MP3Compressor.process"><code class="docutils literal notranslate"><span class="pre">MP3Compressor.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.MP3Compressor.reset"><code class="docutils literal notranslate"><span class="pre">MP3Compressor.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Mix"><code class="docutils literal notranslate"><span class="pre">Mix</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Mix.append"><code class="docutils literal notranslate"><span class="pre">Mix.append()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Mix.insert"><code class="docutils literal notranslate"><span class="pre">Mix.insert()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Mix.process"><code class="docutils literal notranslate"><span class="pre">Mix.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Mix.remove"><code class="docutils literal notranslate"><span class="pre">Mix.remove()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Mix.reset"><code class="docutils literal notranslate"><span class="pre">Mix.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.NoiseGate"><code class="docutils literal notranslate"><span class="pre">NoiseGate</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.NoiseGate.process"><code class="docutils literal notranslate"><span class="pre">NoiseGate.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.NoiseGate.reset"><code class="docutils literal notranslate"><span class="pre">NoiseGate.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.PeakFilter"><code class="docutils literal notranslate"><span class="pre">PeakFilter</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.PeakFilter.process"><code class="docutils literal notranslate"><span class="pre">PeakFilter.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.PeakFilter.reset"><code class="docutils literal notranslate"><span class="pre">PeakFilter.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Pedalboard"><code class="docutils literal notranslate"><span class="pre">Pedalboard</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Pedalboard.append"><code class="docutils literal notranslate"><span class="pre">Pedalboard.append()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Pedalboard.insert"><code class="docutils literal notranslate"><span class="pre">Pedalboard.insert()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Pedalboard.process"><code class="docutils literal notranslate"><span class="pre">Pedalboard.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Pedalboard.remove"><code class="docutils literal notranslate"><span class="pre">Pedalboard.remove()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Pedalboard.reset"><code class="docutils literal notranslate"><span class="pre">Pedalboard.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Phaser"><code class="docutils literal notranslate"><span class="pre">Phaser</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Phaser.process"><code class="docutils literal notranslate"><span class="pre">Phaser.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Phaser.reset"><code class="docutils literal notranslate"><span class="pre">Phaser.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.PitchShift"><code class="docutils literal notranslate"><span class="pre">PitchShift</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.PitchShift.process"><code class="docutils literal notranslate"><span class="pre">PitchShift.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.PitchShift.reset"><code class="docutils literal notranslate"><span class="pre">PitchShift.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Plugin"><code class="docutils literal notranslate"><span class="pre">Plugin</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Plugin.process"><code class="docutils literal notranslate"><span class="pre">Plugin.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Plugin.reset"><code class="docutils literal notranslate"><span class="pre">Plugin.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.PluginContainer"><code class="docutils literal notranslate"><span class="pre">PluginContainer</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.PluginContainer.process"><code class="docutils literal notranslate"><span class="pre">PluginContainer.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.PluginContainer.reset"><code class="docutils literal notranslate"><span class="pre">PluginContainer.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Resample"><code class="docutils literal notranslate"><span class="pre">Resample</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Resample.Quality"><code class="docutils literal notranslate"><span class="pre">Resample.Quality</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Resample.Quality.ZeroOrderHold"><code class="docutils literal notranslate"><span class="pre">Resample.Quality.ZeroOrderHold</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Resample.Quality.Linear"><code class="docutils literal notranslate"><span class="pre">Resample.Quality.Linear</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Resample.Quality.CatmullRom"><code class="docutils literal notranslate"><span class="pre">Resample.Quality.CatmullRom</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Resample.Quality.Lagrange"><code class="docutils literal notranslate"><span class="pre">Resample.Quality.Lagrange</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc"><code class="docutils literal notranslate"><span class="pre">Resample.Quality.WindowedSinc</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Resample.process"><code class="docutils literal notranslate"><span class="pre">Resample.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Resample.reset"><code class="docutils literal notranslate"><span class="pre">Resample.reset()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Resample.quality"><code class="docutils literal notranslate"><span class="pre">Resample.quality</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Resample.target_sample_rate"><code class="docutils literal notranslate"><span class="pre">Resample.target_sample_rate</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.Reverb"><code class="docutils literal notranslate"><span class="pre">Reverb</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.Reverb.process"><code class="docutils literal notranslate"><span class="pre">Reverb.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Reverb.reset"><code class="docutils literal notranslate"><span class="pre">Reverb.reset()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.VST3Plugin"><code class="docutils literal notranslate"><span class="pre">VST3Plugin</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.VST3Plugin.get_plugin_names_for_file"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.get_plugin_names_for_file()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.VST3Plugin.load_preset"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.load_preset()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.VST3Plugin.name"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.name</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.VST3Plugin.process"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.VST3Plugin.reset"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.reset()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.VST3Plugin.show_editor"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.show_editor()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.load_plugin"><code class="docutils literal notranslate"><span class="pre">load_plugin()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
@@ -1573,7 +1784,9 @@ but no <code class="docutils literal notranslate"><span class="pre">plugin_name<
 </div><script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
     <script src="../_static/scripts/furo.js"></script>
     <script src="../_static/clipboard.min.js"></script>
     <script src="../_static/copybutton.js"></script>
