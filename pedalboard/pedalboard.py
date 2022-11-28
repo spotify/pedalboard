@@ -42,7 +42,9 @@ class Pedalboard(Chain):
         )
 
 
-FLOAT_SUFFIXES_TO_IGNORE = set(["x", "%", "*", ",", ".", "hz", "ms", "sec", "seconds", "dB"])
+FLOAT_SUFFIXES_TO_IGNORE = set([
+    "x", "%", "*", ",", ".", "hz", "ms", "sec", "seconds", "dB", "dBTP"
+])
 
 
 def strip_common_float_suffixes(s: Union[float, str]) -> Union[float, str]:
