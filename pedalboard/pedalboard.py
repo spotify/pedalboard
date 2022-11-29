@@ -407,13 +407,23 @@ class AudioProcessorParameter(object):
 
     def get_raw_value_for(self, new_value: Union[float, str, bool]) -> float:
         if self.type is float:
-            new_value = strip_common_float_suffixes(new_value)
+            if isinstance(new_value, str) and self.label and new_value.endswith(self.label):
+                to_float_value = new_value[: -len(self.label)]
+            else:
+                to_float_value = new_value
 
             try:
-                new_value = float(new_value)
+                new_value = float(to_float_value)
             except ValueError:
+                if self.label:
+                    raise ValueError(
+                        "Value received for parameter '{}' ({}) must be a number or a string (with"
+                        " the optional suffix '{}')".format(
+                            self.python_name, repr(new_value), self.label
+                        )
+                    )
                 raise ValueError(
-                    "Value received for parameter '{}' ({}) must be a number".format(
+                    "Value received for parameter '{}' ({}) must be a number or a string".format(
                         self.python_name, repr(new_value)
                     )
                 )
