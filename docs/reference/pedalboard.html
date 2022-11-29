@@ -234,22 +234,10 @@ see <a class="reference internal" href="#pedalboard.VST3Plugin" title="pedalboar
 <p>Note that most Audio Units have a single plugin inside, but this method can be useful to determine if multiple plugins are present in one bundle, and if so, what their names are.</p>
 </dd></dl>
 
-<dl class="py method">
-<dt class="sig sig-object py" id="pedalboard.AudioUnitPlugin.load_preset">
-<span class="sig-name descname"><span class="pre">load_preset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pedalboard_native._AudioUnitPlugin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset_file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.AudioUnitPlugin.load_preset" title="Permalink to this definition">#</a></dt>
-<dd><p>Load an Audio Unit preset file in .aupreset format. Equivalent to loading the provided filename and setting the <cite>preset_state</cite> parameter to the file’s contents.</p>
-</dd></dl>
-
 <dl class="py property">
 <dt class="sig sig-object py" id="pedalboard.AudioUnitPlugin.name">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#pedalboard.AudioUnitPlugin.name" title="Permalink to this definition">#</a></dt>
 <dd><p>The name of this plugin, as reported by the plugin itself.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="pedalboard.AudioUnitPlugin.preset_state">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">preset_state</span></span><a class="headerlink" href="#pedalboard.AudioUnitPlugin.preset_state" title="Permalink to this definition">#</a></dt>
-<dd><p>The internal state of this AudioUnit plugin, as a bytestring in Apple’s binary property list (.aupreset) format.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1444,12 +1432,6 @@ a Windows VST3 plugin bundle will not load on Linux or macOS.)</p>
 <dd><p>The name of this plugin.</p>
 </dd></dl>
 
-<dl class="py property">
-<dt class="sig sig-object py" id="pedalboard.VST3Plugin.preset_state">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">preset_state</span></span><a class="headerlink" href="#pedalboard.VST3Plugin.preset_state" title="Permalink to this definition">#</a></dt>
-<dd><p>The internal state of this VST3 plugin, as a bytestring.</p>
-</dd></dl>
-
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.VST3Plugin.process">
 <span class="sig-name descname"><span class="pre">process</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pedalboard_native.Plugin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_array</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8192</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.VST3Plugin.process" title="Permalink to this definition">#</a></dt>
@@ -1592,9 +1574,7 @@ but no <code class="docutils literal notranslate"><span class="pre">plugin_name<
 <li><a class="reference internal" href="#">The <code class="docutils literal notranslate"><span class="pre">pedalboard</span></code> API</a><ul>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin</span></code></a><ul>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.get_plugin_names_for_file"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.get_plugin_names_for_file()</span></code></a></li>
-<li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.load_preset"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.load_preset()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.name"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.name</span></code></a></li>
-<li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.preset_state"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.preset_state</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.process"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.process()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.reset"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.reset()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.show_editor"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.show_editor()</span></code></a></li>
@@ -1779,7 +1759,6 @@ but no <code class="docutils literal notranslate"><span class="pre">plugin_name<
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.get_plugin_names_for_file"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.get_plugin_names_for_file()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.load_preset"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.load_preset()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.name"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.name</span></code></a></li>
-<li><a class="reference internal" href="#pedalboard.VST3Plugin.preset_state"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.preset_state</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.process"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.process()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.reset"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.reset()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.show_editor"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.show_editor()</span></code></a></li>
