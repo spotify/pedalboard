@@ -455,6 +455,9 @@ def test_float_parameter_valdation(plugin_filename: str, parameter_name: str):
     with pytest.raises(ValueError):
         setattr(plugin, parameter_name, "not a float")
 
+    # Should be allowed to set a float parameter followed by its (or a common) suffix:
+    setattr(plugin, parameter_name, f"{parameter} {parameter.label or 'dB'}")
+
     max_range = parameter.max_value
     with pytest.raises(ValueError):
         setattr(plugin, parameter_name, max_range + 100)
