@@ -47,18 +47,21 @@ FLOAT_SUFFIXES_TO_IGNORE = set(
 )
 
 
-def strip_common_float_suffixes(s: Union[float, str]) -> Union[float, str]:
-    if isinstance(s, float):
+def strip_common_float_suffixes(
+    s: Union[float, str, bool], strip_si_prefixes: bool = True
+) -> Union[float, str, bool]:
+    if not isinstance(s, str) or (hasattr(s, "type") and s.type != str):
         return s
 
     s = s.strip()
 
     # Handle certain plugins that report "Hz" and "kHz" suffixes:
-    if s.lower().endswith("khz") and len(s) > 3:
-        try:
-            s = str(float(s[:-3]) * 1000)
-        except ValueError:
-            pass
+    if strip_si_prefixes:
+        if s.lower().endswith("khz") and len(s) > 3:
+            try:
+                s = str(float(s[:-3]) * 1000)
+            except ValueError:
+                pass
 
     for suffix in FLOAT_SUFFIXES_TO_IGNORE:
         if suffix == "hz" and "khz" in s.lower():
@@ -265,6 +268,24 @@ class AudioProcessorParameter(object):
             self.min_value = min(float_ranges.values())
             self.max_value = max(float_ranges.values())
 
+            if not self.label:
+                # Try to infer the label from the string values:
+                a_value = next(iter(self.ranges.values()))
+                stripped_value = strip_common_float_suffixes(a_value, strip_si_prefixes=False)
+                if stripped_value != a_value and stripped_value in a_value:
+                    # We probably have a label! Iterate through all values just to make sure:
+                    all_possible_labels = set()
+                    for value in self.ranges.values():
+                        all_possible_labels.add(
+                            value.replace(
+                                strip_common_float_suffixes(value, strip_si_prefixes=False), ""
+                            ).strip()
+                        )
+                    if len(all_possible_labels) == 1:
+                        self._label = next(iter(all_possible_labels))
+                    else:
+                        print(f"Not auto-determining label: found {all_possible_labels}")
+
             sorted_values = sorted(float_ranges.values())
             first_derivative_steps = set(
                 [round(abs(b - a), 8) for a, b in zip(sorted_values, sorted_values[1:])]
@@ -303,6 +324,24 @@ class AudioProcessorParameter(object):
             "Parameter {} on plugin {} is no longer available. This could indicate that the plugin"
             " has changed parameters.".format(self.__parameter_name, self.__plugin)
         )
+
+    @property
+    def label(self) -> Optional[str]:
+        """
+        The units used by this parameter (i.e.: Hz, dB, etc).
+        """
+        if hasattr(self, "_label") and self._label:
+            return self._label
+        with self.__get_cpp_parameter() as parameter:
+            if parameter.label:
+                return parameter.label
+
+    @property
+    def units(self) -> Optional[str]:
+        """
+        Alias for "label" - the units used by this parameter (i.e.: Hz, dB, etc).
+        """
+        return self.label
 
     def __repr__(self):
         with self.__get_cpp_parameter() as parameter:
@@ -366,21 +405,33 @@ class AudioProcessorParameter(object):
                 pass
         return super().__setattr__(name, value)
 
-    def get_raw_value_for(self, new_value) -> float:
+    def get_raw_value_for(self, new_value: Union[float, str, bool]) -> float:
         if self.type is float:
+            if isinstance(new_value, str) and self.label and new_value.endswith(self.label):
+                to_float_value = new_value[: -len(self.label)]
+            else:
+                to_float_value = new_value
+
             try:
-                new_value = float(new_value)
+                new_value = float(to_float_value)
             except ValueError:
+                if self.label:
+                    raise ValueError(
+                        "Value received for parameter '{}' ({}) must be a number or a string (with"
+                        " the optional suffix '{}')".format(
+                            self.python_name, repr(new_value), self.label
+                        )
+                    )
                 raise ValueError(
-                    "Value received for parameter '{}' ({}) must be a number".format(
-                        self.python_name, new_value
+                    "Value received for parameter '{}' ({}) must be a number or a string".format(
+                        self.python_name, repr(new_value)
                     )
                 )
             if new_value < self.min_value or new_value > self.max_value:
                 raise ValueError(
                     "Value received for parameter '{}' ({}) is out of range [{}{}, {}{}]".format(
                         self.python_name,
-                        new_value,
+                        repr(new_value),
                         self.min_value,
                         self.label,
                         self.max_value,
@@ -416,13 +467,13 @@ class AudioProcessorParameter(object):
                 raise ValueError(
                     "Value received for parameter '{}' ({}) should be a string (or string-like),"
                     " but got an object of type: {}".format(
-                        self.python_name, new_value, type(new_value)
+                        self.python_name, repr(new_value), type(new_value)
                     )
                 )
             if new_value not in self.valid_values:
                 raise ValueError(
                     "Value received for parameter '{}' ({}) not in list of valid values: {}".format(
-                        self.python_name, new_value, self.valid_values
+                        self.python_name, repr(new_value), self.valid_values
                     )
                 )
             plugin_reported_raw_value = self.get_raw_value_for_text(new_value)
@@ -442,7 +493,7 @@ class AudioProcessorParameter(object):
                 raise ValueError(
                     "Value received for parameter '{}' ({}) should be a boolean,"
                     " but got an object of type: {}".format(
-                        self.python_name, new_value, type(new_value)
+                        self.python_name, repr(new_value), type(new_value)
                     )
                 )
             return 1.0 if new_value else 0.0
