@@ -1030,3 +1030,24 @@ def test_mp3_parsing_with_lyrics3(cross_platform_formats_only: bool, lyric_data_
     ) as f:
         assert f.frames >= input_audio.shape[-1]
         assert f.read(f.frames).shape[1] >= input_audio.shape[-1]
+
+
+@pytest.mark.parametrize("quality", list(range(9)))
+def test_flac_seek(quality: int):
+    stream = io.BytesIO()
+    stream.name = "foo.flac"
+    input_audio = np.random.rand(44100).astype(np.float32)
+    with pedalboard.io.AudioFile(stream, "w", 44100, quality=quality) as f:
+        f.write(input_audio)
+    stream.seek(0)
+
+    with pedalboard.io.ReadableAudioFile(stream) as f:
+        np.testing.assert_allclose(f.read(f.frames)[0], input_audio, atol=4e-5)
+        for offset in range(0, f.frames, 100):
+            f.seek(offset)
+            np.testing.assert_allclose(
+                f.read(f.frames)[0],
+                input_audio[offset:],
+                atol=4e-5,
+                err_msg=f"FLAC contents no longer matched after seeking to offset: {offset:,}",
+            )
