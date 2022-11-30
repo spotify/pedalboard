@@ -789,6 +789,8 @@ public:
         channelPointers[i] = outputBlock.getChannelPointer(i);
       }
 
+      // TODO: need to bind to JUCE here / set tempo?
+
       // Depending on the bus layout, we may have to pass extra buffers to the
       // plugin that we don't use. Use vector here to ensure the memory is
       // freed via RAII.
@@ -1043,6 +1045,7 @@ inline void init_external_plugins(py::module &m) {
            "Show the UI of this plugin as a native window. This method will "
            "block until the window is closed or a KeyboardInterrupt is "
            "received.");
+      // TODO: need to bind to JUCE here?
 #endif
 
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
@@ -1107,6 +1110,7 @@ inline void init_external_plugins(py::module &m) {
            "Show the UI of this plugin as a native window. This method will "
            "block until the window is closed or a KeyboardInterrupt is "
            "received.");
+      // TODO: need to bind to JUCE here?
 #endif
 }
 
