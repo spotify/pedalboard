@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.11.0']
-        os: [ubuntu-latest]
+        os: ['ubuntu-20.04']
     name: Lint Python
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -40,7 +40,7 @@ jobs:
         run: black pedalboard tests --line-length 100 --preview --diff --check
 
   lint-cpp:
-    runs-on: ubuntu-latest
+    runs-on: 'ubuntu-20.04'
     continue-on-error: true
     name: Lint C++
     steps:
@@ -61,7 +61,7 @@ jobs:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11.0']
         # TODO: Switch back to macos-latest once https://github.com/actions/python-versions/pull/114 is fixed
-        os: [ubuntu-latest, windows-latest, macos-12]
+        os: ['ubuntu-20.04', windows-latest, macos-12]
         exclude:
         # macOS 12 and Python 3.11 seem to have issues installing Pedalboard when doing `setup.py install`.
         - os: macos-12
@@ -109,10 +109,10 @@ jobs:
           GCS_READER_SERVICE_ACCOUNT_KEY: ${{ secrets.GCS_READER_SERVICE_ACCOUNT_KEY }}
         run: python ./tests/download_test_plugins.py
       - name: Run tests
-        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.8'
+        if: matrix.os != 'ubuntu-20.04' || matrix.python-version != '3.8'
         run: pytest -v --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard
       - name: Run tests with coverage reporting
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8'
+        if: matrix.os == 'ubuntu-20.04' && matrix.python-version == '3.8'
         run: |
           pytest -v --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard \
           && coverage json --fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} \
@@ -120,7 +120,7 @@ jobs:
           && jq -r 'if .totals.percent_covered > ${{ env.MINIMUM_COVERAGE_PERCENTAGE }} then "COVERAGE_COLOR=green" else "COVERAGE_COLOR=red" end' coverage.json >> $GITHUB_ENV
       - name: Create coverage badge
         uses: schneegans/dynamic-badges-action@v1.1.0
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8' && github.event_name == 'release' && github.event.action == 'published'
+        if: matrix.os == 'ubuntu-20.04' && matrix.python-version == '3.8' && github.event_name == 'release' && github.event.action == 'published'
         with:
           auth: ${{ secrets.COVERAGE_GIST_SECRET }}
           gistID: 8736467e9952991ef44a67915ee7c762
@@ -134,7 +134,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11.0']
-        os: [ubuntu-latest]
+        os: ['ubuntu-20.04']
     name: Test with Python ${{ matrix.python-version }} + Address Sanitizer
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -236,24 +236,24 @@ jobs:
         - { os: windows-latest, build: pp37-win_amd64 }
         - { os: windows-latest, build: pp38-win_amd64 }
         - { os: windows-latest, build: pp39-win_amd64 }
-        - { os: ubuntu-latest, build: cp36-manylinux_x86_64 }
-        - { os: ubuntu-latest, build: cp36-manylinux_aarch64 }
-        - { os: ubuntu-latest, build: cp37-manylinux_x86_64 }
-        - { os: ubuntu-latest, build: cp37-manylinux_aarch64 }
-        - { os: ubuntu-latest, build: cp38-manylinux_x86_64 }
-        - { os: ubuntu-latest, build: cp38-manylinux_aarch64 }
-        - { os: ubuntu-latest, build: cp39-manylinux_x86_64 }
-        - { os: ubuntu-latest, build: cp39-manylinux_aarch64 }
-        - { os: ubuntu-latest, build: cp310-manylinux_x86_64 }
-        - { os: ubuntu-latest, build: cp310-manylinux_aarch64 }
-        - { os: ubuntu-latest, build: cp311-manylinux_x86_64 }
-        - { os: ubuntu-latest, build: cp311-manylinux_aarch64 }
-        - { os: ubuntu-latest, build: pp37-manylinux_x86_64 }
-        - { os: ubuntu-latest, build: pp37-manylinux_aarch64 }
-        - { os: ubuntu-latest, build: pp38-manylinux_x86_64 }
-        - { os: ubuntu-latest, build: pp38-manylinux_aarch64 }
-        - { os: ubuntu-latest, build: pp39-manylinux_x86_64 }
-        - { os: ubuntu-latest, build: pp39-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp36-manylinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp36-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp37-manylinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp37-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp38-manylinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp38-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp39-manylinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp39-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp310-manylinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp310-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp311-manylinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp311-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: pp37-manylinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: pp37-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: pp38-manylinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: pp38-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: pp39-manylinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: pp39-manylinux_aarch64 }
     name: Build wheel for ${{ matrix.build }}
     steps:
       - uses: actions/checkout@v2
@@ -294,7 +294,7 @@ jobs:
 
   upload-pypi:
     needs: [build-wheels]
-    runs-on: ubuntu-latest
+    runs-on: 'ubuntu-20.04'
     name: "Upload wheels to PyPI"
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
