@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "../juce_overrides/juce_PatchedFLACAudioFormat.h"
 #include "../juce_overrides/juce_PatchedMP3AudioFormat.h"
 #include "AudioFile.h"
 #include "LameMP3AudioFormat.h"
@@ -35,10 +36,7 @@ void registerPedalboardAudioFormats(juce::AudioFormatManager &manager,
                                     bool forWriting, bool crossPlatformOnly) {
   manager.registerFormat(new juce::WavAudioFormat(), true);
   manager.registerFormat(new juce::AiffAudioFormat(), false);
-
-#if JUCE_USE_FLAC
-  manager.registerFormat(new juce::FlacAudioFormat(), false);
-#endif
+  manager.registerFormat(new juce::PatchedFlacAudioFormat(), false);
 
 #if JUCE_USE_OGGVORBIS
   manager.registerFormat(new juce::OggVorbisAudioFormat(), false);
