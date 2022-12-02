@@ -241,9 +241,6 @@ public:
       }
 
       if (requestedStart < bufferedRange.getStart()) {
-        // had some problems with flac crashing if the read pos is aligned more
-        // accurately than this. Probably fixed in newer versions of the
-        // library, though.
         bufferedRange = emptyRange(requestedStart);
         FLAC__stream_decoder_seek_absolute(
             decoder,
