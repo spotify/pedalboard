@@ -161,11 +161,11 @@ public:
     if (PythonException::isPending())
       return true;
 
-    if (lastReadWasSmallerThanExpected) {
-      return true;
-    }
-
     try {
+      if (lastReadWasSmallerThanExpected) {
+        return true;
+      }
+
       return fileLike.attr("tell")().cast<juce::int64>() == getTotalLength();
     } catch (py::error_already_set e) {
       e.restore();
@@ -202,6 +202,7 @@ public:
     try {
       if (fileLike.attr("seekable")().cast<bool>()) {
         fileLike.attr("seek")(pos);
+        lastReadWasSmallerThanExpected = false;
       }
 
       return fileLike.attr("tell")().cast<juce::int64>() == pos;

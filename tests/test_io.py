@@ -1030,3 +1030,33 @@ def test_mp3_parsing_with_lyrics3(cross_platform_formats_only: bool, lyric_data_
     ) as f:
         assert f.frames >= input_audio.shape[-1]
         assert f.read(f.frames).shape[1] >= input_audio.shape[-1]
+
+
+@pytest.mark.parametrize("quality", list(range(9)))
+@pytest.mark.parametrize("chunk_duration", [16, 1024, 2048, 1024 * 1024])
+@pytest.mark.parametrize("granularity", [1, 16, 17, 1024, 1025])
+@pytest.mark.parametrize("extension", [".wav", ".aiff", ".flac"])
+def test_seek_accuracy(quality: int, chunk_duration: int, granularity: int, extension: str):
+    stream = io.BytesIO()
+    stream.name = "foo" + extension
+    sr = 44100
+    input_audio = np.random.rand(sr // 10).astype(np.float32)
+    if extension != ".flac":
+        quality = None
+    with pedalboard.io.AudioFile(stream, "w", sr, quality=quality) as f:
+        f.write(input_audio)
+    stream.seek(0)
+
+    with pedalboard.io.ReadableAudioFile(stream) as f:
+        np.testing.assert_allclose(f.read(f.frames)[0, : len(input_audio)], input_audio, atol=0.1)
+        for offset in range(0, f.frames, granularity):
+            f.seek(offset)
+            np.testing.assert_allclose(
+                f.read(chunk_duration)[0, : len(input_audio) - offset],
+                input_audio[offset : offset + chunk_duration],
+                atol=0.1,
+                err_msg=(
+                    f"{extension} file contents no longer matched after seeking to offset:"
+                    f" {offset:,}"
+                ),
+            )
