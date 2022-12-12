@@ -681,7 +681,6 @@ try:
                 )
             _VST3Plugin.__init__(self, path_to_plugin_file, plugin_name)
             self.__set_initial_parameter_values__(parameter_values)
-            self.__set_extra_functions__(tempo_bpm)
 
 except ImportError:
     # We may be on a system that doesn't have native VST3Plugin support.

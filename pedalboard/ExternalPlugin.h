@@ -789,7 +789,6 @@ public:
         channelPointers[i] = outputBlock.getChannelPointer(i);
       }
 
-      // TODO: need to bind to JUCE here / set tempo?
 
       // Depending on the bus layout, we may have to pass extra buffers to the
       // plugin that we don't use. Use vector here to ensure the memory is
@@ -996,9 +995,10 @@ inline void init_external_plugins(py::module &m) {
       "(i.e.: if you're running Linux but trying to open a VST that does not "
       "support Linux, this will fail).")
       .def(py::init([](std::string &pathToPluginFile,
-                       std::optional<std::string> pluginName) {
+                       std::optional<std::string> pluginName,
+                       std::optional<int> tempoBpm) {
              return std::make_unique<ExternalPlugin<juce::VST3PluginFormat>>(
-                 pathToPluginFile, pluginName);
+                 pathToPluginFile, pluginName, tempoBpm);
            }),
            py::arg("path_to_plugin_file"), py::arg("plugin_name") = py::none())
       .def("__repr__",
@@ -1045,7 +1045,10 @@ inline void init_external_plugins(py::module &m) {
            "Show the UI of this plugin as a native window. This method will "
            "block until the window is closed or a KeyboardInterrupt is "
            "received.");
-      // TODO: need to bind to JUCE here?
+      .def_property(
+          "tempo", &ExternalPlugin<juce::VST3PluginFormat>::getBpm,
+          &ExternalPlugin<juce::VST3PluginFormat>::setBpm, 
+          "The value of the tempo/bpm")
 #endif
 
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
@@ -1110,7 +1113,6 @@ inline void init_external_plugins(py::module &m) {
            "Show the UI of this plugin as a native window. This method will "
            "block until the window is closed or a KeyboardInterrupt is "
            "received.");
-      // TODO: need to bind to JUCE here?
 #endif
 }
 
