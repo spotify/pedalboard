@@ -709,7 +709,6 @@ try:
             path_to_plugin_file: str,
             parameter_values: Dict[str, Union[str, int, float, bool]] = {},
             plugin_name: Optional[str] = None,
-            tempo_bpm: int = 120,
         ):
             if not isinstance(parameter_values, dict):
                 raise TypeError(
@@ -719,7 +718,6 @@ try:
                 )
             _AudioUnitPlugin.__init__(self, path_to_plugin_file, plugin_name)
             self.__set_initial_parameter_values__(parameter_values)
-            self.__set_extra_functions__(tempo_bpm)
 
 except ImportError:
     # We may be on a system that doesn't have native AudioUnitPlugin support.
