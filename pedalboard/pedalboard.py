@@ -753,7 +753,7 @@ def load_plugin(
             ``plugin_name`` is not provided, an exception will be thrown.
 
     Returns:
-        an instance of :class:`pedalboard.VST3Plugin`` or :class:`pedalboard.AudioUnitPlugin`
+        an instance of :class:`pedalboard.VST3Plugin` or :class:`pedalboard.AudioUnitPlugin`
 
     Throws:
         ``ImportError``: if the plugin cannot be found or loaded
