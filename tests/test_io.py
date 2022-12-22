@@ -1032,6 +1032,16 @@ def test_mp3_parsing_with_lyrics3(cross_platform_formats_only: bool, lyric_data_
         assert f.read(f.frames).shape[1] >= input_audio.shape[-1]
 
 
+@pytest.mark.parametrize("cross_platform_formats_only", [True, False])
+def test_real_mp3_parsing_with_lyrics3(cross_platform_formats_only: bool):
+    with pedalboard.io.ReadableAudioFile(
+        os.path.join(os.path.dirname(__file__), "audio", "correct", "bad_audio_file_lyrics3.mp3"),
+        cross_platform_formats_only=cross_platform_formats_only,
+    ) as f:
+        assert f.frames >= 0
+        assert f.read(f.frames).shape[1] == f.frames
+
+
 @pytest.mark.parametrize("quality", list(range(9)))
 @pytest.mark.parametrize("chunk_duration", [16, 1024, 2048, 1024 * 1024])
 @pytest.mark.parametrize("granularity", [1, 16, 17, 1024, 1025])
