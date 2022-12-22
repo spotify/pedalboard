@@ -14,7 +14,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        python-version: ['3.11.0']
+        python-version: ['3.11']
         os: ['ubuntu-20.04']
     name: Lint Python
     steps:
@@ -59,13 +59,15 @@ jobs:
       MINIMUM_COVERAGE_PERCENTAGE: 80
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11.0']
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
         # TODO: Switch back to macos-latest once https://github.com/actions/python-versions/pull/114 is fixed
         os: ['ubuntu-20.04', windows-latest, macos-12]
         exclude:
-        # macOS 12 and Python 3.11 seem to have issues installing Pedalboard when doing `setup.py install`.
+        # macOS 12 and Python 3.9/3.11 seem to have issues installing Pedalboard when doing `setup.py install`.
         - os: macos-12
-          python-version: "3.11.0"
+          python-version: "3.11"
+        - os: macos-12
+          python-version: "3.9"
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -133,7 +135,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11.0']
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
         os: ['ubuntu-20.04']
     name: Test with Python ${{ matrix.python-version }} + Address Sanitizer
     steps:
