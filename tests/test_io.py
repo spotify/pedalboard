@@ -1008,8 +1008,7 @@ def test_file_not_created_if_constructor_error_thrown(tmp_path: pathlib.Path):
 
 
 @pytest.mark.parametrize("cross_platform_formats_only", [True, False])
-@pytest.mark.parametrize("lyric_data_length", [100, 1024, 1024 * 1024])
-def test_mp3_parsing_with_lyrics3(cross_platform_formats_only: bool, lyric_data_length: int):
+def test_real_mp3_parsing_with_lyrics3(cross_platform_formats_only: bool):
     """
     Lyrics3 is a non-standard extension to the MP3 format that appends lyric data after the last
     MP3 frame. This data is not read by Pedalboard - but the MP3 parser used on Linux and Windows
@@ -1017,23 +1016,6 @@ def test_mp3_parsing_with_lyrics3(cross_platform_formats_only: bool, lyric_data_
     use a patched version of JUCE's MP3 parser to allow reading MP3 files that contain Lyrics3
     data.
     """
-    LYRICS3_TRAILING_DATA = b"LYRICSBEGIN" + (b"0" * lyric_data_length) + b"LYRICS200"
-    stream = io.BytesIO()
-    stream.name = "foo.mp3"
-    input_audio = np.random.rand(44100)
-    with pedalboard.io.AudioFile(stream, "w", 44100) as f:
-        f.write(input_audio)
-    stream.write(LYRICS3_TRAILING_DATA)
-    stream.seek(0)
-    with pedalboard.io.ReadableAudioFile(
-        stream, cross_platform_formats_only=cross_platform_formats_only
-    ) as f:
-        assert f.frames >= input_audio.shape[-1]
-        assert f.read(f.frames).shape[1] >= input_audio.shape[-1]
-
-
-@pytest.mark.parametrize("cross_platform_formats_only", [True, False])
-def test_real_mp3_parsing_with_lyrics3(cross_platform_formats_only: bool):
     with pedalboard.io.ReadableAudioFile(
         os.path.join(os.path.dirname(__file__), "audio", "correct", "bad_audio_file_lyrics3.mp3"),
         cross_platform_formats_only=cross_platform_formats_only,
