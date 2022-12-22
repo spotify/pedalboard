@@ -283,8 +283,6 @@ class AudioProcessorParameter(object):
                         )
                     if len(all_possible_labels) == 1:
                         self._label = next(iter(all_possible_labels))
-                    else:
-                        print(f"Not auto-determining label: found {all_possible_labels}")
 
             sorted_values = sorted(float_ranges.values())
             first_derivative_steps = set(
