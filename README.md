@@ -71,27 +71,38 @@ If you are new to Python, follow [INSTALLATION.md](https://github.com/spotify/pe
 
 ## Examples
 
+> **Note**: If you'd rather watch a video instead of reading examples or documentation, **watch [_Working with Audio in Python (feat. Pedalboard)_ on YouTube](https://www.youtube.com/watch?v=NYhkqXpFAlg)**.
+
 ### Quick start
 
 ```python
 from pedalboard import Pedalboard, Chorus, Reverb
 from pedalboard.io import AudioFile
 
-# Read in a whole audio file:
-with AudioFile('some-file.wav') as f:
-  audio = f.read(f.frames)
-  samplerate = f.samplerate
-
-# Make a Pedalboard object, containing multiple plugins:
+# Make a Pedalboard object, containing multiple audio plugins:
 board = Pedalboard([Chorus(), Reverb(room_size=0.25)])
 
-# Run the audio through this pedalboard!
-effected = board(audio, samplerate)
-
-# Write the audio back as a wav file:
-with AudioFile('processed-output.wav', 'w', samplerate, effected.shape[0]) as f:
-  f.write(effected)
+# Open an audio file for reading, just like a regular file:
+with AudioFile('some-file.wav') as f:
+  
+  # Open an audio file to write to:
+  with AudioFile('output.wav', 'w', f.samplerate, f.num_channels) as o:
+  
+    # Read one second of audio at a time, until the file is empty:
+    while f.tell() < f.frames:
+      chunk = f.read(f.samplerate)
+      
+      # Run the audio through our pedalboard:
+      effected = board(chunk, samplerate, reset=False)
+      
+      # Write the output to our output file:
+      o.write(effected)
 ```
+
+> **Note**: For more information about how to process audio through
+> Pedalboard plugins, including how the `reset` parameter works,
+> see [the documentation for `pedalboard.Plugin.process`](
+> https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.Plugin.process).
 
 ### Making a guitar-style pedalboard
 
@@ -205,6 +216,7 @@ board = Pedalboard([
 For more examples, see:
  - [the "examples" folder of this repository](https://github.com/spotify/pedalboard/tree/master/examples)
  - [the "Pedalboard Demo" Colab notebook](https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_lOfG99Xs3qWVrhch)
+ - [_Working with Audio in Python (feat. Pedalboard)_ by Peter Sobot at EuroPython 2022](https://www.youtube.com/watch?v=NYhkqXpFAlg)
  - [an interactive web demo on Hugging Face Spaces and Gradio](https://huggingface.co/spaces/akhaliq/pedalboard) (via [@AK391](https://github.com/AK391)) 
 
 ## Contributing
