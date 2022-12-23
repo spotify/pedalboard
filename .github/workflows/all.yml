@@ -110,7 +110,7 @@ jobs:
         run: python ./tests/download_test_plugins.py
       - name: Run tests
         if: matrix.os != 'ubuntu-20.04' || matrix.python-version != '3.8'
-        run: pytest -v --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard
+        run: pytest -v --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard --durations=100
       - name: Run tests with coverage reporting
         if: matrix.os == 'ubuntu-20.04' && matrix.python-version == '3.8'
         run: |
