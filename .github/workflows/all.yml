@@ -293,7 +293,7 @@ jobs:
           path: ./wheelhouse/*.whl
 
   upload-pypi:
-    needs: [build-wheels]
+    needs: [build-wheels, test-docs, run-tests-with-address-sanitizer, run-tests]
     runs-on: 'ubuntu-20.04'
     name: "Upload wheels to PyPI"
     if: github.event_name == 'release' && github.event.action == 'published'
