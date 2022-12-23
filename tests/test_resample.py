@@ -50,7 +50,12 @@ def test_resample(
     quality: Resample.Quality,
     plugin_class,
 ):
-    sine_wave = generate_sine_at(sample_rate, fundamental_hz, num_channels=num_channels)
+    sine_wave = generate_sine_at(
+        sample_rate,
+        fundamental_hz,
+        num_seconds=duration,
+        num_channels=num_channels,
+    )
     plugin = plugin_class(target_sample_rate, quality=quality)
     output = plugin.process(sine_wave, sample_rate, buffer_size=buffer_size)
     np.testing.assert_allclose(sine_wave, output, atol=TOLERANCE_PER_QUALITY[quality])
@@ -72,7 +77,12 @@ def test_resample_invariant_to_buffer_size(
     quality: Resample.Quality,
     plugin_class,
 ):
-    sine_wave = generate_sine_at(sample_rate, fundamental_hz, num_channels=num_channels)
+    sine_wave = generate_sine_at(
+        sample_rate,
+        fundamental_hz,
+        num_seconds=duration,
+        num_channels=num_channels,
+    )
     plugin = plugin_class(target_sample_rate, quality=quality)
 
     buffer_sizes = [1, 7000, 8192, 1_000_000]
@@ -113,9 +123,9 @@ def test_identical_noise_with_zero_order_hold(
 @pytest.mark.parametrize("fundamental_hz", [10])
 @pytest.mark.parametrize("sample_rate", [100, 384_123.45])
 @pytest.mark.parametrize("target_sample_rate", [100, 384_123.45])
-@pytest.mark.parametrize("buffer_size", [1, 1_000_000])
+@pytest.mark.parametrize("buffer_size", [1_000_000])
 @pytest.mark.parametrize("duration", DURATIONS)
-@pytest.mark.parametrize("num_channels", [1, 2])
+@pytest.mark.parametrize("num_channels", [1])
 @pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
 @pytest.mark.parametrize("plugin_class", [Resample, ResampleWithLatency])
 def test_extreme_resampling(
@@ -128,7 +138,12 @@ def test_extreme_resampling(
     quality: Resample.Quality,
     plugin_class,
 ):
-    sine_wave = generate_sine_at(sample_rate, fundamental_hz, num_channels=num_channels)
+    sine_wave = generate_sine_at(
+        sample_rate,
+        fundamental_hz,
+        num_seconds=duration,
+        num_channels=num_channels,
+    )
     plugin = plugin_class(target_sample_rate, quality=quality)
     output = plugin.process(sine_wave, sample_rate, buffer_size=buffer_size)
     np.testing.assert_allclose(sine_wave, output, atol=TOLERANCE_PER_QUALITY[quality])
