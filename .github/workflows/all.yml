@@ -192,7 +192,7 @@ jobs:
           pip install wheel
           pip install -r test-requirements.txt
       - name: Build pedalboard locally
-        run: python setup.py install
+        run: python setup.py develop
       - name: Generate type stubs and documentation, and validate they match
         # Only validate documentation on macOS, as Linux and Windows have a subset of the classes
         # TODO: 3.11.0-rc1 doesn't include type hints when generating type stubs.
