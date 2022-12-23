@@ -98,7 +98,7 @@ jobs:
         run: chocolatey install jq
         if: runner.os == 'Windows'
       - name: Build pedalboard locally
-        run: python setup.py install
+        run: python setup.py develop
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
@@ -155,11 +155,11 @@ jobs:
           pip install -r test-requirements.txt
       - name: Build pedalboard locally
         env:
-          DEBUG: "1"
+          DEBUG: "0"
           USE_ASAN: "1"
           CC: clang
           CXX: clang++
-        run: python setup.py install
+        run: python setup.py develop
       - name: Run tests with ASan loaded
         # pytest can exit before all Python objects have been destroyed,
         # so we tell ASan to ignore leaks.
@@ -192,7 +192,7 @@ jobs:
           pip install wheel
           pip install -r test-requirements.txt
       - name: Build pedalboard locally
-        run: python setup.py install
+        run: python setup.py develop
       - name: Generate type stubs and documentation, and validate they match
         # Only validate documentation on macOS, as Linux and Windows have a subset of the classes
         # TODO: 3.11.0-rc1 doesn't include type hints when generating type stubs.
