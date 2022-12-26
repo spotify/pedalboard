@@ -1000,7 +1000,7 @@ inline void init_external_plugins(py::module &m) {
              return std::make_unique<ExternalPlugin<juce::VST3PluginFormat>>(
                  pathToPluginFile, pluginName, tempoBpm);
            }),
-           py::arg("path_to_plugin_file"), py::arg("plugin_name") = py::none())
+           py::arg("path_to_plugin_file"), py::arg("plugin_name") = py::none(), py::arg("tempo_bpm") = 120)
       .def("__repr__",
            [](ExternalPlugin<juce::VST3PluginFormat> &plugin) {
              std::ostringstream ss;
