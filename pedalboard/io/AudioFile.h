@@ -53,12 +53,12 @@ void registerPedalboardAudioFormats(juce::AudioFormatManager &manager,
     // Linux. To do so, we use this flag:
 
     if (crossPlatformOnly) {
-      manager.registerFormat(new juce::MP3AudioFormat(), false);
+      manager.registerFormat(new juce::PatchedMP3AudioFormat(), false);
     } else {
 #if JUCE_MAC || JUCE_IOS
       manager.registerFormat(new juce::CoreAudioFormat(), false);
 #else
-      manager.registerFormat(new juce::MP3AudioFormat(), false);
+      manager.registerFormat(new juce::PatchedMP3AudioFormat(), false);
 #endif
     }
   }

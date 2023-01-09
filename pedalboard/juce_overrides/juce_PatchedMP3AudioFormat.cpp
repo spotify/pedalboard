@@ -1791,8 +1791,8 @@ static void dct64(float *out0, float *out1, const float *samples) noexcept {
 } // namespace DCT
 
 //==============================================================================
-struct MP3Stream {
-  MP3Stream(InputStream &source) : stream(source, 8192) { reset(); }
+struct PatchedMP3Stream {
+  PatchedMP3Stream(InputStream &source) : stream(source, 8192) { reset(); }
 
   int decodeNextBlock(float *out0, float *out1, int &done) {
     if (!headerParsed) {
@@ -3252,7 +3252,7 @@ private:
     samplesDone += 32;
   }
 
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MP3Stream)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PatchedMP3Stream)
 };
 
 //==============================================================================
@@ -3344,7 +3344,7 @@ public:
   }
 
 private:
-  MP3Stream stream;
+  PatchedMP3Stream stream;
   int64 currentPosition;
   enum { decodedDataSize = 1152 };
   float decoded0[decodedDataSize], decoded1[decodedDataSize];

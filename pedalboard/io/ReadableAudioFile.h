@@ -493,7 +493,7 @@ private:
 
     if (PythonInputStream *stream = getPythonInputStream()) {
       if (stream->isExhausted()) {
-        ss << " The file may contain invalid data past or near its end. Try "
+        ss << " The file may contain invalid data near its end. Try "
               "reading fewer audio frames from the file.";
       }
     }
