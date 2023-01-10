@@ -216,11 +216,11 @@ public:
       throw std::runtime_error("I/O operation on a closed file.");
 
     // Allocate a buffer to return of up to numSamples:
-    int numChannels = reader->numChannels;
+    long long numChannels = reader->numChannels;
     numSamples =
         std::min(numSamples, reader->lengthInSamples - currentPosition);
     py::array_t<float> buffer =
-        py::array_t<float>({(int)numChannels, (int)numSamples});
+        py::array_t<float>({(long long)numChannels, (long long)numSamples});
 
     py::buffer_info outputInfo = buffer.request();
 
@@ -234,7 +234,7 @@ public:
                   numChannels * numSamples * sizeof(float));
 
       float **channelPointers = (float **)alloca(numChannels * sizeof(float *));
-      for (int c = 0; c < numChannels; c++) {
+      for (long long c = 0; c < numChannels; c++) {
         channelPointers[c] = ((float *)outputInfo.ptr) + (numSamples * c);
       }
 
@@ -283,7 +283,7 @@ public:
         }
         float scaleFactor = 1.0f / static_cast<float>(maxValueAsInt);
 
-        for (int c = 0; c < numChannels; c++) {
+        for (long long c = 0; c < numChannels; c++) {
           juce::FloatVectorOperations::convertFixedToFloat(
               channelPointers[c], (const int *)channelPointers[c], scaleFactor,
               static_cast<int>(numSamples));
@@ -333,11 +333,11 @@ public:
     }
 
     // Allocate a buffer to return of up to numSamples:
-    int numChannels = reader->numChannels;
+    long long numChannels = reader->numChannels;
     numSamples =
         std::min(numSamples, reader->lengthInSamples - currentPosition);
-    py::array_t<SampleType> buffer =
-        py::array_t<SampleType>({(int)numChannels, (int)numSamples});
+    py::array_t<SampleType> buffer = py::array_t<SampleType>(
+        {(long long)numChannels, (long long)numSamples});
 
     py::buffer_info outputInfo = buffer.request();
 
@@ -354,7 +354,7 @@ public:
                     numChannels * numSamples * sizeof(SampleType));
 
         int **channelPointers = (int **)alloca(numChannels * sizeof(int *));
-        for (int c = 0; c < numChannels; c++) {
+        for (long long c = 0; c < numChannels; c++) {
           channelPointers[c] = ((int *)outputInfo.ptr) + (numSamples * c);
         }
 
@@ -373,11 +373,11 @@ public:
         int **channelPointers = (int **)alloca(numChannels * sizeof(int *));
         for (long long startSample = 0; startSample < numSamples;
              startSample += DEFAULT_AUDIO_BUFFER_SIZE_FRAMES) {
-          int samplesToRead =
+          long long samplesToRead =
               std::min(numSamples - startSample,
                        (long long)DEFAULT_AUDIO_BUFFER_SIZE_FRAMES);
 
-          for (int c = 0; c < numChannels; c++) {
+          for (long long c = 0; c < numChannels; c++) {
             intBuffers[c].resize(samplesToRead);
             channelPointers[c] = intBuffers[c].data();
           }
@@ -394,10 +394,10 @@ public:
 
           // Convert the data in intBuffers to the output format:
           char shift = 32 - reader->bitsPerSample;
-          for (int c = 0; c < numChannels; c++) {
+          for (long long c = 0; c < numChannels; c++) {
             SampleType *outputChannelPointer =
                 (((SampleType *)outputInfo.ptr) + (c * numSamples));
-            for (int i = 0; i < samplesToRead; i++) {
+            for (long long i = 0; i < samplesToRead; i++) {
               outputChannelPointer[startSample + i] = intBuffers[c][i] >> shift;
             }
           }
