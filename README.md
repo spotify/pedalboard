@@ -224,7 +224,7 @@ For more examples, see:
 Contributions to `pedalboard` are welcomed! See [CONTRIBUTING.md](https://github.com/spotify/pedalboard/blob/master/CONTRIBUTING.md) for details.
 
 ## License
-`pedalboard` is Copyright 2021-2022 Spotify AB.
+`pedalboard` is Copyright 2021-2023 Spotify AB.
 
 `pedalboard` is licensed under the [GNU General Public License v3](https://www.gnu.org/licenses/gpl-3.0.en.html). `pedalboard` includes a number of libraries that are statically compiled, and which carry the following licenses:
 
