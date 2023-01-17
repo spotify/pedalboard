@@ -6,15 +6,15 @@
 <meta property="og:title" content="Examples" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://spotify.github.io/pedalboard/examples.html" />
-<meta property="og:site_name" content="Pedalboard v0.6.7 Documentation" />
-<meta property="og:description" content="Quick start: Making a guitar-style pedalboard: Using VST3® or Audio Unit plugins: Creating parallel effects chains: This example creates a delayed pitch-shift effect by running multiple Pedalboards..." />
+<meta property="og:site_name" content="Pedalboard v0.6.8 Documentation" />
+<meta property="og:description" content="Note: If you’d rather watch a video instead of reading examples or documentation,** watch*Working with Audio in Python (feat. Pedalboard)* on YouTube**. Quick start: Note: For more information abou..." />
 <meta property="og:image" content="https://repository-images.githubusercontent.com/383471193/0f79b949-9b91-4436-bfc4-05d30ef384cc" />
 <meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
-<meta name="description" content="Quick start: Making a guitar-style pedalboard: Using VST3® or Audio Unit plugins: Creating parallel effects chains: This example creates a delayed pitch-shift effect by running multiple Pedalboards..." />
+<meta name="description" content="Note: If you’d rather watch a video instead of reading examples or documentation,** watch*Working with Audio in Python (feat. Pedalboard)* on YouTube**. Quick start: Note: For more information abou..." />
 <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Frequently Asked Questions" href="faq.html" /><link rel="prev" title="The pedalboard.io API" href="reference/pedalboard.io.html" />
 
     <link rel="shortcut icon" href="_static/favicon.ico"/><meta name="generator" content="sphinx-5.3.0, furo 2022.09.29"/>
-        <title>Examples - Pedalboard v0.6.7 Documentation</title>
+        <title>Examples - Pedalboard v0.6.8 Documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?digest=d81277517bee4d6b0349d71bb2661d4890b5617c" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css" />
@@ -132,7 +132,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">Pedalboard v0.6.7 Documentation</div></a>
+      <a href="index.html"><div class="brand">Pedalboard v0.6.8 Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -158,7 +158,7 @@
     <img class="sidebar-logo" src="_static/pedalboard_logo_small.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">Pedalboard v0.6.7 Documentation</span>
+  <span class="sidebar-brand-text">Pedalboard v0.6.8 Documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
@@ -172,6 +172,8 @@
 </ul>
 <ul class="current">
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#put-a-compressor-at-the-front-of-the-chain">Put a compressor at the front of the chain:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#run-all-of-these-pedalboards-simultaneously-with-the-mix-plugin">Run all of these pedalboards simultaneously with the Mix plugin:</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="compatibility.html">Plugin Compatibility</a></li>
 <li class="toctree-l1"><a class="reference internal" href="internals.html">Pedalboard Internals</a></li>
@@ -213,27 +215,39 @@
         <article role="main">
           <section id="examples">
 <h1>Examples<a class="headerlink" href="#examples" title="Permalink to this heading">#</a></h1>
+<blockquote>
+<div><p><strong>Note</strong>: If you’d rather watch a video instead of reading examples or documentation, <a href="#id1"><span class="problematic" id="id2">**</span></a>watch <a class="reference external" href="https://www.youtube.com/watch?v=NYhkqXpFAlg">*Working with Audio in Python (feat. Pedalboard)* on YouTube</a><a href="#id3"><span class="problematic" id="id4">**</span></a>.</p>
+</div></blockquote>
 <section id="quick-start">
 <h2>Quick start<a class="headerlink" href="#quick-start" title="Permalink to this heading">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pedalboard</span> <span class="kn">import</span> <span class="n">Pedalboard</span><span class="p">,</span> <span class="n">Chorus</span><span class="p">,</span> <span class="n">Reverb</span>
 <span class="kn">from</span> <span class="nn">pedalboard.io</span> <span class="kn">import</span> <span class="n">AudioFile</span>
 
-<span class="c1"># Read in a whole audio file:</span>
-<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;some-file.wav&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-  <span class="n">audio</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span>
-  <span class="n">samplerate</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">samplerate</span>
-
-<span class="c1"># Make a Pedalboard object, containing multiple plugins:</span>
+<span class="c1"># Make a Pedalboard object, containing multiple audio plugins:</span>
 <span class="n">board</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span><span class="n">Chorus</span><span class="p">(),</span> <span class="n">Reverb</span><span class="p">(</span><span class="n">room_size</span><span class="o">=</span><span class="mf">0.25</span><span class="p">)])</span>
 
-<span class="c1"># Run the audio through this pedalboard!</span>
-<span class="n">effected</span> <span class="o">=</span> <span class="n">board</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">)</span>
+<span class="c1"># Open an audio file for reading, just like a regular file:</span>
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;some-file.wav&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
 
-<span class="c1"># Write the audio back as a wav file:</span>
-<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;processed-output.wav&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">,</span> <span class="n">effected</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-  <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">effected</span><span class="p">)</span>
+  <span class="c1"># Open an audio file to write to:</span>
+  <span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;output.wav&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">num_channels</span><span class="p">)</span> <span class="k">as</span> <span class="n">o</span><span class="p">:</span>
+
+    <span class="c1"># Read one second of audio at a time, until the file is empty:</span>
+    <span class="k">while</span> <span class="n">f</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">f</span><span class="o">.</span><span class="n">frames</span><span class="p">:</span>
+      <span class="n">chunk</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span><span class="p">))</span>
+
+      <span class="c1"># Run the audio through our pedalboard:</span>
+      <span class="n">effected</span> <span class="o">=</span> <span class="n">board</span><span class="p">(</span><span class="n">chunk</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span> <span class="n">reset</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+      <span class="c1"># Write the output to our output file:</span>
+      <span class="n">o</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">effected</span><span class="p">)</span>
 </pre></div>
 </div>
+<blockquote>
+<div><p><strong>Note</strong>: For more information about how to process audio through
+Pedalboard plugins, including how the <code class="docutils literal notranslate"><span class="pre">reset</span></code> parameter works,
+see <cite>the documentation for ``pedalboard.Plugin.process`</cite> &lt;<a class="reference external" href="https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.Plugin.process">https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.Plugin.process</a>&gt;`_.</p>
+</div></blockquote>
 </section>
 <section id="making-a-guitar-style-pedalboard">
 <h2>Making a guitar-style pedalboard<a class="headerlink" href="#making-a-guitar-style-pedalboard" title="Permalink to this heading">#</a></h2>
@@ -312,43 +326,42 @@
 multiple Pedalboards in parallel on the same audio. <code class="docutils literal notranslate"><span class="pre">Pedalboard</span></code>
 objects are themselves <code class="docutils literal notranslate"><span class="pre">Plugin</span></code> objects, so you can nest them
 as much as you like:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pedalboard</span> <span class="kn">import</span> <span class="n">Pedalboard</span><span class="p">,</span> <span class="n">Compressor</span><span class="p">,</span> <span class="n">Delay</span><span class="p">,</span> <span class="n">Distortion</span><span class="p">,</span> <span class="n">Gain</span><span class="p">,</span> <span class="n">PitchShift</span><span class="p">,</span> <span class="n">Reverb</span><span class="p">,</span> <span class="n">Mix</span>
-
-<span class="n">passthrough</span> <span class="o">=</span> <span class="n">Gain</span><span class="p">(</span><span class="n">gain_db</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-
-<span class="n">delay_and_pitch_shift</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span>
-  <span class="n">Delay</span><span class="p">(</span><span class="n">delay_seconds</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">mix</span><span class="o">=</span><span class="mf">1.0</span><span class="p">),</span>
-  <span class="n">PitchShift</span><span class="p">(</span><span class="n">semitones</span><span class="o">=</span><span class="mi">7</span><span class="p">),</span>
-  <span class="n">Gain</span><span class="p">(</span><span class="n">gain_db</span><span class="o">=-</span><span class="mi">3</span><span class="p">),</span>
-<span class="p">])</span>
-
-<span class="n">delay_longer_and_more_pitch_shift</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span>
-  <span class="n">Delay</span><span class="p">(</span><span class="n">delay_seconds</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">mix</span><span class="o">=</span><span class="mf">1.0</span><span class="p">),</span>
-  <span class="n">PitchShift</span><span class="p">(</span><span class="n">semitones</span><span class="o">=</span><span class="mi">12</span><span class="p">),</span>
-  <span class="n">Gain</span><span class="p">(</span><span class="n">gain_db</span><span class="o">=-</span><span class="mi">6</span><span class="p">),</span>
-<span class="p">])</span>
-
-<span class="n">board</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span>
-  <span class="c1"># Put a compressor at the front of the chain:</span>
-  <span class="n">Compressor</span><span class="p">(),</span>
-  <span class="c1"># Run all of these pedalboards simultaneously with the Mix plugin:</span>
-  <span class="n">Mix</span><span class="p">([</span>
-    <span class="n">passthrough</span><span class="p">,</span>
-    <span class="n">delay_and_pitch_shift</span><span class="p">,</span>
-    <span class="n">delay_longer_and_more_pitch_shift</span><span class="p">,</span>
-  <span class="p">]),</span>
-  <span class="c1"># Add a reverb on the final mix:</span>
-  <span class="n">Reverb</span><span class="p">()</span>
-<span class="p">])</span>
-</pre></div>
-</div>
-<p>For more examples, see:</p>
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/spotify/pedalboard/tree/master/examples">the “examples” folder of this repository</a></p></li>
-<li><p><a class="reference external" href="https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_lOfG99Xs3qWVrhch">the “Pedalboard Demo” Colab notebook</a></p></li>
-<li><p><a class="reference external" href="https://huggingface.co/spaces/akhaliq/pedalboard">an interactive web demo on Hugging Face Spaces and Gradio</a> (via <a class="reference external" href="https://github.com/AK391">&#64;AK391</a>)</p></li>
-</ul>
+<p><a href="#id5"><span class="problematic" id="id6">``</span></a><a href="#id7"><span class="problematic" id="id8">`</span></a>python
+from pedalboard import Pedalboard, Compressor, Delay, Distortion, Gain, PitchShift, Reverb, Mix</p>
+<p>passthrough = Gain(gain_db=0)</p>
+<dl class="simple">
+<dt>delay_and_pitch_shift = Pedalboard([</dt><dd><p>Delay(delay_seconds=0.25, mix=1.0),
+PitchShift(semitones=7),
+Gain(gain_db=-3),</p>
+</dd>
+</dl>
+<p>])</p>
+<dl class="simple">
+<dt>delay_longer_and_more_pitch_shift = Pedalboard([</dt><dd><p>Delay(delay_seconds=0.5, mix=1.0),
+PitchShift(semitones=12),
+Gain(gain_db=-6),</p>
+</dd>
+</dl>
+<p>])</p>
+<p>board = Pedalboard([</p>
 </section>
+</section>
+<section id="put-a-compressor-at-the-front-of-the-chain">
+<h1>Put a compressor at the front of the chain:<a class="headerlink" href="#put-a-compressor-at-the-front-of-the-chain" title="Permalink to this heading">#</a></h1>
+<blockquote>
+<div><p>Compressor(),</p>
+</div></blockquote>
+</section>
+<section id="run-all-of-these-pedalboards-simultaneously-with-the-mix-plugin">
+<h1>Run all of these pedalboards simultaneously with the Mix plugin:<a class="headerlink" href="#run-all-of-these-pedalboards-simultaneously-with-the-mix-plugin" title="Permalink to this heading">#</a></h1>
+<blockquote>
+<div><dl class="simple">
+<dt>Mix([</dt><dd><p>passthrough,
+delay_and_pitch_shift,
+delay_longer_and_more_pitch_shift,</p>
+</dd>
+</dl>
+</div></blockquote>
 </section>
 
         </article>
@@ -380,7 +393,7 @@ as much as you like:</p>
         <div class="bottom-of-page">
           <div class="left-details">
             <div class="copyright">
-                Copyright &#169; 2021-2022, Spotify AB
+                Copyright &#169; 2021-2023, Spotify AB
             </div>
             Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
             
@@ -421,6 +434,8 @@ as much as you like:</p>
 <li><a class="reference internal" href="#creating-parallel-effects-chains">Creating parallel effects chains</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#put-a-compressor-at-the-front-of-the-chain">Put a compressor at the front of the chain:</a></li>
+<li><a class="reference internal" href="#run-all-of-these-pedalboards-simultaneously-with-the-mix-plugin">Run all of these pedalboards simultaneously with the Mix plugin:</a></li>
 </ul>
 
           </div>
