@@ -66,6 +66,15 @@ UNSUPPORTED_FILENAMES = [
     )
 ]
 
+UNSUPPORTED_CROSS_PLATFORM_FILENAMES = [
+    filename
+    for filename in sum(TEST_AUDIO_FILES.values(), [])
+    if not any(
+        filename.endswith(extension)
+        for extension in pedalboard.io.get_supported_read_formats(cross_platform_formats_only=True)
+    )
+]
+
 
 def get_tolerance_for_format_and_bit_depth(extension: str, input_format, file_dtype: str) -> float:
     if not extension.startswith("."):
@@ -485,10 +494,16 @@ def test_fails_gracefully():
             pass
 
 
-@pytest.mark.parametrize("audio_filename", UNSUPPORTED_FILENAMES)
-def test_fails_on_unsupported_format(audio_filename: str):
+@pytest.mark.parametrize(
+    "cross_platform_formats_only,audio_filename",
+    [(False, f) for f in UNSUPPORTED_FILENAMES]
+    + [(True, f) for f in UNSUPPORTED_CROSS_PLATFORM_FILENAMES],
+)
+def test_fails_on_unsupported_format(cross_platform_formats_only: bool, audio_filename: str):
     with pytest.raises(ValueError):
-        af = pedalboard.io.AudioFile(audio_filename)
+        af = pedalboard.io.ReadableAudioFile(
+            audio_filename, cross_platform_formats_only=cross_platform_formats_only
+        )
         assert not af
 
 
