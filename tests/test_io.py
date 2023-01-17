@@ -344,8 +344,10 @@ def test_read_from_seekable_stream(
     "mp3_filename",
     [f for f in sum(TEST_AUDIO_FILES.values(), []) if f.endswith("mp3")],
 )
-def test_read_mp3_from_named_stream(mp3_filename: str):
-    with pedalboard.io.AudioFile(open(mp3_filename, "rb")) as af:
+def test_read_mp3_from_unnamed_stream(mp3_filename: str):
+    with open(mp3_filename, "rb") as f:
+        file_like = io.BytesIO(f.read())
+    with pedalboard.io.AudioFile(file_like) as af:
         assert af is not None
 
 
