@@ -269,41 +269,40 @@ def test_context_manager_allows_exceptions():
     assert af.closed
 
 
-@pytest.mark.parametrize("audio_filename,samplerate", FILENAMES_AND_SAMPLERATES)
+@pytest.mark.parametrize(
+    "cross_platform_formats_only,audio_filename,samplerate",
+    [(False, f, sr) for f, sr in FILENAMES_AND_SAMPLERATES]
+    + [(True, f, sr) for f, sr in CROSS_PLATFORM_FILENAMES_AND_SAMPLERATES],
+)
 def test_read_okay_without_extension(
-    tmp_path: pathlib.Path, audio_filename: str, samplerate: float
+    tmp_path: pathlib.Path,
+    audio_filename: str,
+    samplerate: float,
+    cross_platform_formats_only: bool,
 ):
     dest_path = str(tmp_path / "no_extension")
     shutil.copyfile(audio_filename, dest_path)
-    try:
-        with pedalboard.io.AudioFile(dest_path) as af:
-            assert af.samplerate == samplerate
-            assert af.num_channels == 1
-    except Exception:
-        if ".mp3" in audio_filename:
-            # Skip this test - due to a bug in JUCE's MP3 reader on Linux/Windows,
-            # we throw an exception when trying to read MP3 files without a known
-            # extension.
-            pass
-        else:
-            raise
+    with pedalboard.io.ReadableAudioFile(
+        dest_path, cross_platform_formats_only=cross_platform_formats_only
+    ) as af:
+        assert af.samplerate == samplerate
+        assert af.num_channels == 1
 
 
-@pytest.mark.parametrize("audio_filename,samplerate", FILENAMES_AND_SAMPLERATES)
-def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
+@pytest.mark.parametrize(
+    "cross_platform_formats_only,audio_filename,samplerate",
+    [(False, f, sr) for f, sr in FILENAMES_AND_SAMPLERATES]
+    + [(True, f, sr) for f, sr in CROSS_PLATFORM_FILENAMES_AND_SAMPLERATES],
+)
+def test_read_from_seekable_stream(
+    audio_filename: str, samplerate: float, cross_platform_formats_only: bool
+):
     with open(audio_filename, "rb") as f:
         stream = io.BytesIO(f.read())
 
-    try:
-        af = pedalboard.io.AudioFile(stream)
-    except Exception:
-        if ".mp3" in audio_filename:
-            # Skip this test - due to a bug in JUCE's MP3 reader on Linux/Windows,
-            # we throw an exception when trying to read MP3 files without a known
-            # extension.
-            return
-        else:
-            raise
+    af = pedalboard.io.ReadableAudioFile(
+        stream, cross_platform_formats_only=cross_platform_formats_only
+    )
 
     with af:
         assert af.samplerate == samplerate

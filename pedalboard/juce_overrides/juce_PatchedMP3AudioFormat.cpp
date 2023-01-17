@@ -2132,6 +2132,14 @@ private:
           break;
       }
 
+      bool isParsingFirstFrame = stream.getPosition() == 0;
+      if (isParsingFirstFrame) {
+        // If we're parsing the first frame of a file/stream, that frame must be
+        // at the start of the stream. This prevents accidentally parsing .mp4
+        // files (among others) as MP3 files that start with junk.
+        break;
+      }
+
       ++offset;
     }
 
