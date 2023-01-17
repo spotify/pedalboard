@@ -66,6 +66,15 @@ UNSUPPORTED_FILENAMES = [
     )
 ]
 
+UNSUPPORTED_CROSS_PLATFORM_FILENAMES = [
+    filename
+    for filename in sum(TEST_AUDIO_FILES.values(), [])
+    if not any(
+        filename.endswith(extension)
+        for extension in pedalboard.io.get_supported_read_formats(cross_platform_formats_only=True)
+    )
+]
+
 
 def get_tolerance_for_format_and_bit_depth(extension: str, input_format, file_dtype: str) -> float:
     if not extension.startswith("."):
@@ -269,41 +278,40 @@ def test_context_manager_allows_exceptions():
     assert af.closed
 
 
-@pytest.mark.parametrize("audio_filename,samplerate", FILENAMES_AND_SAMPLERATES)
+@pytest.mark.parametrize(
+    "cross_platform_formats_only,audio_filename,samplerate",
+    [(False, f, sr) for f, sr in FILENAMES_AND_SAMPLERATES]
+    + [(True, f, sr) for f, sr in CROSS_PLATFORM_FILENAMES_AND_SAMPLERATES],
+)
 def test_read_okay_without_extension(
-    tmp_path: pathlib.Path, audio_filename: str, samplerate: float
+    tmp_path: pathlib.Path,
+    audio_filename: str,
+    samplerate: float,
+    cross_platform_formats_only: bool,
 ):
     dest_path = str(tmp_path / "no_extension")
     shutil.copyfile(audio_filename, dest_path)
-    try:
-        with pedalboard.io.AudioFile(dest_path) as af:
-            assert af.samplerate == samplerate
-            assert af.num_channels == 1
-    except Exception:
-        if ".mp3" in audio_filename:
-            # Skip this test - due to a bug in JUCE's MP3 reader on Linux/Windows,
-            # we throw an exception when trying to read MP3 files without a known
-            # extension.
-            pass
-        else:
-            raise
+    with pedalboard.io.ReadableAudioFile(
+        dest_path, cross_platform_formats_only=cross_platform_formats_only
+    ) as af:
+        assert af.samplerate == samplerate
+        assert af.num_channels == 1
 
 
-@pytest.mark.parametrize("audio_filename,samplerate", FILENAMES_AND_SAMPLERATES)
-def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
+@pytest.mark.parametrize(
+    "cross_platform_formats_only,audio_filename,samplerate",
+    [(False, f, sr) for f, sr in FILENAMES_AND_SAMPLERATES]
+    + [(True, f, sr) for f, sr in CROSS_PLATFORM_FILENAMES_AND_SAMPLERATES],
+)
+def test_read_from_seekable_stream(
+    audio_filename: str, samplerate: float, cross_platform_formats_only: bool
+):
     with open(audio_filename, "rb") as f:
         stream = io.BytesIO(f.read())
 
-    try:
-        af = pedalboard.io.AudioFile(stream)
-    except Exception:
-        if ".mp3" in audio_filename:
-            # Skip this test - due to a bug in JUCE's MP3 reader on Linux/Windows,
-            # we throw an exception when trying to read MP3 files without a known
-            # extension.
-            return
-        else:
-            raise
+    af = pedalboard.io.ReadableAudioFile(
+        stream, cross_platform_formats_only=cross_platform_formats_only
+    )
 
     with af:
         assert af.samplerate == samplerate
@@ -345,8 +353,10 @@ def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
     "mp3_filename",
     [f for f in sum(TEST_AUDIO_FILES.values(), []) if f.endswith("mp3")],
 )
-def test_read_mp3_from_named_stream(mp3_filename: str):
-    with pedalboard.io.AudioFile(open(mp3_filename, "rb")) as af:
+def test_read_mp3_from_unnamed_stream(mp3_filename: str):
+    with open(mp3_filename, "rb") as f:
+        file_like = io.BytesIO(f.read())
+    with pedalboard.io.AudioFile(file_like) as af:
         assert af is not None
 
 
@@ -484,10 +494,16 @@ def test_fails_gracefully():
             pass
 
 
-@pytest.mark.parametrize("audio_filename", UNSUPPORTED_FILENAMES)
-def test_fails_on_unsupported_format(audio_filename: str):
+@pytest.mark.parametrize(
+    "cross_platform_formats_only,audio_filename",
+    [(False, f) for f in UNSUPPORTED_FILENAMES]
+    + [(True, f) for f in UNSUPPORTED_CROSS_PLATFORM_FILENAMES],
+)
+def test_fails_on_unsupported_format(cross_platform_formats_only: bool, audio_filename: str):
     with pytest.raises(ValueError):
-        af = pedalboard.io.AudioFile(audio_filename)
+        af = pedalboard.io.ReadableAudioFile(
+            audio_filename, cross_platform_formats_only=cross_platform_formats_only
+        )
         assert not af
 
 

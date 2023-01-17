@@ -2107,7 +2107,10 @@ private:
     uint32 header = 0;
 
     for (;;) {
-      if (stream.isExhausted() || stream.getPosition() > oldPos + 32768) {
+      auto streamPos = stream.getPosition();
+      bool isParsingFirstFrame = streamPos == 0;
+
+      if (stream.isExhausted() || streamPos > oldPos + 32768) {
         offset = -1;
         break;
       }
@@ -2130,6 +2133,13 @@ private:
             lsf == (uint32)frame.lsf && mpeg25 == frame.mpeg25 &&
             sampleRateIndex == (uint32)frame.sampleRateIndex)
           break;
+      }
+
+      if (isParsingFirstFrame) {
+        // If we're parsing the first frame of a file/stream, that frame must be
+        // at the start of the stream. This prevents accidentally parsing .mp4
+        // files (among others) as MP3 files that start with junk.
+        break;
       }
 
       ++offset;
