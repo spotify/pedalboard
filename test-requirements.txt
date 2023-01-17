@@ -3,7 +3,7 @@ pytest>6.2
 pytest-cov
 pytest-mock
 pybind11>=2.6.0
-setuptools>=65
+setuptools>=59
 pip>22
 wheel
 flake8
