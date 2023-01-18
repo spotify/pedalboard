@@ -1,6 +1,6 @@
 /*
  * pedalboard
- * Copyright 2022 Spotify AB
+ * Copyright 2023 Spotify AB
  *
  * Licensed under the GNU Public License, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -217,13 +217,35 @@ inline void init_audio_stream(py::module &m) {
   auto audioStream =
       py::class_<AudioStream, std::shared_ptr<AudioStream>>(
           m, "AudioStream",
-          "A class that pipes audio from an input device to an output device, "
-          "passing it through a Pedalboard to add effects.")
+          R("
+A class that pipes audio from an input device to an output device, passing it through a Pedalboard to add effects.
+
+:class:`AudioStream` may be used as a context manager::
+
+   with AudioStream(ogg_buffer) as stream:
+#In this block, audio is streaming through `stream`!
+#Add plugins to the live audio stream:
+       reverb = Reverb()
+       stream.pedalboard.append(reverb)
+       reverb.wet_level = 1.0
+
+#Delete plugins, etc:
+       del stream.pedalboard[0]
+
+
+:class:`AudioStream` may also be used synchronously::
+
+   stream = AudioStream(ogg_buffer)
+   stream.pedalboard.append(Reverb(wet_level=1.0))
+   stream.stream()
+
+*Introduced in v0.6.9.*
+"))
           .def(py::init([](std::string inputDeviceName,
                            std::string outputDeviceName, double sampleRate,
                            int bufferSize) {
-                 return std::make_shared<AudioStream>(
-                     inputDeviceName, outputDeviceName, sampleRate, bufferSize);
+    return std::make_shared<AudioStream>(inputDeviceName, outputDeviceName,
+                                         sampleRate, bufferSize);
                }),
                py::arg("input_device_name"), py::arg("output_device_name"),
                py::arg("sample_rate") = 44100, py::arg("buffer_size") = 512);
@@ -231,7 +253,8 @@ inline void init_audio_stream(py::module &m) {
   audioStream
       .def("stream", &AudioStream::stream,
            "Stream audio from input to output, through the `plugins` on this "
-           "AudioStream object, until a KeyboardInterrupt is received.")
+           "AudioStream object, until a KeyboardInterrupt is received. "
+           "This call will block the current thread.")
       .def_property_readonly("running", &AudioStream::getIsRunning,
                              "True iff this stream is currently streaming live "
                              "audio from input to output.")
@@ -239,24 +262,24 @@ inline void init_audio_stream(py::module &m) {
       .def("__exit__", &AudioStream::exit)
       .def("__repr__",
            [](const AudioStream &stream) {
-             std::ostringstream ss;
-             ss << "<pedalboard.io.AudioStream";
-             auto audioDeviceSetup = stream.getAudioDeviceSetup();
-             ss << " input_device_name="
-                << audioDeviceSetup.inputDeviceName.toStdString();
-             ss << " output_device_name="
-                << audioDeviceSetup.outputDeviceName.toStdString();
-             ss << " sample_rate="
-                << juce::String(audioDeviceSetup.sampleRate, 2).toStdString();
-             ss << " buffer_size=" << audioDeviceSetup.bufferSize;
-             if (stream.getIsRunning()) {
-               ss << " running";
-             } else {
-               ss << " not running";
-             }
-             ss << " at " << &stream;
-             ss << ">";
-             return ss.str();
+    std::ostringstream ss;
+    ss << "<pedalboard.io.AudioStream";
+    auto audioDeviceSetup = stream.getAudioDeviceSetup();
+    ss << " input_device_name="
+       << audioDeviceSetup.inputDeviceName.toStdString();
+    ss << " output_device_name="
+       << audioDeviceSetup.outputDeviceName.toStdString();
+    ss << " sample_rate="
+       << juce::String(audioDeviceSetup.sampleRate, 2).toStdString();
+    ss << " buffer_size=" << audioDeviceSetup.bufferSize;
+    if (stream.getIsRunning()) {
+      ss << " running";
+    } else {
+      ss << " not running";
+    }
+    ss << " at " << &stream;
+    ss << ">";
+    return ss.str();
            })
       .def_property(
           "pedalboard", &AudioStream::getPedalboard,
@@ -264,11 +287,13 @@ inline void init_audio_stream(py::module &m) {
           "The Pedalboard object currently processing the live effects chain.")
       .def_property_readonly_static(
           "input_device_names",
-          [](py::object *obj) { return AudioStream::getDeviceNames(true); },
+          [](py::object *obj) {
+    return AudioStream::getDeviceNames(true); },
           "The currently-available input device names.")
       .def_property_readonly_static(
           "output_device_names",
-          [](py::object *obj) { return AudioStream::getDeviceNames(false); },
+          [](py::object *obj) {
+    return AudioStream::getDeviceNames(false); },
           "The currently-available output device names.");
 #endif
 }

@@ -325,6 +325,30 @@ if using the <cite>io</cite> package).</p></li>
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.io.</span></span><span class="sig-name descname"><span class="pre">AudioStream</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_device_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_device_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">44100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">512</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.io.AudioStream" title="Permalink to this definition">#</a></dt>
+<dd><p>A class that pipes audio from an input device to an output device, passing it through a Pedalboard to add effects.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.stream">
+<span class="sig-name descname"><span class="pre">stream</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.io.AudioStream.stream" title="Permalink to this definition">#</a></dt>
+<dd><p>Stream audio from input to output, through the <cite>plugins</cite> on this AudioStream object, until a KeyboardInterrupt is received.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.pedalboard">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">pedalboard</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="pedalboard.html#pedalboard.Chain" title="pedalboard_native.utils.Chain"><span class="pre">Chain</span></a></em><a class="headerlink" href="#pedalboard.io.AudioStream.pedalboard" title="Permalink to this definition">#</a></dt>
+<dd><p>The Pedalboard object currently processing the live effects chain.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.running">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">running</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#pedalboard.io.AudioStream.running" title="Permalink to this definition">#</a></dt>
+<dd><p>True iff this stream is currently streaming live audio from input to output.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.io.</span></span><span class="sig-name descname"><span class="pre">ReadableAudioFile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_like</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">BinaryIO</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile" title="Permalink to this definition">#</a></dt>
 <dt class="sig sig-object py">
@@ -803,6 +827,12 @@ second argument.</p>
             <ul>
 <li><a class="reference internal" href="#">The <code class="docutils literal notranslate"><span class="pre">pedalboard.io</span></code> API</a><ul>
 <li><a class="reference internal" href="#pedalboard.io.AudioFile"><code class="docutils literal notranslate"><span class="pre">AudioFile</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream"><code class="docutils literal notranslate"><span class="pre">AudioStream</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.stream"><code class="docutils literal notranslate"><span class="pre">AudioStream.stream()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.pedalboard"><code class="docutils literal notranslate"><span class="pre">AudioStream.pedalboard</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.running"><code class="docutils literal notranslate"><span class="pre">AudioStream.running</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a><ul>
 <li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.__enter__"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.__enter__()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.__exit__"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.__exit__()</span></code></a></li>

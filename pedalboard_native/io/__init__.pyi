@@ -12,6 +12,7 @@ _Shape = typing.Tuple[int, ...]
 
 __all__ = [
     "AudioFile",
+    "AudioStream",
     "ReadableAudioFile",
     "ResampledReadableAudioFile",
     "StreamResampler",
@@ -132,6 +133,48 @@ class AudioFile:
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
     ) -> WriteableAudioFile: ...
+    pass
+
+class AudioStream:
+    """
+    A class that pipes audio from an input device to an output device, passing it through a Pedalboard to add effects.
+    """
+
+    def __enter__(self) -> AudioStream: ...
+    def __exit__(self, arg0: object, arg1: object, arg2: object) -> None: ...
+    def __init__(
+        self,
+        input_device_name: str,
+        output_device_name: str,
+        sample_rate: float = 44100,
+        buffer_size: int = 512,
+    ) -> None: ...
+    def __repr__(self) -> str: ...
+    def stream(self) -> None:
+        """
+        Stream audio from input to output, through the `plugins` on this AudioStream object, until a KeyboardInterrupt is received.
+        """
+    @property
+    def pedalboard(self) -> pedalboard_native.utils.Chain:
+        """
+        The Pedalboard object currently processing the live effects chain.
+
+
+        """
+    @pedalboard.setter
+    def pedalboard(self, arg1: pedalboard_native.utils.Chain) -> None:
+        """
+        The Pedalboard object currently processing the live effects chain.
+        """
+    @property
+    def running(self) -> bool:
+        """
+        True iff this stream is currently streaming live audio from input to output.
+
+
+        """
+    input_device_names = ["Peter Sobot’s iPhone Microphone", "MacBook Pro Microphone"]
+    output_device_names = ["MacBook Pro Speakers"]
     pass
 
 class ReadableAudioFile(AudioFile):
