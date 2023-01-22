@@ -345,17 +345,30 @@ passing it through a Pedalboard to add effects.
       .def_property("plugins", &AudioStream::getPedalboard,
                     &AudioStream::setPedalboard,
                     "The Pedalboard object that this AudioStream will use to "
-                    "process audio.")
+                    "process audio.");
+#endif
+  audioStream
       .def_property_readonly_static(
           "input_device_names",
-          [](py::object *obj) { return AudioStream::getDeviceNames(true); },
+          [](py::object *obj) -> std::vector<std::string> {
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
+            return AudioStream::getDeviceNames(true);
+#else
+            return {};
+#endif
+          },
           "The input devices (i.e.: microphones, audio interfaces, etc.) "
           "currently available on the current machine.")
       .def_property_readonly_static(
           "output_device_names",
-          [](py::object *obj) { return AudioStream::getDeviceNames(false); },
+          [](py::object *obj) -> std::vector<std::string> {
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
+            return AudioStream::getDeviceNames(false);
+#else
+            return {};
+#endif
+          },
           "The output devices (i.e.: speakers, headphones, etc.) currently "
           "available on the current machine.");
-#endif
 }
 } // namespace Pedalboard
