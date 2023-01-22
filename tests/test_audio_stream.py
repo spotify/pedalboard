@@ -31,6 +31,8 @@ INPUT_DEVICE_NAMES = [
     if not any(substr in n for substr in INPUT_DEVICE_NAMES_TO_SKIP)
 ]
 
+ACCEPTABLE_ERRORS_ON_CI = {"No driver"}
+
 
 # Note: this test may do nothing on CI, because we don't have mock audio devices available.
 # This will run on macOS and probably Windows as long as at least one audio device is available.
@@ -38,7 +40,15 @@ INPUT_DEVICE_NAMES = [
 @pytest.mark.parametrize("output_device_name", pedalboard.io.AudioStream.output_device_names)
 @pytest.mark.skipif(platform.system() == "Linux", reason="AudioStream not supported on Linux yet.")
 def test_create_stream(input_device_name: str, output_device_name: str):
-    stream = pedalboard.io.AudioStream(input_device_name, output_device_name, allow_feedback=True)
+    try:
+        stream = pedalboard.io.AudioStream(
+            input_device_name, output_device_name, allow_feedback=True
+        )
+    except Exception as e:
+        if any(substr in str(e) for substr in ACCEPTABLE_ERRORS_ON_CI):
+            return
+        raise
+
     assert stream is not None
     assert input_device_name in repr(stream)
     assert output_device_name in repr(stream)
