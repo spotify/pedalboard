@@ -24,6 +24,7 @@
    - Support for reading and writing AIFF, FLAC, MP3, OGG, and WAV files on all platforms with no dependencies
    - Additional support for reading AAC, AC3, WMA, and other formats depending on platform
    - Support for on-the-fly resampling of audio files and streams with `O(1)` memory usage
+   - Live audio processing and effects via [`AudioStream`](https://spotify.github.io/pedalboard/reference/pedalboard.io.html)
  - Built-in support for a number of basic audio transformations, including:
    - Guitar-style effects: `Chorus`, `Distortion`, `Phaser`, `Clipping`
    - Loudness and dynamic range effects: `Compressor`, `Gain`, `Limiter`
@@ -211,6 +212,35 @@ board = Pedalboard([
   # Add a reverb on the final mix:
   Reverb()
 ])
+```
+
+### Running Pedalboard on Live Audio
+
+On macOS or Windows, Pedalboard supports streaming live audio through
+[an `AudioStream` object](https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream),
+allowing for real-time manipulation of audio by adding effects in Python.
+
+```python
+from pedalboard import Pedalboard, Chorus, Compressor, Delay, Gain, Reverb, Phaser
+from pedalboard.io import AudioStream
+
+# Open up an audio stream:
+with AudioStream(
+  input_device_name="Apogee Jam+",  # Guitar interface
+  output_device_name="MacBook Pro Speakers"
+) as stream:
+  # Audio is now streaming through this pedalboard and out of your speakers!
+  stream.plugins = Pedalboard([
+      Compressor(threshold_db=-50, ratio=25),
+      Gain(gain_db=30),
+      Chorus(),
+      Phaser(),
+      Convolution("./guitar_amp.wav", 1.0),
+      Reverb(room_size=0.25),
+  ])
+  input("Press enter to stop streaming...")
+
+# The live AudioStream is now closed, and audio has stopped.
 ```
 
 For more examples, see:

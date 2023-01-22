@@ -7,6 +7,8 @@ import typing
 from typing_extensions import Literal
 from enum import Enum
 import numpy
+import pedalboard_native.utils  # type: ignore  # type: ignore
+import pedalboard  # type: ignore
 
 _Shape = typing.Tuple[int, ...]
 
@@ -137,7 +139,57 @@ class AudioFile:
 
 class AudioStream:
     """
-    A class that pipes audio from an input device to an output device, passing it through a Pedalboard to add effects.
+    A class that streams audio from an input audio device (i.e.: a microphone,
+    audio interface, etc) to an output device (speaker, headphones),
+    passing it through a Pedalboard to add effects.
+
+    :class:`AudioStream` may be used as a context manager::
+
+       input_device_name = AudioStream.input_device_names[0]
+       output_device_name = AudioStream.output_device_names[0]
+       with AudioStream(input_device_name, output_device_name) as stream:
+           # In this block, audio is streaming through `stream`!
+           # Audio will be coming out of your speakers at this point.
+
+           # Add plugins to the live audio stream:
+           reverb = Reverb()
+           stream.plugins.append(reverb)
+
+           # Change plugin properties as the stream is running:
+           reverb.wet_level = 1.0
+
+           # Delete plugins:
+           del stream.plugins[0]
+
+
+    :class:`AudioStream` may also be used synchronously::
+
+       stream = AudioStream(ogg_buffer)
+       stream.plugins.append(Reverb(wet_level=1.0))
+       stream.run()  # Run the stream until Ctrl-C is received
+
+    .. note::
+        This class uses C++ under the hood to ensure speed, thread safety,
+        and avoid any locking concerns with Python's Global Interpreter Lock.
+        Audio data processed by :class:`AudioStream` is not available to
+        Python code; the only way to interact with the audio stream is through
+        the :py:attr:`plugins` attribute.
+
+    .. warning::
+        The :class:`AudioStream` class implements a context manager interface
+        to ensure that audio streams are never left "dangling" (i.e.: running in
+        the background without being stopped).
+
+        While it is possible to call the :meth:`__enter__` method directly to run an
+        audio stream in the background, this can make it possible to lose all
+        references to the :class:`AudioStream` object, resulting in an audio stream
+        that can't be stopped until the Python interpreter exits.
+
+        To run an :class:`AudioStream` in the background, use Python's
+        :module:`threading` module to call the :meth:`run` method on a background
+        thread, allowing for easier cleanup.
+
+    *Introduced in v0.6.9. Not supported on Linux.*
     """
 
     def __enter__(self) -> AudioStream: ...
@@ -146,35 +198,37 @@ class AudioStream:
         self,
         input_device_name: str,
         output_device_name: str,
+        plugins: typing.Optional[pedalboard_native.utils.Chain] = None,
         sample_rate: float = 44100,
         buffer_size: int = 512,
+        allow_feedback: bool = False,
     ) -> None: ...
     def __repr__(self) -> str: ...
-    def stream(self) -> None:
+    def run(self) -> None:
         """
-        Stream audio from input to output, through the `plugins` on this AudioStream object, until a KeyboardInterrupt is received.
+        Start streaming audio from input to output, passing the audio stream  through the `plugins` on this AudioStream object. This call will block the current thread until a KeyboardInterrupt (Ctrl-C) is received.
         """
     @property
-    def pedalboard(self) -> pedalboard_native.utils.Chain:
+    def plugins(self) -> pedalboard_native.utils.Chain:
         """
-        The Pedalboard object currently processing the live effects chain.
+        The Pedalboard object that this AudioStream will use to process audio.
 
 
         """
-    @pedalboard.setter
-    def pedalboard(self, arg1: pedalboard_native.utils.Chain) -> None:
+    @plugins.setter
+    def plugins(self, arg1: pedalboard_native.utils.Chain) -> None:
         """
-        The Pedalboard object currently processing the live effects chain.
+        The Pedalboard object that this AudioStream will use to process audio.
         """
     @property
     def running(self) -> bool:
         """
-        True iff this stream is currently streaming live audio from input to output.
+        True if this stream is currently streaming live audio from input to output, false otherwise.
 
 
         """
     input_device_names = ["Peter Sobot’s iPhone Microphone", "MacBook Pro Microphone"]
-    output_device_names = ["MacBook Pro Speakers"]
+    output_device_names = ["DELL U3223QE", "MacBook Pro Speakers"]
     pass
 
 class ReadableAudioFile(AudioFile):

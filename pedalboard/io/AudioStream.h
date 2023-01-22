@@ -42,10 +42,13 @@ class AudioStream : public std::enable_shared_from_this<AudioStream>
 {
 public:
   AudioStream(std::string inputDeviceName, std::string outputDeviceName,
-              double sampleRate, int bufferSize)
+              std::optional<std::shared_ptr<Chain>> pedalboard,
+              std::optional<double> sampleRate, int bufferSize,
+              bool allowFeedback)
 #ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
-      : pedalboard(
-            std::make_shared<Chain>(std::vector<std::shared_ptr<Plugin>>())),
+      : pedalboard(pedalboard ? *pedalboard
+                              : std::make_shared<Chain>(
+                                    std::vector<std::shared_ptr<Plugin>>())),
         livePedalboard(std::vector<std::shared_ptr<Plugin>>())
 #endif
   {
@@ -53,8 +56,19 @@ public:
     juce::AudioDeviceManager::AudioDeviceSetup setup;
     setup.inputDeviceName = inputDeviceName;
     setup.outputDeviceName = outputDeviceName;
-    setup.sampleRate = sampleRate;
+    // A value of 0 indicates we want to use whatever the device default is:
+    setup.sampleRate = sampleRate ? *sampleRate : 0;
     setup.bufferSize = bufferSize;
+
+    if (!allowFeedback &&
+        juce::String(inputDeviceName).containsIgnoreCase("microphone") &&
+        juce::String(outputDeviceName).containsIgnoreCase("speaker")) {
+      throw std::runtime_error(
+          "The audio input device passed to AudioStream looks like a "
+          "microphone, and the output device looks like a speaker. This setup "
+          "may cause feedback. To create an AudioStream anyways, pass "
+          "`allow_feedback=True` to the AudioStream constructor.");
+    }
 
     juce::String defaultDeviceName;
     juce::String error = deviceManager.initialise(2, 2, nullptr, true,
@@ -101,6 +115,8 @@ public:
       // Check to see if the live pedalboard and the regular pedalboard
       // differ, and apply any changes as necessary:
       if (pedalboard->getAllPlugins() != livePedalboard.getAllPlugins()) {
+        juce::SpinLock::ScopedLockType lock(livePedalboardMutex);
+
         livePedalboard.getPlugins().clear();
         for (auto plugin : pedalboard->getPlugins()) {
           plugin->prepare(spec);
@@ -164,9 +180,11 @@ public:
         outputChannelData, numOutputChannels, 0, numSamples);
     juce::dsp::ProcessContextReplacing<float> context(ioBlock);
 
-    // TODO: Should getPlugins() here have a lock around it?
-    for (auto plugin : livePedalboard.getPlugins()) {
-      int outputSamples = plugin->process(context);
+    juce::SpinLock::ScopedTryLockType tryLock(livePedalboardMutex);
+    if (tryLock.isLocked()) {
+      for (auto plugin : livePedalboard.getPlugins()) {
+        int outputSamples = plugin->process(context);
+      }
     }
   }
 
@@ -177,12 +195,15 @@ public:
     spec.numChannels = static_cast<juce::uint32>(
         device->getActiveOutputChannels().countNumberOfSetBits());
 
+    juce::SpinLock::ScopedLockType lock(livePedalboardMutex);
     for (auto plugin : livePedalboard.getPlugins()) {
       plugin->prepare(spec);
     }
   }
 
   virtual void audioDeviceStopped() {
+    juce::SpinLock::ScopedLockType lock(livePedalboardMutex);
+
     for (auto plugin : livePedalboard.getPlugins()) {
       plugin->reset();
     }
@@ -201,6 +222,11 @@ private:
 
   std::shared_ptr<Chain> pedalboard;
 
+  // A simple spin-lock mutex that we can try to acquire from
+  // the audio thread, allowing us to avoid modifying state that's
+  // currently being used for rendering.
+  juce::SpinLock livePedalboardMutex;
+
   // A "live" pedalboard, called from the audio thread.
   // This is not exposed to Python, and is only updated from C++.
   Chain livePedalboard;
@@ -215,86 +241,121 @@ private:
 
 inline void init_audio_stream(py::module &m) {
   auto audioStream =
-      py::class_<AudioStream, std::shared_ptr<AudioStream>>(
-          m, "AudioStream",
-          R("
-A class that pipes audio from an input device to an output device, passing it through a Pedalboard to add effects.
+      py::class_<AudioStream, std::shared_ptr<AudioStream>>(m, "AudioStream",
+                                                            R"(
+A class that streams audio from an input audio device (i.e.: a microphone,
+audio interface, etc) to an output device (speaker, headphones),
+passing it through a Pedalboard to add effects.
 
 :class:`AudioStream` may be used as a context manager::
 
-   with AudioStream(ogg_buffer) as stream:
-#In this block, audio is streaming through `stream`!
-#Add plugins to the live audio stream:
+   input_device_name = AudioStream.input_device_names[0]
+   output_device_name = AudioStream.output_device_names[0]
+   with AudioStream(input_device_name, output_device_name) as stream:
+       # In this block, audio is streaming through `stream`!
+       # Audio will be coming out of your speakers at this point.
+
+       # Add plugins to the live audio stream:
        reverb = Reverb()
-       stream.pedalboard.append(reverb)
+       stream.plugins.append(reverb)
+
+       # Change plugin properties as the stream is running:
        reverb.wet_level = 1.0
 
-#Delete plugins, etc:
-       del stream.pedalboard[0]
+       # Delete plugins:
+       del stream.plugins[0]
 
 
 :class:`AudioStream` may also be used synchronously::
 
    stream = AudioStream(ogg_buffer)
-   stream.pedalboard.append(Reverb(wet_level=1.0))
-   stream.stream()
+   stream.plugins.append(Reverb(wet_level=1.0))
+   stream.run()  # Run the stream until Ctrl-C is received
 
-*Introduced in v0.6.9.*
-"))
+.. note::
+    This class uses C++ under the hood to ensure speed, thread safety,
+    and avoid any locking concerns with Python's Global Interpreter Lock.
+    Audio data processed by :class:`AudioStream` is not available to
+    Python code; the only way to interact with the audio stream is through
+    the :py:attr:`plugins` attribute.
+
+.. warning::
+    The :class:`AudioStream` class implements a context manager interface
+    to ensure that audio streams are never left "dangling" (i.e.: running in
+    the background without being stopped).
+    
+    While it is possible to call the :meth:`__enter__` method directly to run an
+    audio stream in the background, this can have some nasty side effects. If the
+    :class:`AudioStream` object is no longer reachable (not bound to a variable,
+    not in scope, etc), the audio stream will continue to play back forever, and
+    won't stop until the Python interpreter exits.
+
+    To run an :class:`AudioStream` in the background, use Python's
+    :py:mod:`threading` module to call the synchronous :meth:`run` method on a
+    background thread, allowing for easier cleanup.
+
+*Introduced in v0.6.9. Not supported on Linux.*
+)")
           .def(py::init([](std::string inputDeviceName,
-                           std::string outputDeviceName, double sampleRate,
-                           int bufferSize) {
-    return std::make_shared<AudioStream>(inputDeviceName, outputDeviceName,
-                                         sampleRate, bufferSize);
+                           std::string outputDeviceName,
+                           std::optional<std::shared_ptr<Chain>> pedalboard,
+                           std::optional<double> sampleRate, int bufferSize,
+                           bool allowFeedback) {
+                 return std::make_shared<AudioStream>(
+                     inputDeviceName, outputDeviceName, pedalboard, sampleRate,
+                     bufferSize, allowFeedback);
                }),
                py::arg("input_device_name"), py::arg("output_device_name"),
-               py::arg("sample_rate") = 44100, py::arg("buffer_size") = 512);
+               py::arg("plugins") = py::none(),
+               py::arg("sample_rate") = py::none(),
+               py::arg("buffer_size") = 512, py::arg("allow_feedback") = false);
 #ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
   audioStream
-      .def("stream", &AudioStream::stream,
-           "Stream audio from input to output, through the `plugins` on this "
-           "AudioStream object, until a KeyboardInterrupt is received. "
-           "This call will block the current thread.")
+      .def("run", &AudioStream::stream,
+           "Start streaming audio from input to output, passing the audio "
+           "stream  through the :py:attr:`plugins` on this AudioStream object. "
+           "This call will block the current thread until a KeyboardInterrupt "
+           "(Ctrl-C) is received.")
       .def_property_readonly("running", &AudioStream::getIsRunning,
-                             "True iff this stream is currently streaming live "
-                             "audio from input to output.")
+                             "True if this stream is currently streaming live "
+                             "audio from input to output, False otherwise.")
       .def("__enter__", &AudioStream::enter)
       .def("__exit__", &AudioStream::exit)
       .def("__repr__",
            [](const AudioStream &stream) {
-    std::ostringstream ss;
-    ss << "<pedalboard.io.AudioStream";
-    auto audioDeviceSetup = stream.getAudioDeviceSetup();
-    ss << " input_device_name="
-       << audioDeviceSetup.inputDeviceName.toStdString();
-    ss << " output_device_name="
-       << audioDeviceSetup.outputDeviceName.toStdString();
-    ss << " sample_rate="
-       << juce::String(audioDeviceSetup.sampleRate, 2).toStdString();
-    ss << " buffer_size=" << audioDeviceSetup.bufferSize;
-    if (stream.getIsRunning()) {
-      ss << " running";
-    } else {
-      ss << " not running";
-    }
-    ss << " at " << &stream;
-    ss << ">";
-    return ss.str();
+             std::ostringstream ss;
+             ss << "<pedalboard.io.AudioStream";
+             auto audioDeviceSetup = stream.getAudioDeviceSetup();
+             ss << " input_device_name="
+                << audioDeviceSetup.inputDeviceName.toStdString();
+             ss << " output_device_name="
+                << audioDeviceSetup.outputDeviceName.toStdString();
+             ss << " sample_rate="
+                << juce::String(audioDeviceSetup.sampleRate, 2).toStdString();
+             ss << " buffer_size=" << audioDeviceSetup.bufferSize;
+             if (stream.getIsRunning()) {
+               ss << " running";
+             } else {
+               ss << " not running";
+             }
+             ss << " at " << &stream;
+             ss << ">";
+             return ss.str();
            })
-      .def_property(
-          "pedalboard", &AudioStream::getPedalboard,
-          &AudioStream::setPedalboard,
-          "The Pedalboard object currently processing the live effects chain.")
+      .def_property("plugins", &AudioStream::getPedalboard,
+                    &AudioStream::setPedalboard,
+                    "The Pedalboard object that this AudioStream will use to "
+                    "process audio.")
       .def_property_readonly_static(
           "input_device_names",
-          [](py::object *obj) {
-    return AudioStream::getDeviceNames(true); },
-          "The currently-available input device names.")
+          [](py::object *obj) { return AudioStream::getDeviceNames(true); },
+          "The input devices (i.e.: microphones, audio interfaces, etc.) "
+          "currently available on the current machine.")
       .def_property_readonly_static(
           "output_device_names",
-          [](py::object *obj) {
-    return AudioStream::getDeviceNames(false); },
-          "The currently-available output device names.");
+          [](py::object *obj) { return AudioStream::getDeviceNames(false); },
+          "The output devices (i.e.: speakers, headphones, etc.) currently "
+          "available on the current machine.");
 #endif
 }
 } // namespace Pedalboard
