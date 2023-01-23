@@ -112,15 +112,23 @@ public:
     while (isRunning) {
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-      // Check to see if the live pedalboard and the regular pedalboard
-      // differ, and apply any changes as necessary:
-      if (pedalboard->getAllPlugins() != livePedalboard.getAllPlugins()) {
-        juce::SpinLock::ScopedLockType lock(livePedalboardMutex);
+      // Make sure nobody modifies the Python-side object while we're reading
+      // it (without taking the GIL, which would be expensive)
+      std::unique_lock<std::mutex> lock(pedalboard->mutex, std::try_to_lock);
+      if (lock.owns_lock()) {
+        // We can read livePedalboard's plugins without a lock, as we're the
+        // only writer:
+        if (pedalboard->getAllPlugins() != livePedalboard.getAllPlugins()) {
+          // But if we need to write, then we need to try to get the lock:
+          juce::SpinLock::ScopedTryLockType tryLock(livePedalboardMutex);
+          if (tryLock.isLocked()) {
+            livePedalboard.getPlugins().clear();
 
-        livePedalboard.getPlugins().clear();
-        for (auto plugin : pedalboard->getPlugins()) {
-          plugin->prepare(spec);
-          livePedalboard.getPlugins().push_back(plugin);
+            for (auto plugin : pedalboard->getPlugins()) {
+              plugin->prepare(spec);
+              livePedalboard.getPlugins().push_back(plugin);
+            }
+          }
         }
       }
     }
@@ -183,7 +191,13 @@ public:
     juce::SpinLock::ScopedTryLockType tryLock(livePedalboardMutex);
     if (tryLock.isLocked()) {
       for (auto plugin : livePedalboard.getPlugins()) {
-        int outputSamples = plugin->process(context);
+        std::unique_lock<std::mutex> lock(pedalboard->mutex, std::try_to_lock);
+        // If someone's running audio through this plugin in parallel (offline,
+        // or in a different AudioStream object) then don't corrupt its state by
+        // calling it here too; instead, just skip it:
+        if (lock.owns_lock()) {
+          plugin->process(context);
+        }
       }
     }
   }
@@ -225,6 +239,9 @@ private:
   // A simple spin-lock mutex that we can try to acquire from
   // the audio thread, allowing us to avoid modifying state that's
   // currently being used for rendering.
+  // The `livePedalboard` object already has a std::mutex on it,
+  // but we want something that's faster and callable from the
+  // dudio thread.
   juce::SpinLock livePedalboardMutex;
 
   // A "live" pedalboard, called from the audio thread.
