@@ -1,7 +1,17 @@
 # This file is not intended to be executed - it's intended to be used to ensure MyPy compatibility!
 
 # Don't do import *! (It just makes this example smaller)
-from pedalboard import *
+from pedalboard import (
+    Pedalboard,
+    Compressor,
+    Gain,
+    Chorus,
+    LadderFilter,
+    Limiter,
+    Phaser,
+    Convolution,
+    Reverb,
+)
 from pedalboard.io import AudioFile
 
 # Read in a whole file, resampling to our desired sample rate:

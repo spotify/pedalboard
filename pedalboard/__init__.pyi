@@ -48,7 +48,6 @@ class Plugin:
     A generic audio processing plugin. Base class of all Pedalboard plugins.
     """
 
-    def __init__(self) -> None: ...
     def process(
         self,
         input_array: numpy.ndarray,
@@ -284,7 +283,6 @@ class IIRFilter(Plugin):
     An abstract class that implements various kinds of infinite impulse response (IIR) filter designs. This should not be used directly; use :class:`HighShelfFilter`, :class:`LowShelfFilter`, or :class:`PeakFilter` directly instead.
     """
 
-    def __init__(self) -> None: ...
     pass
 
 class HighpassFilter(Plugin):
@@ -338,7 +336,6 @@ class Invert(Plugin):
     Inverting a signal may be useful to cancel out signals in many cases; for instance, ``Invert`` can be used with the ``Mix`` plugin to remove the original signal from an effects chain that contains multiple signals.
     """
 
-    def __init__(self) -> None: ...
     def __repr__(self) -> str: ...
     pass
 

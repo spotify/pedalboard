@@ -97,7 +97,6 @@ class AudioFile:
                    o.write(i.read(1024))
     """
 
-    def __init__(self) -> None: ...
     @staticmethod
     @typing.overload
     def __new__(
