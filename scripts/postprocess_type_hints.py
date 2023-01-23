@@ -64,6 +64,9 @@ REPLACEMENTS = [
     ),
     # Remove type hints in docstrings, added unnecessarily by pybind11-stubgen
     (r".*?:type:.*$", ""),
+    # MyPy chokes on classes that contain both __new__ and __init__.
+    # Remove all bare, arg-free inits:
+    (r"def __init__\(self\) -> None: ...", ""),
 ]
 
 REMOVE_INDENTED_BLOCKS_STARTING_WITH = [
