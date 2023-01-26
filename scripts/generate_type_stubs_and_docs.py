@@ -7,6 +7,7 @@ import shutil
 import difflib
 import importlib
 import traceback
+import subprocess
 from tempfile import TemporaryDirectory
 from contextlib import contextmanager
 from typing import List
@@ -240,6 +241,9 @@ def main():
 
     if not args.skip_regenerating_type_hints:
         with TemporaryDirectory() as tempdir, isolated_imports({"pedalboard", "pedalboard.io"}):
+            print("Generating type stubs from pure-Python code...")
+            subprocess.check_call(["stubgen", "-o", tempdir, "pedalboard/pedalboard.py"])
+
             # Generate .pyi stubs files from Pedalboard's native (Pybind11) source.
             # Documentation will be copied from the Pybind11 docstrings, and these stubs
             # files will be used as the "source of truth" for both IDE autocompletion
@@ -253,6 +257,7 @@ def main():
             postprocess_type_hints_main(
                 [tempdir, "pedalboard"] + (["--check"] if args.check else [])
             )
+            breakpoint()
 
             # Run mypy.stubtest to ensure that the results are correct and nothing got missed:
             if sys.version_info > (3, 6):
