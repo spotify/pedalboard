@@ -1083,6 +1083,7 @@ def test_22050Hz_mono_mp3(audio_filename: str, samplerate: float):
     """
     af = pedalboard.io.ReadableAudioFile(audio_filename, cross_platform_formats_only=True)
     assert af.duration < 30.5
+    assert af.samplerate == samplerate
     data_read_all_at_once = af.read(af.frames)
 
     chunk_size = MP3_FRAME_LENGTH_SAMPLES
