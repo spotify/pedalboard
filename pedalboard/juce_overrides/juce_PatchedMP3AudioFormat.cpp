@@ -814,6 +814,18 @@ struct MP3Frame {
     return ParseSuccessful::yes;
   }
 
+  int numSamples() const {
+    switch (layer) {
+    case 1:
+      return 384;
+    case 3:
+      if (lsf)
+        return 576;
+    default:
+      return 1152;
+    }
+  }
+
   int layer, frameSize, numChannels, single;
   int lsf;     // 0 = mpeg-1, 1 = mpeg-2/LSF
   bool mpeg25; // true = mpeg-2.5, false = mpeg-1/2
@@ -3282,6 +3294,7 @@ public:
       usesFloatingPointData = true;
       sampleRate = stream.frame.getFrequency();
       numChannels = (unsigned int)stream.frame.numChannels;
+      samplesPerFrame = stream.frame.numSamples();
       lengthInSamples = findLength(streamPos);
     }
   }
@@ -3295,12 +3308,12 @@ public:
     }
 
     if (currentPosition != startSampleInFile) {
-      if (!stream.seek((int)(startSampleInFile / 1152 - 1))) {
+      if (!stream.seek((int)(startSampleInFile / samplesPerFrame - 1))) {
         currentPosition = -1;
         createEmptyDecodedData();
       } else {
         decodedStart = decodedEnd = 0;
-        const int64 streamPos = stream.currentFrameIndex * 1152;
+        const int64 streamPos = stream.currentFrameIndex * samplesPerFrame;
         int toSkip = (int)(startSampleInFile - streamPos);
         jassert(toSkip >= 0);
 
@@ -3356,6 +3369,7 @@ public:
 private:
   PatchedMP3Stream stream;
   int64 currentPosition;
+  int samplesPerFrame;
   enum { decodedDataSize = 1152 };
   float decoded0[decodedDataSize], decoded1[decodedDataSize];
   int decodedStart, decodedEnd;
@@ -3370,6 +3384,12 @@ private:
   bool readNextBlock() {
     for (int attempts = 10; --attempts >= 0;) {
       int samplesDone = 0;
+
+      if (stream.stream.isExhausted()) {
+        createEmptyDecodedData();
+        return true;
+      }
+
       const int result =
           stream.decodeNextBlock(decoded0, decoded1, samplesDone);
 
@@ -3426,7 +3446,7 @@ private:
       }
     }
 
-    return numFrames * 1152;
+    return numFrames * samplesPerFrame;
   }
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PatchedMP3Reader)
