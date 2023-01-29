@@ -1098,29 +1098,38 @@ def test_22050Hz_mono_mp3(audio_filename: str, samplerate: float):
 @pytest.mark.parametrize(
     "samplerate", [8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000]
 )
-def test_mp3_at_all_samplerates(quality: str, samplerate: float):
+@pytest.mark.parametrize("num_channels", [1, 2])
+def test_mp3_at_all_samplerates(quality: str, samplerate: float, num_channels: int):
     secs = 2
     # Make an audio signal that is equal parts noise and silence to make sure
     # we end up with a mixture of bitrates in the file:
     signal = np.concatenate(
         [np.random.rand(samplerate * secs) - 0.5, np.zeros(samplerate * secs)]
     ).astype(np.float32)
+    if num_channels == 2:
+        signal = np.stack([signal] * num_channels)
+    else:
+        signal = np.expand_dims(signal, 0)
 
     buf = io.BytesIO()
     buf.name = "test.mp3"
-    with pedalboard.io.AudioFile(buf, "w", samplerate, num_channels=1, quality=quality) as f:
+    with pedalboard.io.AudioFile(
+        buf, "w", samplerate, num_channels=num_channels, quality=quality
+    ) as f:
         f.write(signal)
 
     read_buf = io.BytesIO(buf.getvalue())
 
     with pedalboard.io.ReadableAudioFile(read_buf, cross_platform_formats_only=True) as af:
         # Allow for up to two MP3 frames of padding:
-        assert af.frames <= (len(signal) + MP3_FRAME_LENGTH_SAMPLES * 2)
-        assert af.frames >= len(signal)
+        assert af.frames <= (signal.shape[-1] + MP3_FRAME_LENGTH_SAMPLES * 2)
+        assert af.frames >= signal.shape[-1]
         # MP3 is lossy, so we can't expect the waveforms to be comparable;
         # but at least make sure that the first half of the signal is loud
         # and the second half is silent:
-        assert np.amax(af.read(samplerate * secs)[0]) >= np.amax(signal[: samplerate * secs])
+        assert np.amax(np.mean(af.read(samplerate * secs), axis=0)) >= np.amax(
+            signal[:, : samplerate * secs]
+        )
         # skip a couple MP3 frames:
         af.read(MP3_FRAME_LENGTH_SAMPLES * 2)
-        assert np.amax(af.read(samplerate * secs)[0]) < 0.01
+        assert np.amax(np.mean(af.read(samplerate * secs), axis=0)) < 0.01
