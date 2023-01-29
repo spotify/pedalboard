@@ -814,6 +814,18 @@ struct MP3Frame {
     return ParseSuccessful::yes;
   }
 
+  int numSamples() const {
+    switch (layer) {
+    case 1:
+      return 384;
+    case 3:
+      if (lsf)
+        return 576;
+    default:
+      return 1152;
+    }
+  }
+
   int layer, frameSize, numChannels, single;
   int lsf;     // 0 = mpeg-1, 1 = mpeg-2/LSF
   bool mpeg25; // true = mpeg-2.5, false = mpeg-1/2
@@ -3282,11 +3294,7 @@ public:
       usesFloatingPointData = true;
       sampleRate = stream.frame.getFrequency();
       numChannels = (unsigned int)stream.frame.numChannels;
-      if (sampleRate >= 32000) {
-        samplesPerFrame = 1152;
-      } else {
-        samplesPerFrame = 576;
-      }
+      samplesPerFrame = stream.frame.numSamples();
       lengthInSamples = findLength(streamPos);
     }
   }
