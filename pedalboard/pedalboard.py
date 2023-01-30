@@ -563,6 +563,9 @@ class ExternalPlugin(object):
                 )
             setattr(self, key, value)
 
+    def __set_extra_functions__(self, tempo_bpm: int = 120):
+        tempo_bpm = self.tempo_bpm
+
     @property
     def parameters(self) -> Dict[str, AudioProcessorParameter]:
         # Return a read-only version of this dictionary,
@@ -666,6 +669,7 @@ try:
             path_to_plugin_file: str,
             parameter_values: Dict[str, Union[str, int, float, bool]] = {},
             plugin_name: Optional[str] = None,
+            tempo_bpm: int = 120,
         ):
             if not isinstance(parameter_values, dict):
                 raise TypeError(
@@ -726,6 +730,7 @@ def load_plugin(
     path_to_plugin_file: str,
     parameter_values: Dict[str, Union[str, int, float, bool]] = {},
     plugin_name: Union[str, None] = None,
+    tempo_bpm: int = 120,
 ) -> ExternalPlugin:
     """
     Load an audio plugin.
@@ -772,6 +777,7 @@ def load_plugin(
                 path_to_plugin_file=path_to_plugin_file,
                 parameter_values=parameter_values,
                 plugin_name=plugin_name,
+                tempo_bpm=tempo_bpm
             )
         except ImportError as e:
             exceptions.append(e)
