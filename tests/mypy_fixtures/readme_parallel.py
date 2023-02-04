@@ -1,6 +1,6 @@
 # This file is not intended to be executed - it's intended to be used to ensure MyPy compatibility!
 
-from pedalboard import Pedalboard, Compressor, Delay, Distortion, Gain, PitchShift, Reverb, Mix
+from pedalboard import Pedalboard, Compressor, Delay, Gain, PitchShift, Reverb, Mix
 
 passthrough = Gain(gain_db=0)
 
