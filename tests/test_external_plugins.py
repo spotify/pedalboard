@@ -27,7 +27,7 @@ import subprocess
 from glob import glob
 from pathlib import Path
 
-from pedalboard.pedalboard import (
+from pedalboard._pedalboard import (
     WrappedBool,
     strip_common_float_suffixes,
     normalize_python_parameter_name,
