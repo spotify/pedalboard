@@ -35,11 +35,11 @@ except ImportError as _e:
         raise
 from pedalboard_native.utils import *  # noqa: F403, F401
 from ._pedalboard import (
-    Pedalboard,
+    Pedalboard,  # noqa: 401
     _AVAILABLE_PLUGIN_CLASSES,
-    load_plugin,
-    AudioProcessorParameter,
-    ExternalPlugin,
+    load_plugin,  # noqa: 401
+    AudioProcessorParameter,  # noqa: 401
+    ExternalPlugin,  # noqa: 401
 )  # noqa: F401
 from .version import __version__  # noqa: F401
 

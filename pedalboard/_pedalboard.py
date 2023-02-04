@@ -114,9 +114,7 @@ def wrap_type(base_type):
                 del kwargs["wrapped"]
             else:
                 raise ValueError(
-                    "WeakTypeWrapper({}) expected to be passed a 'wrapped' keyword argument.".format(
-                        base_type
-                    )
+                    "WeakTypeWrapper({}) expected to be passed a 'wrapped' kwarg.".format(base_type)
                 )
             try:
                 super().__init__(*args, **kwargs)
