@@ -12,76 +12,12 @@ from tempfile import TemporaryDirectory
 from contextlib import contextmanager
 from typing import List
 
-from pybind11_stubgen import ClassStubsGenerator, StubsGenerator
-from pybind11_stubgen import main as pybind11_stubgen_main
-from .postprocess_type_hints import main as postprocess_type_hints_main
 from mypy.stubtest import test_stubs, parse_options as mypy_parse_options
 import sphinx.ext.autodoc.importer
 from sphinx.cmd.build import main as sphinx_build_main
 
 
 MAX_DIFF_LINE_LENGTH = 150
-
-
-def patch_pybind11_stubgen():
-    """
-    Patch ``pybind11_stubgen`` to generate more ergonomic code for Enum-like classes.
-    This generates a subclass of :class:``Enum`` for each Pybind11-generated Enum,
-    which is not strictly correct, but produces much nicer documentation and allows
-    for a much more Pythonic API.
-    """
-
-    original_class_stubs_generator_new = ClassStubsGenerator.__new__
-
-    class EnumClassStubsGenerator(StubsGenerator):
-        def __init__(self, klass):
-            self.klass = klass
-            assert inspect.isclass(klass)
-            assert klass.__name__.isidentifier()
-            assert hasattr(klass, "__entries")
-
-            self.doc_string = None
-            self.enum_names = []
-            self.enum_values = []
-            self.enum_docstrings = []
-
-        def get_involved_modules_names(self):
-            return []
-
-        def parse(self):
-            self.doc_string = self.klass.__doc__ or ""
-            self.doc_string = self.doc_string.split("Members:")[0]
-            for name, (value_object, docstring) in getattr(self.klass, "__entries").items():
-                self.enum_names.append(name)
-                self.enum_values.append(value_object.value)
-                self.enum_docstrings.append(docstring)
-
-        def to_lines(self):
-            result = [
-                "class {class_name}(Enum):{doc_string}".format(
-                    class_name=self.klass.__name__,
-                    doc_string="\n" + self.format_docstring(self.doc_string)
-                    if self.doc_string
-                    else "",
-                ),
-            ]
-            for (name, value, docstring) in sorted(
-                list(zip(self.enum_names, self.enum_values, self.enum_docstrings)),
-                key=lambda x: x[1],
-            ):
-                result.append(f"    {name} = {value}  # fmt: skip")
-                result.append(f"{self.format_docstring(docstring)}")
-            if not self.enum_names:
-                result.append(self.indent("pass"))
-            return result
-
-    def patched_class_stubs_generator_new(cls, klass, *args, **kwargs):
-        if hasattr(klass, "__entries"):
-            return EnumClassStubsGenerator(klass, *args, **kwargs)
-        else:
-            return original_class_stubs_generator_new(cls)
-
-    ClassStubsGenerator.__new__ = patched_class_stubs_generator_new
 
 
 def import_stub(stubs_path: str, module_name: str) -> typing.Any:
@@ -236,28 +172,12 @@ def main():
     )
     args = parser.parse_args()
 
-    patch_pybind11_stubgen()
     patch_sphinx(module_names_to_combine={"pedalboard", "pedalboard.io"})
 
     if not args.skip_regenerating_type_hints:
         with TemporaryDirectory() as tempdir, isolated_imports({"pedalboard", "pedalboard.io"}):
             print("Generating type stubs from pure-Python code...")
-            subprocess.check_call(["stubgen", "-o", tempdir, "pedalboard/pedalboard.py"])
-
-            # Generate .pyi stubs files from Pedalboard's native (Pybind11) source.
-            # Documentation will be copied from the Pybind11 docstrings, and these stubs
-            # files will be used as the "source of truth" for both IDE autocompletion
-            # and Sphinx documentation.
-            print("Generating type stubs from native code...")
-            pybind11_stubgen_main(["-o", tempdir, "pedalboard_native", "--no-setup-py"])
-
-            # Post-process the type hints generaetd by pybind11_stubgen; we can't patch
-            # everything easily, so we do string manipulation after-the-fact and run ``black``.
-            print("Postprocessing generated type hints...")
-            postprocess_type_hints_main(
-                [tempdir, "pedalboard"] + (["--check"] if args.check else [])
-            )
-            breakpoint()
+            subprocess.check_call(["stubgen", "-o", tempdir, "pedalboard/_pedalboard.py"])
 
             # Run mypy.stubtest to ensure that the results are correct and nothing got missed:
             if sys.version_info > (3, 6):

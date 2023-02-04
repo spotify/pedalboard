@@ -172,8 +172,6 @@
 </ul>
 <ul class="current">
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#put-a-compressor-at-the-front-of-the-chain">Put a compressor at the front of the chain:</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#run-all-of-these-pedalboards-simultaneously-with-the-mix-plugin">Run all of these pedalboards simultaneously with the Mix plugin:</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="compatibility.html">Plugin Compatibility</a></li>
 <li class="toctree-l1"><a class="reference internal" href="internals.html">Pedalboard Internals</a></li>
@@ -326,42 +324,47 @@ see <cite>the documentation for ``pedalboard.Plugin.process`</cite> &lt;<a class
 multiple Pedalboards in parallel on the same audio. <code class="docutils literal notranslate"><span class="pre">Pedalboard</span></code>
 objects are themselves <code class="docutils literal notranslate"><span class="pre">Plugin</span></code> objects, so you can nest them
 as much as you like:</p>
-<p><a href="#id5"><span class="problematic" id="id6">``</span></a><a href="#id7"><span class="problematic" id="id8">`</span></a>python
-from pedalboard import Pedalboard, Compressor, Delay, Distortion, Gain, PitchShift, Reverb, Mix</p>
-<p>passthrough = Gain(gain_db=0)</p>
-<dl class="simple">
-<dt>delay_and_pitch_shift = Pedalboard([</dt><dd><p>Delay(delay_seconds=0.25, mix=1.0),
-PitchShift(semitones=7),
-Gain(gain_db=-3),</p>
-</dd>
-</dl>
-<p>])</p>
-<dl class="simple">
-<dt>delay_longer_and_more_pitch_shift = Pedalboard([</dt><dd><p>Delay(delay_seconds=0.5, mix=1.0),
-PitchShift(semitones=12),
-Gain(gain_db=-6),</p>
-</dd>
-</dl>
-<p>])</p>
-<p>board = Pedalboard([</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pedalboard</span> <span class="kn">import</span> <span class="n">Pedalboard</span><span class="p">,</span> <span class="n">Compressor</span><span class="p">,</span> <span class="n">Delay</span><span class="p">,</span> <span class="n">Distortion</span><span class="p">,</span> <span class="n">Gain</span><span class="p">,</span> <span class="n">PitchShift</span><span class="p">,</span> <span class="n">Reverb</span><span class="p">,</span> <span class="n">Mix</span>
+
+<span class="n">passthrough</span> <span class="o">=</span> <span class="n">Gain</span><span class="p">(</span><span class="n">gain_db</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">delay_and_pitch_shift</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span>
+  <span class="n">Delay</span><span class="p">(</span><span class="n">delay_seconds</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">mix</span><span class="o">=</span><span class="mf">1.0</span><span class="p">),</span>
+  <span class="n">PitchShift</span><span class="p">(</span><span class="n">semitones</span><span class="o">=</span><span class="mi">7</span><span class="p">),</span>
+  <span class="n">Gain</span><span class="p">(</span><span class="n">gain_db</span><span class="o">=-</span><span class="mi">3</span><span class="p">),</span>
+<span class="p">])</span>
+
+<span class="n">delay_longer_and_more_pitch_shift</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span>
+  <span class="n">Delay</span><span class="p">(</span><span class="n">delay_seconds</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">mix</span><span class="o">=</span><span class="mf">1.0</span><span class="p">),</span>
+  <span class="n">PitchShift</span><span class="p">(</span><span class="n">semitones</span><span class="o">=</span><span class="mi">12</span><span class="p">),</span>
+  <span class="n">Gain</span><span class="p">(</span><span class="n">gain_db</span><span class="o">=-</span><span class="mi">6</span><span class="p">),</span>
+<span class="p">])</span>
+
+<span class="n">board</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span>
+  <span class="c1"># Put a compressor at the front of the chain:</span>
+  <span class="n">Compressor</span><span class="p">(),</span>
+  <span class="c1"># Run all of these pedalboards simultaneously with the Mix plugin:</span>
+  <span class="n">Mix</span><span class="p">([</span>
+    <span class="n">passthrough</span><span class="p">,</span>
+    <span class="n">delay_and_pitch_shift</span><span class="p">,</span>
+    <span class="n">delay_longer_and_more_pitch_shift</span><span class="p">,</span>
+  <span class="p">]),</span>
+  <span class="c1"># Add a reverb on the final mix:</span>
+  <span class="n">Reverb</span><span class="p">()</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+<p>For more examples, see:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/spotify/pedalboard/tree/master/examples">the “examples” folder of this repository</a></p></li>
+<li><p><a class="reference external" href="https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_lOfG99Xs3qWVrhch">the “Pedalboard Demo” Colab notebook</a></p></li>
+<li><p><a class="reference external" href="https://www.youtube.com/watch?v=NYhkqXpFAlg">*Working with Audio in Python (feat. Pedalboard)* by Peter Sobot at EuroPython 2022</a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/spaces/akhaliq/pedalboard">an interactive web demo on Hugging Face Spaces and Gradio</a> (via <a class="reference external" href="https://github.com/AK391">&#64;AK391</a>)</p></li>
+</ul>
+<section id="contributing">
+<h3>Contributing<a class="headerlink" href="#contributing" title="Permalink to this heading">#</a></h3>
 </section>
 </section>
-<section id="put-a-compressor-at-the-front-of-the-chain">
-<h1>Put a compressor at the front of the chain:<a class="headerlink" href="#put-a-compressor-at-the-front-of-the-chain" title="Permalink to this heading">#</a></h1>
-<blockquote>
-<div><p>Compressor(),</p>
-</div></blockquote>
-</section>
-<section id="run-all-of-these-pedalboards-simultaneously-with-the-mix-plugin">
-<h1>Run all of these pedalboards simultaneously with the Mix plugin:<a class="headerlink" href="#run-all-of-these-pedalboards-simultaneously-with-the-mix-plugin" title="Permalink to this heading">#</a></h1>
-<blockquote>
-<div><dl class="simple">
-<dt>Mix([</dt><dd><p>passthrough,
-delay_and_pitch_shift,
-delay_longer_and_more_pitch_shift,</p>
-</dd>
-</dl>
-</div></blockquote>
 </section>
 
         </article>
@@ -431,11 +434,12 @@ delay_longer_and_more_pitch_shift,</p>
 <li><a class="reference internal" href="#quick-start">Quick start</a></li>
 <li><a class="reference internal" href="#making-a-guitar-style-pedalboard">Making a guitar-style pedalboard</a></li>
 <li><a class="reference internal" href="#using-vst3-or-audio-unit-plugins">Using VST3® or Audio Unit plugins</a></li>
-<li><a class="reference internal" href="#creating-parallel-effects-chains">Creating parallel effects chains</a></li>
+<li><a class="reference internal" href="#creating-parallel-effects-chains">Creating parallel effects chains</a><ul>
+<li><a class="reference internal" href="#contributing">Contributing</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#put-a-compressor-at-the-front-of-the-chain">Put a compressor at the front of the chain:</a></li>
-<li><a class="reference internal" href="#run-all-of-these-pedalboards-simultaneously-with-the-mix-plugin">Run all of these pedalboards simultaneously with the Mix plugin:</a></li>
+</ul>
+</li>
 </ul>
 
           </div>

@@ -19,7 +19,7 @@ import platform
 
 import weakref
 from contextlib import contextmanager
-from typing import List, Optional, Dict, Tuple, Iterable, Type, Union
+from typing import List, Optional, Dict, Tuple, Iterable, Type, Union, Set, no_type_check
 
 from pedalboard_native import Plugin, _AudioProcessorParameter  # type: ignore
 from pedalboard_native.utils import Chain  # type: ignore
@@ -42,7 +42,7 @@ class Pedalboard(Chain):
         )
 
 
-FLOAT_SUFFIXES_TO_IGNORE = set(
+FLOAT_SUFFIXES_TO_IGNORE: Set[str] = set(
     ["x", "%", "*", ",", ".", "hz", "ms", "sec", "seconds", "dB", "dBTP"]
 )
 
@@ -92,7 +92,10 @@ class ReadOnlyDictWrapper(dict):
         )
 
 
+# This is so nasty that I had to disable MyPy. Sorry.
+@no_type_check
 def wrap_type(base_type):
+    @no_type_check
     class WeakTypeWrapper(base_type):
         """
         A wrapper around `base_type` that allows adding additional
@@ -111,8 +114,9 @@ def wrap_type(base_type):
                 del kwargs["wrapped"]
             else:
                 raise ValueError(
-                    "WeakTypeWrapper({}) expected to be passed a 'wrapped' keyword argument."
-                    .format(base_type)
+                    "WeakTypeWrapper({}) expected to be passed a 'wrapped' keyword argument.".format(
+                        base_type
+                    )
                 )
             try:
                 super().__init__(*args, **kwargs)
@@ -136,6 +140,7 @@ def wrap_type(base_type):
     return WeakTypeWrapper
 
 
+@no_type_check
 class WrappedBool(object):
     def __init__(self, value):
         if not isinstance(value, bool):
@@ -164,9 +169,9 @@ class WrappedBool(object):
         return hasattr(self.__value, attr)
 
 
-StringWithParameter = wrap_type(str)
-FloatWithParameter = wrap_type(float)
-BooleanWithParameter = wrap_type(WrappedBool)
+StringWithParameter: Type[str] = wrap_type(str)
+FloatWithParameter: Type[float] = wrap_type(float)
+BooleanWithParameter: Type[bool] = wrap_type(WrappedBool)
 
 
 # Some plugins, on some platforms (TAL Reverb 3 on Ubuntu, so far) seem to
@@ -174,11 +179,11 @@ BooleanWithParameter = wrap_type(WrappedBool)
 # (i.e.: MIDI CC [0-16]|[0-128], resulting in 2,048 parameters).
 # This hugely delays load times and adds complexity to the interface.
 # Guitar Rig also seems to expose 512 parameters, each matching "P\d\d\d"
-PARAMETER_NAME_REGEXES_TO_IGNORE = set(
+PARAMETER_NAME_REGEXES_TO_IGNORE: Set[re.Pattern] = set(
     [re.compile(pattern) for pattern in ["MIDI CC ", r"P\d\d\d"]]
 )
 
-TRUE_BOOLEANS = {"on", "yes", "true", "enabled"}
+TRUE_BOOLEANS: Set[str] = {"on", "yes", "true", "enabled"}
 
 
 def get_text_for_raw_value(
@@ -271,18 +276,26 @@ class AudioProcessorParameter(object):
             if not self.label:
                 # Try to infer the label from the string values:
                 a_value = next(iter(self.ranges.values()))
-                stripped_value = strip_common_float_suffixes(a_value, strip_si_prefixes=False)
-                if stripped_value != a_value and stripped_value in a_value:
-                    # We probably have a label! Iterate through all values just to make sure:
-                    all_possible_labels = set()
-                    for value in self.ranges.values():
-                        all_possible_labels.add(
-                            value.replace(
-                                strip_common_float_suffixes(value, strip_si_prefixes=False), ""
-                            ).strip()
-                        )
-                    if len(all_possible_labels) == 1:
-                        self._label = next(iter(all_possible_labels))
+                if isinstance(a_value, str):
+                    stripped_value = strip_common_float_suffixes(a_value, strip_si_prefixes=False)
+                    if (
+                        stripped_value != a_value
+                        and isinstance(stripped_value, str)
+                        and stripped_value in a_value
+                    ):
+                        # We probably have a label! Iterate through all values just to make sure:
+                        all_possible_labels = set()
+                        for value in self.ranges.values():
+                            if not isinstance(value, str):
+                                continue
+                            stripped_value = strip_common_float_suffixes(
+                                value, strip_si_prefixes=False
+                            )
+                            if not isinstance(stripped_value, str):
+                                continue
+                            all_possible_labels.add(value.replace(stripped_value, "").strip())
+                        if len(all_possible_labels) == 1:
+                            self._label = next(iter(all_possible_labels))
 
             sorted_values = sorted(float_ranges.values())
             first_derivative_steps = set(
@@ -333,6 +346,7 @@ class AudioProcessorParameter(object):
         with self.__get_cpp_parameter() as parameter:
             if parameter.label:
                 return parameter.label
+        return None
 
     @property
     def units(self) -> Optional[str]:
@@ -405,6 +419,7 @@ class AudioProcessorParameter(object):
 
     def get_raw_value_for(self, new_value: Union[float, str, bool]) -> float:
         if self.type is float:
+            to_float_value: Union[str, float, bool]
             if isinstance(new_value, str) and self.label and new_value.endswith(self.label):
                 to_float_value = new_value[: -len(self.label)]
             else:
@@ -425,7 +440,9 @@ class AudioProcessorParameter(object):
                         self.python_name, repr(new_value)
                     )
                 )
-            if new_value < self.min_value or new_value > self.max_value:
+            if (self.min_value is not None and new_value < self.min_value) or (
+                self.max_value is not None and new_value > self.max_value
+            ):
                 raise ValueError(
                     "Value received for parameter '{}' ({}) is out of range [{}{}, {}{}]".format(
                         self.python_name,
@@ -441,6 +458,8 @@ class AudioProcessorParameter(object):
             closest_diff = None
             closest_range_value: Optional[Tuple[float, float]] = None
             for value, raw_value_range in self._value_to_raw_value_ranges.items():
+                if not isinstance(value, float):
+                    continue
                 diff = new_value - value
                 if closest_diff is None or abs(diff) < abs(closest_diff):
                     closest_range_value = raw_value_range
@@ -541,14 +560,14 @@ class ExternalPlugin(object):
 
     @classmethod
     def get_plugin_names_for_file(cls, filename: str) -> List[str]:
-        ...
+        return []  # Should never be hit, just appeasing MyPy.
 
     def show_editor(self) -> None:
         ...
 
     @property
     def name(self) -> str:
-        ...
+        return ""  # Should never be hit, just appeasing MyPy.
 
     def __set_initial_parameter_values__(
         self, parameter_values: Dict[str, Union[str, int, float, bool]] = {}
@@ -625,11 +644,13 @@ class ExternalPlugin(object):
                 if parameter.type is float:
                     return FloatWithParameter(
                         float(strip_common_float_suffixes(string_value)), wrapped=parameter
-                    )
+                    )  # type: ignore
                 elif parameter.type is bool:
-                    return BooleanWithParameter(parameter.raw_value >= 0.5, wrapped=parameter)
+                    return BooleanWithParameter(
+                        parameter.raw_value >= 0.5, wrapped=parameter
+                    )  # type: ignore
                 elif parameter.type is str:
-                    return StringWithParameter(str(string_value), wrapped=parameter)
+                    return StringWithParameter(str(string_value), wrapped=parameter)  # type: ignore
                 else:
                     raise ValueError(
                         f"Parameter {parameter.python_name} has an unknown type. (Found"
