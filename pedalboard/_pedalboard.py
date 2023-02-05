@@ -27,7 +27,16 @@ from pedalboard_native.utils import Chain  # type: ignore
 
 class Pedalboard(Chain):
     """
-    A container for a chain of plugins, to use for processing audio.
+    A container for a series of :class:`Plugin` objects, to use for processing audio, like a
+    `guitar pedalboard <https://en.wikipedia.org/wiki/Guitar_pedalboard>`_.
+
+    :class:`Pedalboard` objects act like regular Python ``List`` objects,
+    but come with an additional :py:meth:`process` method (also aliased to ``__call__``),
+    allowing audio to be passed through the entire :class:`Pedalboard` object for processing::
+
+        my_pedalboard = Pedalboard()
+        my_pedalboard.append(Reverb())
+        output_audio = my_pedalboard(input_audio)
     """
 
     def __init__(self, plugins: Optional[List[Plugin]] = None):
@@ -203,25 +212,30 @@ def get_text_for_raw_value(
 
 class AudioProcessorParameter(object):
     """
-    The C++ version of this class (`_AudioProcessorParameter`) is owned
-    by the ExternalPlugin object and is not guaranteed to exist at the
-    same memory address every time we might need it. This Python wrapper
-    looks it up dynamically.
+    A wrapper around various different parameters exposed by
+    :class:`VST3Plugin` or :class:`AudioUnitPlugin` instances.
 
-    VSTs and Audio Units don't always consistently give parameter values,
-    types, or names - all we get is APIs that map float values on [0, 1]
-    to strings, which may represent floats, strings, integers, enums, etc.
+    :class:`AudioProcessorParameter` objects are rarely used directly,
+    and usually used via their implicit interface::
 
-    AudioProcessorParameter exposes some attributes that can be
-    implemented by plugins to give hints (i.e.: num_steps, allowed_values,
-    is_discrete, etc) but not all plugins implement them properly.
-
-    This method assigns additional properties to AudioProcessorParameter;
-    we could do this in C++, but doing this in Python uses much less code
-    and is (roughly) as performant as it should only run once per parameter.
+       my_plugin = load_plugin("My Cool Audio Effect.vst3")
+       # Print all of the parameter names:
+       print(my_plugin.parameters.keys())
+       # ["mix", "delay_time_ms", "foobar"]
+       # Access each parameter as if it were just a Python attribute:
+       my_plugin.mix = 0.5
+       my_plugin.delay_time_ms = 400
+    
+    .. note::
+        :class:`AudioProcessorParameter` tries to guess the range of
+        valid parameter values, as well as the type/unit of the parameter,
+        when instantiated. This guess may not always be accurate.
+        Raw control over the underlying parameter's value can be had by
+        accessing the :py:attr:`raw_value` attribute, which is always bounded
+        on [0, 1] and is passed directly to the underlying plugin object.
     """
 
-    def __init__(self, plugin, parameter_name, search_steps: int = 1000):
+    def __init__(self, plugin: "ExternalPlugin", parameter_name: str, search_steps: int = 1000):
         self.__plugin = plugin
         self.__parameter_name = parameter_name
 
@@ -324,7 +338,12 @@ class AudioProcessorParameter(object):
 
     @contextmanager
     def __get_cpp_parameter(self):
-        # Re-fetch the parameter by name every time, as it may have changed.
+        """
+        The C++ version of this class (`_AudioProcessorParameter`) is owned
+        by the ExternalPlugin object and is not guaranteed to exist at the
+        same memory address every time we might need it. This Python wrapper
+        looks it up dynamically.
+        """
         _parameter = self.__plugin._get_parameter(self.__parameter_name)
         if _parameter and _parameter.name == self.__parameter_name:
             yield _parameter
@@ -337,7 +356,10 @@ class AudioProcessorParameter(object):
     @property
     def label(self) -> Optional[str]:
         """
-        The units used by this parameter (i.e.: Hz, dB, etc).
+        The units used by this parameter (Hz, dB, etc).
+
+        May be `None` if the plugin does not expose units for this
+        parameter or if automatic unit detection fails.
         """
         if hasattr(self, "_label") and self._label:
             return self._label
@@ -349,7 +371,10 @@ class AudioProcessorParameter(object):
     @property
     def units(self) -> Optional[str]:
         """
-        Alias for "label" - the units used by this parameter (i.e.: Hz, dB, etc).
+        Alias for "label" - the units used by this parameter (Hz, dB, etc).
+
+        May be `None` if the plugin does not expose units for this
+        parameter or if automatic unit detection fails.
         """
         return self.label
 
@@ -671,7 +696,9 @@ try:
     class VST3Plugin(_VST3Plugin, ExternalPlugin):
         """
         A wrapper around third-party, non-Pedalboard audio effects
-        plugins in Steinberg GmbH's VST3® format.
+        plugins in
+        `Steinberg GmbH's VST3® <https://en.wikipedia.org/wiki/Virtual_Studio_Technology>`_
+        format.
 
         VST3® plugins are supported on macOS, Windows, and Linux.
         However, VST3® plugin files are not cross-compatible with
@@ -705,7 +732,9 @@ try:
     class AudioUnitPlugin(_AudioUnitPlugin, ExternalPlugin):
         """
         A wrapper around third-party, non-Pedalboard audio effects
-        plugins in Apple's Audio Unit format.
+        plugins in
+        `Apple's Audio Unit <https://en.wikipedia.org/wiki/Audio_Units>`_
+        format.
 
         Audio Unit plugins are only supported on macOS. This class will be
         unavailable on non-macOS platforms. Plugin files must be installed

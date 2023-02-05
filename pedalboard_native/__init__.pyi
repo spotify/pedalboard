@@ -2,9 +2,8 @@
 
 For audio I/O classes (i.e.: reading and writing audio files), see ``pedalboard.io``."""
 from __future__ import annotations
-import pedalboard_native as pedalboard  # type: ignore
+import pedalboard_native
 import typing
-from typing import List, Dict, Union, Optional
 from typing_extensions import Literal
 from enum import Enum
 import numpy
@@ -78,12 +77,18 @@ class Plugin:
         If calling ``process`` multiple times while processing the same audio file
         or buffer, set ``reset`` to ``False``.
 
+        .. note::
+            The :py:meth:`process` method can also be used via :py:meth:`__call__`;
+            i.e.: just calling this object like a function (``my_plugin(...)``) will
+            automatically invoke :py:meth:`process` with the same arguments.
+
+
         """
     def reset(self) -> None:
         """
         Clear any internal state stored by this plugin (e.g.: reverb tails, delay lines, LFO state, etc). The values of plugin parameters will remain unchanged.
         """
-    __call__ = process
+    pass
 
 class Chorus(Plugin):
     """
@@ -407,12 +412,12 @@ class LadderFilter(Plugin):
     @resonance.setter
     def resonance(self, arg1: float) -> None:
         pass
-    BPF12: Mode  # value = <Mode.BPF12: 2>
-    BPF24: Mode  # value = <Mode.BPF24: 5>
-    HPF12: Mode  # value = <Mode.HPF12: 1>
-    HPF24: Mode  # value = <Mode.HPF24: 4>
-    LPF12: Mode  # value = <Mode.LPF12: 0>
-    LPF24: Mode  # value = <Mode.LPF24: 3>
+    BPF12: pedalboard_native.LadderFilter.Mode  # value = <Mode.BPF12: 2>
+    BPF24: pedalboard_native.LadderFilter.Mode  # value = <Mode.BPF24: 5>
+    HPF12: pedalboard_native.LadderFilter.Mode  # value = <Mode.HPF12: 1>
+    HPF24: pedalboard_native.LadderFilter.Mode  # value = <Mode.HPF24: 4>
+    LPF12: pedalboard_native.LadderFilter.Mode  # value = <Mode.LPF12: 0>
+    LPF24: pedalboard_native.LadderFilter.Mode  # value = <Mode.LPF24: 3>
     pass
 
 class Limiter(Plugin):
@@ -659,15 +664,36 @@ class PluginContainer(Plugin):
     """
 
     def __contains__(self, plugin: Plugin) -> bool: ...
-    def __delitem__(self, index: int) -> None: ...
-    def __getitem__(self, index: int) -> Plugin: ...
+    def __delitem__(self, index: int) -> None:
+        """
+        Delete a plugin by its index. Index may be negative. If the index is out of range, an IndexError will be thrown.
+        """
+    def __getitem__(self, index: int) -> Plugin:
+        """
+        Get a plugin by its index. Index may be negative. If the index is out of range, an IndexError will be thrown.
+        """
     def __init__(self, plugins: typing.List[Plugin]) -> None: ...
     def __iter__(self) -> typing.Iterator: ...
-    def __len__(self) -> int: ...
-    def __setitem__(self, index: int, plugin: Plugin) -> None: ...
-    def append(self, arg0: Plugin) -> None: ...
-    def insert(self, index: int, plugin: Plugin) -> None: ...
-    def remove(self, plugin: Plugin) -> None: ...
+    def __len__(self) -> int:
+        """
+        Get the number of plugins in this container.
+        """
+    def __setitem__(self, index: int, plugin: Plugin) -> None:
+        """
+        Replace a plugin at the specified index. Index may be negative. If the index is out of range, an IndexError will be thrown.
+        """
+    def append(self, plugin: Plugin) -> None:
+        """
+        Append a plugin to the end of this container.
+        """
+    def insert(self, index: int, plugin: Plugin) -> None:
+        """
+        Insert a plugin at the specified index.
+        """
+    def remove(self, plugin: Plugin) -> None:
+        """
+        Remove a plugin by its value.
+        """
     pass
 
 class Resample(Plugin):
@@ -701,9 +727,7 @@ class Resample(Plugin):
         The highest quality and slowest resampling method, with no audible artifacts.
         """
     def __init__(
-        self,
-        target_sample_rate: float = 8000.0,
-        quality: Resample.Quality = pedalboard.Resample.Quality.WindowedSinc,
+        self, target_sample_rate: float = 8000.0, quality: Quality = Quality.WindowedSinc
     ) -> None: ...
     def __repr__(self) -> str: ...
     @property
@@ -730,11 +754,11 @@ class Resample(Plugin):
         """
         The sample rate to resample the input audio to. This value may be a floating-point number, in which case a floating-point sampling rate will be used. Note that the output of this plugin will still be at the original sample rate; this is merely the sample rate used for quality reduction.
         """
-    CatmullRom: pedalboard.Resample.Quality  # value = <Quality.CatmullRom: 2>
-    Lagrange: pedalboard.Resample.Quality  # value = <Quality.Lagrange: 3>
-    Linear: pedalboard.Resample.Quality  # value = <Quality.Linear: 1>
-    WindowedSinc: pedalboard.Resample.Quality  # value = <Quality.WindowedSinc: 4>
-    ZeroOrderHold: pedalboard.Resample.Quality  # value = <Quality.ZeroOrderHold: 0>
+    CatmullRom: pedalboard_native.Resample.Quality  # value = <Quality.CatmullRom: 2>
+    Lagrange: pedalboard_native.Resample.Quality  # value = <Quality.Lagrange: 3>
+    Linear: pedalboard_native.Resample.Quality  # value = <Quality.Linear: 1>
+    WindowedSinc: pedalboard_native.Resample.Quality  # value = <Quality.WindowedSinc: 4>
+    ZeroOrderHold: pedalboard_native.Resample.Quality  # value = <Quality.ZeroOrderHold: 0>
     pass
 
 class Reverb(Plugin):
@@ -899,37 +923,13 @@ class _AudioProcessorParameter:
         """
     pass
 
-class ExternalPlugin(Plugin):
-    def __init__(
-        self,
-        path_to_plugin_file: str,
-        parameter_values: Dict[str, Union[str, int, float, bool]] = ...,
-        plugin_name: Optional[str] = ...,
-    ) -> None: ...
-    @classmethod
-    def get_plugin_names_for_file(cls, filename: str) -> List[str]: ...
-    def show_editor(self) -> None: ...
-    @property
-    def name(self) -> str: ...
-    def __set_initial_parameter_values__(
-        self, parameter_values: Dict[str, Union[str, int, float, bool]] = ...
-    ): ...
-    @property
-    def parameters(self) -> Dict[str, AudioProcessorParameter]: ...
-    def __dir__(self): ...
-    def __getattr__(self, name: str): ...
-    def __setattr__(self, name: str, value): ...
-
-class AudioUnitPlugin(ExternalPlugin):
+class _AudioUnitPlugin(Plugin):
     """
     A wrapper around any Apple Audio Unit audio effect plugin. Only available on macOS.
     """
 
     def __init__(
-        self,
-        path_to_plugin_file: str,
-        parameter_values: Dict[str, Union[str, int, float, bool]] = ...,
-        plugin_name: Optional[str] = ...,
+        self, path_to_plugin_file: str, plugin_name: typing.Optional[str] = None
     ) -> None: ...
     def __repr__(self) -> str: ...
     def _get_parameter(self, arg0: str) -> _AudioProcessorParameter: ...
@@ -956,16 +956,13 @@ class AudioUnitPlugin(ExternalPlugin):
         """
     pass
 
-class VST3Plugin(ExternalPlugin):
+class _VST3Plugin(Plugin):
     """
     A wrapper around any Steinberg® VST3 audio effect plugin. Note that plugins must already support the operating system currently in use (i.e.: if you're running Linux but trying to open a VST that does not support Linux, this will fail).
     """
 
     def __init__(
-        self,
-        path_to_plugin_file: str,
-        parameter_values: Dict[str, Union[str, int, float, bool]] = ...,
-        plugin_name: Optional[str] = ...,
+        self, path_to_plugin_file: str, plugin_name: typing.Optional[str] = None
     ) -> None: ...
     def __repr__(self) -> str: ...
     def _get_parameter(self, arg0: str) -> _AudioProcessorParameter: ...
@@ -989,6 +986,8 @@ class VST3Plugin(ExternalPlugin):
     def name(self) -> str:
         """
         The name of this plugin.
+
+
         """
     pass
 
@@ -1016,73 +1015,12 @@ def process(
     :meta private:
     """
 
-from pedalboard_native.utils import Mix as Mix, Chain as Chain
-from pedalboard.version import __version__ as __version__
-
-class Pedalboard(Chain):
-    """
-    Run zero or more plugins as a plugin, just like when using a real-life pedalboard.
-    """
-
-    def __init__(self, plugins: Optional[List[Plugin]] = ...) -> None: ...
-
-class AudioProcessorParameter:
-    def __init__(self, plugin, parameter_name, search_steps: int = ...) -> None: ...
-    @property
-    def label(self) -> Optional[str]: ...
-    @property
-    def units(self) -> Optional[str]: ...
-    def __getattr__(self, name: str): ...
-    def __setattr__(self, name: str, value): ...
-    def get_raw_value_for(self, new_value: Union[float, str, bool]) -> float: ...
-
-def load_plugin(
-    path_to_plugin_file: str,
-    parameter_values: Dict[str, Union[str, int, float, bool]] = ...,
-    plugin_name: Union[str, None] = ...,
-) -> ExternalPlugin:
-    """
-    Load an audio plugin.
-
-    Two plugin formats are supported:
-     - VST3® format is supported on macOS, Windows, and Linux
-     - Audio Units are supported on macOS
-
-    Args:
-        path_to_plugin_file (str): The path of a VST3® or Audio Unit plugin file or bundle.
-
-        parameter_values (Dict[str, Union[str, int, float, bool]]):
-            An optional dictionary of initial values to provide to the plugin
-            after loading. Keys in this dictionary are expected to match the
-            parameter names reported by the plugin, but normalized to strings
-            that can be used as Python identifiers. (These are the same
-            identifiers that are used as keys in the ``.parameters`` dictionary
-            of a loaded plugin.)
-
-        plugin_name (Optional[str]):
-            An optional plugin name that can be used to load a specific plugin
-            from a multi-plugin package. If a package is loaded but a
-            ``plugin_name`` is not provided, an exception will be thrown.
-
-    Returns:
-        an instance of :class:`pedalboard.VST3Plugin` or :class:`pedalboard.AudioUnitPlugin`
-
-    Throws:
-        ``ImportError``: if the plugin cannot be found or loaded
-
-        ``RuntimeError``: if the plugin file contains more than one plugin,
-        but no ``plugin_name`` was provided
-    """
-    ...
-
 class GSMFullRateCompressor(Plugin):
     """
     An audio degradation/compression plugin that applies the GSM "Full Rate" compression algorithm to emulate the sound of a 2G cellular phone connection. This plugin internally resamples the input audio to a fixed sample rate of 8kHz (required by the GSM Full Rate codec), although the quality of the resampling algorithm can be specified.
     """
 
-    def __init__(
-        self, quality: Resample.Quality = pedalboard.Resample.Quality.WindowedSinc
-    ) -> None: ...
+    def __init__(self, quality: Resample.Quality = Resample.Quality.WindowedSinc) -> None: ...
     def __repr__(self) -> str: ...
     @property
     def quality(self) -> Resample.Quality:

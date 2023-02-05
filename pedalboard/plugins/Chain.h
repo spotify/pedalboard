@@ -87,59 +87,25 @@ inline void init_chain(py::module &m) {
            }),
            py::arg("plugins"))
       .def(py::init([]() { return new Chain({}); }))
-      .def("__repr__",
-           [](Chain &plugin) {
-             std::ostringstream ss;
-             ss << "<pedalboard.Chain with " << plugin.getPlugins().size()
-                << " plugin";
-             if (plugin.getPlugins().size() != 1) {
-               ss << "s";
-             }
-             ss << ": [";
-             for (int i = 0; i < plugin.getPlugins().size(); i++) {
-               py::object nestedPlugin = py::cast(plugin.getPlugins()[i]);
-               ss << nestedPlugin.attr("__repr__")();
-               if (i < plugin.getPlugins().size() - 1) {
-                 ss << ", ";
-               }
-             }
-             ss << "] at " << &plugin;
-             ss << ">";
-             return ss.str();
-           })
-      // If calling process() directly on Chain, pass the plugins immediately to
-      // process() itself, as that will result in slightly faster performance.
-      .def(
-          "process",
-          [](std::shared_ptr<Chain> self,
-             const py::array_t<float, py::array::c_style> inputArray,
-             double sampleRate, unsigned int bufferSize, bool reset) {
-            return process(inputArray, sampleRate, self->getPlugins(),
-                           bufferSize, reset);
-          },
-          "Run a 32-bit floating point audio buffer through this plugin."
-          "(Note: if calling this multiple times with multiple plugins, "
-          "consider using pedalboard.process(...) instead.)",
-          py::arg("input_array"), py::arg("sample_rate"),
-          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
-
-      .def(
-          "process",
-          [](std::shared_ptr<Chain> self,
-             const py::array_t<double, py::array::c_style> inputArray,
-             double sampleRate, unsigned int bufferSize, bool reset) {
-            const py::array_t<float, py::array::c_style> float32InputArray =
-                inputArray.attr("astype")("float32");
-            return process(float32InputArray, sampleRate, self->getPlugins(),
-                           bufferSize, reset);
-          },
-          "Run a 64-bit floating point audio buffer through this plugin."
-          "(Note: if calling this multiple times with multiple plugins, "
-          "consider using pedalboard.process(...) instead.) The buffer "
-          "will be converted to 32-bit for processing.",
-          py::arg("input_array"), py::arg("sample_rate"),
-          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-          py::arg("reset") = true);
+      .def("__repr__", [](Chain &plugin) {
+        std::ostringstream ss;
+        ss << "<pedalboard.Chain with " << plugin.getPlugins().size()
+           << " plugin";
+        if (plugin.getPlugins().size() != 1) {
+          ss << "s";
+        }
+        ss << ": [";
+        for (int i = 0; i < plugin.getPlugins().size(); i++) {
+          py::object nestedPlugin = py::cast(plugin.getPlugins()[i]);
+          ss << nestedPlugin.attr("__repr__")();
+          if (i < plugin.getPlugins().size() - 1) {
+            ss << ", ";
+          }
+        }
+        ss << "] at " << &plugin;
+        ss << ">";
+        return ss.str();
+      });
 }
 
 } // namespace Pedalboard

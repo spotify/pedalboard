@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import argparse
 import inspect
@@ -6,18 +7,109 @@ import typing
 import shutil
 import difflib
 import importlib
+import pathlib
 import traceback
-import subprocess
 from tempfile import TemporaryDirectory
 from contextlib import contextmanager
-from typing import List
+from typing import Dict, List
 
+from pybind11_stubgen import ClassStubsGenerator, StubsGenerator
+from pybind11_stubgen import main as pybind11_stubgen_main
+import mypy.stubtest
 from mypy.stubtest import test_stubs, parse_options as mypy_parse_options
 import sphinx.ext.autodoc.importer
 from sphinx.cmd.build import main as sphinx_build_main
+from scripts.postprocess_type_hints import main as postprocess_type_hints_main
 
 
 MAX_DIFF_LINE_LENGTH = 150
+
+
+SPHINX_REPLACEMENTS = {
+    # Pretend that the `pedalboard_native` package just does not exist:
+    r"pedalboard_native\.": r"pedalboard.",
+    # Remove any "self: <foo>," lines:
+    (
+        r'<em class="sig-param"><span class="n"><span class="pre">self'
+        r'</span></span><span class="p"><span class="pre">:.*?</em>, '
+    ): r"",
+    # Remove any "(self: <foo>)" lines too:
+    (
+        r'<em class="sig-param"><span class="n"><span class="pre">self</span>'
+        r'</span><span class="p"><span class="pre">:.*?</em><span class="sig-paren">\)</span>'
+    ): r'<span class="sig-paren">)</span>',
+    # Sometimes Sphinx fully-qualifies names, other times it doesn't. Here are some special cases:
+    r'<span class="pre">pedalboard\.Plugin</span>': r'<span class="pre">Plugin</span>',
+}
+
+
+def patch_mypy_stubtest():
+    def patched_verify_metaclass(*args, **kwargs):
+        # Just ignore metaclass mismatches entirely:
+        return []
+
+    mypy.stubtest._verify_metaclass = patched_verify_metaclass
+
+
+def patch_pybind11_stubgen():
+    """
+    Patch ``pybind11_stubgen`` to generate more ergonomic code for Enum-like classes.
+    This generates a subclass of :class:``Enum`` for each Pybind11-generated Enum,
+    which is not strictly correct, but produces much nicer documentation and allows
+    for a much more Pythonic API.
+    """
+
+    original_class_stubs_generator_new = ClassStubsGenerator.__new__
+
+    class EnumClassStubsGenerator(StubsGenerator):
+        def __init__(self, klass):
+            self.klass = klass
+            assert inspect.isclass(klass)
+            assert klass.__name__.isidentifier()
+            assert hasattr(klass, "__entries")
+
+            self.doc_string = None
+            self.enum_names = []
+            self.enum_values = []
+            self.enum_docstrings = []
+
+        def get_involved_modules_names(self):
+            return []
+
+        def parse(self):
+            self.doc_string = self.klass.__doc__ or ""
+            self.doc_string = self.doc_string.split("Members:")[0]
+            for name, (value_object, docstring) in getattr(self.klass, "__entries").items():
+                self.enum_names.append(name)
+                self.enum_values.append(value_object.value)
+                self.enum_docstrings.append(docstring)
+
+        def to_lines(self):
+            result = [
+                "class {class_name}(Enum):{doc_string}".format(
+                    class_name=self.klass.__name__,
+                    doc_string="\n" + self.format_docstring(self.doc_string)
+                    if self.doc_string
+                    else "",
+                ),
+            ]
+            for (name, value, docstring) in sorted(
+                list(zip(self.enum_names, self.enum_values, self.enum_docstrings)),
+                key=lambda x: x[1],
+            ):
+                result.append(f"    {name} = {value}  # fmt: skip")
+                result.append(f"{self.format_docstring(docstring)}")
+            if not self.enum_names:
+                result.append(self.indent("pass"))
+            return result
+
+    def patched_class_stubs_generator_new(cls, klass, *args, **kwargs):
+        if hasattr(klass, "__entries"):
+            return EnumClassStubsGenerator(klass, *args, **kwargs)
+        else:
+            return original_class_stubs_generator_new(cls)
+
+    ClassStubsGenerator.__new__ = patched_class_stubs_generator_new
 
 
 def import_stub(stubs_path: str, module_name: str) -> typing.Any:
@@ -40,52 +132,26 @@ def import_stub(stubs_path: str, module_name: str) -> typing.Any:
         sys.path_hooks.pop(0)
 
 
-def patch_sphinx(module_names_to_combine: typing.Set[str]):
+def patch_sphinx_to_read_pyi():
     """
     Sphinx doesn't know how to read .pyi files, but we use .pyi files as our
     "source of truth" for the public API that we expose to IDEs and our documentation.
-    This patch tells Sphinx how to read .pyi files, and goes one step further to
-    combine both our "fake" module from our .pyi files and any real Python code
-    in our regular modules.
+    This patch tells Sphinx how to read .pyi files, using them to replace their .py
+    counterparts.
     """
     old_import_module = sphinx.ext.autodoc.importer.import_module
 
     def patch_import_module(modname: str, *args, **kwargs) -> typing.Any:
         if modname in sys.modules:
             return sys.modules[modname]
-        if modname in module_names_to_combine:
-            try:
-                pyi_module = import_stub(".", modname)
-            except Exception as e:
-                print(f"Failed to import stub module: {e}")
-                traceback.print_exc()
-                raise
-            # Remove the stub module from the module cache:
-            temp_module_holding_area = {}
-            for module_name in list(sys.modules.keys()):
-                if module_name.split(".")[0] in module_names_to_combine:
-                    temp_module_holding_area[module_name] = sys.modules[module_name]
-                    del sys.modules[module_name]
-            try:
-                regular_module = importlib.import_module(modname, None)
-            except Exception as e:
-                print(f"Failed to import regular module: {e}")
-                raise
-            for x in dir(regular_module):
-                if (
-                    not hasattr(pyi_module, x)
-                    and not inspect.ismodule(getattr(regular_module, x))
-                    and not x.startswith("_")
-                ):
-                    setattr(pyi_module, x, getattr(regular_module, x))
-                    getattr(pyi_module, "__all__").append(x)
-            sys.modules.update(temp_module_holding_area)
-
-            # The sort order of __all__ is used by Sphinx:
-            getattr(pyi_module, "__all__").sort()
-
-            return pyi_module
-        return old_import_module(modname, *args, **kwargs)
+        try:
+            return import_stub(".", modname)
+        except ImportError:
+            return old_import_module(modname, *args, **kwargs)
+        except Exception as e:
+            print(f"Failed to import stub module: {e}")
+            traceback.print_exc()
+            raise
 
     sphinx.ext.autodoc.importer.import_module = patch_import_module
 
@@ -136,6 +202,22 @@ def glob_matches(filename: str, globs: List[str]) -> bool:
     return False
 
 
+def postprocess_sphinx_output(directory: str, renames: Dict[str, str]):
+    """
+    I've spent 7 hours of my time this weekend fighting with Sphinx.
+    Rather than find the "correct" way to fix this, I'm just going to
+    overwrite the HTML output with good old find-and-replace.
+    """
+    for html_path in pathlib.Path(directory).rglob("*.html"):
+        html_contents = html_path.read_text()
+        for find, replace in renames.items():
+            results = re.findall(find, html_contents)
+            if results:
+                html_contents = re.sub(find, replace, html_contents)
+        with open(html_path, "w") as f:
+            f.write(html_contents)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate type stub files (.pyi) and Sphinx documentation for Pedalboard."
@@ -172,12 +254,42 @@ def main():
     )
     args = parser.parse_args()
 
-    patch_sphinx(module_names_to_combine={"pedalboard", "pedalboard.io"})
+    patch_mypy_stubtest()
+    patch_pybind11_stubgen()
+    patch_sphinx_to_read_pyi()
 
     if not args.skip_regenerating_type_hints:
-        with TemporaryDirectory() as tempdir, isolated_imports({"pedalboard", "pedalboard.io"}):
-            print("Generating type stubs from pure-Python code...")
-            subprocess.check_call(["stubgen", "-o", tempdir, "pedalboard/_pedalboard.py"])
+        with isolated_imports(
+            {
+                "pedalboard",
+                "pedalboard.io",
+                "pedalboard_native",
+                "pedalboard_native.io",
+                "pedalboard_native.utils",
+            }
+        ):
+            # print("Generating type stubs from pure-Python code...")
+            # subprocess.check_call(["stubgen", "-o", tempdir, "pedalboard/_pedalboard.py"])
+
+            # Generate .pyi stubs files from Pedalboard's native (Pybind11) source.
+            # Documentation will be copied from the Pybind11 docstrings, and these stubs
+            # files will be used as the "source of truth" for both IDE autocompletion
+            # and Sphinx documentation.
+            print("Generating type stubs from native code...")
+            pybind11_stubgen_main(["-o", "pedalboard_native", "pedalboard_native", "--no-setup-py"])
+
+            # Move type hints out of pedalboard_native/something_else/*:
+            native_dir = pathlib.Path("pedalboard_native")
+            native_subdir = [f for f in native_dir.glob("*") if "stubs" in f.name][0]
+            shutil.copytree(native_subdir, native_dir, dirs_exist_ok=True)
+            shutil.rmtree(native_subdir)
+
+            # Post-process the type hints generaetd by pybind11_stubgen; we can't patch
+            # everything easily, so we do string manipulation after-the-fact and run ``black``.
+            print("Postprocessing generated type hints...")
+            postprocess_type_hints_main(
+                ["pedalboard_native", "pedalboard_native"] + (["--check"] if args.check else [])
+            )
 
             # Run mypy.stubtest to ensure that the results are correct and nothing got missed:
             if sys.version_info > (3, 6):
@@ -195,15 +307,20 @@ def main():
                 )
 
     # Why is this necessary? I don't know, but without it, things fail.
-    print("Importing numpy to ensure a successful Pedalboard import...")
+    print("Importing numpy to ensure a successful Pedalboard stub import...")
     import numpy  # noqa
+
+    print("Importing .pyi files for our native modules...")
+    for modname in ["pedalboard_native", "pedalboard_native.io", "pedalboard_native.utils"]:
+        import_stub(".", modname)
 
     print("Running Sphinx...")
     if args.check:
         missing_files = []
         mismatched_files = []
         with TemporaryDirectory() as tempdir:
-            sphinx_build_main(["-b", "html", args.docs_input_dir, tempdir])
+            sphinx_build_main(["-b", "html", args.docs_input_dir, tempdir, "-v", "-v", "-v"])
+            postprocess_sphinx_output(tempdir, SPHINX_REPLACEMENTS)
             remove_non_public_files(tempdir)
 
             for (dirpath, _dirnames, filenames) in os.walk(tempdir):
@@ -254,6 +371,7 @@ def main():
         print("Done! Generated type stubs and documentation are valid.")
     else:
         sphinx_build_main(["-b", "html", args.docs_input_dir, args.docs_output_dir])
+        postprocess_sphinx_output(args.docs_output_dir, SPHINX_REPLACEMENTS)
         remove_non_public_files(args.docs_output_dir)
         print(f"Done! Commit the contents of `{args.docs_output_dir}` to Git.")
 

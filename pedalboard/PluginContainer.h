@@ -88,7 +88,9 @@ inline void init_plugin_container(py::module &m) {
               throw py::index_error("index out of range");
             return s.getPlugins()[i];
           },
-          py::arg("index"))
+          py::arg("index"),
+          "Get a plugin by its index. Index may be negative. If the index is "
+          "out of range, an IndexError will be thrown.")
       .def(
           "__setitem__",
           [](PluginContainer &s, int i, std::shared_ptr<Plugin> plugin) {
@@ -100,7 +102,9 @@ inline void init_plugin_container(py::module &m) {
               throw py::index_error("index out of range");
             s.getPlugins()[i] = plugin;
           },
-          py::arg("index"), py::arg("plugin"))
+          py::arg("index"), py::arg("plugin"),
+          "Replace a plugin at the specified index. Index may be negative. If "
+          "the index is out of range, an IndexError will be thrown.")
       .def(
           "__delitem__",
           [](PluginContainer &s, int i) {
@@ -113,8 +117,12 @@ inline void init_plugin_container(py::module &m) {
             auto &plugins = s.getPlugins();
             plugins.erase(plugins.begin() + i);
           },
-          py::arg("index"))
-      .def("__len__", [](PluginContainer &s) { return s.getPlugins().size(); })
+          py::arg("index"),
+          "Delete a plugin by its index. Index may be negative. If the index "
+          "is out of range, an IndexError will be thrown.")
+      .def(
+          "__len__", [](PluginContainer &s) { return s.getPlugins().size(); },
+          "Get the number of plugins in this container.")
       .def(
           "insert",
           [](PluginContainer &s, int i, std::shared_ptr<Plugin> plugin) {
@@ -127,11 +135,14 @@ inline void init_plugin_container(py::module &m) {
             auto &plugins = s.getPlugins();
             plugins.insert(plugins.begin() + i, plugin);
           },
-          py::arg("index"), py::arg("plugin"))
-      .def("append",
-           [](PluginContainer &s, std::shared_ptr<Plugin> plugin) {
-             s.getPlugins().push_back(plugin);
-           })
+          py::arg("index"), py::arg("plugin"),
+          "Insert a plugin at the specified index.")
+      .def(
+          "append",
+          [](PluginContainer &s, std::shared_ptr<Plugin> plugin) {
+            s.getPlugins().push_back(plugin);
+          },
+          py::arg("plugin"), "Append a plugin to the end of this container.")
       .def(
           "remove",
           [](PluginContainer &s, std::shared_ptr<Plugin> plugin) {
@@ -141,7 +152,7 @@ inline void init_plugin_container(py::module &m) {
               throw py::value_error("remove(x): x not in list");
             plugins.erase(position);
           },
-          py::arg("plugin"))
+          py::arg("plugin"), "Remove a plugin by its value.")
       .def(
           "__iter__",
           [](PluginContainer &s) {

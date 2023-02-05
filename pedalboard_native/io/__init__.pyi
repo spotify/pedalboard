@@ -2,8 +2,7 @@
 
 *Introduced in v0.5.1.*"""
 from __future__ import annotations
-import pedalboard_native.io  # type: ignore  # type: ignore
-import pedalboard  # type: ignore
+import pedalboard_native.io
 import typing
 from typing_extensions import Literal
 from enum import Enum
@@ -215,7 +214,7 @@ class ReadableAudioFile(AudioFile):
     def resampled_to(
         self,
         target_sample_rate: float,
-        quality: pedalboard.Resample.Quality = pedalboard.Resample.Quality.WindowedSinc,
+        quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc,
     ) -> ResampledReadableAudioFile:
         """
         Return a :class:`ResampledReadableAudioFile` that will automatically resample this :class:`ReadableAudioFile` to the provided `target_sample_rate`, using a constant amount of memory.
@@ -333,14 +332,14 @@ class ResampledReadableAudioFile(AudioFile):
         self,
         audio_file: ReadableAudioFile,
         target_sample_rate: float,
-        resampling_quality: pedalboard.Resample.Quality = pedalboard.Resample.Quality.WindowedSinc,
+        resampling_quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc,
     ) -> None: ...
     @staticmethod
     def __new__(
         cls: object,
         audio_file: ReadableAudioFile,
         target_sample_rate: float,
-        resampling_quality: pedalboard.Resample.Quality = pedalboard.Resample.Quality.WindowedSinc,
+        resampling_quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc,
     ) -> ResampledReadableAudioFile: ...
     def __repr__(self) -> str: ...
     def close(self) -> None:
@@ -422,7 +421,7 @@ class ResampledReadableAudioFile(AudioFile):
 
         """
     @property
-    def resampling_quality(self) -> pedalboard.Resample.Quality:
+    def resampling_quality(self) -> pedalboard_native.Resample.Quality:
         """
         The resampling algorithm used to resample from the original file's sample rate to the ``target_sample_rate``.
 
@@ -451,7 +450,7 @@ class StreamResampler:
         source_sample_rate: float,
         target_sample_rate: float,
         num_channels: int,
-        quality: pedalboard.Resample.Quality = pedalboard.Resample.Quality.WindowedSinc,
+        quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc,
     ) -> None:
         """
         Create a new StreamResampler, capable of resampling a potentially-unbounded audio stream with a constant amount of memory. The source sample rate, target sample rate, quality, or number of channels cannot be changed once the resampler is instantiated.
@@ -482,7 +481,7 @@ class StreamResampler:
 
         """
     @property
-    def quality(self) -> pedalboard.Resample.Quality:
+    def quality(self) -> pedalboard_native.Resample.Quality:
         """
         The resampling algorithm used by this resampler.
 
