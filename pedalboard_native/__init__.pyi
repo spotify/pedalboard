@@ -18,6 +18,7 @@ __all__ = [
     "Convolution",
     "Delay",
     "Distortion",
+    "ExternalPlugin",
     "GSMFullRateCompressor",
     "Gain",
     "HighShelfFilter",
@@ -274,6 +275,13 @@ class Distortion(Plugin):
     @drive_db.setter
     def drive_db(self, arg1: float) -> None:
         pass
+    pass
+
+class ExternalPlugin(Plugin):
+    """
+    A wrapper around a third-party effect plugin.
+    """
+
     pass
 
 class Gain(Plugin):
@@ -933,7 +941,7 @@ class _AudioProcessorParameter:
         """
     pass
 
-class _AudioUnitPlugin(Plugin):
+class _AudioUnitPlugin(ExternalPlugin, Plugin):
     """
     A wrapper around any Apple Audio Unit audio effect plugin. Only available on macOS.
     """
@@ -966,7 +974,7 @@ class _AudioUnitPlugin(Plugin):
         """
     pass
 
-class _VST3Plugin(Plugin):
+class _VST3Plugin(ExternalPlugin, Plugin):
     """
     A wrapper around any Steinberg® VST3 audio effect plugin. Note that plugins must already support the operating system currently in use (i.e.: if you're running Linux but trying to open a VST that does not support Linux, this will fail).
     """

@@ -267,7 +267,17 @@ enum class ExternalPluginReloadType {
   PersistsAudioOnReset,
 };
 
-template <typename ExternalPluginType> class ExternalPlugin : public Plugin {
+/**
+ * @brief A C++ abstract base class that gets exposed to Python as
+ * `ExternalPlugin`.
+ */
+class AbstractExternalPlugin : public Plugin {
+public:
+  AbstractExternalPlugin() : Plugin() {}
+};
+
+template <typename ExternalPluginType>
+class ExternalPlugin : public AbstractExternalPlugin {
 public:
   ExternalPlugin(std::string &_pathToPluginFile,
                  std::optional<std::string> pluginName = {})
@@ -985,8 +995,18 @@ inline void init_external_plugins(py::module &m) {
           },
           "Returns the current value of the parameter as a string.");
 
+  py::class_<AbstractExternalPlugin, Plugin,
+             std::shared_ptr<AbstractExternalPlugin>>(
+      m, "ExternalPlugin", "A wrapper around a third-party effect plugin.")
+      .def(py::init([]() {
+        throw py::type_error(
+            "Plugin is an abstract base class - don't instantiate this "
+            "directly, use its subclasses instead.");
+        return nullptr;
+      }));
+
 #if JUCE_PLUGINHOST_VST3 && (JUCE_MAC || JUCE_WINDOWS || JUCE_LINUX)
-  py::class_<ExternalPlugin<juce::VST3PluginFormat>, Plugin,
+  py::class_<ExternalPlugin<juce::VST3PluginFormat>, AbstractExternalPlugin,
              std::shared_ptr<ExternalPlugin<juce::VST3PluginFormat>>>(
       m, "_VST3Plugin",
       "A wrapper around any Steinberg® VST3 audio effect plugin. Note that "
@@ -1018,7 +1038,8 @@ inline void init_external_plugins(py::module &m) {
             return getPluginNamesForFile<juce::VST3PluginFormat>(filename);
           },
           "Return a list of plugin names contained within a given VST3 "
-          "plugin (i.e.: a \".vst3\"). If the provided file cannot be scanned, "
+          "plugin (i.e.: a \".vst3\"). If the provided file cannot be "
+          "scanned, "
           "an ImportError will be raised.")
       .def_property_readonly_static(
           "installed_plugins",
@@ -1040,13 +1061,15 @@ inline void init_external_plugins(py::module &m) {
            &ExternalPlugin<juce::VST3PluginFormat>::getParameter,
            py::return_value_policy::reference_internal)
       .def("show_editor", &ExternalPlugin<juce::VST3PluginFormat>::showEditor,
-           "Show the UI of this plugin as a native window. This method will "
+           "Show the UI of this plugin as a native window. This method "
+           "will "
            "block until the window is closed or a KeyboardInterrupt is "
            "received.");
 #endif
 
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
-  py::class_<ExternalPlugin<juce::AudioUnitPluginFormat>, Plugin,
+  py::class_<ExternalPlugin<juce::AudioUnitPluginFormat>,
+             AbstractExternalPlugin,
              std::shared_ptr<ExternalPlugin<juce::AudioUnitPluginFormat>>>(
       m, "_AudioUnitPlugin",
       "A wrapper around any Apple Audio Unit audio effect plugin. Only "

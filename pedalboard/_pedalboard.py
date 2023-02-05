@@ -19,9 +19,9 @@ import platform
 
 import weakref
 from contextlib import contextmanager
-from typing import List, Optional, Dict, Tuple, Iterable, Type, Union, Set, no_type_check
+from typing import cast, List, Optional, Dict, Tuple, Iterable, Type, Union, Set, no_type_check
 
-from pedalboard_native import Plugin, _AudioProcessorParameter  # type: ignore
+from pedalboard_native import Plugin, ExternalPlugin, _AudioProcessorParameter  # type: ignore
 from pedalboard_native.utils import Chain  # type: ignore
 
 
@@ -571,45 +571,7 @@ def normalize_python_parameter_name(name: str) -> str:
     return name
 
 
-class ExternalPlugin(Plugin):
-    """
-    A wrapper around third-party, non-Pedalboard audio effects plugins.
-
-    This is a base class and cannot be called directly; use
-    :py:meth:`load_plugin` to load a plugin file, or one of :class:`VST3Plugin`
-    or :class:`AudioUnitPlugin`, depending on your operating system.
-    """
-
-    # Don't actually define this here; this is only to appease MyPy.
-    def __init__(
-        self,
-        path_to_plugin_file: str,
-        parameter_values: Dict[str, Union[str, int, float, bool]] = {},
-        plugin_name: Optional[str] = None,
-    ) -> None:
-        # TODO: could we use __new__ here to support this interface as well?
-        raise NotImplementedError("Call load_plugin instead!")
-
-    @classmethod
-    def get_plugin_names_for_file(cls, filename: str) -> List[str]:
-        raise NotImplementedError(
-            "This function should not be reachable! This is an internal "
-            "Pedalboard error and should be reported."
-        )
-
-    def show_editor(self) -> None:
-        raise NotImplementedError(
-            "This function should not be reachable! This is an internal "
-            "Pedalboard error and should be reported."
-        )
-
-    @property
-    def name(self) -> str:
-        raise NotImplementedError(
-            "This function should not be reachable! This is an internal "
-            "Pedalboard error and should be reported."
-        )
-
+class _PythonExternalPluginMixin:
     def __set_initial_parameter_values__(
         self, parameter_values: Dict[str, Union[str, int, float, bool]] = {}
     ):
@@ -665,7 +627,7 @@ class ExternalPlugin(Plugin):
 
         if cpp_parameter.name not in self.__python_parameter_cache__:
             self.__python_parameter_cache__[cpp_parameter.name] = AudioProcessorParameter(
-                self, cpp_parameter.name
+                cast(ExternalPlugin, self), cpp_parameter.name
             )
         return self.__python_parameter_cache__[cpp_parameter.name]
 
@@ -708,10 +670,12 @@ class ExternalPlugin(Plugin):
         super().__setattr__(name, value)
 
 
+_AVAILABLE_PLUGIN_CLASSES: List[Type[ExternalPlugin]] = []
+
 try:
     from pedalboard_native import _VST3Plugin
 
-    class VST3Plugin(_VST3Plugin, ExternalPlugin):
+    class VST3Plugin(_VST3Plugin, _PythonExternalPluginMixin):
         """
         A wrapper around third-party, non-Pedalboard audio effects
         plugins in
@@ -737,9 +701,11 @@ try:
                     f" {type(parameter_values).__name__}. (If passing a plugin name, pass"
                     ' "plugin_name=..." as a keyword argument instead.)'
                 )
+
             _VST3Plugin.__init__(self, path_to_plugin_file, plugin_name)
             self.__set_initial_parameter_values__(parameter_values)
 
+    _AVAILABLE_PLUGIN_CLASSES.append(VST3Plugin)
 except ImportError:
     # We may be on a system that doesn't have native VST3Plugin support.
     pass
@@ -747,7 +713,7 @@ except ImportError:
 try:
     from pedalboard_native import _AudioUnitPlugin
 
-    class AudioUnitPlugin(_AudioUnitPlugin, ExternalPlugin):
+    class AudioUnitPlugin(_AudioUnitPlugin, _PythonExternalPluginMixin):
         """
         A wrapper around third-party, non-Pedalboard audio effects
         plugins in
@@ -779,13 +745,11 @@ try:
             _AudioUnitPlugin.__init__(self, path_to_plugin_file, plugin_name)
             self.__set_initial_parameter_values__(parameter_values)
 
+    _AVAILABLE_PLUGIN_CLASSES.append(AudioUnitPlugin)
 except ImportError:
     # We may be on a system that doesn't have native AudioUnitPlugin support.
     # (i.e.: any platform that's not macOS.)
     pass
-
-
-_AVAILABLE_PLUGIN_CLASSES: List[Type[ExternalPlugin]] = list(ExternalPlugin.__subclasses__())
 
 
 def load_plugin(
@@ -834,11 +798,11 @@ def load_plugin(
     exceptions = []
     for plugin_class in _AVAILABLE_PLUGIN_CLASSES:
         try:
-            return plugin_class(
-                path_to_plugin_file=path_to_plugin_file,
-                parameter_values=parameter_values,
-                plugin_name=plugin_name,
-            )
+            return plugin_class(  # type: ignore
+                path_to_plugin_file=path_to_plugin_file,  # type: ignore
+                parameter_values=parameter_values,  # type: ignore
+                plugin_name=plugin_name,  # type: ignore
+            )  # type: ignore
         except ImportError as e:
             exceptions.append(e)
         except Exception:
