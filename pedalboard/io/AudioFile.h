@@ -40,10 +40,6 @@ void registerPedalboardAudioFormats(juce::AudioFormatManager &manager,
   manager.registerFormat(new juce::OggVorbisAudioFormat(), false);
 #endif
 
-#if JUCE_USE_WINDOWS_MEDIA_FORMAT
-  manager.registerFormat(new juce::WindowsMediaAudioFormat(), false);
-#endif
-
   if (forWriting) {
     // Prefer our own custom MP3 format (which only writes, doesn't read) over
     // PatchedMP3AudioFormat (which only reads, doesn't write)
@@ -54,6 +50,10 @@ void registerPedalboardAudioFormats(juce::AudioFormatManager &manager,
     manager.registerFormat(new juce::CoreAudioFormat(), false);
 #endif
   }
+  
+#if JUCE_USE_WINDOWS_MEDIA_FORMAT
+  manager.registerFormat(new juce::WindowsMediaAudioFormat(), false);
+#endif
 }
 
 class AudioFile {};
