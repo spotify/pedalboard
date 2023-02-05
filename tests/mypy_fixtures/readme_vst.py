@@ -15,7 +15,7 @@ print(vst.parameters.keys())
 # ])
 
 # Set the "ratio" parameter to 15
-vst.ratio = 15
+vst.ratio = 15  # type: ignore
 
 # Use this VST to process some audio:
 with AudioFile("some-file.wav", "r") as f:

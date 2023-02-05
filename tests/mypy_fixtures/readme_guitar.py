@@ -33,12 +33,13 @@ board = Pedalboard(
 )
 
 # Pedalboard objects behave like lists, so you can add plugins:
-board.append(Compressor(threshold_db=-25, ratio=10))
+compressor = Compressor(threshold_db=-25, ratio=10)
+board.append(compressor)
 board.append(Gain(gain_db=10))
 board.append(Limiter())
 
 # ... or change parameters easily:
-board[0].threshold_db = -40
+compressor.threshold_db = -40
 
 # Run the audio through this pedalboard!
 effected = board(audio, samplerate)

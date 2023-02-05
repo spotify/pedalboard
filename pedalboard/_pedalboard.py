@@ -571,7 +571,15 @@ def normalize_python_parameter_name(name: str) -> str:
     return name
 
 
-class ExternalPlugin(object):
+class ExternalPlugin(Plugin):
+    """
+    A wrapper around third-party, non-Pedalboard audio effects plugins.
+
+    This is a base class and cannot be called directly; use
+    :py:meth:`load_plugin` to load a plugin file, or one of :class:`VST3Plugin`
+    or :class:`AudioUnitPlugin`, depending on your operating system.
+    """
+
     # Don't actually define this here; this is only to appease MyPy.
     def __init__(
         self,
@@ -579,18 +587,28 @@ class ExternalPlugin(object):
         parameter_values: Dict[str, Union[str, int, float, bool]] = {},
         plugin_name: Optional[str] = None,
     ) -> None:
-        ...
+        # TODO: could we use __new__ here to support this interface as well?
+        raise NotImplementedError("Call load_plugin instead!")
 
     @classmethod
     def get_plugin_names_for_file(cls, filename: str) -> List[str]:
-        return []  # Should never be hit, just appeasing MyPy.
+        raise NotImplementedError(
+            "This function should not be reachable! This is an internal "
+            "Pedalboard error and should be reported."
+        )
 
     def show_editor(self) -> None:
-        ...
+        raise NotImplementedError(
+            "This function should not be reachable! This is an internal "
+            "Pedalboard error and should be reported."
+        )
 
     @property
     def name(self) -> str:
-        return ""  # Should never be hit, just appeasing MyPy.
+        raise NotImplementedError(
+            "This function should not be reachable! This is an internal "
+            "Pedalboard error and should be reported."
+        )
 
     def __set_initial_parameter_values__(
         self, parameter_values: Dict[str, Union[str, int, float, bool]] = {}
