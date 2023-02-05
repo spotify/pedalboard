@@ -36,10 +36,8 @@ class ReadableAudioFile
     : public AudioFile,
       public std::enable_shared_from_this<ReadableAudioFile> {
 public:
-  ReadableAudioFile(std::string filename, bool crossPlatformFormatsOnly = false)
-      : filename(filename) {
-    registerPedalboardAudioFormats(formatManager, false,
-                                   crossPlatformFormatsOnly);
+  ReadableAudioFile(std::string filename) : filename(filename) {
+    registerPedalboardAudioFormats(formatManager, false);
 
     juce::File file(filename);
 
@@ -61,10 +59,8 @@ public:
           "\" does not seem to be of a known or supported format.");
   }
 
-  ReadableAudioFile(std::unique_ptr<PythonInputStream> inputStream,
-                    bool crossPlatformFormatsOnly = false) {
-    registerPedalboardAudioFormats(formatManager, false,
-                                   crossPlatformFormatsOnly);
+  ReadableAudioFile(std::unique_ptr<PythonInputStream> inputStream) {
+    registerPedalboardAudioFormats(formatManager, false);
 
     if (!inputStream->isSeekable()) {
       PythonException::raise();
@@ -505,9 +501,7 @@ be readable depending on the operating system and installed system libraries:
    ``.wav``
 
 Use :meth:`pedalboard.io.get_supported_read_formats()` to see which
-formats or file extensions are supported on the current platform. To use
-only audio format parsing libraries that are consistent on all platforms, pass
-``cross_platform_formats_only=True`` to this constructor.
+formats or file extensions are supported on the current platform.
 
 (Note that although an audio file may have a certain file extension, its
 contents may be encoded with a compression algorithm unsupported by
@@ -528,35 +522,29 @@ inline void init_readable_audio_file(
     py::class_<ReadableAudioFile, AudioFile, std::shared_ptr<ReadableAudioFile>>
         &pyReadableAudioFile) {
   pyReadableAudioFile
-      .def(py::init([](std::string filename,
-                       bool crossPlatformFormatsOnly) -> ReadableAudioFile * {
+      .def(py::init([](std::string filename) -> ReadableAudioFile * {
              // This definition is only here to provide nice docstrings.
              throw std::runtime_error(
                  "Internal error: __init__ should never be called, as this "
                  "class implements __new__.");
            }),
-           py::arg("filename"), py::arg("cross_platform_formats_only") = false)
-      .def(py::init([](py::object filelike,
-                       bool crossPlatformFormatsOnly) -> ReadableAudioFile * {
+           py::arg("filename"))
+      .def(py::init([](py::object filelike) -> ReadableAudioFile * {
              // This definition is only here to provide nice docstrings.
              throw std::runtime_error(
                  "Internal error: __init__ should never be called, as this "
                  "class implements __new__.");
            }),
-           py::arg("file_like"), py::arg("cross_platform_formats_only") = false)
+           py::arg("file_like"))
       .def_static(
           "__new__",
-          [](const py::object *, std::string filename,
-             bool crossPlatformFormatsOnly) {
-            return std::make_shared<ReadableAudioFile>(
-                filename, crossPlatformFormatsOnly);
+          [](const py::object *, std::string filename) {
+            return std::make_shared<ReadableAudioFile>(filename);
           },
-          py::arg("cls"), py::arg("filename"),
-          py::arg("cross_platform_formats_only") = false)
+          py::arg("cls"), py::arg("filename"))
       .def_static(
           "__new__",
-          [](const py::object *, py::object filelike,
-             bool crossPlatformFormatsOnly) {
+          [](const py::object *, py::object filelike) {
             if (!isReadableFileLike(filelike)) {
               throw py::type_error(
                   "Expected either a filename or a file-like object (with "
@@ -565,11 +553,9 @@ inline void init_readable_audio_file(
             }
 
             return std::make_shared<ReadableAudioFile>(
-                std::make_unique<PythonInputStream>(filelike),
-                crossPlatformFormatsOnly);
+                std::make_unique<PythonInputStream>(filelike));
           },
-          py::arg("cls"), py::arg("file_like"),
-          py::arg("cross_platform_formats_only") = false)
+          py::arg("cls"), py::arg("file_like"))
       .def(
           "read", &ReadableAudioFile::read, py::arg("num_frames") = 0,
           "Read the given number of frames (samples in each channel) from this "
@@ -679,36 +665,31 @@ inline void init_readable_audio_file(
           "provided `target_sample_rate`, using a constant amount of "
           "memory.\n\n*Introduced in v0.6.0.*");
 
-  m.def(
-      "get_supported_read_formats",
-      [](bool crossPlatformFormatsOnly) {
-        juce::AudioFormatManager manager;
-        registerPedalboardAudioFormats(manager, false,
-                                       crossPlatformFormatsOnly);
+  m.def("get_supported_read_formats", []() {
+    juce::AudioFormatManager manager;
+    registerPedalboardAudioFormats(manager, false);
 
-        std::vector<std::string> formatNames(manager.getNumKnownFormats());
-        juce::StringArray extensions;
-        for (int i = 0; i < manager.getNumKnownFormats(); i++) {
-          auto *format = manager.getKnownFormat(i);
-          extensions.addArray(format->getFileExtensions());
-        }
+    std::vector<std::string> formatNames(manager.getNumKnownFormats());
+    juce::StringArray extensions;
+    for (int i = 0; i < manager.getNumKnownFormats(); i++) {
+      auto *format = manager.getKnownFormat(i);
+      extensions.addArray(format->getFileExtensions());
+    }
 
-        extensions.trim();
-        extensions.removeEmptyStrings();
-        extensions.removeDuplicates(true);
+    extensions.trim();
+    extensions.removeEmptyStrings();
+    extensions.removeDuplicates(true);
 
-        std::vector<std::string> output;
-        for (juce::String s : extensions) {
-          output.push_back(s.toStdString());
-        }
+    std::vector<std::string> output;
+    for (juce::String s : extensions) {
+      output.push_back(s.toStdString());
+    }
 
-        std::sort(output.begin(), output.end(),
-                  [](const std::string lhs, const std::string rhs) {
-                    return lhs < rhs;
-                  });
+    std::sort(
+        output.begin(), output.end(),
+        [](const std::string lhs, const std::string rhs) { return lhs < rhs; });
 
-        return output;
-      },
-      py::arg("cross_platform_formats_only") = false);
+    return output;
+  });
 }
 } // namespace Pedalboard

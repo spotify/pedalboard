@@ -48,32 +48,12 @@ FILENAMES_AND_SAMPLERATES = [
     if any(filename.endswith(extension) for extension in pedalboard.io.get_supported_read_formats())
 ]
 
-CROSS_PLATFORM_FILENAMES_AND_SAMPLERATES = [
-    (filename, samplerate)
-    for samplerate, filenames in TEST_AUDIO_FILES.items()
-    for filename in filenames
-    # On some platforms, not all extensions will be available.
-    if any(
-        filename.endswith(extension)
-        for extension in pedalboard.io.get_supported_read_formats(cross_platform_formats_only=True)
-    )
-]
-
 
 UNSUPPORTED_FILENAMES = [
     filename
     for filename in sum(TEST_AUDIO_FILES.values(), [])
     if not any(
         filename.endswith(extension) for extension in pedalboard.io.get_supported_read_formats()
-    )
-]
-
-UNSUPPORTED_CROSS_PLATFORM_FILENAMES = [
-    filename
-    for filename in sum(TEST_AUDIO_FILES.values(), [])
-    if not any(
-        filename.endswith(extension)
-        for extension in pedalboard.io.get_supported_read_formats(cross_platform_formats_only=True)
     )
 ]
 
@@ -165,18 +145,9 @@ def test_basic_formats_available_on_all_platforms(extension: str):
     assert extension in pedalboard.io.get_supported_read_formats()
 
 
-@pytest.mark.parametrize(
-    "audio_filename,samplerate,cross_platform_formats_only",
-    [(a, s, False) for a, s in FILENAMES_AND_SAMPLERATES]
-    + [(a, s, True) for a, s in CROSS_PLATFORM_FILENAMES_AND_SAMPLERATES],
-)
-def test_basic_read(audio_filename: str, samplerate: float, cross_platform_formats_only: bool):
-    if cross_platform_formats_only:
-        af = pedalboard.io.ReadableAudioFile(
-            audio_filename, cross_platform_formats_only=cross_platform_formats_only
-        )
-    else:
-        af = pedalboard.io.AudioFile(audio_filename)
+@pytest.mark.parametrize("audio_filename,samplerate", FILENAMES_AND_SAMPLERATES)
+def test_basic_read(audio_filename: str, samplerate: float):
+    af = pedalboard.io.AudioFile(audio_filename)
     assert af.samplerate == samplerate
     assert af.num_channels == 1
     if any(ext in audio_filename for ext in EXPECT_LENGTH_TO_BE_EXACT):
@@ -280,40 +251,23 @@ def test_context_manager_allows_exceptions():
     assert af.closed
 
 
-@pytest.mark.parametrize(
-    "cross_platform_formats_only,audio_filename,samplerate",
-    [(False, f, sr) for f, sr in FILENAMES_AND_SAMPLERATES]
-    + [(True, f, sr) for f, sr in CROSS_PLATFORM_FILENAMES_AND_SAMPLERATES],
-)
+@pytest.mark.parametrize("audio_filename,samplerate", FILENAMES_AND_SAMPLERATES)
 def test_read_okay_without_extension(
-    tmp_path: pathlib.Path,
-    audio_filename: str,
-    samplerate: float,
-    cross_platform_formats_only: bool,
+    tmp_path: pathlib.Path, audio_filename: str, samplerate: float
 ):
     dest_path = str(tmp_path / "no_extension")
     shutil.copyfile(audio_filename, dest_path)
-    with pedalboard.io.ReadableAudioFile(
-        dest_path, cross_platform_formats_only=cross_platform_formats_only
-    ) as af:
+    with pedalboard.io.AudioFile(dest_path) as af:
         assert af.samplerate == samplerate
         assert af.num_channels == 1
 
 
-@pytest.mark.parametrize(
-    "cross_platform_formats_only,audio_filename,samplerate",
-    [(False, f, sr) for f, sr in FILENAMES_AND_SAMPLERATES]
-    + [(True, f, sr) for f, sr in CROSS_PLATFORM_FILENAMES_AND_SAMPLERATES],
-)
-def test_read_from_seekable_stream(
-    audio_filename: str, samplerate: float, cross_platform_formats_only: bool
-):
+@pytest.mark.parametrize("audio_filename,samplerate", FILENAMES_AND_SAMPLERATES)
+def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
     with open(audio_filename, "rb") as f:
         stream = io.BytesIO(f.read())
 
-    af = pedalboard.io.ReadableAudioFile(
-        stream, cross_platform_formats_only=cross_platform_formats_only
-    )
+    af = pedalboard.io.AudioFile(stream)
 
     with af:
         assert af.samplerate == samplerate
@@ -496,16 +450,10 @@ def test_fails_gracefully():
             pass
 
 
-@pytest.mark.parametrize(
-    "cross_platform_formats_only,audio_filename",
-    [(False, f) for f in UNSUPPORTED_FILENAMES]
-    + [(True, f) for f in UNSUPPORTED_CROSS_PLATFORM_FILENAMES],
-)
-def test_fails_on_unsupported_format(cross_platform_formats_only: bool, audio_filename: str):
+@pytest.mark.parametrize("audio_filename", UNSUPPORTED_FILENAMES)
+def test_fails_on_unsupported_format(audio_filename: str):
     with pytest.raises(ValueError):
-        af = pedalboard.io.ReadableAudioFile(
-            audio_filename, cross_platform_formats_only=cross_platform_formats_only
-        )
+        af = pedalboard.io.AudioFile(audio_filename)
         assert not af
 
 
@@ -829,14 +777,11 @@ def test_write_empty_file(extension: str, samplerate: float, num_channels: int):
     with pedalboard.io.AudioFile(stream) as af:
         assert af.samplerate == samplerate
         assert af.num_channels == num_channels
-        # The built-in JUCE MP3 reader (only used on Linux and Windows)
-        # reads zero-length MP3 files as having exactly one frame.
-        if "mp3" in extension and platform.system() != "Darwin":
-            assert af.frames <= MP3_FRAME_LENGTH_SAMPLES
+        # The built-in JUCE MP3 reader reads zero-length MP3 files as having exactly one frame:
+        assert af.frames <= MP3_FRAME_LENGTH_SAMPLES
+        if af.frames > 0:
             contents = af.read(af.frames)
             np.testing.assert_allclose(np.zeros_like(contents), contents)
-        else:
-            assert af.frames == 0
 
 
 @pytest.mark.parametrize(
@@ -1025,8 +970,7 @@ def test_file_not_created_if_constructor_error_thrown(tmp_path: pathlib.Path):
     assert not os.path.exists(filename)
 
 
-@pytest.mark.parametrize("cross_platform_formats_only", [True, False])
-def test_real_mp3_parsing_with_lyrics3(cross_platform_formats_only: bool):
+def test_real_mp3_parsing_with_lyrics3():
     """
     Lyrics3 is a non-standard extension to the MP3 format that appends lyric data after the last
     MP3 frame. This data is not read by Pedalboard - but the MP3 parser used on Linux and Windows
@@ -1034,9 +978,8 @@ def test_real_mp3_parsing_with_lyrics3(cross_platform_formats_only: bool):
     use a patched version of JUCE's MP3 parser to allow reading MP3 files that contain Lyrics3
     data.
     """
-    with pedalboard.io.ReadableAudioFile(
-        os.path.join(os.path.dirname(__file__), "audio", "correct", "bad_audio_file_lyrics3.mp3"),
-        cross_platform_formats_only=cross_platform_formats_only,
+    with pedalboard.io.AudioFile(
+        os.path.join(os.path.dirname(__file__), "audio", "correct", "bad_audio_file_lyrics3.mp3")
     ) as f:
         assert f.frames >= 0
         assert f.read(f.frames).shape[1] == f.frames
@@ -1081,7 +1024,7 @@ def test_22050Hz_mono_mp3(audio_filename: str, samplerate: float):
     File size estimation was broken for 22kHz mono MP3 files.
     This test should catch that kind of problem.
     """
-    af = pedalboard.io.ReadableAudioFile(audio_filename, cross_platform_formats_only=True)
+    af = pedalboard.io.ReadableAudioFile(audio_filename)
     assert af.duration < 30.5
     assert af.samplerate == samplerate
     data_read_all_at_once = af.read(af.frames)
@@ -1121,7 +1064,7 @@ def test_mp3_at_all_samplerates(quality: str, samplerate: float, num_channels: i
 
     read_buf = io.BytesIO(buf.getvalue())
 
-    with pedalboard.io.ReadableAudioFile(read_buf, cross_platform_formats_only=True) as af:
+    with pedalboard.io.ReadableAudioFile(read_buf) as af:
         # Allow for up to two MP3 frames of padding:
         assert af.frames <= (signal.shape[-1] + MP3_FRAME_LENGTH_SAMPLES * 2)
         assert af.frames >= signal.shape[-1]
