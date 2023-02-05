@@ -6,7 +6,8 @@ from pedalboard.io import AudioFile
 # Load a VST3 or Audio Unit plugin from a known path on disk:
 vst = load_plugin("./VSTs/RoughRider3.vst3")
 
-print(vst.parameters.keys())
+# TODO: Add type hints for `parameters` here!
+print(vst.parameters.keys())  # type: ignore
 # dict_keys([
 #   'sc_hpf_hz', 'input_lvl_db', 'sensitivity_db',
 #   'ratio', 'attack_ms', 'release_ms', 'makeup_db',
