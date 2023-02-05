@@ -50,7 +50,7 @@ void registerPedalboardAudioFormats(juce::AudioFormatManager &manager,
     manager.registerFormat(new juce::CoreAudioFormat(), false);
 #endif
   }
-  
+
 #if JUCE_USE_WINDOWS_MEDIA_FORMAT
   manager.registerFormat(new juce::WindowsMediaAudioFormat(), false);
 #endif
