@@ -159,9 +159,18 @@ or buffer, set ``reset`` to ``False``.
 
           )",
           py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
+      .def(
+          "__call__",
+          [](std::shared_ptr<Plugin> self, const py::array inputArray,
+             double sampleRate, unsigned int bufferSize, bool reset) {
+            return process(inputArray, sampleRate, {self}, bufferSize, reset);
+          },
+          "Run an audio buffer through this plugin. Alias for "
+          ":py:meth:`process`.",
+          py::arg("input_array"), py::arg("sample_rate"),
           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
           py::arg("reset") = true);
-  plugin.attr("__call__") = plugin.attr("process");
 
   init_plugin_container(m);
 

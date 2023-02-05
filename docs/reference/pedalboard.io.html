@@ -7,8 +7,10 @@
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://spotify.github.io/pedalboard/reference/pedalboard.io.html" />
 <meta property="og:site_name" content="Pedalboard v0.6.8 Documentation" />
+<meta property="og:description" content="This module provides classes and functions for reading and writing audio files or streams. pedalboard.io allows for reading and writing to audio files just like working with other types of files in..." />
 <meta property="og:image" content="https://repository-images.githubusercontent.com/383471193/0f79b949-9b91-4436-bfc4-05d30ef384cc" />
 <meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
+<meta name="description" content="This module provides classes and functions for reading and writing audio files or streams. pedalboard.io allows for reading and writing to audio files just like working with other types of files in..." />
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Examples" href="../examples.html" /><link rel="prev" title="The pedalboard API" href="pedalboard.html" />
 
     <link rel="shortcut icon" href="../_static/favicon.ico"/><meta name="generator" content="sphinx-5.3.0, furo 2022.09.29"/>
@@ -209,9 +211,44 @@
           </label>
         </div>
         <article role="main">
-          <section id="module-pedalboard.io">
-<span id="the-pedalboard-io-api"></span><h1>The <code class="docutils literal notranslate"><span class="pre">pedalboard.io</span></code> API<a class="headerlink" href="#module-pedalboard.io" title="Permalink to this heading">#</a></h1>
-<dl class="py class">
+          <section id="the-pedalboard-io-api">
+<h1>The <code class="docutils literal notranslate"><span class="pre">pedalboard.io</span></code> API<a class="headerlink" href="#the-pedalboard-io-api" title="Permalink to this heading">#</a></h1>
+<p>This module provides classes and functions for reading and writing audio files or streams.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For audio effects, see the <a class="reference internal" href="pedalboard.html#module-pedalboard" title="pedalboard"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pedalboard</span></code></a> module.</p>
+</div>
+<p><a class="reference internal" href="#module-pedalboard.io" title="pedalboard.io"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pedalboard.io</span></code></a> allows for reading and writing to audio files
+just like working with other types of files in Python. Audio encoding
+and decoding is handled automatically behind the scenes in C++, providing
+high quality, high performance, thread-safe access to audio files.</p>
+<p>The goal of <a class="reference internal" href="#module-pedalboard.io" title="pedalboard.io"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pedalboard.io</span></code></a> is to direct access to audio like
+a regular file in Python:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pedalboard.io</span> <span class="kn">import</span> <span class="n">AudioFile</span>
+
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;my_filename.mp3&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+   <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">duration</span><span class="p">)</span> <span class="c1"># =&gt; 30.0</span>
+   <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span> <span class="c1"># =&gt; 44100</span>
+   <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">num_channels</span><span class="p">)</span> <span class="c1"># =&gt; 2</span>
+   <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">*</span> <span class="mi">10</span><span class="p">))</span>
+   <span class="c1"># =&gt; returns a NumPy array of shape (2, 441_000):</span>
+   <span class="c1">#    [[ 0.  0.  0. ... -0. -0. -0.]</span>
+   <span class="c1">#     [ 0.  0.  0. ... -0. -0. -0.]]</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.io.AudioFile</span></code></a> class should be all that’s necessary for most use cases.</p>
+<ul class="simple">
+<li><p>Writing to a file can be accomplished by passing <code class="docutils literal notranslate"><span class="pre">&quot;w&quot;</span></code> as a second argument, just like with regular files in Python.</p></li>
+<li><p>Changing the sample rate of a file can be accomplished by calling <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.resampled_to" title="pedalboard.io.ReadableAudioFile.resampled_to"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pedalboard.io.ReadableAudioFile.resampled_to()</span></code></a>.</p></li>
+</ul>
+<p>If you find yourself importing <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.io.ReadableAudioFile</span></code></a>,
+<a class="reference internal" href="#pedalboard.io.WriteableAudioFile" title="pedalboard.io.WriteableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.io.WriteableAudioFile</span></code></a>, or <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.io.ResampledReadableAudioFile</span></code></a> directly,
+you <em>probably don’t need to do that</em> - <a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.io.AudioFile</span></code></a> has you covered.</p>
+</div>
+<p>The following documentation lists all of the available I/O classes.</p>
+<span class="target" id="module-pedalboard.io"></span><dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.io.AudioFile">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.io.</span></span><span class="sig-name descname"><span class="pre">AudioFile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_like</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">BinaryIO</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'r'</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'r'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.io.AudioFile" title="Permalink to this definition">#</a></dt>
 <dt class="sig sig-object py">
@@ -322,6 +359,18 @@ Pedalboard.)</p>
 same arguments to <a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> will work too, and allows using
 <a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> just like you’d use <code class="docutils literal notranslate"><span class="pre">open(...)</span></code> in Python.</p>
 </div>
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.__enter__">
+<span class="sig-name descname"><span class="pre">__enter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><span class="pre">ReadableAudioFile</span></a></span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.__enter__" title="Permalink to this definition">#</a></dt>
+<dd><p>Use this <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> as a context manager, automatically closing the file and releasing resources when the context manager exits.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.__exit__">
+<span class="sig-name descname"><span class="pre">__exit__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.__exit__" title="Permalink to this definition">#</a></dt>
+<dd><p>Stop using this <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> as a context manager, close the file, release its resources.</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.close">
 <span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.close" title="Permalink to this definition">#</a></dt>
@@ -439,6 +488,18 @@ output by <a class="reference internal" href="#pedalboard.io.ResampledReadableAu
 to the result obtained by passing the entire audio file through a
 <a class="reference internal" href="#pedalboard.io.StreamResampler" title="pedalboard.io.StreamResampler"><code class="xref py py-class docutils literal notranslate"><span class="pre">StreamResampler</span></code></a>, with the added benefits of allowing chunked
 reads, seeking through files, and using a constant amount of memory.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.__enter__">
+<span class="sig-name descname"><span class="pre">__enter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><span class="pre">ResampledReadableAudioFile</span></a></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.__enter__" title="Permalink to this definition">#</a></dt>
+<dd><p>Use this <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a> as a context manager, automatically closing the file and releasing resources when the context manager exits.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.__exit__">
+<span class="sig-name descname"><span class="pre">__exit__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.__exit__" title="Permalink to this definition">#</a></dt>
+<dd><p>Stop using this <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a> as a context manager, close the file, release its resources.</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.close">
 <span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.close" title="Permalink to this definition">#</a></dt>
@@ -745,6 +806,8 @@ second argument.</p>
 <li><a class="reference internal" href="#">The <code class="docutils literal notranslate"><span class="pre">pedalboard.io</span></code> API</a><ul>
 <li><a class="reference internal" href="#pedalboard.io.AudioFile"><code class="docutils literal notranslate"><span class="pre">AudioFile</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.__enter__"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.__enter__()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.__exit__"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.__exit__()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.close"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.close()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.read"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.read()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.read_raw"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.read_raw()</span></code></a></li>
@@ -762,6 +825,8 @@ second argument.</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.__enter__"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.__enter__()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.__exit__"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.__exit__()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.close"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.close()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.read"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.read()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.seek"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.seek()</span></code></a></li>

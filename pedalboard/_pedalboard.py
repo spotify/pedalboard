@@ -31,7 +31,7 @@ class Pedalboard(Chain):
     `guitar pedalboard <https://en.wikipedia.org/wiki/Guitar_pedalboard>`_.
 
     :class:`Pedalboard` objects act like regular Python ``List`` objects,
-    but come with an additional :py:meth:`process` method (also aliased to ``__call__``),
+    but come with an additional :py:meth:`process` method (also aliased to :py:meth:`__call__`),
     allowing audio to be passed through the entire :class:`Pedalboard` object for processing::
 
         my_pedalboard = Pedalboard()
@@ -225,7 +225,7 @@ class AudioProcessorParameter(object):
        # Access each parameter as if it were just a Python attribute:
        my_plugin.mix = 0.5
        my_plugin.delay_time_ms = 400
-    
+
     .. note::
         :class:`AudioProcessorParameter` tries to guess the range of
         valid parameter values, as well as the type/unit of the parameter,
@@ -358,7 +358,7 @@ class AudioProcessorParameter(object):
         """
         The units used by this parameter (Hz, dB, etc).
 
-        May be `None` if the plugin does not expose units for this
+        May be ``None`` if the plugin does not expose units for this
         parameter or if automatic unit detection fails.
         """
         if hasattr(self, "_label") and self._label:
@@ -373,7 +373,7 @@ class AudioProcessorParameter(object):
         """
         Alias for "label" - the units used by this parameter (Hz, dB, etc).
 
-        May be `None` if the plugin does not expose units for this
+        May be ``None`` if the plugin does not expose units for this
         parameter or if automatic unit detection fails.
         """
         return self.label

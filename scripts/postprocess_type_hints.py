@@ -47,9 +47,14 @@ REPLACEMENTS = [
     ),
     # None of our enums are properly detected by pybind11-stubgen. These are brittle hacks:
     (r"0, quality: Resample\.Quality", "0, quality: Quality"),
-    (r"self, quality: Resample\.Quality = Quality", "self, quality: Resample.Quality = Resample.Quality"),
-    (r"pedalboard_native\.Resample\.Quality = Quality", "pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality"),
-    
+    (
+        r"self, quality: Resample\.Quality = Quality",
+        "self, quality: Resample.Quality = Resample.Quality",
+    ),
+    (
+        r"pedalboard_native\.Resample\.Quality = Quality",
+        "pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality",
+    ),
     # Remove type hints in docstrings, added unnecessarily by pybind11-stubgen
     (r".*?:type:.*$", ""),
     # MyPy chokes on classes that contain both __new__ and __init__.

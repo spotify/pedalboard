@@ -47,6 +47,16 @@ class Plugin:
     A generic audio processing plugin. Base class of all Pedalboard plugins.
     """
 
+    def __call__(
+        self,
+        input_array: numpy.ndarray,
+        sample_rate: float,
+        buffer_size: int = 8192,
+        reset: bool = True,
+    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+        """
+        Run an audio buffer through this plugin. Alias for :py:meth:`process`.
+        """
     def process(
         self,
         input_array: numpy.ndarray,
