@@ -28,12 +28,10 @@ static constexpr const unsigned int DEFAULT_AUDIO_BUFFER_SIZE_FRAMES = 8192;
 
 /**
  * Registers audio formats for reading and writing in a deterministic (but
- * configurable) order. On different platforms, different formats are handled by
- * different backends (i.e.: CoreAudioFormat handles MP3 on macOS, but only for
- * reading) so this method allows us to ensure reproducibility in tests.
+ * configurable) order.
  */
 void registerPedalboardAudioFormats(juce::AudioFormatManager &manager,
-                                    bool forWriting, bool crossPlatformOnly) {
+                                    bool forWriting) {
   manager.registerFormat(new juce::WavAudioFormat(), true);
   manager.registerFormat(new juce::AiffAudioFormat(), false);
   manager.registerFormat(new juce::PatchedFlacAudioFormat(), false);
@@ -44,23 +42,13 @@ void registerPedalboardAudioFormats(juce::AudioFormatManager &manager,
 
   if (forWriting) {
     // Prefer our own custom MP3 format (which only writes, doesn't read) over
-    // MP3AudioFormat (which only reads, doesn't write)
+    // PatchedMP3AudioFormat (which only reads, doesn't write)
     manager.registerFormat(new LameMP3AudioFormat(), false);
   } else {
-    // On macOS, CoreAudio can read MP3s better (more fault-tolerantly) than
-    // MP3AudioFormat can. But sometimes, we still want to use the built-in MP3
-    // reader so that we can get identical parsing behaviour on both macOS and
-    // Linux. To do so, we use this flag:
-
-    if (crossPlatformOnly) {
-      manager.registerFormat(new juce::PatchedMP3AudioFormat(), false);
-    } else {
+    manager.registerFormat(new juce::PatchedMP3AudioFormat(), false);
 #if JUCE_MAC || JUCE_IOS
-      manager.registerFormat(new juce::CoreAudioFormat(), false);
-#else
-      manager.registerFormat(new juce::PatchedMP3AudioFormat(), false);
+    manager.registerFormat(new juce::CoreAudioFormat(), false);
 #endif
-    }
   }
 
 #if JUCE_USE_WINDOWS_MEDIA_FORMAT
