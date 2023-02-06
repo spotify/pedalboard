@@ -16,11 +16,7 @@ import argparse
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-OMIT_FILES = [
-    os.path.join("pedalboard-stubs", "__init__.pyi"),
-    os.path.join("pedalboard-stubs", "pedalboard", "__init__.pyi"),
-    os.path.join("pedalboard_native-stubs", "_internal", "__init__.pyi"),
-]
+OMIT_FILES = []
 
 # Any lines containing any of these substrings will be omitted from the pedalboard_native stubs:
 OMIT_LINES_CONTAINING = [
@@ -42,19 +38,6 @@ REPLACEMENTS = [
     # ndarrays need to be corrected as well:
     (r"numpy\.ndarray\[(.*?)\]", r"numpy.ndarray[typing.Any, numpy.dtype[\1]]"),
     # None of our enums are properly detected by pybind11-stubgen:
-    (r"= Quality\.", "= pedalboard_native.Resample.Quality."),
-    (r"pedalboard_native.Resample", "pedalboard.Resample", "pedalboard.io"),
-    (r": pedalboard_native\.LadderFilter\.Mode", ": Mode"),
-    (r"import pedalboard_native(\.?.*)$", r"import pedalboard_native\1  # type: ignore"),
-    (
-        r"import pedalboard_native(\.?.*)$",
-        "\n".join(
-            [
-                r"import pedalboard_native\1  # type: ignore",
-                r"import pedalboard  # type: ignore",
-            ]
-        ),
-    ),
     (
         # For Python 3.6 compatibility:
         r"import typing",
@@ -62,14 +45,27 @@ REPLACEMENTS = [
             ["import typing", "from typing_extensions import Literal", "from enum import Enum"]
         ),
     ),
+    # None of our enums are properly detected by pybind11-stubgen. These are brittle hacks:
+    (r"0, quality: Resample\.Quality", "0, quality: Quality"),
+    (
+        r"self, quality: Resample\.Quality = Quality",
+        "self, quality: Resample.Quality = Resample.Quality",
+    ),
+    (
+        r"pedalboard_native\.Resample\.Quality = Quality",
+        "pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality",
+    ),
     # Remove type hints in docstrings, added unnecessarily by pybind11-stubgen
     (r".*?:type:.*$", ""),
+    # MyPy chokes on classes that contain both __new__ and __init__.
+    # Remove all bare, arg-free inits:
+    (r"def __init__\(self\) -> None: ...", ""),
 ]
 
 REMOVE_INDENTED_BLOCKS_STARTING_WITH = [
     # TODO(psobot): Add a conditional to _AudioUnitPlugin
     # to ensure type stubs only show up on macOS:
-    "class _AudioUnitPlugin(Plugin):"
+    # "class _AudioUnitPlugin(Plugin):"
 ]
 
 # .pyi files usually don't care about dependent types being present in order in the file;
@@ -114,20 +110,7 @@ def main(args=None):
 
     output_file_to_source_files = defaultdict(list)
     for source_path in Path(args.source_directory).rglob("*.pyi"):
-        source_path = str(source_path)
-        if any(x in source_path for x in OMIT_FILES):
-            print(f"Skipping possible source file '{source_path}'...")
-            continue
-        output_module_path = os.path.join(
-            *(
-                ["pedalboard"]
-                + source_path.replace(args.source_directory, "").split(os.path.sep)[2:-1]
-            )
-        )
-        if not source_path.endswith("__init__.pyi"):
-            raise NotImplementedError("Not sure how to create stubs not at the module level.")
-        output_file_name = os.path.join(output_module_path, "__init__.pyi")
-        output_file_to_source_files[output_file_name].append(source_path)
+        output_file_to_source_files[str(source_path)].append(str(source_path))
 
     for output_file_name, source_files in output_file_to_source_files.items():
         os.makedirs(os.path.dirname(output_file_name), exist_ok=True)

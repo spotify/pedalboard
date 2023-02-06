@@ -19,15 +19,24 @@ import platform
 
 import weakref
 from contextlib import contextmanager
-from typing import List, Optional, Dict, Tuple, Iterable, Type, Union
+from typing import cast, List, Optional, Dict, Tuple, Iterable, Type, Union, Set, no_type_check
 
-from pedalboard_native import Plugin, _AudioProcessorParameter  # type: ignore
+from pedalboard_native import Plugin, ExternalPlugin, _AudioProcessorParameter  # type: ignore
 from pedalboard_native.utils import Chain  # type: ignore
 
 
 class Pedalboard(Chain):
     """
-    A container for a chain of plugins, to use for processing audio.
+    A container for a series of :class:`Plugin` objects, to use for processing audio, like a
+    `guitar pedalboard <https://en.wikipedia.org/wiki/Guitar_pedalboard>`_.
+
+    :class:`Pedalboard` objects act like regular Python ``List`` objects,
+    but come with an additional :py:meth:`process` method (also aliased to :py:meth:`__call__`),
+    allowing audio to be passed through the entire :class:`Pedalboard` object for processing::
+
+        my_pedalboard = Pedalboard()
+        my_pedalboard.append(Reverb())
+        output_audio = my_pedalboard(input_audio)
     """
 
     def __init__(self, plugins: Optional[List[Plugin]] = None):
@@ -42,7 +51,7 @@ class Pedalboard(Chain):
         )
 
 
-FLOAT_SUFFIXES_TO_IGNORE = set(
+FLOAT_SUFFIXES_TO_IGNORE: Set[str] = set(
     ["x", "%", "*", ",", ".", "hz", "ms", "sec", "seconds", "dB", "dBTP"]
 )
 
@@ -92,7 +101,10 @@ class ReadOnlyDictWrapper(dict):
         )
 
 
+# This is so nasty that I had to disable MyPy. Sorry.
+@no_type_check
 def wrap_type(base_type):
+    @no_type_check
     class WeakTypeWrapper(base_type):
         """
         A wrapper around `base_type` that allows adding additional
@@ -111,8 +123,7 @@ def wrap_type(base_type):
                 del kwargs["wrapped"]
             else:
                 raise ValueError(
-                    "WeakTypeWrapper({}) expected to be passed a 'wrapped' keyword argument."
-                    .format(base_type)
+                    "WeakTypeWrapper({}) expected to be passed a 'wrapped' kwarg.".format(base_type)
                 )
             try:
                 super().__init__(*args, **kwargs)
@@ -136,6 +147,7 @@ def wrap_type(base_type):
     return WeakTypeWrapper
 
 
+@no_type_check
 class WrappedBool(object):
     def __init__(self, value):
         if not isinstance(value, bool):
@@ -164,9 +176,9 @@ class WrappedBool(object):
         return hasattr(self.__value, attr)
 
 
-StringWithParameter = wrap_type(str)
-FloatWithParameter = wrap_type(float)
-BooleanWithParameter = wrap_type(WrappedBool)
+StringWithParameter: Type[str] = wrap_type(str)
+FloatWithParameter: Type[float] = wrap_type(float)
+BooleanWithParameter: Type[bool] = wrap_type(WrappedBool)
 
 
 # Some plugins, on some platforms (TAL Reverb 3 on Ubuntu, so far) seem to
@@ -174,11 +186,11 @@ BooleanWithParameter = wrap_type(WrappedBool)
 # (i.e.: MIDI CC [0-16]|[0-128], resulting in 2,048 parameters).
 # This hugely delays load times and adds complexity to the interface.
 # Guitar Rig also seems to expose 512 parameters, each matching "P\d\d\d"
-PARAMETER_NAME_REGEXES_TO_IGNORE = set(
+PARAMETER_NAME_REGEXES_TO_IGNORE: Set[re.Pattern] = set(
     [re.compile(pattern) for pattern in ["MIDI CC ", r"P\d\d\d"]]
 )
 
-TRUE_BOOLEANS = {"on", "yes", "true", "enabled"}
+TRUE_BOOLEANS: Set[str] = {"on", "yes", "true", "enabled"}
 
 
 def get_text_for_raw_value(
@@ -200,25 +212,30 @@ def get_text_for_raw_value(
 
 class AudioProcessorParameter(object):
     """
-    The C++ version of this class (`_AudioProcessorParameter`) is owned
-    by the ExternalPlugin object and is not guaranteed to exist at the
-    same memory address every time we might need it. This Python wrapper
-    looks it up dynamically.
+    A wrapper around various different parameters exposed by
+    :class:`VST3Plugin` or :class:`AudioUnitPlugin` instances.
 
-    VSTs and Audio Units don't always consistently give parameter values,
-    types, or names - all we get is APIs that map float values on [0, 1]
-    to strings, which may represent floats, strings, integers, enums, etc.
+    :class:`AudioProcessorParameter` objects are rarely used directly,
+    and usually used via their implicit interface::
 
-    AudioProcessorParameter exposes some attributes that can be
-    implemented by plugins to give hints (i.e.: num_steps, allowed_values,
-    is_discrete, etc) but not all plugins implement them properly.
+       my_plugin = load_plugin("My Cool Audio Effect.vst3")
+       # Print all of the parameter names:
+       print(my_plugin.parameters.keys())
+       # ["mix", "delay_time_ms", "foobar"]
+       # Access each parameter as if it were just a Python attribute:
+       my_plugin.mix = 0.5
+       my_plugin.delay_time_ms = 400
 
-    This method assigns additional properties to AudioProcessorParameter;
-    we could do this in C++, but doing this in Python uses much less code
-    and is (roughly) as performant as it should only run once per parameter.
+    .. note::
+        :class:`AudioProcessorParameter` tries to guess the range of
+        valid parameter values, as well as the type/unit of the parameter,
+        when instantiated. This guess may not always be accurate.
+        Raw control over the underlying parameter's value can be had by
+        accessing the :py:attr:`raw_value` attribute, which is always bounded
+        on [0, 1] and is passed directly to the underlying plugin object.
     """
 
-    def __init__(self, plugin, parameter_name, search_steps: int = 1000):
+    def __init__(self, plugin: "ExternalPlugin", parameter_name: str, search_steps: int = 1000):
         self.__plugin = plugin
         self.__parameter_name = parameter_name
 
@@ -271,18 +288,26 @@ class AudioProcessorParameter(object):
             if not self.label:
                 # Try to infer the label from the string values:
                 a_value = next(iter(self.ranges.values()))
-                stripped_value = strip_common_float_suffixes(a_value, strip_si_prefixes=False)
-                if stripped_value != a_value and stripped_value in a_value:
-                    # We probably have a label! Iterate through all values just to make sure:
-                    all_possible_labels = set()
-                    for value in self.ranges.values():
-                        all_possible_labels.add(
-                            value.replace(
-                                strip_common_float_suffixes(value, strip_si_prefixes=False), ""
-                            ).strip()
-                        )
-                    if len(all_possible_labels) == 1:
-                        self._label = next(iter(all_possible_labels))
+                if isinstance(a_value, str):
+                    stripped_value = strip_common_float_suffixes(a_value, strip_si_prefixes=False)
+                    if (
+                        stripped_value != a_value
+                        and isinstance(stripped_value, str)
+                        and stripped_value in a_value
+                    ):
+                        # We probably have a label! Iterate through all values just to make sure:
+                        all_possible_labels = set()
+                        for value in self.ranges.values():
+                            if not isinstance(value, str):
+                                continue
+                            stripped_value = strip_common_float_suffixes(
+                                value, strip_si_prefixes=False
+                            )
+                            if not isinstance(stripped_value, str):
+                                continue
+                            all_possible_labels.add(value.replace(stripped_value, "").strip())
+                        if len(all_possible_labels) == 1:
+                            self._label = next(iter(all_possible_labels))
 
             sorted_values = sorted(float_ranges.values())
             first_derivative_steps = set(
@@ -313,7 +338,12 @@ class AudioProcessorParameter(object):
 
     @contextmanager
     def __get_cpp_parameter(self):
-        # Re-fetch the parameter by name every time, as it may have changed.
+        """
+        The C++ version of this class (`_AudioProcessorParameter`) is owned
+        by the ExternalPlugin object and is not guaranteed to exist at the
+        same memory address every time we might need it. This Python wrapper
+        looks it up dynamically.
+        """
         _parameter = self.__plugin._get_parameter(self.__parameter_name)
         if _parameter and _parameter.name == self.__parameter_name:
             yield _parameter
@@ -326,18 +356,25 @@ class AudioProcessorParameter(object):
     @property
     def label(self) -> Optional[str]:
         """
-        The units used by this parameter (i.e.: Hz, dB, etc).
+        The units used by this parameter (Hz, dB, etc).
+
+        May be ``None`` if the plugin does not expose units for this
+        parameter or if automatic unit detection fails.
         """
         if hasattr(self, "_label") and self._label:
             return self._label
         with self.__get_cpp_parameter() as parameter:
             if parameter.label:
                 return parameter.label
+        return None
 
     @property
     def units(self) -> Optional[str]:
         """
-        Alias for "label" - the units used by this parameter (i.e.: Hz, dB, etc).
+        Alias for "label" - the units used by this parameter (Hz, dB, etc).
+
+        May be ``None`` if the plugin does not expose units for this
+        parameter or if automatic unit detection fails.
         """
         return self.label
 
@@ -405,6 +442,7 @@ class AudioProcessorParameter(object):
 
     def get_raw_value_for(self, new_value: Union[float, str, bool]) -> float:
         if self.type is float:
+            to_float_value: Union[str, float, bool]
             if isinstance(new_value, str) and self.label and new_value.endswith(self.label):
                 to_float_value = new_value[: -len(self.label)]
             else:
@@ -425,7 +463,9 @@ class AudioProcessorParameter(object):
                         self.python_name, repr(new_value)
                     )
                 )
-            if new_value < self.min_value or new_value > self.max_value:
+            if (self.min_value is not None and new_value < self.min_value) or (
+                self.max_value is not None and new_value > self.max_value
+            ):
                 raise ValueError(
                     "Value received for parameter '{}' ({}) is out of range [{}{}, {}{}]".format(
                         self.python_name,
@@ -441,6 +481,8 @@ class AudioProcessorParameter(object):
             closest_diff = None
             closest_range_value: Optional[Tuple[float, float]] = None
             for value, raw_value_range in self._value_to_raw_value_ranges.items():
+                if not isinstance(value, float):
+                    continue
                 diff = new_value - value
                 if closest_diff is None or abs(diff) < abs(closest_diff):
                     closest_range_value = raw_value_range
@@ -529,27 +571,7 @@ def normalize_python_parameter_name(name: str) -> str:
     return name
 
 
-class ExternalPlugin(object):
-    # Don't actually define this here; this is only to appease MyPy.
-    def __init__(
-        self,
-        path_to_plugin_file: str,
-        parameter_values: Dict[str, Union[str, int, float, bool]] = {},
-        plugin_name: Optional[str] = None,
-    ) -> None:
-        ...
-
-    @classmethod
-    def get_plugin_names_for_file(cls, filename: str) -> List[str]:
-        ...
-
-    def show_editor(self) -> None:
-        ...
-
-    @property
-    def name(self) -> str:
-        ...
-
+class _PythonExternalPluginMixin:
     def __set_initial_parameter_values__(
         self, parameter_values: Dict[str, Union[str, int, float, bool]] = {}
     ):
@@ -605,7 +627,7 @@ class ExternalPlugin(object):
 
         if cpp_parameter.name not in self.__python_parameter_cache__:
             self.__python_parameter_cache__[cpp_parameter.name] = AudioProcessorParameter(
-                self, cpp_parameter.name
+                cast(ExternalPlugin, self), cpp_parameter.name
             )
         return self.__python_parameter_cache__[cpp_parameter.name]
 
@@ -625,11 +647,13 @@ class ExternalPlugin(object):
                 if parameter.type is float:
                     return FloatWithParameter(
                         float(strip_common_float_suffixes(string_value)), wrapped=parameter
-                    )
+                    )  # type: ignore
                 elif parameter.type is bool:
-                    return BooleanWithParameter(parameter.raw_value >= 0.5, wrapped=parameter)
+                    return BooleanWithParameter(
+                        parameter.raw_value >= 0.5, wrapped=parameter
+                    )  # type: ignore
                 elif parameter.type is str:
-                    return StringWithParameter(str(string_value), wrapped=parameter)
+                    return StringWithParameter(str(string_value), wrapped=parameter)  # type: ignore
                 else:
                     raise ValueError(
                         f"Parameter {parameter.python_name} has an unknown type. (Found"
@@ -646,13 +670,17 @@ class ExternalPlugin(object):
         super().__setattr__(name, value)
 
 
+_AVAILABLE_PLUGIN_CLASSES: List[Type[ExternalPlugin]] = []
+
 try:
     from pedalboard_native import _VST3Plugin
 
-    class VST3Plugin(_VST3Plugin, ExternalPlugin):
+    class VST3Plugin(_VST3Plugin, _PythonExternalPluginMixin):
         """
         A wrapper around third-party, non-Pedalboard audio effects
-        plugins in Steinberg GmbH's VST3® format.
+        plugins in
+        `Steinberg GmbH's VST3® <https://en.wikipedia.org/wiki/Virtual_Studio_Technology>`_
+        format.
 
         VST3® plugins are supported on macOS, Windows, and Linux.
         However, VST3® plugin files are not cross-compatible with
@@ -673,9 +701,11 @@ try:
                     f" {type(parameter_values).__name__}. (If passing a plugin name, pass"
                     ' "plugin_name=..." as a keyword argument instead.)'
                 )
+
             _VST3Plugin.__init__(self, path_to_plugin_file, plugin_name)
             self.__set_initial_parameter_values__(parameter_values)
 
+    _AVAILABLE_PLUGIN_CLASSES.append(VST3Plugin)
 except ImportError:
     # We may be on a system that doesn't have native VST3Plugin support.
     pass
@@ -683,10 +713,12 @@ except ImportError:
 try:
     from pedalboard_native import _AudioUnitPlugin
 
-    class AudioUnitPlugin(_AudioUnitPlugin, ExternalPlugin):
+    class AudioUnitPlugin(_AudioUnitPlugin, _PythonExternalPluginMixin):
         """
         A wrapper around third-party, non-Pedalboard audio effects
-        plugins in Apple's Audio Unit format.
+        plugins in
+        `Apple's Audio Unit <https://en.wikipedia.org/wiki/Audio_Units>`_
+        format.
 
         Audio Unit plugins are only supported on macOS. This class will be
         unavailable on non-macOS platforms. Plugin files must be installed
@@ -713,13 +745,11 @@ try:
             _AudioUnitPlugin.__init__(self, path_to_plugin_file, plugin_name)
             self.__set_initial_parameter_values__(parameter_values)
 
+    _AVAILABLE_PLUGIN_CLASSES.append(AudioUnitPlugin)
 except ImportError:
     # We may be on a system that doesn't have native AudioUnitPlugin support.
     # (i.e.: any platform that's not macOS.)
     pass
-
-
-_AVAILABLE_PLUGIN_CLASSES: List[Type[ExternalPlugin]] = list(ExternalPlugin.__subclasses__())
 
 
 def load_plugin(
@@ -768,11 +798,11 @@ def load_plugin(
     exceptions = []
     for plugin_class in _AVAILABLE_PLUGIN_CLASSES:
         try:
-            return plugin_class(
-                path_to_plugin_file=path_to_plugin_file,
-                parameter_values=parameter_values,
-                plugin_name=plugin_name,
-            )
+            return plugin_class(  # type: ignore
+                path_to_plugin_file=path_to_plugin_file,  # type: ignore
+                parameter_values=parameter_values,  # type: ignore
+                plugin_name=plugin_name,  # type: ignore
+            )  # type: ignore
         except ImportError as e:
             exceptions.append(e)
         except Exception:

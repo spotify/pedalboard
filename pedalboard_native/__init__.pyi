@@ -2,8 +2,7 @@
 
 For audio I/O classes (i.e.: reading and writing audio files), see ``pedalboard.io``."""
 from __future__ import annotations
-import pedalboard_native  # type: ignore  # type: ignore
-import pedalboard  # type: ignore
+import pedalboard_native
 import typing
 from typing_extensions import Literal
 from enum import Enum
@@ -19,6 +18,7 @@ __all__ = [
     "Convolution",
     "Delay",
     "Distortion",
+    "ExternalPlugin",
     "GSMFullRateCompressor",
     "Gain",
     "HighShelfFilter",
@@ -48,7 +48,16 @@ class Plugin:
     A generic audio processing plugin. Base class of all Pedalboard plugins.
     """
 
-    def __init__(self) -> None: ...
+    def __call__(
+        self,
+        input_array: numpy.ndarray,
+        sample_rate: float,
+        buffer_size: int = 8192,
+        reset: bool = True,
+    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+        """
+        Run an audio buffer through this plugin. Alias for :py:meth:`process`.
+        """
     def process(
         self,
         input_array: numpy.ndarray,
@@ -78,6 +87,12 @@ class Plugin:
         processing begins, clearing any state from previous calls to ``process``.
         If calling ``process`` multiple times while processing the same audio file
         or buffer, set ``reset`` to ``False``.
+
+        .. note::
+            The :py:meth:`process` method can also be used via :py:meth:`__call__`;
+            i.e.: just calling this object like a function (``my_plugin(...)``) will
+            automatically invoke :py:meth:`process` with the same arguments.
+
 
         """
     def reset(self) -> None:
@@ -262,6 +277,13 @@ class Distortion(Plugin):
         pass
     pass
 
+class ExternalPlugin(Plugin):
+    """
+    A wrapper around a third-party effect plugin.
+    """
+
+    pass
+
 class Gain(Plugin):
     """
     A gain plugin that increases or decreases the volume of a signal by amplifying or attenuating it by the provided value (in decibels). No distortion or other effects are applied.
@@ -284,7 +306,6 @@ class IIRFilter(Plugin):
     An abstract class that implements various kinds of infinite impulse response (IIR) filter designs. This should not be used directly; use :class:`HighShelfFilter`, :class:`LowShelfFilter`, or :class:`PeakFilter` directly instead.
     """
 
-    def __init__(self) -> None: ...
     pass
 
 class HighpassFilter(Plugin):
@@ -338,7 +359,6 @@ class Invert(Plugin):
     Inverting a signal may be useful to cancel out signals in many cases; for instance, ``Invert`` can be used with the ``Mix`` plugin to remove the original signal from an effects chain that contains multiple signals.
     """
 
-    def __init__(self) -> None: ...
     def __repr__(self) -> str: ...
     pass
 
@@ -410,12 +430,12 @@ class LadderFilter(Plugin):
     @resonance.setter
     def resonance(self, arg1: float) -> None:
         pass
-    BPF12: Mode  # value = <Mode.BPF12: 2>
-    BPF24: Mode  # value = <Mode.BPF24: 5>
-    HPF12: Mode  # value = <Mode.HPF12: 1>
-    HPF24: Mode  # value = <Mode.HPF24: 4>
-    LPF12: Mode  # value = <Mode.LPF12: 0>
-    LPF24: Mode  # value = <Mode.LPF24: 3>
+    BPF12: pedalboard_native.LadderFilter.Mode  # value = <Mode.BPF12: 2>
+    BPF24: pedalboard_native.LadderFilter.Mode  # value = <Mode.BPF24: 5>
+    HPF12: pedalboard_native.LadderFilter.Mode  # value = <Mode.HPF12: 1>
+    HPF24: pedalboard_native.LadderFilter.Mode  # value = <Mode.HPF24: 4>
+    LPF12: pedalboard_native.LadderFilter.Mode  # value = <Mode.LPF12: 0>
+    LPF24: pedalboard_native.LadderFilter.Mode  # value = <Mode.LPF24: 3>
     pass
 
 class Limiter(Plugin):
@@ -662,15 +682,36 @@ class PluginContainer(Plugin):
     """
 
     def __contains__(self, plugin: Plugin) -> bool: ...
-    def __delitem__(self, index: int) -> None: ...
-    def __getitem__(self, index: int) -> Plugin: ...
+    def __delitem__(self, index: int) -> None:
+        """
+        Delete a plugin by its index. Index may be negative. If the index is out of range, an IndexError will be thrown.
+        """
+    def __getitem__(self, index: int) -> Plugin:
+        """
+        Get a plugin by its index. Index may be negative. If the index is out of range, an IndexError will be thrown.
+        """
     def __init__(self, plugins: typing.List[Plugin]) -> None: ...
     def __iter__(self) -> typing.Iterator: ...
-    def __len__(self) -> int: ...
-    def __setitem__(self, index: int, plugin: Plugin) -> None: ...
-    def append(self, arg0: Plugin) -> None: ...
-    def insert(self, index: int, plugin: Plugin) -> None: ...
-    def remove(self, plugin: Plugin) -> None: ...
+    def __len__(self) -> int:
+        """
+        Get the number of plugins in this container.
+        """
+    def __setitem__(self, index: int, plugin: Plugin) -> None:
+        """
+        Replace a plugin at the specified index. Index may be negative. If the index is out of range, an IndexError will be thrown.
+        """
+    def append(self, plugin: Plugin) -> None:
+        """
+        Append a plugin to the end of this container.
+        """
+    def insert(self, index: int, plugin: Plugin) -> None:
+        """
+        Insert a plugin at the specified index.
+        """
+    def remove(self, plugin: Plugin) -> None:
+        """
+        Remove a plugin by its value.
+        """
     pass
 
 class Resample(Plugin):
@@ -704,9 +745,7 @@ class Resample(Plugin):
         The highest quality and slowest resampling method, with no audible artifacts.
         """
     def __init__(
-        self,
-        target_sample_rate: float = 8000.0,
-        quality: Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc,
+        self, target_sample_rate: float = 8000.0, quality: Quality = Quality.WindowedSinc
     ) -> None: ...
     def __repr__(self) -> str: ...
     @property
@@ -902,7 +941,40 @@ class _AudioProcessorParameter:
         """
     pass
 
-class _VST3Plugin(Plugin):
+class _AudioUnitPlugin(ExternalPlugin, Plugin):
+    """
+    A wrapper around any Apple Audio Unit audio effect plugin. Only available on macOS.
+    """
+
+    def __init__(
+        self, path_to_plugin_file: str, plugin_name: typing.Optional[str] = None
+    ) -> None: ...
+    def __repr__(self) -> str: ...
+    def _get_parameter(self, arg0: str) -> _AudioProcessorParameter: ...
+    @staticmethod
+    def get_plugin_names_for_file(filename: str) -> typing.List[str]:
+        """
+        Return a list of plugin names contained within a given Audio Unit bundle (i.e.: a ``.component`` file). If the provided file cannot be scanned, an ``ImportError`` will be raised.
+
+        Note that most Audio Units have a single plugin inside, but this method can be useful to determine if multiple plugins are present in one bundle, and if so, what their names are.
+        """
+    def show_editor(self) -> None:
+        """
+        Show the UI of this plugin as a native window. This method will block until the window is closed or a KeyboardInterrupt is received.
+        """
+    @property
+    def _parameters(self) -> typing.List[_AudioProcessorParameter]:
+        """ """
+    @property
+    def name(self) -> str:
+        """
+        The name of this plugin, as reported by the plugin itself.
+
+
+        """
+    pass
+
+class _VST3Plugin(ExternalPlugin, Plugin):
     """
     A wrapper around any Steinberg® VST3 audio effect plugin. Note that plugins must already support the operating system currently in use (i.e.: if you're running Linux but trying to open a VST that does not support Linux, this will fail).
     """
@@ -966,9 +1038,7 @@ class GSMFullRateCompressor(Plugin):
     An audio degradation/compression plugin that applies the GSM "Full Rate" compression algorithm to emulate the sound of a 2G cellular phone connection. This plugin internally resamples the input audio to a fixed sample rate of 8kHz (required by the GSM Full Rate codec), although the quality of the resampling algorithm can be specified.
     """
 
-    def __init__(
-        self, quality: Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc
-    ) -> None: ...
+    def __init__(self, quality: Resample.Quality = Resample.Quality.WindowedSinc) -> None: ...
     def __repr__(self) -> str: ...
     @property
     def quality(self) -> Resample.Quality:

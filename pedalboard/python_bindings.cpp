@@ -151,11 +151,26 @@ The ``reset`` flag determines if all of the plugins should be reset before
 processing begins, clearing any state from previous calls to ``process``.
 If calling ``process`` multiple times while processing the same audio file
 or buffer, set ``reset`` to ``False``.
+
+.. note::
+    The :py:meth:`process` method can also be used via :py:meth:`__call__`;
+    i.e.: just calling this object like a function (``my_plugin(...)``) will
+    automatically invoke :py:meth:`process` with the same arguments.
+
           )",
+          py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
+      .def(
+          "__call__",
+          [](std::shared_ptr<Plugin> self, const py::array inputArray,
+             double sampleRate, unsigned int bufferSize, bool reset) {
+            return process(inputArray, sampleRate, {self}, bufferSize, reset);
+          },
+          "Run an audio buffer through this plugin. Alias for "
+          ":py:meth:`process`.",
           py::arg("input_array"), py::arg("sample_rate"),
           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
           py::arg("reset") = true);
-  plugin.attr("__call__") = plugin.attr("process");
 
   init_plugin_container(m);
 

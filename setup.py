@@ -332,9 +332,10 @@ setup(
     ],
     ext_modules=[pedalboard_cpp],
     install_requires=['numpy'],
-    packages=['pedalboard', 'pedalboard.io'],
+    packages=['pedalboard', 'pedalboard.io', 'pedalboard_native'],
     package_data={
-        'pedalboard': ['py.typed', '*.pyi', '**/*.pyi']
+        'pedalboard': ['py.typed', '*.pyi', '**/*.pyi'],
+        'pedalboard_native': ['py.typed', '*.pyi', '**/*.pyi']
     },
     cmdclass={"build_ext": BuildC_CxxExtensions},
 )
