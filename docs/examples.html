@@ -7,10 +7,10 @@
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://spotify.github.io/pedalboard/examples.html" />
 <meta property="og:site_name" content="Pedalboard v0.6.9 Documentation" />
-<meta property="og:description" content="Examples: Note: If you’d rather watch a video instead of reading examples or documentation,** watch*Working with Audio in Python (feat. Pedalboard)* on YouTube**. Quick start: Note: For more inform..." />
+<meta property="og:description" content="Note: If you’d rather watch a video instead of reading examples or documentation,** watch*Working with Audio in Python (feat. Pedalboard)* on YouTube**. Quick start: Note: For more information abou..." />
 <meta property="og:image" content="https://repository-images.githubusercontent.com/383471193/0f79b949-9b91-4436-bfc4-05d30ef384cc" />
 <meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
-<meta name="description" content="Examples: Note: If you’d rather watch a video instead of reading examples or documentation,** watch*Working with Audio in Python (feat. Pedalboard)* on YouTube**. Quick start: Note: For more inform..." />
+<meta name="description" content="Note: If you’d rather watch a video instead of reading examples or documentation,** watch*Working with Audio in Python (feat. Pedalboard)* on YouTube**. Quick start: Note: For more information abou..." />
 <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Frequently Asked Questions" href="faq.html" /><link rel="prev" title="The pedalboard.io API" href="reference/pedalboard.io.html" />
 
     <link rel="shortcut icon" href="_static/favicon.ico"/><meta name="generator" content="sphinx-5.3.0, furo 2022.09.29"/>
@@ -176,8 +176,6 @@
 <li class="toctree-l1"><a class="reference internal" href="compatibility.html">Plugin Compatibility</a></li>
 <li class="toctree-l1"><a class="reference internal" href="internals.html">Pedalboard Internals</a></li>
 <li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
-<li class="toctree-l1"><a class="reference internal" href="license.html#open-up-an-audio-stream">Open up an audio stream:</a></li>
-<li class="toctree-l1"><a class="reference internal" href="license.html#audio-is-now-streaming-through-this-pedalboard-and-out-of-your-speakers">Audio is now streaming through this pedalboard and out of your speakers!</a></li>
 <li class="toctree-l1"><a class="reference external" href="http://github.com/spotify/pedalboard">GitHub Repo</a></li>
 </ul>
 
@@ -215,13 +213,11 @@
         <article role="main">
           <section id="examples">
 <h1>Examples<a class="headerlink" href="#examples" title="Permalink to this heading">#</a></h1>
-<section id="id1">
-<h2>Examples<a class="headerlink" href="#id1" title="Permalink to this heading">#</a></h2>
 <blockquote>
-<div><p><strong>Note</strong>: If you’d rather watch a video instead of reading examples or documentation, <a href="#id2"><span class="problematic" id="id3">**</span></a>watch <a class="reference external" href="https://www.youtube.com/watch?v=NYhkqXpFAlg">*Working with Audio in Python (feat. Pedalboard)* on YouTube</a><a href="#id4"><span class="problematic" id="id5">**</span></a>.</p>
+<div><p><strong>Note</strong>: If you’d rather watch a video instead of reading examples or documentation, <a href="#id1"><span class="problematic" id="id2">**</span></a>watch <a class="reference external" href="https://www.youtube.com/watch?v=NYhkqXpFAlg">*Working with Audio in Python (feat. Pedalboard)* on YouTube</a><a href="#id3"><span class="problematic" id="id4">**</span></a>.</p>
 </div></blockquote>
 <section id="quick-start">
-<h3>Quick start<a class="headerlink" href="#quick-start" title="Permalink to this heading">#</a></h3>
+<h2>Quick start<a class="headerlink" href="#quick-start" title="Permalink to this heading">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pedalboard</span> <span class="kn">import</span> <span class="n">Pedalboard</span><span class="p">,</span> <span class="n">Chorus</span><span class="p">,</span> <span class="n">Reverb</span>
 <span class="kn">from</span> <span class="nn">pedalboard.io</span> <span class="kn">import</span> <span class="n">AudioFile</span>
 
@@ -252,7 +248,7 @@ see <cite>the documentation for ``pedalboard.Plugin.process`</cite> &lt;<a class
 </div></blockquote>
 </section>
 <section id="making-a-guitar-style-pedalboard">
-<h3>Making a guitar-style pedalboard<a class="headerlink" href="#making-a-guitar-style-pedalboard" title="Permalink to this heading">#</a></h3>
+<h2>Making a guitar-style pedalboard<a class="headerlink" href="#making-a-guitar-style-pedalboard" title="Permalink to this heading">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Don&#39;t do import *! (It just makes this example smaller)</span>
 <span class="kn">from</span> <span class="nn">pedalboard</span> <span class="kn">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">pedalboard.io</span> <span class="kn">import</span> <span class="n">AudioFile</span>
@@ -291,7 +287,7 @@ see <cite>the documentation for ``pedalboard.Plugin.process`</cite> &lt;<a class
 </div>
 </section>
 <section id="using-vst3-or-audio-unit-plugins">
-<h3>Using VST3® or Audio Unit plugins<a class="headerlink" href="#using-vst3-or-audio-unit-plugins" title="Permalink to this heading">#</a></h3>
+<h2>Using VST3® or Audio Unit plugins<a class="headerlink" href="#using-vst3-or-audio-unit-plugins" title="Permalink to this heading">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pedalboard</span> <span class="kn">import</span> <span class="n">Pedalboard</span><span class="p">,</span> <span class="n">Reverb</span><span class="p">,</span> <span class="n">load_plugin</span>
 <span class="kn">from</span> <span class="nn">pedalboard.io</span> <span class="kn">import</span> <span class="n">AudioFile</span>
 
@@ -323,7 +319,7 @@ see <cite>the documentation for ``pedalboard.Plugin.process`</cite> &lt;<a class
 </div>
 </section>
 <section id="creating-parallel-effects-chains">
-<h3>Creating parallel effects chains<a class="headerlink" href="#creating-parallel-effects-chains" title="Permalink to this heading">#</a></h3>
+<h2>Creating parallel effects chains<a class="headerlink" href="#creating-parallel-effects-chains" title="Permalink to this heading">#</a></h2>
 <p>This example creates a delayed pitch-shift effect by running
 multiple Pedalboards in parallel on the same audio. <code class="docutils literal notranslate"><span class="pre">Pedalboard</span></code>
 objects are themselves <code class="docutils literal notranslate"><span class="pre">Plugin</span></code> objects, so you can nest them
@@ -358,12 +354,15 @@ as much as you like:</p>
 <span class="p">])</span>
 </pre></div>
 </div>
-</section>
-<section id="running-pedalboard-on-live-audio">
-<h3>Running Pedalboard on Live Audio<a class="headerlink" href="#running-pedalboard-on-live-audio" title="Permalink to this heading">#</a></h3>
-<p>On macOS or Windows, Pedalboard supports streaming live audio through
-<cite>an ``AudioStream`</cite> object &lt;<a class="reference external" href="https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream">https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream</a>&gt;`_,
-allowing for real-time manipulation of audio by adding effects in Python.</p>
+<p>For more examples, see:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/spotify/pedalboard/tree/master/examples">the “examples” folder of this repository</a></p></li>
+<li><p><a class="reference external" href="https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_lOfG99Xs3qWVrhch">the “Pedalboard Demo” Colab notebook</a></p></li>
+<li><p><a class="reference external" href="https://www.youtube.com/watch?v=NYhkqXpFAlg">*Working with Audio in Python (feat. Pedalboard)* by Peter Sobot at EuroPython 2022</a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/spaces/akhaliq/pedalboard">an interactive web demo on Hugging Face Spaces and Gradio</a> (via <a class="reference external" href="https://github.com/AK391">&#64;AK391</a>)</p></li>
+</ul>
+<section id="contributing">
+<h3>Contributing<a class="headerlink" href="#contributing" title="Permalink to this heading">#</a></h3>
 </section>
 </section>
 </section>
@@ -432,12 +431,11 @@ allowing for real-time manipulation of audio by adding effects in Python.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Examples</a><ul>
-<li><a class="reference internal" href="#id1">Examples</a><ul>
 <li><a class="reference internal" href="#quick-start">Quick start</a></li>
 <li><a class="reference internal" href="#making-a-guitar-style-pedalboard">Making a guitar-style pedalboard</a></li>
 <li><a class="reference internal" href="#using-vst3-or-audio-unit-plugins">Using VST3® or Audio Unit plugins</a></li>
-<li><a class="reference internal" href="#creating-parallel-effects-chains">Creating parallel effects chains</a></li>
-<li><a class="reference internal" href="#running-pedalboard-on-live-audio">Running Pedalboard on Live Audio</a></li>
+<li><a class="reference internal" href="#creating-parallel-effects-chains">Creating parallel effects chains</a><ul>
+<li><a class="reference internal" href="#contributing">Contributing</a></li>
 </ul>
 </li>
 </ul>

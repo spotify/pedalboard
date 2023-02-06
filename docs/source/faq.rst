@@ -4,9 +4,15 @@ Frequently Asked Questions
 Can Pedalboard be used with live (real-time) audio?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Yes! As of Pedalboard v0.7.0, the `AudioStream <https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream>`
-class allows live processing of audio through a Pedalboard object without needing to worry about Python's
-`Global Interpreter Lock <https://wiki.python.org/moin/GlobalInterpreterLock>`_.
+Technically, yes, Pedalboard could be used with live audio input/output. See:
+
+
+* `Pull request #98 <https://github.com/spotify/pedalboard/pull/98>`_\ , which contains an experimental live audio interface written in C++.
+* `@stefanobazzi <https://github.com/stefanobazzi>`_\ 's `guitarboard <https://github.com/stefanobazzi/guitarboard>`_ project for an example that uses the ``python-sounddevice`` library.
+
+However, there are a couple big caveats when talking about using Pedalboard in a live context. Python, as a language, is `garbage-collected <https://devguide.python.org/garbage_collector/>`_\ , meaning that your code randomly pauses on a regular interval to clean up unused objects. In most programs, this is not an issue at all. However, for live audio, garbage collection can result in random pops, clicks, or audio drop-outs that are very difficult to prevent. Python's `Global Interpreter Lock <https://wiki.python.org/moin/GlobalInterpreterLock>`_ also adds potentially-unbounded delays when switching threads, and most operating systems use a separate high-priority thread for audio processing; meaning that Python could block this thread and cause stuttering if *any* Python objects are accessed or mutated in the audio thread.
+
+Note that if your application processes audio in a streaming fashion, but allows for large buffer sizes (multiple seconds of audio) or soft real-time requirements, Pedalboard can be used there without issue. Examples of this use case include streaming audio processing over the network, or processing data offline but chunk-by-chunk.
 
 Does Pedalboard support changing a plugin's parameters over time?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
