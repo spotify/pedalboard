@@ -186,7 +186,7 @@ BooleanWithParameter: Type[bool] = wrap_type(WrappedBool)
 # (i.e.: MIDI CC [0-16]|[0-128], resulting in 2,048 parameters).
 # This hugely delays load times and adds complexity to the interface.
 # Guitar Rig also seems to expose 512 parameters, each matching "P\d\d\d"
-PARAMETER_NAME_REGEXES_TO_IGNORE: Set[re.Pattern] = set(
+PARAMETER_NAME_REGEXES_TO_IGNORE = set(
     [re.compile(pattern) for pattern in ["MIDI CC ", r"P\d\d\d"]]
 )
 
