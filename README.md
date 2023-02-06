@@ -24,7 +24,7 @@
    - Support for reading and writing AIFF, FLAC, MP3, OGG, and WAV files on all platforms with no dependencies
    - Additional support for reading AAC, AC3, WMA, and other formats depending on platform
    - Support for on-the-fly resampling of audio files and streams with `O(1)` memory usage
-   - Live audio processing and effects via [`AudioStream`](https://spotify.github.io/pedalboard/reference/pedalboard.io.html)
+   - Live audio effects via [`AudioStream`](https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream)
  - Built-in support for a number of basic audio transformations, including:
    - Guitar-style effects: `Chorus`, `Distortion`, `Phaser`, `Clipping`
    - Loudness and dynamic range effects: `Compressor`, `Gain`, `Limiter`
