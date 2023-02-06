@@ -262,7 +262,7 @@ inline void init_audio_stream(py::module &m) {
                                                             R"(
 A class that streams audio from an input audio device (i.e.: a microphone,
 audio interface, etc) to an output device (speaker, headphones),
-passing it through a Pedalboard to add effects.
+passing it through a :class:`pedalboard.Pedalboard` to add effects.
 
 :class:`AudioStream` may be used as a context manager::
 
@@ -311,7 +311,7 @@ passing it through a Pedalboard to add effects.
     :py:mod:`threading` module to call the synchronous :meth:`run` method on a
     background thread, allowing for easier cleanup.
 
-*Introduced in v0.6.9. Not supported on Linux.*
+*Introduced in v0.7.0. Not supported on Linux.*
 )")
           .def(py::init([](std::string inputDeviceName,
                            std::string outputDeviceName,
@@ -331,13 +331,20 @@ passing it through a Pedalboard to add effects.
       .def("run", &AudioStream::stream,
            "Start streaming audio from input to output, passing the audio "
            "stream  through the :py:attr:`plugins` on this AudioStream object. "
-           "This call will block the current thread until a KeyboardInterrupt "
-           "(Ctrl-C) is received.")
-      .def_property_readonly("running", &AudioStream::getIsRunning,
-                             "True if this stream is currently streaming live "
-                             "audio from input to output, False otherwise.")
-      .def("__enter__", &AudioStream::enter)
-      .def("__exit__", &AudioStream::exit)
+           "This call will block the current thread until a "
+           ":py:exc:`KeyboardInterrupt` (``Ctrl-C``) is received.")
+      .def_property_readonly(
+          "running", &AudioStream::getIsRunning,
+          ":py:const:`True` if this stream is currently streaming live "
+          "audio from input to output, :py:const:`False` otherwise.")
+      .def("__enter__", &AudioStream::enter,
+           "Use this :class:`AudioStream` as a context manager. Entering the "
+           "context manager will immediately start the audio stream, sending "
+           "audio through to the output device.")
+      .def("__exit__", &AudioStream::exit,
+           "Exit the context manager, ending the audio stream. Once called, "
+           "the audio stream will be stopped (i.e.: :py:attr:`running` will be "
+           ":py:const:`False`).")
       .def("__repr__",
            [](const AudioStream &stream) {
              std::ostringstream ss;

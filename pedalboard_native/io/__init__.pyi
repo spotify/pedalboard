@@ -96,6 +96,14 @@ class AudioFile:
            with AudioFile("output.mp3", "w", i.samplerate, i.num_channels) as o:
                while i.tell() < i.frames:
                    o.write(i.read(1024))
+
+
+    .. note::
+        Calling the :class:`AudioFile` constructor does not actually return an
+        :class:`AudioFile`. If opening an audio file in read ("r") mode, a
+        :class:`ReadableAudioFile` will be returned. If opening an audio file
+        in write ("w") mode, a :class:`WriteableAudioFile` will be returned. See
+        those classes below for documentation.
     """
 
     @staticmethod
@@ -140,7 +148,7 @@ class AudioStream:
     """
     A class that streams audio from an input audio device (i.e.: a microphone,
     audio interface, etc) to an output device (speaker, headphones),
-    passing it through a Pedalboard to add effects.
+    passing it through a :class:`pedalboard.Pedalboard` to add effects.
 
     :class:`AudioStream` may be used as a context manager::
 
@@ -189,11 +197,17 @@ class AudioStream:
         :py:mod:`threading` module to call the synchronous :meth:`run` method on a
         background thread, allowing for easier cleanup.
 
-    *Introduced in v0.6.9. Not supported on Linux.*
+    *Introduced in v0.7.0. Not supported on Linux.*
     """
 
-    def __enter__(self) -> AudioStream: ...
-    def __exit__(self, arg0: object, arg1: object, arg2: object) -> None: ...
+    def __enter__(self) -> AudioStream:
+        """
+        Use this :class:`AudioStream` as a context manager. Entering the context manager will immediately start the audio stream, sending audio through to the output device.
+        """
+    def __exit__(self, arg0: object, arg1: object, arg2: object) -> None:
+        """
+        Exit the context manager, ending the audio stream. Once called, the audio stream will be stopped (i.e.: :py:attr:`running` will be :py:const:`False`).
+        """
     def __init__(
         self,
         input_device_name: str,
@@ -206,7 +220,7 @@ class AudioStream:
     def __repr__(self) -> str: ...
     def run(self) -> None:
         """
-        Start streaming audio from input to output, passing the audio stream  through the :py:attr:`plugins` on this AudioStream object. This call will block the current thread until a KeyboardInterrupt (Ctrl-C) is received.
+        Start streaming audio from input to output, passing the audio stream  through the :py:attr:`plugins` on this AudioStream object. This call will block the current thread until a :py:exc:`KeyboardInterrupt` (``Ctrl-C``) is received.
         """
     @property
     def plugins(self) -> pedalboard_native.utils.Chain:
@@ -223,7 +237,7 @@ class AudioStream:
     @property
     def running(self) -> bool:
         """
-        True if this stream is currently streaming live audio from input to output, False otherwise.
+        :py:const:`True` if this stream is currently streaming live audio from input to output, :py:const:`False` otherwise.
 
 
         """

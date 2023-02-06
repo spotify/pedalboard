@@ -324,6 +324,14 @@ if using the <cite>io</cite> package).</p></li>
             <span class="n">o</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1024</span><span class="p">))</span>
 </pre></div>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Calling the <a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> constructor does not actually return an
+<a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a>. If opening an audio file in read (“r”) mode, a
+<a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> will be returned. If opening an audio file
+in write (“w”) mode, a <a class="reference internal" href="#pedalboard.io.WriteableAudioFile" title="pedalboard.io.WriteableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">WriteableAudioFile</span></code></a> will be returned. See
+those classes below for documentation.</p>
+</div>
 </dd></dl>
 
 <dl class="py class">
@@ -331,7 +339,7 @@ if using the <cite>io</cite> package).</p></li>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.io.</span></span><span class="sig-name descname"><span class="pre">AudioStream</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_device_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_device_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plugins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="pedalboard.html#pedalboard.Chain" title="pedalboard.utils.Chain"><span class="pre">Chain</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">512</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_feedback</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.io.AudioStream" title="Permalink to this definition">#</a></dt>
 <dd><p>A class that streams audio from an input audio device (i.e.: a microphone,
 audio interface, etc) to an output device (speaker, headphones),
-passing it through a Pedalboard to add effects.</p>
+passing it through a <a class="reference internal" href="pedalboard.html#pedalboard.Pedalboard" title="pedalboard.Pedalboard"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.Pedalboard</span></code></a> to add effects.</p>
 <p><a class="reference internal" href="#pedalboard.io.AudioStream" title="pedalboard.io.AudioStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioStream</span></code></a> may be used as a context manager:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">input_device_name</span> <span class="o">=</span> <span class="n">AudioStream</span><span class="o">.</span><span class="n">input_device_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="n">output_device_name</span> <span class="o">=</span> <span class="n">AudioStream</span><span class="o">.</span><span class="n">output_device_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -369,7 +377,7 @@ the <a class="reference internal" href="#pedalboard.io.AudioStream.plugins" titl
 <p>The <a class="reference internal" href="#pedalboard.io.AudioStream" title="pedalboard.io.AudioStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioStream</span></code></a> class implements a context manager interface
 to ensure that audio streams are never left “dangling” (i.e.: running in
 the background without being stopped).</p>
-<p>While it is possible to call the <code class="xref py py-meth docutils literal notranslate"><span class="pre">__enter__()</span></code> method directly to run an
+<p>While it is possible to call the <a class="reference internal" href="#pedalboard.io.AudioStream.__enter__" title="pedalboard.io.AudioStream.__enter__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__enter__()</span></code></a> method directly to run an
 audio stream in the background, this can have some nasty side effects. If the
 <a class="reference internal" href="#pedalboard.io.AudioStream" title="pedalboard.io.AudioStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioStream</span></code></a> object is no longer reachable (not bound to a variable,
 not in scope, etc), the audio stream will continue to play back forever, and
@@ -378,11 +386,23 @@ won’t stop until the Python interpreter exits.</p>
 <code class="xref py py-mod docutils literal notranslate"><span class="pre">threading</span></code> module to call the synchronous <a class="reference internal" href="#pedalboard.io.AudioStream.run" title="pedalboard.io.AudioStream.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a> method on a
 background thread, allowing for easier cleanup.</p>
 </div>
-<p><em>Introduced in v0.6.9. Not supported on Linux.</em></p>
+<p><em>Introduced in v0.7.0. Not supported on Linux.</em></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.__enter__">
+<span class="sig-name descname"><span class="pre">__enter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pedalboard.io.AudioStream" title="pedalboard.io.AudioStream"><span class="pre">AudioStream</span></a></span></span><a class="headerlink" href="#pedalboard.io.AudioStream.__enter__" title="Permalink to this definition">#</a></dt>
+<dd><p>Use this <a class="reference internal" href="#pedalboard.io.AudioStream" title="pedalboard.io.AudioStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioStream</span></code></a> as a context manager. Entering the context manager will immediately start the audio stream, sending audio through to the output device.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.__exit__">
+<span class="sig-name descname"><span class="pre">__exit__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.io.AudioStream.__exit__" title="Permalink to this definition">#</a></dt>
+<dd><p>Exit the context manager, ending the audio stream. Once called, the audio stream will be stopped (i.e.: <a class="reference internal" href="#pedalboard.io.AudioStream.running" title="pedalboard.io.AudioStream.running"><code class="xref py py-attr docutils literal notranslate"><span class="pre">running</span></code></a> will be <code class="xref py py-const docutils literal notranslate"><span class="pre">False</span></code>).</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.io.AudioStream.run">
 <span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.io.AudioStream.run" title="Permalink to this definition">#</a></dt>
-<dd><p>Start streaming audio from input to output, passing the audio stream  through the <a class="reference internal" href="#pedalboard.io.AudioStream.plugins" title="pedalboard.io.AudioStream.plugins"><code class="xref py py-attr docutils literal notranslate"><span class="pre">plugins</span></code></a> on this AudioStream object. This call will block the current thread until a KeyboardInterrupt (Ctrl-C) is received.</p>
+<dd><p>Start streaming audio from input to output, passing the audio stream  through the <a class="reference internal" href="#pedalboard.io.AudioStream.plugins" title="pedalboard.io.AudioStream.plugins"><code class="xref py py-attr docutils literal notranslate"><span class="pre">plugins</span></code></a> on this AudioStream object. This call will block the current thread until a <code class="xref py py-exc docutils literal notranslate"><span class="pre">KeyboardInterrupt</span></code> (<code class="docutils literal notranslate"><span class="pre">Ctrl-C</span></code>) is received.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -394,7 +414,7 @@ background thread, allowing for easier cleanup.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="pedalboard.io.AudioStream.running">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">running</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#pedalboard.io.AudioStream.running" title="Permalink to this definition">#</a></dt>
-<dd><p>True if this stream is currently streaming live audio from input to output, False otherwise.</p>
+<dd><p><code class="xref py py-const docutils literal notranslate"><span class="pre">True</span></code> if this stream is currently streaming live audio from input to output, <code class="xref py py-const docutils literal notranslate"><span class="pre">False</span></code> otherwise.</p>
 </dd></dl>
 
 </dd></dl>
@@ -879,6 +899,8 @@ second argument.</p>
 <li><a class="reference internal" href="#">The <code class="docutils literal notranslate"><span class="pre">pedalboard.io</span></code> API</a><ul>
 <li><a class="reference internal" href="#pedalboard.io.AudioFile"><code class="docutils literal notranslate"><span class="pre">AudioFile</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.io.AudioStream"><code class="docutils literal notranslate"><span class="pre">AudioStream</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.__enter__"><code class="docutils literal notranslate"><span class="pre">AudioStream.__enter__()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.__exit__"><code class="docutils literal notranslate"><span class="pre">AudioStream.__exit__()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.io.AudioStream.run"><code class="docutils literal notranslate"><span class="pre">AudioStream.run()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.io.AudioStream.plugins"><code class="docutils literal notranslate"><span class="pre">AudioStream.plugins</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.io.AudioStream.running"><code class="docutils literal notranslate"><span class="pre">AudioStream.running</span></code></a></li>

@@ -115,6 +115,13 @@ Re-encoding a WAV file as an MP3 in four lines of Python::
            while i.tell() < i.frames:
                o.write(i.read(1024))
 
+
+.. note::
+    Calling the :class:`AudioFile` constructor does not actually return an
+    :class:`AudioFile`. If opening an audio file in read ("r") mode, a
+    :class:`ReadableAudioFile` will be returned. If opening an audio file
+    in write ("w") mode, a :class:`WriteableAudioFile` will be returned. See
+    those classes below for documentation.
 )");
 }
 
