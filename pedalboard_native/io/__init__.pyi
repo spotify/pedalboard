@@ -152,9 +152,7 @@ class ReadableAudioFile(AudioFile):
        ``.wav``
 
     Use :meth:`pedalboard.io.get_supported_read_formats()` to see which
-    formats or file extensions are supported on the current platform. To use
-    only audio format parsing libraries that are consistent on all platforms, pass
-    ``cross_platform_formats_only=True`` to this constructor.
+    formats or file extensions are supported on the current platform.
 
     (Note that although an audio file may have a certain file extension, its
     contents may be encoded with a compression algorithm unsupported by
@@ -175,21 +173,15 @@ class ReadableAudioFile(AudioFile):
         Stop using this :class:`ReadableAudioFile` as a context manager, close the file, release its resources.
         """
     @typing.overload
-    def __init__(
-        self, file_like: typing.BinaryIO, cross_platform_formats_only: bool = False
-    ) -> None: ...
+    def __init__(self, file_like: typing.BinaryIO) -> None: ...
     @typing.overload
-    def __init__(self, filename: str, cross_platform_formats_only: bool = False) -> None: ...
+    def __init__(self, filename: str) -> None: ...
     @staticmethod
     @typing.overload
-    def __new__(
-        cls: object, file_like: typing.BinaryIO, cross_platform_formats_only: bool = False
-    ) -> ReadableAudioFile: ...
+    def __new__(cls: object, file_like: typing.BinaryIO) -> ReadableAudioFile: ...
     @staticmethod
     @typing.overload
-    def __new__(
-        cls: object, filename: str, cross_platform_formats_only: bool = False
-    ) -> ReadableAudioFile: ...
+    def __new__(cls: object, filename: str) -> ReadableAudioFile: ...
     def __repr__(self) -> str: ...
     def close(self) -> None:
         """
@@ -652,8 +644,8 @@ class WriteableAudioFile(AudioFile):
         """
     pass
 
-def get_supported_read_formats(cross_platform_formats_only: bool = False) -> typing.List[str]:
+def get_supported_read_formats() -> typing.List[str]:
     pass
 
-def get_supported_write_formats(cross_platform_formats_only: bool = False) -> typing.List[str]:
+def get_supported_write_formats() -> typing.List[str]:
     pass
