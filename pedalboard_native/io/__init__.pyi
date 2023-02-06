@@ -7,8 +7,7 @@ import typing
 from typing_extensions import Literal
 from enum import Enum
 import numpy
-import pedalboard_native.utils  # type: ignore  # type: ignore
-import pedalboard  # type: ignore
+import pedalboard_native.utils
 
 _Shape = typing.Tuple[int, ...]
 
@@ -181,13 +180,14 @@ class AudioStream:
         the background without being stopped).
 
         While it is possible to call the :meth:`__enter__` method directly to run an
-        audio stream in the background, this can make it possible to lose all
-        references to the :class:`AudioStream` object, resulting in an audio stream
-        that can't be stopped until the Python interpreter exits.
+        audio stream in the background, this can have some nasty side effects. If the
+        :class:`AudioStream` object is no longer reachable (not bound to a variable,
+        not in scope, etc), the audio stream will continue to play back forever, and
+        won't stop until the Python interpreter exits.
 
         To run an :class:`AudioStream` in the background, use Python's
-        :module:`threading` module to call the :meth:`run` method on a background
-        thread, allowing for easier cleanup.
+        :py:mod:`threading` module to call the synchronous :meth:`run` method on a
+        background thread, allowing for easier cleanup.
 
     *Introduced in v0.6.9. Not supported on Linux.*
     """
@@ -199,14 +199,14 @@ class AudioStream:
         input_device_name: str,
         output_device_name: str,
         plugins: typing.Optional[pedalboard_native.utils.Chain] = None,
-        sample_rate: float = 44100,
+        sample_rate: typing.Optional[float] = None,
         buffer_size: int = 512,
         allow_feedback: bool = False,
     ) -> None: ...
     def __repr__(self) -> str: ...
     def run(self) -> None:
         """
-        Start streaming audio from input to output, passing the audio stream  through the `plugins` on this AudioStream object. This call will block the current thread until a KeyboardInterrupt (Ctrl-C) is received.
+        Start streaming audio from input to output, passing the audio stream  through the :py:attr:`plugins` on this AudioStream object. This call will block the current thread until a KeyboardInterrupt (Ctrl-C) is received.
         """
     @property
     def plugins(self) -> pedalboard_native.utils.Chain:
@@ -223,12 +223,16 @@ class AudioStream:
     @property
     def running(self) -> bool:
         """
-        True if this stream is currently streaming live audio from input to output, false otherwise.
+        True if this stream is currently streaming live audio from input to output, False otherwise.
 
 
         """
-    input_device_names = ["Peter Sobot’s iPhone Microphone", "MacBook Pro Microphone"]
-    output_device_names = ["DELL U3223QE", "MacBook Pro Speakers"]
+    input_device_names = [
+        "Peter Sobot’s iPhone Microphone",
+        "BlackHole 2ch",
+        "MacBook Pro Microphone",
+    ]
+    output_device_names = ["BlackHole 2ch", "MacBook Pro Speakers"]
     pass
 
 class ReadableAudioFile(AudioFile):

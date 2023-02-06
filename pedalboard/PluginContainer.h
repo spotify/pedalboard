@@ -123,11 +123,12 @@ inline void init_plugin_container(py::module &m) {
           py::arg("index"),
           "Delete a plugin by its index. Index may be negative. If the index "
           "is out of range, an IndexError will be thrown.")
-      .def("__len__",
-           [](PluginContainer &s) {
-             std::scoped_lock lock(s.mutex);
-             return s.getPlugins().size();
-           },
+      .def(
+          "__len__",
+          [](PluginContainer &s) {
+            std::scoped_lock lock(s.mutex);
+            return s.getPlugins().size();
+          },
           "Get the number of plugins in this container.")
       .def(
           "insert",
