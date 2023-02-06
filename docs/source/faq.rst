@@ -4,7 +4,7 @@ Frequently Asked Questions
 Can Pedalboard be used with live (real-time) audio?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Yes! As of Pedalboard v0.6.9, the `AudioStream <https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream>`
+Yes! As of Pedalboard v0.7.0, the `AudioStream <https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream>`
 class allows live processing of audio through a Pedalboard object without needing to worry about Python's
 `Global Interpreter Lock <https://wiki.python.org/moin/GlobalInterpreterLock>`_.
 
