@@ -29,7 +29,7 @@ PASSING_FIXTURES = ALL_FIXTURES - FAILING_FIXTURES
 
 
 @pytest.mark.skipif(
-    os.environ.get("CIBW_BUILD"),
+    os.environ.get("CIBW_BUILD") is not None,
     reason="Unable to get MyPy tests working while in cibuildwheel",
 )
 @pytest.mark.parametrize("filename", PASSING_FIXTURES)
@@ -44,7 +44,7 @@ def test_mypy_passes(filename):
 
 
 @pytest.mark.skipif(
-    os.environ.get("CIBW_BUILD"),
+    os.environ.get("CIBW_BUILD") is not None,
     reason="Unable to get MyPy tests working while in cibuildwheel",
 )
 @pytest.mark.parametrize("filename", FAILING_FIXTURES)
