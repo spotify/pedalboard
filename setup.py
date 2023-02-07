@@ -23,11 +23,11 @@ from pathlib import Path
 from distutils.core import setup
 from distutils.unixccompiler import UnixCCompiler
 
-DEBUG = bool(int(os.environ.get('DEBUG', 0)))
+DEBUG = bool(int(os.environ.get("DEBUG", 0)))
 
 # C or C++ flags:
 BASE_CPP_FLAGS = [
-    '-Wall',
+    "-Wall",
 ]
 ALL_INCLUDES = []
 ALL_LINK_ARGS = []
@@ -78,7 +78,7 @@ ALL_CPPFLAGS.extend(
         "-DJUCE_MODAL_LOOPS_PERMITTED=1",
     ]
 )
-ALL_INCLUDES.extend(['JUCE/modules/', 'JUCE/modules/juce_audio_processors/format_types/VST3_SDK/'])
+ALL_INCLUDES.extend(["JUCE/modules/", "JUCE/modules/juce_audio_processors/format_types/VST3_SDK/"])
 
 # Rubber Band library:
 ALL_CPPFLAGS.extend(
@@ -107,14 +107,14 @@ ALL_SOURCE_PATHS += list(Path("vendors/lame/libmp3lame").glob("*.c"))
 ALL_SOURCE_PATHS += list(Path("vendors/lame/libmp3lame/vector").glob("*.c"))
 ALL_SOURCE_PATHS += list(Path("vendors/lame/mpglib").glob("*.c"))
 ALL_INCLUDES += [
-    'vendors/lame/include/',
-    'vendors/lame/libmp3lame/',
-    'vendors/lame/',
+    "vendors/lame/include/",
+    "vendors/lame/libmp3lame/",
+    "vendors/lame/",
 ]
 
 # libgsm
-ALL_SOURCE_PATHS += [p for p in Path("vendors/libgsm/src").glob("*.c") if 'toast' not in p.name]
-ALL_INCLUDES += ['vendors/libgsm/inc']
+ALL_SOURCE_PATHS += [p for p in Path("vendors/libgsm/src").glob("*.c") if "toast" not in p.name]
+ALL_INCLUDES += ["vendors/libgsm/inc"]
 
 
 # Add platform-specific flags:
@@ -125,6 +125,7 @@ if platform.system() == "Darwin":
         ALL_CPPFLAGS.append("-flto=thin")
         ALL_LINK_ARGS.append("-flto=thin")
     ALL_LINK_ARGS.append("-fvisibility=hidden")
+    ALL_CPPFLAGS.append("-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1")
 elif platform.system() == "Linux":
     ALL_CPPFLAGS.append("-DLINUX=1")
     # We use GCC on Linux, which doesn't take a value for the -flto flag:
@@ -134,6 +135,7 @@ elif platform.system() == "Linux":
     ALL_LINK_ARGS.append("-fvisibility=hidden")
 elif platform.system() == "Windows":
     ALL_CPPFLAGS.append("-DWINDOWS=1")
+    ALL_CPPFLAGS.append("-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1")
 else:
     raise NotImplementedError(
         "Not sure how to build JUCE on platform: {}!".format(platform.system())
@@ -142,20 +144,20 @@ else:
 
 if DEBUG:
     ALL_CPPFLAGS += ["-DDEBUG=1", "-D_DEBUG=1"]
-    ALL_CPPFLAGS += ['-O0', '-g']
-    if bool(int(os.environ.get('USE_ASAN', 0))):
-        ALL_CPPFLAGS += ['-fsanitize=address', '-fno-omit-frame-pointer']
-        ALL_LINK_ARGS += ['-fsanitize=address']
+    ALL_CPPFLAGS += ["-O0", "-g"]
+    if bool(int(os.environ.get("USE_ASAN", 0))):
+        ALL_CPPFLAGS += ["-fsanitize=address", "-fno-omit-frame-pointer"]
+        ALL_LINK_ARGS += ["-fsanitize=address"]
         if platform.system() == "Linux":
-            ALL_LINK_ARGS += ['-shared-libasan']
-    elif bool(int(os.environ.get('USE_TSAN', 0))):
-        ALL_CPPFLAGS += ['-fsanitize=thread']
-        ALL_LINK_ARGS += ['-fsanitize=thread']
-    elif bool(int(os.environ.get('USE_MSAN', 0))):
-        ALL_CPPFLAGS += ['-fsanitize=memory', '-fsanitize-memory-track-origins']
-        ALL_LINK_ARGS += ['-fsanitize=memory']
+            ALL_LINK_ARGS += ["-shared-libasan"]
+    elif bool(int(os.environ.get("USE_TSAN", 0))):
+        ALL_CPPFLAGS += ["-fsanitize=thread"]
+        ALL_LINK_ARGS += ["-fsanitize=thread"]
+    elif bool(int(os.environ.get("USE_MSAN", 0))):
+        ALL_CPPFLAGS += ["-fsanitize=memory", "-fsanitize-memory-track-origins"]
+        ALL_LINK_ARGS += ["-fsanitize=memory"]
 else:
-    ALL_CPPFLAGS += ['/Ox' if platform.system() == "Windows" else '-O3']
+    ALL_CPPFLAGS += ["/Ox" if platform.system() == "Windows" else "-O3"]
 
 
 # Regardless of platform, allow our compiler to compile .mm files as Objective-C (required on MacOS)
@@ -167,25 +169,25 @@ ALL_SOURCE_PATHS += list(Path("pedalboard").glob("**/*.cpp"))
 
 if platform.system() == "Darwin":
     MACOS_FRAMEWORKS = [
-        'Accelerate',
-        'AppKit',
-        'AudioToolbox',
-        'Cocoa',
-        'CoreAudio',
-        'CoreAudioKit',
-        'CoreMIDI',
-        'Foundation',
-        'IOKit',
-        'QuartzCore',
-        'WebKit',
+        "Accelerate",
+        "AppKit",
+        "AudioToolbox",
+        "Cocoa",
+        "CoreAudio",
+        "CoreAudioKit",
+        "CoreMIDI",
+        "Foundation",
+        "IOKit",
+        "QuartzCore",
+        "WebKit",
     ]
 
     # On MacOS, we link against some Objective-C system libraries, so we search
     # for Objective-C++ files instead of C++ files.
     for f in MACOS_FRAMEWORKS:
-        ALL_LINK_ARGS += ['-framework', f]
+        ALL_LINK_ARGS += ["-framework", f]
     ALL_CPPFLAGS.append("-DJUCE_PLUGINHOST_AU=1")
-    ALL_CPPFLAGS.append('-xobjective-c++')
+    ALL_CPPFLAGS.append("-xobjective-c++")
 
     # Replace .cpp sources with matching .mm sources on macOS to force the
     # compiler to use Apple's Objective-C and Objective-C++ code.
@@ -206,20 +208,20 @@ if platform.system() == "Darwin":
             ALL_SOURCE_PATHS.append(objc_source)
     ALL_RESOLVED_SOURCE_PATHS = [str(p.resolve()) for p in ALL_SOURCE_PATHS]
 elif platform.system() == "Linux":
-    for package in ['freetype2']:
+    for package in ["freetype2"]:
         flags = (
-            check_output(['pkg-config', '--cflags-only-I', package])
-            .decode('utf-8')
+            check_output(["pkg-config", "--cflags-only-I", package])
+            .decode("utf-8")
             .strip()
-            .split(' ')
+            .split(" ")
         )
         include_paths = [flag[2:] for flag in flags]
         ALL_INCLUDES += include_paths
-    ALL_LINK_ARGS += ['-lfreetype']
+    ALL_LINK_ARGS += ["-lfreetype"]
 
     ALL_RESOLVED_SOURCE_PATHS = [str(p.resolve()) for p in ALL_SOURCE_PATHS]
 elif platform.system() == "Windows":
-    ALL_CPPFLAGS += ['-DJUCE_DLL_BUILD=1']
+    ALL_CPPFLAGS += ["-DJUCE_DLL_BUILD=1"]
     # https://forum.juce.com/t/statically-linked-exe-in-win-10-not-working/25574/3
     ALL_LIBRARIES.extend(
         [
@@ -252,11 +254,11 @@ def patch_compile(original_compile):
     def new_compile(obj, src, ext, cc_args, extra_postargs, *args, **kwargs):
         _cc_args = cc_args
 
-        if ext in ('.cpp', '.cxx', '.cc', '.mm'):
+        if ext in (".cpp", ".cxx", ".cc", ".mm"):
             _cc_args = cc_args + ALL_CPPFLAGS
-        elif ext in ('.c',):
+        elif ext in (".c",):
             # We're compiling C code, remove the -std= arg:
-            extra_postargs = [arg for arg in extra_postargs if 'std=' not in arg]
+            extra_postargs = [arg for arg in extra_postargs if "std=" not in arg]
             _cc_args = cc_args + ALL_CFLAGS
 
         return original_compile(obj, src, ext, _cc_args, extra_postargs, *args, **kwargs)
@@ -282,7 +284,7 @@ if platform.system() == "Windows":
 
 
 pedalboard_cpp = Pybind11Extension(
-    'pedalboard_native',
+    "pedalboard_native",
     sources=ALL_RESOLVED_SOURCE_PATHS,
     include_dirs=ALL_INCLUDES,
     extra_compile_args=BASE_CPP_FLAGS,
@@ -295,7 +297,7 @@ pedalboard_cpp = Pybind11Extension(
 
 if DEBUG:
     # Why does Pybind11 always remove debugging symbols?
-    pedalboard_cpp.extra_compile_args.remove('-g0')
+    pedalboard_cpp.extra_compile_args.remove("-g0")
 
 # read the contents of the README file
 this_directory = Path(__file__).parent
@@ -307,13 +309,13 @@ version_file_contents = (this_directory / "pedalboard" / "version.py").read_text
 exec(version_file_contents, version)
 
 setup(
-    name='pedalboard',
-    version=version['__version__'],
-    author='Peter Sobot',
-    author_email='psobot@spotify.com',
-    description='A Python library for adding effects to audio.',
+    name="pedalboard",
+    version=version["__version__"],
+    author="Peter Sobot",
+    author_email="psobot@spotify.com",
+    description="A Python library for adding effects to audio.",
     long_description=long_description,
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",

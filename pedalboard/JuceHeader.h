@@ -31,3 +31,7 @@
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+
+#ifndef JUCE_LINUX
+#include <juce_audio_devices/juce_audio_devices.h>
+#endif
