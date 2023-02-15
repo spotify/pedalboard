@@ -216,7 +216,22 @@ class AudioStream:
         sample_rate: typing.Optional[float] = None,
         buffer_size: int = 512,
         allow_feedback: bool = False,
-    ) -> None: ...
+    ) -> None:
+        """
+        Create a new :class:`AudioStream` instance.
+
+        Creating this object does not start an audio stream; it merely prepares
+        the stream to run.
+
+        Use the :py:meth:`input_device_names` and :py:meth:`output_device_names`
+        properties to fetch the currently-available input and output device names
+        on the current system.
+
+        Note that if the provided input device name looks like a microphone and
+        the provided output device name looks like a speaker, this constructor will
+        throw an exception to prevent audio feedback from occurring. To bypass this,
+        pass ``allow_feedback=True`` (and ensure your volume is turned down!).
+        """
     def __repr__(self) -> str: ...
     def run(self) -> None:
         """
@@ -241,13 +256,8 @@ class AudioStream:
 
 
         """
-    input_device_names = [
-        "Peter Sobot’s iPhone Microphone",
-        "BlackHole 2ch",
-        "MacBook Pro Microphone",
-    ]
-    output_device_names = ["BlackHole 2ch", "MacBook Pro Speakers"]
-    pass
+    input_device_names: typing.List[str]
+    output_device_names: typing.List[str]
 
 class ReadableAudioFile(AudioFile):
     """

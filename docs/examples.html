@@ -6,7 +6,7 @@
 <meta property="og:title" content="Examples" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://spotify.github.io/pedalboard/examples.html" />
-<meta property="og:site_name" content="Pedalboard v0.6.9 Documentation" />
+<meta property="og:site_name" content="Pedalboard v0.7.0 Documentation" />
 <meta property="og:description" content="Note: If you’d rather watch a video instead of reading examples or documentation,** watch*Working with Audio in Python (feat. Pedalboard)* on YouTube**. Quick start: Note: For more information abou..." />
 <meta property="og:image" content="https://repository-images.githubusercontent.com/383471193/0f79b949-9b91-4436-bfc4-05d30ef384cc" />
 <meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
@@ -14,7 +14,7 @@
 <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Frequently Asked Questions" href="faq.html" /><link rel="prev" title="The pedalboard.io API" href="reference/pedalboard.io.html" />
 
     <link rel="shortcut icon" href="_static/favicon.ico"/><meta name="generator" content="sphinx-5.3.0, furo 2022.09.29"/>
-        <title>Examples - Pedalboard v0.6.9 Documentation</title>
+        <title>Examples - Pedalboard v0.7.0 Documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?digest=d81277517bee4d6b0349d71bb2661d4890b5617c" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css" />
@@ -132,7 +132,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">Pedalboard v0.6.9 Documentation</div></a>
+      <a href="index.html"><div class="brand">Pedalboard v0.7.0 Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -158,7 +158,7 @@
     <img class="sidebar-logo" src="_static/pedalboard_logo_small.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">Pedalboard v0.6.9 Documentation</span>
+  <span class="sidebar-brand-text">Pedalboard v0.7.0 Documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
@@ -354,6 +354,34 @@ as much as you like:</p>
 <span class="p">])</span>
 </pre></div>
 </div>
+</section>
+<section id="running-pedalboard-on-live-audio">
+<h2>Running Pedalboard on Live Audio<a class="headerlink" href="#running-pedalboard-on-live-audio" title="Permalink to this heading">#</a></h2>
+<p>On macOS or Windows, Pedalboard supports streaming live audio through
+<cite>an ``AudioStream`</cite> object &lt;<a class="reference external" href="https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream">https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream</a>&gt;`_,
+allowing for real-time manipulation of audio by adding effects in Python.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pedalboard</span> <span class="kn">import</span> <span class="n">Pedalboard</span><span class="p">,</span> <span class="n">Chorus</span><span class="p">,</span> <span class="n">Compressor</span><span class="p">,</span> <span class="n">Delay</span><span class="p">,</span> <span class="n">Gain</span><span class="p">,</span> <span class="n">Reverb</span><span class="p">,</span> <span class="n">Phaser</span>
+<span class="kn">from</span> <span class="nn">pedalboard.io</span> <span class="kn">import</span> <span class="n">AudioStream</span>
+
+<span class="c1"># Open up an audio stream:</span>
+<span class="k">with</span> <span class="n">AudioStream</span><span class="p">(</span>
+  <span class="n">input_device_name</span><span class="o">=</span><span class="s2">&quot;Apogee Jam+&quot;</span><span class="p">,</span>  <span class="c1"># Guitar interface</span>
+  <span class="n">output_device_name</span><span class="o">=</span><span class="s2">&quot;MacBook Pro Speakers&quot;</span>
+<span class="p">)</span> <span class="k">as</span> <span class="n">stream</span><span class="p">:</span>
+  <span class="c1"># Audio is now streaming through this pedalboard and out of your speakers!</span>
+  <span class="n">stream</span><span class="o">.</span><span class="n">plugins</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span>
+      <span class="n">Compressor</span><span class="p">(</span><span class="n">threshold_db</span><span class="o">=-</span><span class="mi">50</span><span class="p">,</span> <span class="n">ratio</span><span class="o">=</span><span class="mi">25</span><span class="p">),</span>
+      <span class="n">Gain</span><span class="p">(</span><span class="n">gain_db</span><span class="o">=</span><span class="mi">30</span><span class="p">),</span>
+      <span class="n">Chorus</span><span class="p">(),</span>
+      <span class="n">Phaser</span><span class="p">(),</span>
+      <span class="n">Convolution</span><span class="p">(</span><span class="s2">&quot;./guitar_amp.wav&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+      <span class="n">Reverb</span><span class="p">(</span><span class="n">room_size</span><span class="o">=</span><span class="mf">0.25</span><span class="p">),</span>
+  <span class="p">])</span>
+  <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Press enter to stop streaming...&quot;</span><span class="p">)</span>
+
+<span class="c1"># The live AudioStream is now closed, and audio has stopped.</span>
+</pre></div>
+</div>
 <p>For more examples, see:</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://github.com/spotify/pedalboard/tree/master/examples">the “examples” folder of this repository</a></p></li>
@@ -434,7 +462,8 @@ as much as you like:</p>
 <li><a class="reference internal" href="#quick-start">Quick start</a></li>
 <li><a class="reference internal" href="#making-a-guitar-style-pedalboard">Making a guitar-style pedalboard</a></li>
 <li><a class="reference internal" href="#using-vst3-or-audio-unit-plugins">Using VST3® or Audio Unit plugins</a></li>
-<li><a class="reference internal" href="#creating-parallel-effects-chains">Creating parallel effects chains</a><ul>
+<li><a class="reference internal" href="#creating-parallel-effects-chains">Creating parallel effects chains</a></li>
+<li><a class="reference internal" href="#running-pedalboard-on-live-audio">Running Pedalboard on Live Audio</a><ul>
 <li><a class="reference internal" href="#contributing">Contributing</a></li>
 </ul>
 </li>

@@ -2,5 +2,5 @@ Examples
 ========
 
 .. mdinclude:: ../../README.md
-   :start-line: 72
-   :end-line: 222
+   :start-line: 73
+   :end-line: 252
