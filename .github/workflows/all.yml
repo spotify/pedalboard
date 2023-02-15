@@ -58,7 +58,7 @@ jobs:
 
   run-tests:
     runs-on: ${{ matrix.os }}
-    continue-on-error: true
+    continue-on-error: false
     env:
       MINIMUM_COVERAGE_PERCENTAGE: 80
     strategy:
