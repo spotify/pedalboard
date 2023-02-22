@@ -14,7 +14,7 @@
 
 `pedalboard` is a Python library for working with audio: reading, writing, adding effects, and more. It supports most popular audio file formats and a number of common audio effects out of the box, and also allows the use of [VST3®](https://www.steinberg.net/en/company/technologies/vst3.html) and [Audio Unit](https://en.wikipedia.org/wiki/Audio_Units) formats for third-party plugins.
 
-`pedalboard` was built by [Spotify's Audio Intelligence Lab](https://research.atspotify.com/audio-intelligence/) to enable using studio-quality audio effects from within Python and TensorFlow. Internally at Spotify, `pedalboard` is used for [data augmentation](https://en.wikipedia.org/wiki/Data_augmentation) to improve machine learning models. `pedalboard` also helps in the process of content creation, making it possible to add effects to audio without using a Digital Audio Workstation.
+`pedalboard` was built by [Spotify's Audio Intelligence Lab](https://research.atspotify.com/audio-intelligence/) to enable using studio-quality audio effects from within Python and TensorFlow. Internally at Spotify, `pedalboard` is used for [data augmentation](https://en.wikipedia.org/wiki/Data_augmentation) to improve machine learning models and to help power features like [Spotify's AI DJ](https://newsroom.spotify.com/2023-02-22/spotify-debuts-a-new-ai-dj-right-in-your-pocket/). `pedalboard` also helps in the process of content creation, making it possible to add effects to audio without using a Digital Audio Workstation.
 
 [![Documentation](https://img.shields.io/badge/Documentation-on%20github.io-brightgreen)](https://spotify.github.io/pedalboard)
 
@@ -33,7 +33,7 @@
    - Pitch effects: `PitchShift`
    - Lossy compression: `GSMFullRateCompressor`, `MP3Compressor`
    - Quality reduction: `Resample`, `Bitcrush`
- - Supports VST3® plugins on macOS, Windows, and Linux ([pedalboard.load_plugin](https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.load_plugin))
+ - Supports VST3® plugins on macOS, Windows, and Linux ([`pedalboard.load_plugin`](https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.load_plugin))
  - Supports Audio Units on macOS
  - Strong thread-safety, memory usage, and speed guarantees
    - Releases Python's Global Interpreter Lock (GIL) to allow use of multiple CPU cores
