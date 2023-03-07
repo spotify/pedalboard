@@ -240,7 +240,8 @@ public:
         return;
       }
 
-      if (requestedStart < bufferedRange.getStart()) {
+      if (requestedStart < bufferedRange.getStart() ||
+          requestedStart > bufferedRange.getEnd()) {
         bufferedRange = emptyRange(requestedStart);
         FLAC__stream_decoder_seek_absolute(
             decoder,

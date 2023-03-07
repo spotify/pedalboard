@@ -987,13 +987,13 @@ def test_real_mp3_parsing_with_lyrics3():
 
 @pytest.mark.parametrize("quality", list(range(9)))
 @pytest.mark.parametrize("chunk_duration", [16, 1024, 2048, 1024 * 1024])
-@pytest.mark.parametrize("granularity", [1, 16, 17, 1024, 1025])
+@pytest.mark.parametrize("granularity", [1, 16, 17, 1024, 1025, 44100])
 @pytest.mark.parametrize("extension", [".wav", ".aiff", ".flac"])
 def test_seek_accuracy(quality: int, chunk_duration: int, granularity: int, extension: str):
     stream = io.BytesIO()
     stream.name = "foo" + extension
     sr = 44100
-    input_audio = np.random.rand(sr // 10).astype(np.float32)
+    input_audio = np.random.rand(sr * 2).astype(np.float32)
     if extension != ".flac":
         quality = None
     with pedalboard.io.AudioFile(stream, "w", sr, quality=quality) as f:
@@ -1001,8 +1001,12 @@ def test_seek_accuracy(quality: int, chunk_duration: int, granularity: int, exte
     stream.seek(0)
 
     with pedalboard.io.ReadableAudioFile(stream) as f:
+        num_frames = f.frames
         np.testing.assert_allclose(f.read(f.frames)[0, : len(input_audio)], input_audio, atol=0.1)
-        for offset in range(0, f.frames, granularity):
+
+    for offset in range(0, num_frames, granularity):
+        stream.seek(0)
+        with pedalboard.io.ReadableAudioFile(stream) as f:
             f.seek(offset)
             np.testing.assert_allclose(
                 f.read(chunk_duration)[0, : len(input_audio) - offset],
@@ -1013,6 +1017,24 @@ def test_seek_accuracy(quality: int, chunk_duration: int, granularity: int, exte
                     f" {offset:,}"
                 ),
             )
+
+
+@pytest.mark.parametrize("seek_seconds", [0, 0.1, 0.5, 1, 10])
+@pytest.mark.parametrize("read_seconds", [1, 10])
+@pytest.mark.parametrize(
+    "filename", [os.path.join(os.path.dirname(__file__), "audio", "correct", "seek_pinknoise.flac")]
+)
+def test_real_world_flac_seek_accuracy(filename: str, seek_seconds: float, read_seconds: float):
+    with pedalboard.io.AudioFile(filename) as f:
+        f.seek(int(seek_seconds * f.samplerate))
+        chunk = f.read(int(f.samplerate * read_seconds))
+        assert np.amax(np.abs(chunk)) > 0
+
+        # Seek backwards, but not to the start of the file:
+        f.seek(int(seek_seconds * f.samplerate))
+        chunk_again = f.read(int(f.samplerate * read_seconds))
+        assert np.amax(np.abs(chunk)) > 0
+        np.testing.assert_allclose(chunk, chunk_again)
 
 
 @pytest.mark.parametrize(
