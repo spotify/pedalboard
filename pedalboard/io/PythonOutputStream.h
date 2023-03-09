@@ -48,6 +48,9 @@ public:
   virtual void flush() noexcept override {
     py::gil_scoped_acquire acquire;
 
+    if (PythonException::isPending())
+      return;
+
     try {
       if (py::hasattr(fileLike, "flush")) {
         fileLike.attr("flush")();
@@ -72,6 +75,9 @@ public:
   virtual bool write(const void *ptr, size_t numBytes) noexcept override {
     py::gil_scoped_acquire acquire;
 
+    if (PythonException::isPending())
+      return false;
+
     try {
       int bytesWritten =
           fileLike.attr("write")(py::bytes((const char *)ptr, numBytes))
@@ -93,6 +99,9 @@ public:
   virtual bool writeRepeatedByte(juce::uint8 byte,
                                  size_t numTimesToRepeat) noexcept override {
     py::gil_scoped_acquire acquire;
+
+    if (PythonException::isPending())
+      return false;
 
     try {
       const size_t maxEffectiveSize = std::min(numTimesToRepeat, (size_t)8192);

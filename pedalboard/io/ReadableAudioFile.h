@@ -431,7 +431,11 @@ public:
 
   void exit(const py::object &type, const py::object &value,
             const py::object &traceback) {
+    bool shouldThrow = PythonException::isPending();
     close();
+
+    if (shouldThrow || PythonException::isPending())
+      throw py::error_already_set();
   }
 
 private:
