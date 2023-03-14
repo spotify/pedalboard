@@ -316,17 +316,41 @@ class ReadableAudioFile(AudioFile):
         """
         Read the given number of frames (samples in each channel) from this audio file at its current position.
 
-        ``num_frames`` is a required argument, as audio files can be deceptively large. (Consider that an hour-long ``.ogg`` file may be only a handful of megabytes on disk, but may decompress to nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid hard-to-debug memory problems and out-of-memory crashes.
+        ``num_frames`` is a required argument, as audio files can be deceptively large. (Consider that
+        an hour-long ``.ogg`` file may be only a handful of megabytes on disk, but may decompress to
+        nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid
+        hard-to-debug memory problems and out-of-memory crashes.
 
-        Audio samples are returned as a multi-dimensional :class:`numpy.array` with the shape ``(channels, samples)``; i.e.: a stereo audio file will have shape ``(2, <length>)``. Returned data is always in the ``float32`` datatype.
+        Audio samples are returned as a multi-dimensional :class:`numpy.array` with the shape
+        ``(channels, samples)``; i.e.: a stereo audio file will have shape ``(2, <length>)``.
+        Returned data is always in the ``float32`` datatype.
 
-        For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the maximum sample value will be ``+1.0f``.
+        If the file does not contain enough audio data to fill ``num_frames``, the returned
+        :class:`numpy.array` will contain as many frames as could be read from the file. (See
+        :py:attr:`frames` and :py:attr:`duration_is_accurate` for more information about situations
+        in which this may be true.)
+
+        For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the
+        maximum sample value will be ``+1.0f``.
         """
     def read_raw(self, num_frames: int = 0) -> numpy.ndarray:
         """
-        Read the given number of frames (samples in each channel) from this audio file at the current position.
+        Read the given number of frames (samples in each channel) from this audio file at its current position.
 
-        Audio samples are returned as a multi-dimensional :class:`numpy.array` with the shape ``(channels, samples)``; i.e.: a stereo audio file will have shape ``(2, <length>)``. Returned data is in the raw format stored by the underlying file (one of ``int8``, ``int16``, ``int32``, or ``float32``).
+        ``num_frames`` is a required argument, as audio files can be deceptively large. (Consider that
+        an hour-long ``.ogg`` file may be only a handful of megabytes on disk, but may decompress to
+        nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid
+        hard-to-debug memory problems and out-of-memory crashes.
+
+        Audio samples are returned as a multi-dimensional :class:`numpy.array` with the shape
+        ``(channels, samples)``; i.e.: a stereo audio file will have shape ``(2, <length>)``.
+        Returned data is in the raw format stored by the underlying file (one of ``int8``, ``int16``,
+        ``int32``, or ``float32``) and may have any magnitude.
+
+        If the file does not contain enough audio data to fill ``num_frames``, the returned
+        :class:`numpy.array` will contain as many frames as could be read from the file. (See
+        :py:attr:`frames` and :py:attr:`duration_is_accurate` for more information about situations
+        in which this may be true.)
         """
     def resampled_to(
         self,
@@ -362,6 +386,34 @@ class ReadableAudioFile(AudioFile):
         """
         The duration of this file in seconds (``frames`` divided by ``samplerate``).
 
+        .. warning::
+            :py:attr:`duration` may be an overestimate for certain MP3 files.
+            Use :py:attr:`duration_is_accurate` property to determine if
+            :py:attr:`duration` is accurate. (See the documentation for the
+            :py:attr:`frames` attribute for more details.)
+
+
+        """
+    @property
+    def duration_is_accurate(self) -> bool:
+        """
+        Returns :py:const:`True` if this file's :py:attr:`frames` and
+        :py:attr:`duration` attributes are accurate, or :py:const:`False` if the
+        :py:attr:`frames` and :py:attr:`duration` attributes are estimates based
+        on the file's size and bitrate.
+
+        If :py:attr:`duration_is_accurate` is :py:const:`False`, this value will
+        change to :py:const:`True` once the file is read to completion. Once
+        :py:const:`True`, this value will not change back to :py:const:`False`
+        for the same :py:class:`AudioFile` object (even after calls to :meth:`seek`).
+
+        .. note::
+            :py:attr:`duration_is_accurate` can only ever be :py:const:`False`
+            when reading certain MP3 files. For files in other formats than MP3,
+            :py:attr:`duration_is_accurate` will always be equal to :py:const:`True`.
+
+        *Introduced in v0.7.2.*
+
 
         """
     @property
@@ -378,7 +430,43 @@ class ReadableAudioFile(AudioFile):
         """
         The total number of frames (samples per channel) in this file.
 
-        For example, if this file contains 10 seconds of stereo audio at sample rate of 44,100 Hz, ``frames`` will return ``441,000``.
+        For example, if this file contains 10 seconds of stereo audio at sample rate
+        of 44,100 Hz, ``frames`` will return ``441,000``.
+
+        .. warning::
+            When reading certain MP3 files that have been encoded in constant bitrate mode,
+            the :py:attr:`frames` and :py:attr:`duration` properties may initially be estimates
+            and **may change as the file is read**. The :py:attr:`duration_is_accurate`
+            property indicates if the values of :py:attr:`frames` and :py:attr:`duration`
+            are estimates or exact values.
+
+            This discrepancy is due to the fact that MP3 files are not required to have
+            headers that indicate the duration of the file. If an MP3 file is opened and a
+            ``Xing`` or ``Info`` header frame is not found, the initial value of the
+            :py:attr:`frames` and :py:attr:`duration` attributes are estimates based on the file's
+            bitrate and size. This may result in an overestimate of the file's duration
+            if there is additional data present in the file after the audio stream is finished.
+
+            If the exact number of frames in the file is required, read the entire file
+            first before accessing the :py:attr:`frames` or :py:attr:`duration` properties.
+            This operation forces each frame to be parsed and guarantees that
+            :py:attr:`frames` and :py:attr:`duration` are correct, at the expense of
+            scanning the entire file::
+
+                with AudioFile("my_file.mp3") as f:
+                    while f.tell() < f.frames:
+                        f.read(f.samplerate * 60)
+
+                    # f.frames is now guaranteed to be accurate, as the entire file has been read:
+                    assert f.duration_is_accurate == True
+
+                    f.seek(0)
+                    num_channels, num_samples = f.read(f.frames).shape
+                    assert num_samples == f.frames
+
+            This behaviour is present in v0.7.2 and later; prior versions would
+            raise an exception when trying to read the ends of MP3 files that contained
+            trailing non-audio data and lacked ``Xing`` or ``Info`` headers.
 
 
         """
@@ -465,13 +553,26 @@ class ResampledReadableAudioFile(AudioFile):
         """
     def read(self, num_frames: int = 0) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
         """
-        Read the given number of frames (samples in each channel, at the target sample rate) from this audio file at its current position, automatically resampling on-the-fly to ``target_sample_rate``.
+        Read the given number of frames (samples in each channel, at the target sample rate)
+        from this audio file at its current position, automatically resampling on-the-fly to
+        ``target_sample_rate``.
 
-        ``num_frames`` is a required argument, as audio files can be deceptively large. (Consider that an hour-long ``.ogg`` file may be only a handful of megabytes on disk, but may decompress to nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid hard-to-debug memory problems and out-of-memory crashes.
+        ``num_frames`` is a required argument, as audio files can be deceptively large. (Consider that
+        an hour-long ``.ogg`` file may be only a handful of megabytes on disk, but may decompress to
+        nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid
+        hard-to-debug memory problems and out-of-memory crashes.
 
-        Audio samples are returned as a multi-dimensional :class:`numpy.array` with the shape ``(channels, samples)``; i.e.: a stereo audio file will have shape ``(2, <length>)``. Returned data is always in the ``float32`` datatype.
+        Audio samples are returned as a multi-dimensional :class:`numpy.array` with the shape
+        ``(channels, samples)``; i.e.: a stereo audio file will have shape ``(2, <length>)``.
+        Returned data is always in the ``float32`` datatype.
 
-        For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the maximum sample value will be ``+1.0f``.
+        If the file does not contain enough audio data to fill ``num_frames``, the returned
+        :class:`numpy.array` will contain as many frames as could be read from the file. (See
+        :py:attr:`frames` and :py:attr:`duration_is_accurate` for more information about situations
+        in which this may be true.)
+
+        For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the
+        maximum sample value will be ``+1.0f``.
         """
     def seek(self, position: int) -> None:
         """
@@ -499,6 +600,31 @@ class ResampledReadableAudioFile(AudioFile):
         """
         The duration of this file in seconds (``frames`` divided by ``samplerate``).
 
+        .. warning::
+            When reading certain MP3 files, the :py:attr:`frames` and :py:attr:`duration` properties may initially be estimates and **may change as the file is read**. See the documentation for :py:attr:`.ReadableAudioFile.frames` for more details.
+
+
+        """
+    @property
+    def duration_is_accurate(self) -> bool:
+        """
+        Returns :py:const:`True` if this file's :py:attr:`frames` and
+        :py:attr:`duration` attributes are accurate, or :py:const:`False` if the
+        :py:attr:`frames` and :py:attr:`duration` attributes are estimates based
+        on the file's size and bitrate.
+
+        :py:attr:`duration_is_accurate` will change from :py:const:`False` to
+        :py:const:`True` as the file is read to completion. Once :py:const:`True`,
+        this value will not change back to :py:const:`False` for the same
+        :py:class:`AudioFile` object (even after calls to :meth:`seek`).
+
+        .. note::
+            :py:attr:`duration_is_accurate` can only ever be :py:const:`False`
+            when reading certain MP3 files. For files in other formats than MP3,
+            :py:attr:`duration_is_accurate` will always be equal to :py:const:`True`.
+
+        *Introduced in v0.7.2.*
+
 
         """
     @property
@@ -518,6 +644,9 @@ class ResampledReadableAudioFile(AudioFile):
         For example, if this file contains 10 seconds of stereo audio at sample rate of 44,100 Hz, and ``target_sample_rate`` is 22,050 Hz, ``frames`` will return ``22,050``.
 
         Note that different ``resampling_quality`` values used for resampling may cause ``frames`` to differ by ± 1 from its expected value.
+
+        .. warning::
+            When reading certain MP3 files, the :py:attr:`frames` and :py:attr:`duration` properties may initially be estimates and **may change as the file is read**. See the documentation for :py:attr:`.ReadableAudioFile.frames` for more details.
 
 
         """

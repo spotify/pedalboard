@@ -3281,11 +3281,11 @@ private:
 static const char *const mp3FormatName = "MP3 file";
 
 //==============================================================================
-class PatchedMP3Reader : public AudioFormatReader {
+class PatchedMP3Reader : public AudioFormatReaderWithPosition {
 public:
   PatchedMP3Reader(InputStream *const in)
-      : AudioFormatReader(in, mp3FormatName), stream(*in), currentPosition(0),
-        decodedStart(0), decodedEnd(0) {
+      : AudioFormatReaderWithPosition(in, mp3FormatName), stream(*in),
+        currentPosition(0), decodedStart(0), decodedEnd(0) {
     skipID3();
     const int64 streamPos = stream.stream.getPosition();
 
@@ -3364,6 +3364,14 @@ public:
     }
 
     return true;
+  }
+
+  int64 getCurrentPosition() const override { return currentPosition; }
+
+  bool lengthIsApproximate() const override {
+    // stream.numFrames will only be set if we have a VBR header,
+    // which identifies the exact number of samples expected in the stream:
+    return stream.numFrames <= 0;
   }
 
 private:

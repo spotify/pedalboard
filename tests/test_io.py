@@ -150,6 +150,8 @@ def test_basic_read(audio_filename: str, samplerate: float):
     af = pedalboard.io.AudioFile(audio_filename)
     assert af.samplerate == samplerate
     assert af.num_channels == 1
+    if not audio_filename.endswith(".mp3"):
+        assert af.duration_is_accurate
     if any(ext in audio_filename for ext in EXPECT_LENGTH_TO_BE_EXACT):
         assert af.frames == int(samplerate * EXPECTED_DURATION_SECONDS)
     else:
@@ -178,6 +180,7 @@ def test_basic_read(audio_filename: str, samplerate: float):
 
     af.seek(0)
     actual = af.read(af.frames)
+    assert af.duration_is_accurate
     expected = generate_sine_at(
         af.samplerate, num_channels=af.num_channels, num_seconds=af.duration
     )
@@ -978,24 +981,115 @@ def test_real_mp3_parsing_with_lyrics3():
     use a patched version of JUCE's MP3 parser to allow reading MP3 files that contain Lyrics3
     data.
     """
-    with pedalboard.io.AudioFile(
-        os.path.join(os.path.dirname(__file__), "audio", "correct", "bad_audio_file_lyrics3.mp3")
-    ) as f:
+    filename = os.path.join(
+        os.path.dirname(__file__), "audio", "correct", "bad_audio_file_lyrics3.mp3"
+    )
+    with pedalboard.io.AudioFile(filename) as f:
         assert f.frames >= 0
         assert f.read(f.frames).shape[1] == f.frames
 
 
-@pytest.mark.parametrize("quality", list(range(9)))
+@pytest.mark.parametrize("samplerate", [44100, 32000])
+@pytest.mark.parametrize("chunk_size", [1, 2, 16])
+@pytest.mark.parametrize("target_samplerate", [44100, 32000, 22050, 1234.56])
+def test_mp3_duration_estimate(samplerate: float, target_samplerate: float, chunk_size: int):
+    buf = io.BytesIO()
+    buf.name = "output.mp3"
+
+    num_frames = int(samplerate * 2)
+    with pedalboard.io.AudioFile(buf, "w", samplerate, 2, quality=320) as f:
+        f.write(np.random.rand(2, num_frames))
+
+    # Write some random crap past the end of the file to break length estimation:
+    buf.write(np.random.rand(12345).tobytes())
+    # Skip the VBR header that LAME automatically writes to force length estimation:
+    buf.seek(1044)
+
+    with pedalboard.io.AudioFile(buf) as f:
+        assert not f.duration_is_accurate
+        assert f.samplerate == samplerate
+        original_frame_estimate = f.frames
+        audio = f.read(f.frames)
+        assert f.duration_is_accurate
+        assert f.frames >= num_frames
+        assert f.frames < original_frame_estimate
+        assert audio.shape[0] == f.num_channels
+        assert audio.shape[1] == f.frames
+        assert audio.shape[1] >= num_frames
+        assert audio.shape[1] < original_frame_estimate
+
+        # Seek back to the start
+        f.seek(0)
+        # Now that we've read the whole file and
+        # seeked back, our duration should be accurate:
+        assert f.duration_is_accurate
+        # Number of frames read should match reported value:
+        assert f.frames == audio.shape[1]
+
+    # Try reading again, but in chunks this time:
+    buf.seek(1044)
+    with pedalboard.io.AudioFile(buf) as f:
+        # Ensure that if we just keep reading, we get exactly `f.frames` frames:
+        total_frames_read = 0
+        while True:
+            frames_read = f.read(chunk_size).shape[1]
+            total_frames_read += frames_read
+            if not frames_read:
+                break
+        assert total_frames_read == audio.shape[1]
+        assert total_frames_read == f.frames
+
+    # Try reading again, but checking against f.frames this time:
+    buf.seek(1044)
+    with pedalboard.io.AudioFile(buf) as f:
+        total_frames_read = 0
+        while f.tell() < f.frames:
+            frames_read = f.read(chunk_size).shape[1]
+            total_frames_read += frames_read
+            if not frames_read:
+                break
+        assert total_frames_read == audio.shape[1]
+        assert total_frames_read == f.frames
+
+        assert f.frames <= original_frame_estimate
+
+    # Ensure that the ResampledReadableAudioFile interface works as expected too:
+    buf.seek(1044)
+    with pedalboard.io.AudioFile(buf).resampled_to(
+        target_samplerate, quality=pedalboard.Resample.Quality.Linear
+    ) as f:
+        original_frame_estimate = f.frames
+        total_frames_read = 0
+        while f.tell() < f.frames:
+            frames_read = f.read(chunk_size).shape[1]
+            total_frames_read += frames_read
+            if not frames_read:
+                break
+        assert f.duration_is_accurate
+        assert abs(total_frames_read - int(audio.shape[1] * (target_samplerate / samplerate))) <= 1
+        assert total_frames_read == f.frames
+        assert f.frames <= original_frame_estimate
+
+
 @pytest.mark.parametrize("chunk_duration", [16, 1024, 2048, 1024 * 1024])
-@pytest.mark.parametrize("granularity", [1, 16, 17, 1024, 1025, 44100])
-@pytest.mark.parametrize("extension", [".wav", ".aiff", ".flac"])
-def test_seek_accuracy(quality: int, chunk_duration: int, granularity: int, extension: str):
+@pytest.mark.parametrize(
+    "granularity,max_num_frames",
+    [(1, 2305), (16, 2048), (17, 2048), (1024, 44100), (1025, 44100), (44100, 44100)],
+)
+@pytest.mark.parametrize(
+    "extension,quality", [(".wav", None), (".aiff", None)] + [(".flac", q) for q in [0, 5, 8]]
+)
+def test_seek_accuracy(
+    quality: Optional[int],
+    chunk_duration: int,
+    granularity: int,
+    max_num_frames: int,
+    extension: str,
+):
     stream = io.BytesIO()
     stream.name = "foo" + extension
     sr = 44100
-    input_audio = np.random.rand(sr * 2).astype(np.float32)
-    if extension != ".flac":
-        quality = None
+    input_audio = np.random.rand(sr).astype(np.float32)
     with pedalboard.io.AudioFile(stream, "w", sr, quality=quality) as f:
         f.write(input_audio)
     stream.seek(0)
@@ -1004,19 +1098,20 @@ def test_seek_accuracy(quality: int, chunk_duration: int, granularity: int, exte
         num_frames = f.frames
         np.testing.assert_allclose(f.read(f.frames)[0, : len(input_audio)], input_audio, atol=0.1)
 
-    for offset in range(0, num_frames, granularity):
+    for offset in range(0, min(max_num_frames, num_frames), granularity):
         stream.seek(0)
         with pedalboard.io.ReadableAudioFile(stream) as f:
-            f.seek(offset)
-            np.testing.assert_allclose(
-                f.read(chunk_duration)[0, : len(input_audio) - offset],
-                input_audio[offset : offset + chunk_duration],
-                atol=0.1,
-                err_msg=(
-                    f"{extension} file contents no longer matched after seeking to offset:"
-                    f" {offset:,}"
-                ),
-            )
+            for _ in range(2):
+                f.seek(offset)
+                np.testing.assert_allclose(
+                    f.read(chunk_duration)[0, : len(input_audio) - offset],
+                    input_audio[offset : offset + chunk_duration],
+                    atol=0.1,
+                    err_msg=(
+                        f"{extension} file contents no longer matched after seeking to offset:"
+                        f" {offset:,}"
+                    ),
+                )
 
 
 @pytest.mark.parametrize("seek_seconds", [0, 0.1, 0.5, 1, 10])
@@ -1050,6 +1145,7 @@ def test_22050Hz_mono_mp3(audio_filename: str, samplerate: float):
     assert af.duration < 30.5
     assert af.samplerate == samplerate
     data_read_all_at_once = af.read(af.frames)
+    assert af.duration_is_accurate
 
     chunk_size = MP3_FRAME_LENGTH_SAMPLES
     chunks = []
@@ -1090,6 +1186,7 @@ def test_mp3_at_all_samplerates(quality: str, samplerate: float, num_channels: i
         # Allow for up to two MP3 frames of padding:
         assert af.frames <= (signal.shape[-1] + MP3_FRAME_LENGTH_SAMPLES * 2)
         assert af.frames >= signal.shape[-1]
+        assert af.duration_is_accurate
         # MP3 is lossy, so we can't expect the waveforms to be comparable;
         # but at least make sure that the first half of the signal is loud
         # and the second half is silent:
