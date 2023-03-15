@@ -151,7 +151,9 @@ def test_basic_read(audio_filename: str, samplerate: float):
     assert af.samplerate == samplerate
     assert af.num_channels == 1
     if not audio_filename.endswith(".mp3"):
-        assert af.duration_is_accurate
+        assert af.exact_duration_known
+    else:
+        assert af.exact_duration_known in (True, False)
     if any(ext in audio_filename for ext in EXPECT_LENGTH_TO_BE_EXACT):
         assert af.frames == int(samplerate * EXPECTED_DURATION_SECONDS)
     else:
@@ -179,8 +181,9 @@ def test_basic_read(audio_filename: str, samplerate: float):
     assert f"file_dtype={af.file_dtype}" in repr(af)
 
     af.seek(0)
+    assert af.exact_duration_known in (True, False)
     actual = af.read(af.frames)
-    assert af.duration_is_accurate
+    assert af.exact_duration_known
     expected = generate_sine_at(
         af.samplerate, num_channels=af.num_channels, num_seconds=af.duration
     )
@@ -1002,15 +1005,15 @@ def test_mp3_duration_estimate(samplerate: float, target_samplerate: float, chun
 
     # Write some random crap past the end of the file to break length estimation:
     buf.write(np.random.rand(12345).tobytes())
-    # Skip the VBR header that LAME automatically writes to force length estimation:
+    # Skip the VBR header to force Pedalboard to estimate length:
     buf.seek(1044)
 
     with pedalboard.io.AudioFile(buf) as f:
-        assert not f.duration_is_accurate
+        assert not f.exact_duration_known
         assert f.samplerate == samplerate
         original_frame_estimate = f.frames
         audio = f.read(f.frames)
-        assert f.duration_is_accurate
+        assert f.exact_duration_known
         assert f.frames >= num_frames
         assert f.frames < original_frame_estimate
         assert audio.shape[0] == f.num_channels
@@ -1022,7 +1025,7 @@ def test_mp3_duration_estimate(samplerate: float, target_samplerate: float, chun
         f.seek(0)
         # Now that we've read the whole file and
         # seeked back, our duration should be accurate:
-        assert f.duration_is_accurate
+        assert f.exact_duration_known
         # Number of frames read should match reported value:
         assert f.frames == audio.shape[1]
 
@@ -1065,7 +1068,7 @@ def test_mp3_duration_estimate(samplerate: float, target_samplerate: float, chun
             total_frames_read += frames_read
             if not frames_read:
                 break
-        assert f.duration_is_accurate
+        assert f.exact_duration_known
         assert abs(total_frames_read - int(audio.shape[1] * (target_samplerate / samplerate))) <= 1
         assert total_frames_read == f.frames
         assert f.frames <= original_frame_estimate
@@ -1144,8 +1147,9 @@ def test_22050Hz_mono_mp3(audio_filename: str, samplerate: float):
     af = pedalboard.io.ReadableAudioFile(audio_filename)
     assert af.duration < 30.5
     assert af.samplerate == samplerate
+    assert af.exact_duration_known in (True, False)
     data_read_all_at_once = af.read(af.frames)
-    assert af.duration_is_accurate
+    assert af.exact_duration_known
 
     chunk_size = MP3_FRAME_LENGTH_SAMPLES
     chunks = []
@@ -1186,7 +1190,7 @@ def test_mp3_at_all_samplerates(quality: str, samplerate: float, num_channels: i
         # Allow for up to two MP3 frames of padding:
         assert af.frames <= (signal.shape[-1] + MP3_FRAME_LENGTH_SAMPLES * 2)
         assert af.frames >= signal.shape[-1]
-        assert af.duration_is_accurate
+        assert af.exact_duration_known
         # MP3 is lossy, so we can't expect the waveforms to be comparable;
         # but at least make sure that the first half of the signal is loud
         # and the second half is silent:

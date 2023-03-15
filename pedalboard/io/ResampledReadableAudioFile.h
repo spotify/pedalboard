@@ -61,7 +61,7 @@ public:
 
   long getNumChannels() const { return audioFile->getNumChannels(); }
 
-  bool durationIsAccurate() const { return audioFile->durationIsAccurate(); }
+  bool exactDurationKnown() const { return audioFile->exactDurationKnown(); }
 
   std::string getFileFormat() const { return audioFile->getFileFormat(); }
 
@@ -315,9 +315,10 @@ Audio samples are returned as a multi-dimensional :class:`numpy.array` with the 
 Returned data is always in the ``float32`` datatype.
 
 If the file does not contain enough audio data to fill ``num_frames``, the returned
-:class:`numpy.array` will contain as many frames as could be read from the file. (See
-:py:attr:`frames` and :py:attr:`duration_is_accurate` for more information about situations
-in which this may be true.)
+:class:`numpy.array` will contain as many frames as could be read from the file. (In some cases,
+passing :py:attr:`frames` as ``num_frames`` may still return less data than expected. See documentation
+for :py:attr:`frames` and :py:attr:`exact_duration_known` for more information about situations
+in which this may occur.)
 
 For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the
 maximum sample value will be ``+1.0f``.
@@ -391,23 +392,23 @@ maximum sample value will be ``+1.0f``.
       .def_property_readonly("num_channels",
                              &ResampledReadableAudioFile::getNumChannels,
                              "The number of channels in this file.")
-      .def_property_readonly("duration_is_accurate",
-                             &ResampledReadableAudioFile::durationIsAccurate,
+      .def_property_readonly("exact_duration_known",
+                             &ResampledReadableAudioFile::exactDurationKnown,
                              R"(
 Returns :py:const:`True` if this file's :py:attr:`frames` and
-:py:attr:`duration` attributes are accurate, or :py:const:`False` if the
+:py:attr:`duration` attributes are exact values, or :py:const:`False` if the
 :py:attr:`frames` and :py:attr:`duration` attributes are estimates based
 on the file's size and bitrate.
 
-:py:attr:`duration_is_accurate` will change from :py:const:`False` to
+:py:attr:`exact_duration_known` will change from :py:const:`False` to
 :py:const:`True` as the file is read to completion. Once :py:const:`True`,
 this value will not change back to :py:const:`False` for the same
 :py:class:`AudioFile` object (even after calls to :meth:`seek`).
 
 .. note::
-    :py:attr:`duration_is_accurate` can only ever be :py:const:`False`
+    :py:attr:`exact_duration_known` will only ever be :py:const:`False`
     when reading certain MP3 files. For files in other formats than MP3,
-    :py:attr:`duration_is_accurate` will always be equal to :py:const:`True`.
+    :py:attr:`exact_duration_known` will always be equal to :py:const:`True`.
 
 *Introduced in v0.7.2.*
 )")
