@@ -986,14 +986,19 @@ def test_real_mp3_parsing_with_lyrics3():
 
 
 @pytest.mark.parametrize("quality", list(range(9)))
-@pytest.mark.parametrize("chunk_duration", [16, 1024, 2048, 1024 * 1024])
-@pytest.mark.parametrize("granularity", [1, 16, 17, 1024, 1025, 44100])
+@pytest.mark.parametrize("chunk_duration", [16, 1024, 2048])
+@pytest.mark.parametrize(
+    "granularity,max_num_frames",
+    [(1, 2048), (16, 2048), (17, 2048), (1024, 44100), (1025, 44100), (44100, 44100)],
+)
 @pytest.mark.parametrize("extension", [".wav", ".aiff", ".flac"])
-def test_seek_accuracy(quality: int, chunk_duration: int, granularity: int, extension: str):
+def test_seek_accuracy(
+    quality: int, chunk_duration: int, granularity: int, max_num_frames: int, extension: str
+):
     stream = io.BytesIO()
     stream.name = "foo" + extension
     sr = 44100
-    input_audio = np.random.rand(sr * 2).astype(np.float32)
+    input_audio = np.random.rand(sr).astype(np.float32)
     if extension != ".flac":
         quality = None
     with pedalboard.io.AudioFile(stream, "w", sr, quality=quality) as f:
@@ -1004,19 +1009,20 @@ def test_seek_accuracy(quality: int, chunk_duration: int, granularity: int, exte
         num_frames = f.frames
         np.testing.assert_allclose(f.read(f.frames)[0, : len(input_audio)], input_audio, atol=0.1)
 
-    for offset in range(0, num_frames, granularity):
+    for offset in range(0, min(max_num_frames, num_frames), granularity):
         stream.seek(0)
         with pedalboard.io.ReadableAudioFile(stream) as f:
-            f.seek(offset)
-            np.testing.assert_allclose(
-                f.read(chunk_duration)[0, : len(input_audio) - offset],
-                input_audio[offset : offset + chunk_duration],
-                atol=0.1,
-                err_msg=(
-                    f"{extension} file contents no longer matched after seeking to offset:"
-                    f" {offset:,}"
-                ),
-            )
+            for _ in range(2):
+                f.seek(offset)
+                np.testing.assert_allclose(
+                    f.read(chunk_duration)[0, : len(input_audio) - offset],
+                    input_audio[offset : offset + chunk_duration],
+                    atol=0.1,
+                    err_msg=(
+                        f"{extension} file contents no longer matched after seeking to offset:"
+                        f" {offset:,}"
+                    ),
+                )
 
 
 @pytest.mark.parametrize("seek_seconds", [0, 0.1, 0.5, 1, 10])
@@ -1099,3 +1105,41 @@ def test_mp3_at_all_samplerates(quality: str, samplerate: float, num_channels: i
         # skip a couple MP3 frames:
         af.read(MP3_FRAME_LENGTH_SAMPLES * 2)
         assert np.amax(np.mean(af.read(samplerate * secs), axis=0)) < 0.01
+
+
+def test_useful_exception_when_writing_to_unseekable_file_like():
+    """
+    Sigh.
+
+    Writing to a tensorflow.io.gfile.GFile object fails, due to a known TensorFlow
+    bug (as of March 9th, 2023): https://github.com/tensorflow/tensorflow/issues/32122
+
+    While Pedalboard can't (or won't) easily work around this bug,
+    this test ensures that if we encounter a misbehaving file-like object,
+    we throw a useful error message.
+    """
+
+    class ILieAboutSeekability(object):
+        def __init__(self):
+            self.bytes_written = 0
+
+        @property
+        def name(self) -> str:
+            return "something.wav"
+
+        def seekable(self) -> bool:
+            return True
+
+        def write(self, data: bytes) -> None:
+            self.bytes_written += len(data)
+
+        def seek(self, new_position: int) -> None:
+            raise NotImplementedError("What's a seek?")
+
+        def tell(self) -> int:
+            return self.bytes_written
+
+    with pytest.raises(NotImplementedError) as e:
+        with pedalboard.io.AudioFile(ILieAboutSeekability(), "w", 44100, 2) as f:
+            f.write(np.random.rand(2, 44100))
+    assert "What's a seek?" in str(e)

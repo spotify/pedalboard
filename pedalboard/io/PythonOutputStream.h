@@ -48,6 +48,9 @@ public:
   virtual void flush() noexcept override {
     py::gil_scoped_acquire acquire;
 
+    if (PythonException::isPending())
+      return;
+
     try {
       if (py::hasattr(fileLike, "flush")) {
         fileLike.attr("flush")();
@@ -72,10 +75,29 @@ public:
   virtual bool write(const void *ptr, size_t numBytes) noexcept override {
     py::gil_scoped_acquire acquire;
 
+    if (PythonException::isPending())
+      return false;
+
     try {
-      int bytesWritten =
-          fileLike.attr("write")(py::bytes((const char *)ptr, numBytes))
-              .cast<int>();
+      py::object writeResponse =
+          fileLike.attr("write")(py::bytes((const char *)ptr, numBytes));
+
+      int bytesWritten;
+      if (writeResponse.is_none()) {
+        // Assume bytesWritten is numBytes if `write` returned None.
+        // This shouldn't happen, but sometimes does if the file-like
+        // object is not fully compliant with io.RawIOBase.
+        bytesWritten = numBytes;
+      } else {
+        try {
+          bytesWritten = writeResponse.cast<int>();
+        } catch (const py::cast_error &e) {
+          throw py::type_error(
+              py::repr(fileLike.attr("write")).cast<std::string>() +
+              " was expected to return an integer, but got " +
+              py::repr(writeResponse).cast<std::string>());
+        }
+      }
 
       if (bytesWritten < numBytes) {
         return false;
@@ -94,6 +116,9 @@ public:
                                  size_t numTimesToRepeat) noexcept override {
     py::gil_scoped_acquire acquire;
 
+    if (PythonException::isPending())
+      return false;
+
     try {
       const size_t maxEffectiveSize = std::min(numTimesToRepeat, (size_t)8192);
       std::vector<char> buffer(maxEffectiveSize, byte);
@@ -101,10 +126,25 @@ public:
       for (size_t i = 0; i < numTimesToRepeat; i += buffer.size()) {
         const size_t chunkSize = std::min(numTimesToRepeat - i, buffer.size());
 
-        int bytesWritten = fileLike
-                               .attr("write")(py::bytes(
-                                   (const char *)buffer.data(), chunkSize))
-                               .cast<int>();
+        py::object writeResponse = fileLike.attr("write")(
+            py::bytes((const char *)buffer.data(), chunkSize));
+
+        int bytesWritten;
+        if (writeResponse.is_none()) {
+          // Assume bytesWritten is numBytes if `write` returned None.
+          // This shouldn't happen, but sometimes does if the file-like
+          // object is not fully compliant with io.RawIOBase.
+          bytesWritten = chunkSize;
+        } else {
+          try {
+            bytesWritten = writeResponse.cast<int>();
+          } catch (const py::cast_error &e) {
+            throw py::type_error(
+                py::repr(fileLike.attr("write")).cast<std::string>() +
+                " was expected to return an integer, but got " +
+                py::repr(writeResponse).cast<std::string>());
+          }
+        }
 
         if (bytesWritten != chunkSize) {
           return false;
