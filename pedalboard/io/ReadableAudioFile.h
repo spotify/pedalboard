@@ -54,9 +54,9 @@ public:
     }
 
     if (!reader)
-      throw std::domain_error(
-          "Failed to open audio file: file \"" + filename +
-          "\" does not seem to be of a known or supported format.");
+      throw std::domain_error("Failed to open audio file: file \"" + filename +
+                              "\" does not seem to contain audio data in a "
+                              "known or supported format.");
   }
 
   ReadableAudioFile(std::unique_ptr<PythonInputStream> inputStream) {
@@ -65,12 +65,14 @@ public:
     if (!inputStream->isSeekable()) {
       PythonException::raise();
       throw std::domain_error("Failed to open audio file-like object: input "
-                              "stream must be seekable.");
+                              "stream " +
+                              inputStream->getRepresentation() +
+                              " must be seekable.");
     }
 
-    if (!reader) {
-      auto originalStreamPosition = inputStream->getPosition();
+    auto originalStreamPosition = inputStream->getPosition();
 
+    if (!reader) {
       for (int i = 0; i < formatManager.getNumKnownFormats(); i++) {
         auto *af = formatManager.getKnownFormat(i);
 
@@ -87,7 +89,8 @@ public:
         inputStream->setPosition(originalStreamPosition);
         if (inputStream->getPosition() != originalStreamPosition) {
           throw std::runtime_error(
-              "Input file-like object did not seek to the expected position. "
+              "Input file-like object " + inputStream->getRepresentation() +
+              " did not seek to the expected position. "
               "The provided file-like object must be fully seekable to allow "
               "reading audio files.");
         }
@@ -96,11 +99,35 @@ public:
 
     PythonException::raise();
 
-    if (!reader)
-      throw std::domain_error(
-          "Failed to open audio file-like object: " +
-          inputStream->getRepresentation() +
-          " does not seem to contain a known or supported format.");
+    if (!reader) {
+      std::ostringstream ss;
+      ss.imbue(std::locale(""));
+
+      ss << "Failed to open audio file-like object: ";
+      ss << inputStream->getRepresentation();
+
+      if (originalStreamPosition != 0) {
+        if (originalStreamPosition < inputStream->getTotalLength()) {
+          ss << " has its stream position set to " << originalStreamPosition;
+          ss << "bytes. Reading from this position did not produce "
+                "audio data in a known or supported format.";
+        } else {
+          ss << " has its stream position set to the end of the stream ("
+             << originalStreamPosition;
+          ss << "bytes).";
+        }
+        ss << " Try seeking this file-like object back to its start before "
+              "passing it to AudioFile";
+      } else if (inputStream->getTotalLength() == 0) {
+        ss << " is empty";
+      } else {
+        ss << " does not seem to contain audio data in a known or supported "
+              "format";
+      }
+      ss << ".";
+
+      throw std::domain_error(ss.str());
+    }
 
     PythonException::raise();
   }
