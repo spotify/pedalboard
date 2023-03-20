@@ -159,7 +159,11 @@ public:
 
   void exit(const py::object &type, const py::object &value,
             const py::object &traceback) {
+    bool shouldThrow = PythonException::isPending();
     stop();
+
+    if (shouldThrow || PythonException::isPending())
+      throw py::error_already_set();
   }
 
   static std::vector<std::string> getDeviceNames(bool isInput) {

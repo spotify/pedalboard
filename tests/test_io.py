@@ -1200,3 +1200,41 @@ def test_mp3_at_all_samplerates(quality: str, samplerate: float, num_channels: i
         # skip a couple MP3 frames:
         af.read(MP3_FRAME_LENGTH_SAMPLES * 2)
         assert np.amax(np.mean(af.read(samplerate * secs), axis=0)) < 0.01
+
+
+def test_useful_exception_when_writing_to_unseekable_file_like():
+    """
+    Sigh.
+
+    Writing to a tensorflow.io.gfile.GFile object fails, due to a known TensorFlow
+    bug (as of March 9th, 2023): https://github.com/tensorflow/tensorflow/issues/32122
+
+    While Pedalboard can't (or won't) easily work around this bug,
+    this test ensures that if we encounter a misbehaving file-like object,
+    we throw a useful error message.
+    """
+
+    class ILieAboutSeekability(object):
+        def __init__(self):
+            self.bytes_written = 0
+
+        @property
+        def name(self) -> str:
+            return "something.wav"
+
+        def seekable(self) -> bool:
+            return True
+
+        def write(self, data: bytes) -> None:
+            self.bytes_written += len(data)
+
+        def seek(self, new_position: int) -> None:
+            raise NotImplementedError("What's a seek?")
+
+        def tell(self) -> int:
+            return self.bytes_written
+
+    with pytest.raises(NotImplementedError) as e:
+        with pedalboard.io.AudioFile(ILieAboutSeekability(), "w", 44100, 2) as f:
+            f.write(np.random.rand(2, 44100))
+    assert "What's a seek?" in str(e)
