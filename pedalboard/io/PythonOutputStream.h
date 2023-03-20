@@ -84,7 +84,7 @@ public:
 
       int bytesWritten;
       if (writeResponse.is_none()) {
-        // Assume bytesWritten is numBytes if `write` returned 0.
+        // Assume bytesWritten is numBytes if `write` returned None.
         // This shouldn't happen, but sometimes does if the file-like
         // object is not fully compliant with io.RawIOBase.
         bytesWritten = numBytes;
@@ -131,7 +131,7 @@ public:
 
         int bytesWritten;
         if (writeResponse.is_none()) {
-          // Assume bytesWritten is numBytes if `write` returned 0.
+          // Assume bytesWritten is numBytes if `write` returned None.
           // This shouldn't happen, but sometimes does if the file-like
           // object is not fully compliant with io.RawIOBase.
           bytesWritten = chunkSize;
