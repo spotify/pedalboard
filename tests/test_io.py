@@ -322,6 +322,29 @@ def test_read_mp3_from_unnamed_stream(mp3_filename: str):
         assert af is not None
 
 
+@pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
+def test_read_from_end_of_stream_produces_helpful_error_message(extension: str):
+    buf = io.BytesIO()
+    buf.name = f"something.{extension}"
+    with pedalboard.io.AudioFile(buf, "w", 44100, 1) as af:
+        af.write(np.random.rand(44100))
+    buf.seek(len(buf.getvalue()))
+
+    try:
+        with pedalboard.io.AudioFile(buf) as af:
+            assert af.frames >= 44100
+    except Exception as e:
+        assert "end of the stream" in str(e)
+        assert "Try seeking" in str(e)
+
+
+def test_read_from_empty_stream_produces_helpful_error_message():
+    with pytest.raises(ValueError) as exc_info:
+        with pedalboard.io.AudioFile(io.BytesIO()):
+            pass
+    assert "is empty" in str(exc_info.value)
+
+
 def test_file_like_exceptions_propagate():
     audio_filename = FILENAMES_AND_SAMPLERATES[0][0]
     stream = open(audio_filename, "rb")
