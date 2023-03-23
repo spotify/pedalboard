@@ -569,9 +569,10 @@ class ResampledReadableAudioFile(AudioFile):
         Returned data is always in the ``float32`` datatype.
 
         If the file does not contain enough audio data to fill ``num_frames``, the returned
-        :class:`numpy.array` will contain as many frames as could be read from the file. (See
-        :py:attr:`frames` and :py:attr:`exact_duration_known` for more information about situations
-        in which this may be true.)
+        :class:`numpy.array` will contain as many frames as could be read from the file. (In some cases,
+        passing :py:attr:`frames` as ``num_frames`` may still return less data than expected. See documentation
+        for :py:attr:`frames` and :py:attr:`exact_duration_known` for more information about situations
+        in which this may occur.)
 
         For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the
         maximum sample value will be ``+1.0f``.
