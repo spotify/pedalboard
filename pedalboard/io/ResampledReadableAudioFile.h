@@ -61,6 +61,8 @@ public:
 
   long getNumChannels() const { return audioFile->getNumChannels(); }
 
+  bool exactDurationKnown() const { return audioFile->exactDurationKnown(); }
+
   std::string getFileFormat() const { return audioFile->getFileFormat(); }
 
   std::string getFileDatatype() const { return audioFile->getFileDatatype(); }
@@ -302,21 +304,29 @@ inline void init_resampled_readable_audio_file(
           py::arg("cls"), py::arg("audio_file"), py::arg("target_sample_rate"),
           py::arg("resampling_quality") = ResamplingQuality::WindowedSinc)
       .def("read", &ResampledReadableAudioFile::read, py::arg("num_frames") = 0,
-           "Read the given number of frames (samples in each channel, at the "
-           "target sample rate) from this audio file at its current position, "
-           "automatically resampling on-the-fly to "
-           "``target_sample_rate``.\n\n``num_frames`` is a required argument, "
-           "as audio files can be deceptively large. (Consider that an "
-           "hour-long ``.ogg`` file may be only a handful of megabytes on "
-           "disk, but may decompress to nearly a gigabyte in memory.) Audio "
-           "files should be read in chunks, rather than all at once, to avoid "
-           "hard-to-debug memory problems and out-of-memory crashes.\n\nAudio "
-           "samples are returned as a multi-dimensional :class:`numpy.array` "
-           "with the shape ``(channels, samples)``; i.e.: a stereo audio file "
-           "will have shape ``(2, <length>)``. Returned data is always in the "
-           "``float32`` datatype.\n\nFor most (but not all) audio files, the "
-           "minimum possible sample value will be ``-1.0f`` and the maximum "
-           "sample value will be ``+1.0f``.")
+           R"(
+Read the given number of frames (samples in each channel, at the target sample rate)
+from this audio file at its current position, automatically resampling on-the-fly to
+``target_sample_rate``.
+
+``num_frames`` is a required argument, as audio files can be deceptively large. (Consider that 
+an hour-long ``.ogg`` file may be only a handful of megabytes on disk, but may decompress to
+nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid 
+hard-to-debug memory problems and out-of-memory crashes.
+
+Audio samples are returned as a multi-dimensional :class:`numpy.array` with the shape
+``(channels, samples)``; i.e.: a stereo audio file will have shape ``(2, <length>)``.
+Returned data is always in the ``float32`` datatype.
+
+If the file does not contain enough audio data to fill ``num_frames``, the returned
+:class:`numpy.array` will contain as many frames as could be read from the file. (In some cases,
+passing :py:attr:`frames` as ``num_frames`` may still return less data than expected. See documentation
+for :py:attr:`frames` and :py:attr:`exact_duration_known` for more information about situations
+in which this may occur.)
+
+For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the
+maximum sample value will be ``+1.0f``.
+)")
       .def("seekable", &ResampledReadableAudioFile::isSeekable,
            "Returns True if this file is currently open and calls to seek() "
            "will work.")
@@ -386,6 +396,26 @@ inline void init_resampled_readable_audio_file(
       .def_property_readonly("num_channels",
                              &ResampledReadableAudioFile::getNumChannels,
                              "The number of channels in this file.")
+      .def_property_readonly("exact_duration_known",
+                             &ResampledReadableAudioFile::exactDurationKnown,
+                             R"(
+Returns :py:const:`True` if this file's :py:attr:`frames` and
+:py:attr:`duration` attributes are exact values, or :py:const:`False` if the
+:py:attr:`frames` and :py:attr:`duration` attributes are estimates based
+on the file's size and bitrate.
+
+:py:attr:`exact_duration_known` will change from :py:const:`False` to
+:py:const:`True` as the file is read to completion. Once :py:const:`True`,
+this value will not change back to :py:const:`False` for the same
+:py:class:`AudioFile` object (even after calls to :meth:`seek`).
+
+.. note::
+    :py:attr:`exact_duration_known` will only ever be :py:const:`False`
+    when reading certain MP3 files. For files in other formats than MP3,
+    :py:attr:`exact_duration_known` will always be equal to :py:const:`True`.
+
+*Introduced in v0.7.2.*
+)")
       .def_property_readonly(
           "frames", &ResampledReadableAudioFile::getLengthInSamples,
           "The total number of frames (samples per "
@@ -394,11 +424,21 @@ inline void init_resampled_readable_audio_file(
           "rate of 44,100 Hz, and ``target_sample_rate`` is 22,050 Hz, "
           "``frames`` will return ``22,050``.\n\nNote that different "
           "``resampling_quality`` values used for resampling may cause "
-          "``frames`` to differ by ± 1 from its expected value.")
-      .def_property_readonly("duration",
-                             &ResampledReadableAudioFile::getDuration,
-                             "The duration of this file in seconds (``frames`` "
-                             "divided by ``samplerate``).")
+          "``frames`` to differ by ± 1 from its expected value.\n\n.. "
+          "warning::\n    When reading certain MP3 files, the "
+          ":py:attr:`frames` and :py:attr:`duration` properties may "
+          "initially be estimates and **may change as the file is read**. "
+          "See the documentation for :py:attr:`.ReadableAudioFile.frames` "
+          "for more details.")
+      .def_property_readonly(
+          "duration", &ResampledReadableAudioFile::getDuration,
+          "The duration of this file in seconds (``frames`` "
+          "divided by ``samplerate``).\n\n.. "
+          "warning::\n    When reading certain MP3 files, the "
+          ":py:attr:`frames` and :py:attr:`duration` properties may "
+          "initially be estimates and **may change as the file is read**. "
+          "See the documentation for :py:attr:`.ReadableAudioFile.frames` "
+          "for more details.")
       .def_property_readonly(
           "file_dtype", &ResampledReadableAudioFile::getFileDatatype,
           "The data type (``\"int16\"``, ``\"float32\"``, etc) stored "

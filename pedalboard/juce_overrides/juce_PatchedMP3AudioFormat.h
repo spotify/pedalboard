@@ -1,3 +1,4 @@
+#pragma once
 #include "../JuceHeader.h"
 /*
   ==============================================================================
@@ -67,6 +68,15 @@ public:
                                      const StringPairArray &metadataValues,
                                      int qualityOptionIndex) override;
   using AudioFormat::createWriterFor;
+};
+
+class AudioFormatReaderWithPosition : public AudioFormatReader {
+public:
+  AudioFormatReaderWithPosition(InputStream *sourceStream,
+                                const String &formatName)
+      : AudioFormatReader(sourceStream, formatName) {}
+  virtual int64 getCurrentPosition() const = 0;
+  virtual bool lengthIsApproximate() const { return false; };
 };
 
 } // namespace juce

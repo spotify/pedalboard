@@ -25,6 +25,7 @@
 
 #include "../BufferUtils.h"
 #include "../JuceHeader.h"
+#include "../juce_overrides/juce_PatchedMP3AudioFormat.h"
 #include "AudioFile.h"
 #include "PythonInputStream.h"
 
@@ -111,16 +112,16 @@ public:
     return reader->sampleRate;
   }
 
-  long getLengthInSamples() const {
+  long long getLengthInSamples() const {
     if (!reader)
       throw std::runtime_error("I/O operation on a closed file.");
-    return reader->lengthInSamples;
+    return reader->lengthInSamples + (lengthCorrection ? *lengthCorrection : 0);
   }
 
   double getDuration() const {
     if (!reader)
       throw std::runtime_error("I/O operation on a closed file.");
-    return reader->lengthInSamples / reader->sampleRate;
+    return getLengthInSamples() / reader->sampleRate;
   }
 
   long getNumChannels() const {
@@ -183,9 +184,13 @@ public:
     // Allocate a buffer to return of up to numSamples:
     long long numChannels = reader->numChannels;
     numSamples =
-        std::min(numSamples, reader->lengthInSamples - currentPosition);
+        std::min(numSamples, (reader->lengthInSamples +
+                              (lengthCorrection ? *lengthCorrection : 0)) -
+                                 currentPosition);
     py::array_t<float> buffer =
         py::array_t<float>({(long long)numChannels, (long long)numSamples});
+
+    long long numSamplesToKeep = numSamples;
 
     py::buffer_info outputInfo = buffer.request();
 
@@ -208,9 +213,27 @@ public:
                                        currentPosition, numSamples);
         PythonException::raise();
 
-        if (!readResult) {
-          throwReadError(currentPosition, numSamples);
+        juce::int64 samplesRead = numSamples;
+        if (juce::AudioFormatReaderWithPosition *positionAware =
+                dynamic_cast<juce::AudioFormatReaderWithPosition *>(
+                    reader.get())) {
+          samplesRead = positionAware->getCurrentPosition() - currentPosition;
         }
+
+        bool hitEndOfFile =
+            (samplesRead + currentPosition) == reader->lengthInSamples;
+
+        // We read some data, but not as much as we asked for!
+        // This will only happen for lossy, header-optional formats
+        // like MP3.
+        if (samplesRead < numSamples || hitEndOfFile) {
+          lengthCorrection =
+              (samplesRead + currentPosition) - reader->lengthInSamples;
+        } else if (!readResult) {
+          throwReadError(currentPosition, numSamples, samplesRead);
+        }
+
+        numSamplesToKeep = samplesRead;
       } else {
         // If the audio is stored in an integral format, read it as integers
         // and do the floating-point conversion ourselves to work around
@@ -256,7 +279,12 @@ public:
       }
     }
 
-    currentPosition += numSamples;
+    currentPosition += numSamplesToKeep;
+
+    if (numSamplesToKeep < numSamples) {
+      buffer.resize({(long long)numChannels, (long long)numSamplesToKeep});
+    }
+
     return buffer;
   }
 
@@ -300,7 +328,9 @@ public:
     // Allocate a buffer to return of up to numSamples:
     long long numChannels = reader->numChannels;
     numSamples =
-        std::min(numSamples, reader->lengthInSamples - currentPosition);
+        std::min(numSamples, (reader->lengthInSamples +
+                              (lengthCorrection ? *lengthCorrection : 0)) -
+                                 currentPosition);
     py::array_t<SampleType> buffer = py::array_t<SampleType>(
         {(long long)numChannels, (long long)numSamples});
 
@@ -378,10 +408,13 @@ public:
     const juce::ScopedLock scopedLock(objectLock);
     if (!reader)
       throw std::runtime_error("I/O operation on a closed file.");
-    if (targetPosition > reader->lengthInSamples)
-      throw std::domain_error("Cannot seek beyond end of file (" +
-                              std::to_string(reader->lengthInSamples) +
-                              " frames).");
+    if (targetPosition >
+        (reader->lengthInSamples + (lengthCorrection ? *lengthCorrection : 0)))
+      throw std::domain_error(
+          "Cannot seek beyond end of file (" +
+          std::to_string(reader->lengthInSamples +
+                         (lengthCorrection ? *lengthCorrection : 0)) +
+          " frames).");
     if (targetPosition < 0)
       throw std::domain_error("Cannot seek before start of file.");
     currentPosition = targetPosition;
@@ -412,6 +445,25 @@ public:
     return !isClosed();
   }
 
+  bool exactDurationKnown() const {
+    const juce::ScopedLock scopedLock(objectLock);
+
+    if (juce::AudioFormatReaderWithPosition *approximateLengthReader =
+            dynamic_cast<juce::AudioFormatReaderWithPosition *>(reader.get())) {
+      if (approximateLengthReader->lengthIsApproximate()) {
+        // Note: lengthCorrection is an std::optional,
+        // so this is checking if it's set; not if it's zero:
+        if (!lengthCorrection) {
+          // The reader returns an approximate length, and we haven't
+          // hit the end of the file yet:
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
   std::optional<std::string> getFilename() const { return filename; }
 
   PythonInputStream *getPythonInputStream() const {
@@ -439,7 +491,8 @@ public:
   }
 
 private:
-  void throwReadError(long long currentPosition, long long numSamples) {
+  void throwReadError(long long currentPosition, long long numSamples,
+                      long long samplesRead = -1) {
     std::ostringstream ss;
     ss.imbue(std::locale(""));
 
@@ -455,8 +508,12 @@ private:
        << " Tried to read " << numSamples
        << " frames of audio from frame offset " << currentPosition;
 
+    if (samplesRead != -1) {
+      ss << " but only decoded " << samplesRead << " frames";
+    }
+
     if (PythonInputStream *stream = getPythonInputStream()) {
-      ss << " but encountered invalid data near byte " << stream->getPosition();
+      ss << " and encountered invalid data near byte " << stream->getPosition();
     }
     ss << ".";
 
@@ -481,6 +538,14 @@ private:
   juce::CriticalSection objectLock;
 
   int currentPosition = 0;
+
+  // Certain files (notably CBR MP3 files) can report the wrong number of
+  // frames until the entire file is scanned. This field stores the delta
+  // between the actual number of frames and the reported number of frames.
+  // If more frames are present in the file than expected, `lengthCorrection`
+  // will be greater than 0; if fewer are present, `lengthCorrection` will
+  // be less than 0.
+  std::optional<long long> lengthCorrection = {};
 };
 
 inline py::class_<ReadableAudioFile, AudioFile,
@@ -560,30 +625,47 @@ inline void init_readable_audio_file(
                 std::make_unique<PythonInputStream>(filelike));
           },
           py::arg("cls"), py::arg("file_like"))
-      .def(
-          "read", &ReadableAudioFile::read, py::arg("num_frames") = 0,
-          "Read the given number of frames (samples in each channel) from this "
-          "audio file at its current position.\n\n``num_frames`` is a required "
-          "argument, as audio files can be deceptively large. (Consider that "
-          "an hour-long ``.ogg`` file may be only a handful of megabytes on "
-          "disk, but may decompress to nearly a gigabyte in memory.) Audio "
-          "files should be read in chunks, rather than all at once, to avoid "
-          "hard-to-debug memory problems and out-of-memory crashes.\n\nAudio "
-          "samples are returned as a multi-dimensional :class:`numpy.array` "
-          "with the shape ``(channels, samples)``; i.e.: a stereo audio file "
-          "will have shape ``(2, <length>)``. Returned data is always in the "
-          "``float32`` datatype.\n\nFor most (but not all) audio files, the "
-          "minimum possible sample value will be ``-1.0f`` and the maximum "
-          "sample value will be ``+1.0f``.")
-      .def(
-          "read_raw", &ReadableAudioFile::readRaw, py::arg("num_frames") = 0,
-          "Read the given number of frames (samples in each channel) from this "
-          "audio file at the current position.\n\nAudio samples are returned "
-          "as a multi-dimensional :class:`numpy.array` with the shape "
-          "``(channels, samples)``; i.e.: a stereo audio file "
-          "will have shape ``(2, <length>)``. Returned data is in the raw "
-          "format stored by the underlying file (one of ``int8``, ``int16``, "
-          "``int32``, or ``float32``).")
+      .def("read", &ReadableAudioFile::read, py::arg("num_frames") = 0, R"(
+Read the given number of frames (samples in each channel) from this audio file at its current position.
+
+``num_frames`` is a required argument, as audio files can be deceptively large. (Consider that 
+an hour-long ``.ogg`` file may be only a handful of megabytes on disk, but may decompress to
+nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid 
+hard-to-debug memory problems and out-of-memory crashes.
+
+Audio samples are returned as a multi-dimensional :class:`numpy.array` with the shape
+``(channels, samples)``; i.e.: a stereo audio file will have shape ``(2, <length>)``.
+Returned data is always in the ``float32`` datatype.
+
+If the file does not contain enough audio data to fill ``num_frames``, the returned
+:class:`numpy.array` will contain as many frames as could be read from the file. (In some cases,
+passing :py:attr:`frames` as ``num_frames`` may still return less data than expected. See documentation
+for :py:attr:`frames` and :py:attr:`exact_duration_known` for more information about situations
+in which this may occur.)
+
+For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the
+maximum sample value will be ``+1.0f``.
+)")
+      .def("read_raw", &ReadableAudioFile::readRaw, py::arg("num_frames") = 0,
+           R"(
+Read the given number of frames (samples in each channel) from this audio file at its current position.
+
+``num_frames`` is a required argument, as audio files can be deceptively large. (Consider that 
+an hour-long ``.ogg`` file may be only a handful of megabytes on disk, but may decompress to
+nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid 
+hard-to-debug memory problems and out-of-memory crashes.
+
+Audio samples are returned as a multi-dimensional :class:`numpy.array` with the shape
+``(channels, samples)``; i.e.: a stereo audio file will have shape ``(2, <length>)``.
+Returned data is in the raw format stored by the underlying file (one of ``int8``, ``int16``,
+``int32``, or ``float32``) and may have any magnitude.
+
+If the file does not contain enough audio data to fill ``num_frames``, the returned
+:class:`numpy.array` will contain as many frames as could be read from the file. (In some cases,
+passing :py:attr:`frames` as ``num_frames`` may still return less data than expected. See documentation
+for :py:attr:`frames` and :py:attr:`exact_duration_known` for more information about situations
+in which this may occur.)
+)")
       .def("seekable", &ReadableAudioFile::isSeekable,
            "Returns True if this file is currently open and calls to seek() "
            "will work.")
@@ -639,15 +721,78 @@ inline void init_readable_audio_file(
                              "(per channel) per second (Hz).")
       .def_property_readonly("num_channels", &ReadableAudioFile::getNumChannels,
                              "The number of channels in this file.")
-      .def_property_readonly(
-          "frames", &ReadableAudioFile::getLengthInSamples,
-          "The total number of frames (samples per "
-          "channel) in this file.\n\nFor example, if this "
-          "file contains 10 seconds of stereo audio at sample "
-          "rate of 44,100 Hz, ``frames`` will return ``441,000``.")
+      .def_property_readonly("exact_duration_known",
+                             &ReadableAudioFile::exactDurationKnown,
+                             R"(
+Returns :py:const:`True` if this file's :py:attr:`frames` and
+:py:attr:`duration` attributes are exact values, or :py:const:`False` if the
+:py:attr:`frames` and :py:attr:`duration` attributes are estimates based
+on the file's size and bitrate.
+
+If :py:attr:`exact_duration_known` is :py:const:`False`, this value will
+change to :py:const:`True` once the file is read to completion. Once
+:py:const:`True`, this value will not change back to :py:const:`False`
+for the same :py:class:`AudioFile` object (even after calls to :meth:`seek`).
+
+.. note::
+    :py:attr:`exact_duration_known` will only ever be :py:const:`False`
+    when reading certain MP3 files. For files in other formats than MP3,
+    :py:attr:`exact_duration_known` will always be equal to :py:const:`True`.
+
+*Introduced in v0.7.2.*
+)")
+      .def_property_readonly("frames", &ReadableAudioFile::getLengthInSamples,
+                             R"(
+The total number of frames (samples per channel) in this file.
+
+For example, if this file contains 10 seconds of stereo audio at sample rate
+of 44,100 Hz, ``frames`` will return ``441,000``.
+
+.. warning::
+    When reading certain MP3 files that have been encoded in constant bitrate mode,
+    the :py:attr:`frames` and :py:attr:`duration` properties may initially be estimates
+    and **may change as the file is read**. The :py:attr:`exact_duration_known`
+    property indicates if the values of :py:attr:`frames` and :py:attr:`duration`
+    are estimates or exact values.
+
+    This discrepancy is due to the fact that MP3 files are not required to have
+    headers that indicate the duration of the file. If an MP3 file is opened and a
+    ``Xing`` or ``Info`` header frame is not found, the initial value of the
+    :py:attr:`frames` and :py:attr:`duration` attributes are estimates based on the file's
+    bitrate and size. This may result in an overestimate of the file's duration
+    if there is additional data present in the file after the audio stream is finished.
+
+    If the exact number of frames in the file is required, read the entire file
+    first before accessing the :py:attr:`frames` or :py:attr:`duration` properties.
+    This operation forces each frame to be parsed and guarantees that
+    :py:attr:`frames` and :py:attr:`duration` are correct, at the expense of
+    scanning the entire file::
+        
+        with AudioFile("my_file.mp3") as f:
+            while f.tell() < f.frames:
+                f.read(f.samplerate * 60)
+
+            # f.frames is now guaranteed to be exact, as the entire file has been read:
+            assert f.exact_duration_known == True
+
+            f.seek(0)
+            num_channels, num_samples = f.read(f.frames).shape
+            assert num_samples == f.frames
+    
+    This behaviour is present in v0.7.2 and later; prior versions would
+    raise an exception when trying to read the ends of MP3 files that contained
+    trailing non-audio data and lacked ``Xing`` or ``Info`` headers.
+)")
       .def_property_readonly("duration", &ReadableAudioFile::getDuration,
-                             "The duration of this file in seconds (``frames`` "
-                             "divided by ``samplerate``).")
+                             R"(
+The duration of this file in seconds (``frames`` divided by ``samplerate``).
+
+.. warning::
+    :py:attr:`duration` may be an overestimate for certain MP3 files.
+    Use :py:attr:`exact_duration_known` property to determine if
+    :py:attr:`duration` is accurate. (See the documentation for the
+    :py:attr:`frames` attribute for more details.)
+)")
       .def_property_readonly(
           "file_dtype", &ReadableAudioFile::getFileDatatype,
           "The data type (``\"int16\"``, ``\"float32\"``, etc) stored "
