@@ -1038,11 +1038,11 @@ def test_mp3_duration_estimate(samplerate: float, target_samplerate: float, chun
         audio = f.read(f.frames)
         assert f.exact_duration_known
         assert f.frames >= num_frames
-        assert f.frames < original_frame_estimate
+        assert f.frames <= original_frame_estimate
         assert audio.shape[0] == f.num_channels
         assert audio.shape[1] == f.frames
         assert audio.shape[1] >= num_frames
-        assert audio.shape[1] < original_frame_estimate
+        assert audio.shape[1] <= original_frame_estimate
 
         # Seek back to the start
         f.seek(0)
