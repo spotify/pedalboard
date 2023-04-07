@@ -212,7 +212,7 @@ public:
        */
 
       double numInputSamplesNeeded =
-          std::max(0, numOutputSamplesToProduce - 1) * resamplerRatio;
+          std::max(0LL, numOutputSamplesToProduce - 1) * resamplerRatio;
       numInputSamplesUsed = std::ceil(numInputSamplesNeeded);
       newSubSamplePos = numInputSamplesNeeded - numInputSamplesUsed + 1;
 
