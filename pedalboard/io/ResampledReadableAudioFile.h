@@ -235,7 +235,7 @@ public:
 
     outputBuffer.setSize(0, 0);
 
-    const long long chunkSize = 1;
+    const long long chunkSize = 1024 * 1024;
     for (long long i = positionInTargetSampleRate; i < targetPosition;
          i += chunkSize) {
       long long numSamples = std::min(chunkSize, targetPosition - i);
