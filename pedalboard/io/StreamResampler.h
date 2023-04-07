@@ -96,12 +96,6 @@ public:
         }
 
         if (!isFlushing) {
-          if (inputSamplesConsumed < input.getNumSamples()) {
-            printf("[StreamResampler] only consumed %d of %d provided samples, "
-                   "saving the rest for next time\n",
-                   inputSamplesConsumed, input.getNumSamples(),
-                   input.getNumSamples() - inputSamplesConsumed);
-          }
           for (int i = inputSamplesConsumed; i < input.getNumSamples(); i++) {
             overflowSamples[c].push_back(input.getReadPointer(c)[i]);
           }
@@ -186,9 +180,6 @@ public:
 
   // TODO: Rename me!
   int getOverflowSamples() const { return overflowSamples[0].size(); }
-  std::vector<SampleType> getOverflowSampleBuffer() const {
-    return overflowSamples[0];
-  }
 
   /**
    * Advance the internal state of this resampler, as if the given
@@ -201,20 +192,47 @@ public:
     double newSubSamplePos = 1.0;
     int numOutputSamplesToProduce = numOutputSamples;
 
-    totalSamplesOutput += numOutputSamples;
-    totalSamplesInput += numOutputSamples * resamplerRatio;
-
-    // TODO: Find a closed-form expression that produces the same result as
-    // this to make this O(1) instead of O(n)!
     long long numInputSamplesUsed = 0;
-    while (numOutputSamplesToProduce > 0) {
-      while (newSubSamplePos >= 1.0) {
-        numInputSamplesUsed++;
-        newSubSamplePos -= 1.0;
-      }
 
-      newSubSamplePos += resamplerRatio;
-      --numOutputSamplesToProduce;
+    static const bool USE_CONSTANT_TIME_CALCULATION = false;
+    if (USE_CONSTANT_TIME_CALCULATION) {
+      /**
+       * NOTE(psobot): This calculation is faster than the below (as it runs in
+       * constant time) _but_ due to floating point accumulation errors, this
+       * produces slightly different output than the `while` loops below. This
+       * would mean that users who call seek() on a resampled stream would end
+       * up with a very slightly different copy of the stream. This
+       * nondeterminism is not worth the speedup.
+       *
+       * The probable way to fix this is to rewrite juce::GenericInterpolator to
+       * use two `long long` variables to track the subsample position, rather
+       * than relying on a single `double` whose precision errors can accumulate
+       * over time. That is not a refactor I want to start at 4:44pm on a
+       * Friday.
+       */
+
+      double numInputSamplesNeeded =
+          std::max(0, numOutputSamplesToProduce - 1) * resamplerRatio;
+      numInputSamplesUsed = std::ceil(numInputSamplesNeeded);
+      newSubSamplePos = numInputSamplesNeeded - numInputSamplesUsed + 1;
+
+      if (numOutputSamplesToProduce) {
+        while (newSubSamplePos >= 1.0) {
+          numInputSamplesUsed++;
+          newSubSamplePos -= 1.0;
+        }
+        newSubSamplePos += resamplerRatio;
+      }
+    } else {
+      while (numOutputSamplesToProduce > 0) {
+        while (newSubSamplePos >= 1.0) {
+          numInputSamplesUsed++;
+          newSubSamplePos -= 1.0;
+        }
+
+        newSubSamplePos += resamplerRatio;
+        --numOutputSamplesToProduce;
+      }
     }
 
     float zero = 0.0;
@@ -222,16 +240,12 @@ public:
       // This effectively sets the new subsample position:
       resampler.process(newSubSamplePos, &zero, &zero, 1);
     }
+
+    totalSamplesOutput += numOutputSamples;
+    totalSamplesInput += numInputSamplesUsed;
+
     return numInputSamplesUsed;
   }
-
-  double getSubSamplePosition() const {
-    return resamplers[0].getSubSamplePosition();
-  }
-
-  long getIndexInBuffer() const { return resamplers[0].getIndexInBuffer(); }
-
-  std::vector<float> getBuffer() const { return resamplers[0].getBuffer(); }
 
   void setLastChannelLayout(ChannelLayout last) { lastChannelLayout = last; }
 
