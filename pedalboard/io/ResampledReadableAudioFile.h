@@ -263,17 +263,15 @@ public:
            "is %d in source\n",
            targetPosition, targetPositionInSourceSampleRate);
 
-    // targetPositionInSourceSampleRate -=
-    //     inputBufferSizeFor(resampler.getQuality());
-    // printf("Moving seek position back by %d samples to account "
-    //        "for input buffer, now %d\n",
-    //        inputBufferSizeFor(resampler.getQuality()),
-    //        targetPositionInSourceSampleRate);
+    targetPositionInSourceSampleRate -=
+        inputBufferSizeFor(resampler.getQuality());
+    printf("Moving seek position back by %d samples to account "
+           "for input buffer, now %d\n",
+           inputBufferSizeFor(resampler.getQuality()),
+           targetPositionInSourceSampleRate);
 
-    long long maximumOverflow =
-        (long long)std::ceil(resampler.getSourceSampleRate() /
-                             resampler.getTargetSampleRate()) *
-        2;
+    long long maximumOverflow = (long long)std::ceil(
+        resampler.getSourceSampleRate() / resampler.getTargetSampleRate());
     targetPositionInSourceSampleRate -= std::max(0LL, maximumOverflow);
     printf("Moving seek position back by %d samples to account "
            "for maximum overflow, now %d\n",
