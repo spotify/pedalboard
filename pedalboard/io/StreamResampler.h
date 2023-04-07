@@ -188,9 +188,9 @@ public:
    * Note that this method will only affect the sub-sample position stored by
    * the resampler, but will not clear all of the samples buffered internally.
    */
-  long long advanceResamplerState(int numOutputSamples) {
+  long long advanceResamplerState(long long numOutputSamples) {
     double newSubSamplePos = 1.0;
-    int numOutputSamplesToProduce = numOutputSamples;
+    long long numOutputSamplesToProduce = numOutputSamples;
 
     long long numInputSamplesUsed = 0;
 
