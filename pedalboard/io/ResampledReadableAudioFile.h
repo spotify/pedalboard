@@ -34,6 +34,22 @@ namespace py = pybind11;
 
 namespace Pedalboard {
 
+static inline int inputBufferSizeFor(ResamplingQuality quality) {
+  switch (quality) {
+  case ResamplingQuality::ZeroOrderHold:
+    return 1;
+  case ResamplingQuality::Linear:
+    return 2;
+  case ResamplingQuality::CatmullRom:
+    return 4;
+  case ResamplingQuality::Lagrange:
+    return 5;
+  case ResamplingQuality::WindowedSinc:
+    return 200;
+  }
+  return 0;
+}
+
 class ResampledReadableAudioFile
     : public AudioFile,
       public std::enable_shared_from_this<ResampledReadableAudioFile> {
@@ -78,6 +94,9 @@ public:
           "'frames' attribute).");
 
     const juce::ScopedLock scopedLock(objectLock);
+
+    printf("rraf->read(%d samples at %fHz) from position %d\n", numSamples,
+           getSampleRate(), tell());
 
     long long samplesInResampledBuffer = 0;
     juce::AudioBuffer<float> resampledBuffer(audioFile->getNumChannels(),
@@ -139,8 +158,27 @@ public:
       }
 
       // TODO: Provide an alternative interface to write to the output buffer
+      printResamplerState();
+      printf("\033[92mPassing input to resampler: [");
+      for (int i = 0; i < resamplerInput->getNumSamples(); i++) {
+        printf("%2.2f", *(resamplerInput->getReadPointer(0, i)));
+        if (i < resamplerInput->getNumSamples() - 1) {
+          printf(", ");
+        }
+      }
+      printf("]\033[0m\n");
       juce::AudioBuffer<float> newResampledSamples =
           resampler.process(resamplerInput);
+
+      printf("Got output from resampler: [");
+      for (int i = 0; i < newResampledSamples.getNumSamples(); i++) {
+        printf("%2.2f", *(newResampledSamples.getReadPointer(0, i)));
+        if (i < newResampledSamples.getNumSamples() - 1) {
+          printf(", ");
+        }
+      }
+      printf("]\n");
+      printResamplerState();
 
       int offsetInNewResampledSamples = 0;
       if (newResampledSamples.getNumSamples() >
@@ -186,18 +224,114 @@ public:
                                      ChannelLayout::NotInterleaved, 0);
   }
 
+  void printResamplerState() {
+    printf("Resampler state: \033[93m[subsample_pos=%9.9f, index=%d, "
+           "nextInputSamples=[",
+           resampler.getSubSamplePosition(), resampler.getIndexInBuffer());
+    std::vector<float> overflowSamples = resampler.getOverflowSampleBuffer();
+    for (int i = 0; i < overflowSamples.size(); i++) {
+      printf("%2.2f", overflowSamples[i]);
+      if (i < overflowSamples.size() - 1) {
+        printf(", ");
+      }
+    }
+    printf("], inputBuffer=[");
+    std::vector<float> resamplerBuffer = resampler.getBuffer();
+    for (int i = 0; i < resamplerBuffer.size(); i++) {
+      printf("%2.2f", resamplerBuffer[i]);
+      if (i < resamplerBuffer.size() - 1) {
+        printf(", ");
+      }
+    }
+    printf("]]\033[0m\n");
+  }
+
   void seek(long long targetPosition) {
-    // TODO: This could be done much more efficiently by
-    // only seeking as far back as we need to to prime the resampler.
-    // That logic is _very_ tricky to write correctly, though.
-    audioFile->seek(0);
+    long long positionToSeekToIncludingBuffers = targetPosition;
+
+    long long targetPositionInSourceSampleRate =
+        std::max(0LL, (long long)(((double)positionToSeekToIncludingBuffers *
+                                   resampler.getSourceSampleRate()) /
+                                  resampler.getTargetSampleRate()));
+
+    // TODO: Rounding is off somewhere here. Resampler's subsample
+    // position is
+    //  set properly, but it's receiving the wrong stream and is
+    //  off by 1 or 2 (lastInputSamples is 15 after the seek,
+    //  instead of 13 when read pre-ssek)
+    printf("Seeking to position %d in target sample rate, which "
+           "is %d in source\n",
+           targetPosition, targetPositionInSourceSampleRate);
+
+    // targetPositionInSourceSampleRate -=
+    //     inputBufferSizeFor(resampler.getQuality());
+    // printf("Moving seek position back by %d samples to account "
+    //        "for input buffer, now %d\n",
+    //        inputBufferSizeFor(resampler.getQuality()),
+    //        targetPositionInSourceSampleRate);
+
+    long long maximumOverflow =
+        (long long)std::ceil(resampler.getSourceSampleRate() /
+                             resampler.getTargetSampleRate()) *
+        2;
+    targetPositionInSourceSampleRate -= std::max(0LL, maximumOverflow);
+    printf("Moving seek position back by %d samples to account "
+           "for maximum overflow, now %d\n",
+           maximumOverflow, targetPositionInSourceSampleRate);
+
+    double floatingPositionInTargetSampleRate =
+        std::max(0.0, ((double)targetPositionInSourceSampleRate /
+                       resampler.getSourceSampleRate()) *
+                          resampler.getTargetSampleRate());
+
+    positionInTargetSampleRate =
+        (long long)(floatingPositionInTargetSampleRate);
+
+    int overflowSamples = resampler.getOverflowSamples();
     resampler.reset();
-    positionInTargetSampleRate = 0;
+    printf("Resampler being reset; had %d overflow samples, now %d.\n",
+           overflowSamples, resampler.getOverflowSamples());
+
+    printResamplerState();
+
+    if (floatingPositionInTargetSampleRate != positionInTargetSampleRate) {
+      printf("Advancing resampler state by %d output samples\n",
+             positionInTargetSampleRate);
+      long long inputSamplesUsed =
+          resampler.advanceResamplerState(positionInTargetSampleRate);
+      long long sampleDeficit =
+          targetPositionInSourceSampleRate - inputSamplesUsed;
+      printf("Advancing resampler state by %d output samples used up %d input "
+             "samples, leaving %d that should be buffered\n",
+             positionInTargetSampleRate, inputSamplesUsed, sampleDeficit);
+      printResamplerState();
+
+      if (sampleDeficit > 0) {
+        targetPositionInSourceSampleRate -= sampleDeficit;
+        printf("Moving seek position back by %d samples to account "
+               "for subsample precision, now %d\n",
+               sampleDeficit, targetPositionInSourceSampleRate);
+      }
+    }
+
+    printf("\033[92maudioFile->seek(%d)\033[0m\n",
+           std::max(0LL, targetPositionInSourceSampleRate));
+    audioFile->seek(std::max(0LL, targetPositionInSourceSampleRate));
+
+    printf("Set current position in target sample rate to %d, accounting for "
+           "%f latency and %d input samples\n",
+           positionInTargetSampleRate, resampler.getOutputLatency(),
+           inputBufferSizeFor(resampler.getQuality()));
+
     outputBuffer.setSize(0, 0);
 
-    const long long chunkSize = 1024 * 1024;
-    for (long long i = 0; i < targetPosition; i += chunkSize) {
-      this->read(std::min(chunkSize, targetPosition - i));
+    const long long chunkSize = 1;
+    for (long long i = positionInTargetSampleRate; i < targetPosition;
+         i += chunkSize) {
+      long long numSamples = std::min(chunkSize, targetPosition - i);
+      printf("Reading %d samples from position %d in target sample rate.\n",
+             numSamples, this->tell());
+      this->read(numSamples);
     }
   }
 

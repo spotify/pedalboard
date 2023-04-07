@@ -96,6 +96,12 @@ public:
         }
 
         if (!isFlushing) {
+          if (inputSamplesConsumed < input.getNumSamples()) {
+            printf("[StreamResampler] only consumed %d of %d provided samples, "
+                   "saving the rest for next time\n",
+                   inputSamplesConsumed, input.getNumSamples(),
+                   input.getNumSamples() - inputSamplesConsumed);
+          }
           for (int i = inputSamplesConsumed; i < input.getNumSamples(); i++) {
             overflowSamples[c].push_back(input.getReadPointer(c)[i]);
           }
@@ -180,6 +186,9 @@ public:
 
   // TODO: Rename me!
   int getOverflowSamples() const { return overflowSamples[0].size(); }
+  std::vector<SampleType> getOverflowSampleBuffer() const {
+    return overflowSamples[0];
+  }
 
   /**
    * Advance the internal state of this resampler, as if the given
@@ -188,14 +197,19 @@ public:
    * Note that this method will only affect the sub-sample position stored by
    * the resampler, but will not clear all of the samples buffered internally.
    */
-  void advanceResamplerState(int numOutputSamples) {
+  long long advanceResamplerState(int numOutputSamples) {
     double newSubSamplePos = 1.0;
     int numOutputSamplesToProduce = numOutputSamples;
 
+    totalSamplesOutput += numOutputSamples;
+    totalSamplesInput += numOutputSamples * resamplerRatio;
+
     // TODO: Find a closed-form expression that produces the same result as
     // this to make this O(1) instead of O(n)!
+    long long numInputSamplesUsed = 0;
     while (numOutputSamplesToProduce > 0) {
       while (newSubSamplePos >= 1.0) {
+        numInputSamplesUsed++;
         newSubSamplePos -= 1.0;
       }
 
@@ -208,7 +222,16 @@ public:
       // This effectively sets the new subsample position:
       resampler.process(newSubSamplePos, &zero, &zero, 1);
     }
+    return numInputSamplesUsed;
   }
+
+  double getSubSamplePosition() const {
+    return resamplers[0].getSubSamplePosition();
+  }
+
+  long getIndexInBuffer() const { return resamplers[0].getIndexInBuffer(); }
+
+  std::vector<float> getBuffer() const { return resamplers[0].getBuffer(); }
 
   void setLastChannelLayout(ChannelLayout last) { lastChannelLayout = last; }
 

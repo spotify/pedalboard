@@ -115,8 +115,9 @@ def test_tell_resampled(sample_rate: float, target_sample_rate: float, chunk_siz
 
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67, 22050, 44100, 48000])
+@pytest.mark.parametrize("chunk_size", [2, 10, 100])
 @pytest.mark.parametrize("quality", QUALITIES)
-def test_seek_resampled(sample_rate: float, target_sample_rate: float, quality):
+def test_seek_resampled(sample_rate: float, target_sample_rate: float, chunk_size: int, quality):
     signal = np.linspace(1, sample_rate, sample_rate).astype(np.float32)
 
     read_buffer = BytesIO()
@@ -125,10 +126,15 @@ def test_seek_resampled(sample_rate: float, target_sample_rate: float, quality):
         f.write(signal)
 
     with AudioFile(BytesIO(read_buffer.getvalue())).resampled_to(target_sample_rate, quality) as f:
-        f.read(10)
-        expected = f.read(10)
-        f.seek(10)
-        actual = f.read(10)
+        offset = chunk_size * 3
+        for _ in range(offset):
+            f.read(1)
+        print(f"\033[91m========= reading {chunk_size} samples from {offset} =========\033[0m")
+        expected = f.read(chunk_size)
+        print(f"\033[91m========= seeking back to {offset} =========\033[0m")
+        f.seek(offset)
+        print(f"\033[91m========= reading {chunk_size} samples from {offset} =========\033[0m")
+        actual = f.read(chunk_size)
         np.testing.assert_allclose(expected, actual)
 
 
