@@ -116,7 +116,7 @@ def test_tell_resampled(sample_rate: float, target_sample_rate: float, chunk_siz
 
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67, 22050, 44100, 48000])
-@pytest.mark.parametrize("offset", [2, 10, 100])
+@pytest.mark.parametrize("offset", [2, 10, 100, -10, -1000])
 @pytest.mark.parametrize("chunk_size", [2, 10, 50, 100, 1_000_000])
 @pytest.mark.parametrize("quality", QUALITIES)
 def test_seek_resampled(
@@ -130,9 +130,10 @@ def test_seek_resampled(
         f.write(signal)
 
     with AudioFile(BytesIO(read_buffer.getvalue())).resampled_to(target_sample_rate, quality) as f:
-        f.read(offset)
+        effective_offset = offset if offset >= 0 else f.frames + offset
+        f.read(effective_offset)
         expected = f.read(chunk_size)
-        f.seek(offset)
+        f.seek(effective_offset)
         actual = f.read(chunk_size)
         np.testing.assert_allclose(expected, actual)
 
