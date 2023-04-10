@@ -34,6 +34,22 @@ namespace py = pybind11;
 
 namespace Pedalboard {
 
+static inline int inputBufferSizeFor(ResamplingQuality quality) {
+  switch (quality) {
+  case ResamplingQuality::ZeroOrderHold:
+    return 1;
+  case ResamplingQuality::Linear:
+    return 2;
+  case ResamplingQuality::CatmullRom:
+    return 4;
+  case ResamplingQuality::Lagrange:
+    return 5;
+  case ResamplingQuality::WindowedSinc:
+    return 200;
+  }
+  return 0;
+}
+
 class ResampledReadableAudioFile
     : public AudioFile,
       public std::enable_shared_from_this<ResampledReadableAudioFile> {
@@ -187,17 +203,43 @@ public:
   }
 
   void seek(long long targetPosition) {
-    // TODO: This could be done much more efficiently by
-    // only seeking as far back as we need to to prime the resampler.
-    // That logic is _very_ tricky to write correctly, though.
-    audioFile->seek(0);
+    long long positionToSeekToIncludingBuffers = targetPosition;
+
+    long long targetPositionInSourceSampleRate =
+        std::max(0LL, (long long)(((double)positionToSeekToIncludingBuffers *
+                                   resampler.getSourceSampleRate()) /
+                                  resampler.getTargetSampleRate()));
+
+    targetPositionInSourceSampleRate -=
+        inputBufferSizeFor(resampler.getQuality());
+
+    long long maximumOverflow = (long long)std::ceil(
+        resampler.getSourceSampleRate() / resampler.getTargetSampleRate());
+    targetPositionInSourceSampleRate -= std::max(0LL, maximumOverflow);
+
+    double floatingPositionInTargetSampleRate =
+        std::max(0.0, ((double)targetPositionInSourceSampleRate *
+                       resampler.getTargetSampleRate()) /
+                          resampler.getSourceSampleRate());
+
+    positionInTargetSampleRate =
+        (long long)(floatingPositionInTargetSampleRate);
+
     resampler.reset();
-    positionInTargetSampleRate = 0;
+
+    long long inputSamplesUsed =
+        resampler.advanceResamplerState(positionInTargetSampleRate);
+    targetPositionInSourceSampleRate = inputSamplesUsed;
+
+    audioFile->seek(std::max(0LL, targetPositionInSourceSampleRate));
+
     outputBuffer.setSize(0, 0);
 
     const long long chunkSize = 1024 * 1024;
-    for (long long i = 0; i < targetPosition; i += chunkSize) {
-      this->read(std::min(chunkSize, targetPosition - i));
+    for (long long i = positionInTargetSampleRate; i < targetPosition;
+         i += chunkSize) {
+      long long numSamples = std::min(chunkSize, targetPosition - i);
+      this->read(numSamples);
     }
   }
 
@@ -332,12 +374,13 @@ maximum sample value will be ``+1.0f``.
            "will work.")
       .def("seek", &ResampledReadableAudioFile::seek, py::arg("position"),
            "Seek this file to the provided location in frames at the target "
-           "sample rate. Future reads will start from this position.\n\nAs of "
-           "version 0.6.1, this method operates in linear time with respect to "
-           "the seek length (i.e.: the file is seeked to the start and pushed "
-           "through the resampler) to ensure that the resampled audio output "
-           "is accurate. This may be optimized in a future version of "
-           "Pedalboard.")
+           "sample rate. Future reads will start from this position.\n\n.. "
+           "note::\n    Prior to version 0.7.3, this method operated in linear "
+           "time with respect to the seek position (i.e.: the file was seeked "
+           "to its beginning and pushed through the resampler) to ensure that "
+           "the resampled audio output was sample-accurate. This was optimized "
+           "in version 0.7.3 to operate in effectively constant time while "
+           "retaining sample-accuracy.")
       .def("tell", &ResampledReadableAudioFile::tell,
            "Return the current position of the read pointer in this audio "
            "file, in frames at the target sample rate. This value will "

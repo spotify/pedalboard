@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 import pytest
 from pedalboard import Resample
 from pedalboard.io import AudioFile, StreamResampler, ResampledReadableAudioFile
@@ -115,8 +116,12 @@ def test_tell_resampled(sample_rate: float, target_sample_rate: float, chunk_siz
 
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67, 22050, 44100, 48000])
+@pytest.mark.parametrize("offset", [2, 10, 100, -10, -1000])
+@pytest.mark.parametrize("chunk_size", [2, 10, 50, 100, 1_000_000])
 @pytest.mark.parametrize("quality", QUALITIES)
-def test_seek_resampled(sample_rate: float, target_sample_rate: float, quality):
+def test_seek_resampled(
+    sample_rate: float, target_sample_rate: float, offset: int, chunk_size: int, quality
+):
     signal = np.linspace(1, sample_rate, sample_rate).astype(np.float32)
 
     read_buffer = BytesIO()
@@ -125,11 +130,32 @@ def test_seek_resampled(sample_rate: float, target_sample_rate: float, quality):
         f.write(signal)
 
     with AudioFile(BytesIO(read_buffer.getvalue())).resampled_to(target_sample_rate, quality) as f:
-        f.read(10)
-        expected = f.read(10)
-        f.seek(10)
-        actual = f.read(10)
+        effective_offset = offset if offset >= 0 else f.frames + offset
+        f.read(effective_offset)
+        expected = f.read(chunk_size)
+        f.seek(effective_offset)
+        actual = f.read(chunk_size)
         np.testing.assert_allclose(expected, actual)
+
+
+@pytest.mark.parametrize("sample_rate", [8000, 11025])
+@pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67])
+def test_seek_resampled_is_constant_time(sample_rate: float, target_sample_rate: float):
+    signal = np.random.rand(sample_rate * 60).astype(np.float32)
+
+    read_buffer = BytesIO()
+    read_buffer.name = "test.wav"
+    with AudioFile(read_buffer, "w", sample_rate, 1) as f:
+        f.write(signal)
+
+    with AudioFile(BytesIO(read_buffer.getvalue())).resampled_to(target_sample_rate) as f:
+        timings = []
+        for i in range(0, f.frames, sample_rate):
+            a = time.time()
+            f.seek(i)
+            b = time.time()
+            timings.append(b - a)
+        assert np.std(timings) < 0.01
 
 
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])

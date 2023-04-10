@@ -188,19 +188,51 @@ public:
    * Note that this method will only affect the sub-sample position stored by
    * the resampler, but will not clear all of the samples buffered internally.
    */
-  void advanceResamplerState(int numOutputSamples) {
+  long long advanceResamplerState(long long numOutputSamples) {
     double newSubSamplePos = 1.0;
-    int numOutputSamplesToProduce = numOutputSamples;
+    long long numOutputSamplesToProduce = numOutputSamples;
 
-    // TODO: Find a closed-form expression that produces the same result as
-    // this to make this O(1) instead of O(n)!
-    while (numOutputSamplesToProduce > 0) {
-      while (newSubSamplePos >= 1.0) {
-        newSubSamplePos -= 1.0;
+    long long numInputSamplesUsed = 0;
+
+    static const bool USE_CONSTANT_TIME_CALCULATION = false;
+    if (USE_CONSTANT_TIME_CALCULATION) {
+      /**
+       * NOTE(psobot): This calculation is faster than the below (as it runs in
+       * constant time) _but_ due to floating point accumulation errors, this
+       * produces slightly different output than the `while` loops below. This
+       * would mean that users who call seek() on a resampled stream would end
+       * up with a very slightly different copy of the stream. This
+       * nondeterminism is not worth the speedup.
+       *
+       * The probable way to fix this is to rewrite juce::GenericInterpolator to
+       * use two `long long` variables to track the subsample position, rather
+       * than relying on a single `double` whose precision errors can accumulate
+       * over time. That is not a refactor I want to start at 4:44pm on a
+       * Friday.
+       */
+
+      double numInputSamplesNeeded =
+          std::max(0LL, numOutputSamplesToProduce - 1) * resamplerRatio;
+      numInputSamplesUsed = std::ceil(numInputSamplesNeeded);
+      newSubSamplePos = numInputSamplesNeeded - numInputSamplesUsed + 1;
+
+      if (numOutputSamplesToProduce) {
+        while (newSubSamplePos >= 1.0) {
+          numInputSamplesUsed++;
+          newSubSamplePos -= 1.0;
+        }
+        newSubSamplePos += resamplerRatio;
       }
+    } else {
+      while (numOutputSamplesToProduce > 0) {
+        while (newSubSamplePos >= 1.0) {
+          numInputSamplesUsed++;
+          newSubSamplePos -= 1.0;
+        }
 
-      newSubSamplePos += resamplerRatio;
-      --numOutputSamplesToProduce;
+        newSubSamplePos += resamplerRatio;
+        --numOutputSamplesToProduce;
+      }
     }
 
     float zero = 0.0;
@@ -208,6 +240,11 @@ public:
       // This effectively sets the new subsample position:
       resampler.process(newSubSamplePos, &zero, &zero, 1);
     }
+
+    totalSamplesOutput += numOutputSamples;
+    totalSamplesInput += numInputSamplesUsed;
+
+    return numInputSamplesUsed;
   }
 
   void setLastChannelLayout(ChannelLayout last) { lastChannelLayout = last; }

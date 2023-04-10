@@ -708,7 +708,10 @@ maximum sample value will be <code class="docutils literal notranslate"><span cl
 <dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.seek">
 <span class="sig-name descname"><span class="pre">seek</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.seek" title="Permalink to this definition">#</a></dt>
 <dd><p>Seek this file to the provided location in frames at the target sample rate. Future reads will start from this position.</p>
-<p>As of version 0.6.1, this method operates in linear time with respect to the seek length (i.e.: the file is seeked to the start and pushed through the resampler) to ensure that the resampled audio output is accurate. This may be optimized in a future version of Pedalboard.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Prior to version 0.7.3, this method operated in linear time with respect to the seek position (i.e.: the file was seeked to its beginning and pushed through the resampler) to ensure that the resampled audio output was sample-accurate. This was optimized in version 0.7.3 to operate in effectively constant time while retaining sample-accuracy.</p>
+</div>
 </dd></dl>
 
 <dl class="py method">
