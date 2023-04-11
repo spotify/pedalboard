@@ -10,7 +10,9 @@
 [![Test Badge](https://github.com/spotify/pedalboard/actions/workflows/all.yml/badge.svg)](https://github.com/spotify/pedalboard/actions/workflows/all.yml)
 [![Coverage Badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/psobot/8736467e9952991ef44a67915ee7c762/raw/coverage.json)](https://gist.githubusercontent.com/psobot/8736467e9952991ef44a67915ee7c762/raw/coverage.json)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/pedalboard)](https://pypistats.org/packages/pedalboard)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7817838.svg)](https://doi.org/10.5281/zenodo.7817838)
 [![GitHub Repo stars](https://img.shields.io/github/stars/spotify/pedalboard?style=social)](https://github.com/spotify/pedalboard/stargazers)
+
 
 `pedalboard` is a Python library for working with audio: reading, writing, adding effects, and more. It supports most popular audio file formats and a number of common audio effects out of the box, and also allows the use of [VST3®](https://www.steinberg.net/en/company/technologies/vst3.html) and [Audio Unit](https://en.wikipedia.org/wiki/Audio_Units) formats for third-party plugins.
 
@@ -253,8 +255,26 @@ For more examples, see:
 
 Contributions to `pedalboard` are welcomed! See [CONTRIBUTING.md](https://github.com/spotify/pedalboard/blob/master/CONTRIBUTING.md) for details.
 
+## Citing
+
+To cite `pedalboard` in academic work, use [its entry on Zenodo](https://doi.org/10.5281/zenodo.7817838): [![DOI 7817838](https://zenodo.org/badge/DOI/10.5281/zenodo.7817838.svg)](https://doi.org/10.5281/zenodo.7817838)
+
+To cite via BibTeX:
+
+```tex
+@software{sobot_peter_2023_7817838,
+  author       = {Sobot, Peter},
+  title        = {Pedalboard},
+  month        = jul,
+  year         = 2021,
+  publisher    = {Zenodo},
+  doi          = {10.5281/zenodo.7817838},
+  url          = {https://doi.org/10.5281/zenodo.7817838}
+}
+```
+
 ## License
-`pedalboard` is Copyright 2021-2022 Spotify AB.
+`pedalboard` is Copyright 2021-2023 Spotify AB.
 
 `pedalboard` is licensed under the [GNU General Public License v3](https://www.gnu.org/licenses/gpl-3.0.en.html). `pedalboard` includes a number of libraries that are statically compiled, and which carry the following licenses:
 
