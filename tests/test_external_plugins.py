@@ -768,3 +768,17 @@ def test_get_plugin_names_from_container(plugin_filename: str):
         raise ValueError("Plugin does not seem to be a .vst3 or .component.")
 
     assert len(names) > 1
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_midi(plugin_filename: str):
+    if not '.vst' in plugin_filename:
+        return #TODO make midi work with .component plugins
+    plugin = load_test_plugin(plugin_filename)
+    assert plugin.get_num_midi_events() == 0
+    assert plugin.midi_note_on()
+    assert plugin.get_num_midi_events() == 1
+    assert plugin.midi_note_off(sampleNumber=16000)
+    assert plugin.get_num_midi_events() == 2
+    plugin.clear_midi()
+    assert plugin.get_num_midi_events() == 0
