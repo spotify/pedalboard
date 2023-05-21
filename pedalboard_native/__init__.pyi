@@ -1007,6 +1007,23 @@ class _VST3Plugin(ExternalPlugin, Plugin):
 
 
         """
+    # def addMidiMessage(midiMessage, sampleNumber: int):
+    #     """Add a midi message to the internal buffer at the specified sample"""
+
+    # def midi_note_on(
+    #     self,
+    #     channel: int = 0, 
+    #     noteNumber: int = 69, 
+    #     velocity: int = 63,
+    #     sampleNumber: int = 0
+    # ) -> bool:
+    #     """add a 'note on' MIDI event to the internal buffer"""
+
+    # def get_midi_events(self) -> int:
+    #     """returns the number of MIDI events in the internal buffer"""
+
+    # def clearMidi(self):
+    #     """clears the internal midi buffer of any and all events"""
     pass
 
 def process(

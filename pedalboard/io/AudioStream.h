@@ -95,20 +95,25 @@ public:
 
   void start() {
     isRunning = true;
+    deviceManager.addAudioCallback(this);
     changeObserverThread =
         std::thread(&AudioStream::propagateChangesToAudioThread, this);
-    deviceManager.addAudioCallback(this);
   }
 
   void stop() {
-    deviceManager.removeAudioCallback(this);
     isRunning = false;
     if (changeObserverThread.joinable()) {
       changeObserverThread.join();
     }
+    deviceManager.removeAudioCallback(this);
   }
 
   void propagateChangesToAudioThread() {
+    auto mm = juce::MessageManager::getInstanceWithoutCreating();
+    if (!mm) {
+      throw std::runtime_error("MessageManager object does not exist");
+    }
+    mm->setCurrentThreadAsMessageThread();
     while (isRunning) {
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
@@ -222,6 +227,12 @@ public:
   virtual void audioDeviceStopped() {
     juce::SpinLock::ScopedLockType lock(livePedalboardMutex);
 
+    auto mm = juce::MessageManager::getInstanceWithoutCreating();
+    if (!mm) {
+      throw std::runtime_error("MessageManager instance does not exist!");
+    }
+    mm->setCurrentThreadAsMessageThread();
+
     for (auto plugin : livePedalboard.getPlugins()) {
       plugin->reset();
     }
@@ -245,7 +256,7 @@ private:
   // currently being used for rendering.
   // The `livePedalboard` object already has a std::mutex on it,
   // but we want something that's faster and callable from the
-  // dudio thread.
+  // audio thread.
   juce::SpinLock livePedalboardMutex;
 
   // A "live" pedalboard, called from the audio thread.

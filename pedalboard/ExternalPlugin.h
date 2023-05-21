@@ -543,11 +543,14 @@ public:
     auto mainInputBus = pluginInstance->getBus(true, 0);
     auto mainOutputBus = pluginInstance->getBus(false, 0);
 
-    if (!mainInputBus) {
+    if (!mainInputBus && !mainOutputBus) {
       throw std::invalid_argument(
           "Plugin '" + pluginInstance->getName().toStdString() +
-          "' does not accept audio input. It may be an instrument plug-in "
-          "and not an audio effect processor.");
+          "has no input or output bus");
+    } else if (!mainOutputBus) {
+      throw std::invalid_argument(
+          "Plugin '" + pluginInstance->getName().toStdString() +
+          "has no output bus");
     }
 
     // Try to disable all non-main input buses if possible:
@@ -564,27 +567,40 @@ public:
         bus->enable(false);
     }
 
-    if (mainInputBus->getNumberOfChannels() == numChannels &&
+    // Need either correct number of input channels on input bus,
+    // or no input bus at all:
+    if ((!mainInputBus ||
+        mainInputBus->getNumberOfChannels() == numChannels) &&
         mainOutputBus->getNumberOfChannels() == numChannels) {
       return;
     }
 
     // Cache these values in case the plugin fails to update:
-    auto previousInputChannelCount = mainInputBus->getNumberOfChannels();
+    int previousInputChannelCount;
+    if (mainInputBus) {
+      previousInputChannelCount = mainInputBus->getNumberOfChannels();
+    }
     auto previousOutputChannelCount = mainOutputBus->getNumberOfChannels();
 
     // Try to change the input and output bus channel counts...
-    mainInputBus->setNumberOfChannels(numChannels);
+    if (mainInputBus) {
+      mainInputBus->setNumberOfChannels(numChannels);
+    }
     mainOutputBus->setNumberOfChannels(numChannels);
 
     // If, post-reload, we still can't use the right number of channels, let's
     // conclude the plugin doesn't allow this channel count.
-    if (mainInputBus->getNumberOfChannels() != numChannels ||
-        mainOutputBus->getNumberOfChannels() != numChannels) {
+    // if ((!mainInputBus || mainInputBus->getNumberOfChannels() != numChannels) &&
+    //     mainOutputBus->getNumberOfChannels() != numChannels) {
+    if (false) {
+    // if ((mainInputBus && (mainInputBus->getNumberOfChannels() != numChannels)) ||
+    //     mainOutputBus->getNumberOfChannels() != numChannels) {
 
       // Reset the bus configuration to what it was before, so we don't
       // leave one of the buses smaller than the other:
-      mainInputBus->setNumberOfChannels(previousInputChannelCount);
+      if (mainInputBus) {
+        mainInputBus->setNumberOfChannels(previousInputChannelCount);
+      }
       mainOutputBus->setNumberOfChannels(previousOutputChannelCount);
 
       throw std::invalid_argument(
@@ -610,7 +626,11 @@ public:
 
     auto mainInputBus = pluginInstance->getBus(true, 0);
     if (!mainInputBus) {
-      return 0;
+      auto mainOutputBus = pluginInstance->getBus(false, 0);
+      if (!mainOutputBus) {
+        return 0;
+      }
+      return mainOutputBus->getNumberOfChannels();
     }
 
     return mainInputBus->getNumberOfChannels();
@@ -755,46 +775,60 @@ public:
     }
   }
 
+  juce::MidiBuffer getNextBlock(int numSamples) {
+    juce::MidiBuffer blockBuffer;
+    for (int i=0; i< midiMessages.getNumEvents(); i++) {
+      double eventTime = midiMessages.getEventTime(i);
+      if (eventTime < numSamples) {
+        blockBuffer.addEvent(midiMessages.getEventPointer(i)->message, int(std::round(eventTime)));
+        midiMessages.deleteEvent(i, false);
+        i--;
+      } else{
+        break;
+      }
+    }
+    midiMessages.addTimeToMessages(-1*numSamples);
+    return blockBuffer;
+  }
+
+  // Process a block wrapped in a context object
   int process(
       const juce::dsp::ProcessContextReplacing<float> &context) override {
 
     if (pluginInstance) {
-      juce::MidiBuffer emptyMidiBuffer;
       if (context.usesSeparateInputAndOutputBlocks()) {
         throw std::runtime_error("Not implemented yet - "
                                  "no support for using separate "
                                  "input and output blocks.");
       }
-
       juce::dsp::AudioBlock<float> &outputBlock = context.getOutputBlock();
 
       // This should already be true, as prepare() should have been called
       // before this!
-      if ((size_t)pluginInstance->getMainBusNumInputChannels() !=
-          outputBlock.getNumChannels()) {
-        throw std::invalid_argument(
-            "Plugin '" + pluginInstance->getName().toStdString() +
-            "' was instantiated with " +
-            std::to_string(pluginInstance->getMainBusNumInputChannels()) +
-            "-channel input, but data provided was " +
-            std::to_string(outputBlock.getNumChannels()) + "-channel.");
-      }
+      // if ((size_t)pluginInstance->getMainBusNumInputChannels() !=
+      //     outputBlock.getNumChannels()) {
+      //   throw std::invalid_argument(
+      //       "Plugin '" + pluginInstance->getName().toStdString() +
+      //       "' was instantiated with " +
+      //       std::to_string(pluginInstance->getMainBusNumInputChannels()) +
+      //       "-channel input, but data provided was " +
+      //       std::to_string(outputBlock.getNumChannels()) + "-channel.");
+      // }
 
-      if ((size_t)pluginInstance->getMainBusNumOutputChannels() <
-          outputBlock.getNumChannels()) {
-        throw std::invalid_argument(
-            "Plugin '" + pluginInstance->getName().toStdString() +
-            "' produces " +
-            std::to_string(pluginInstance->getMainBusNumOutputChannels()) +
-            "-channel output, but data provided was " +
-            std::to_string(outputBlock.getNumChannels()) +
-            "-channel. (The number of channels returned must match the "
-            "number of channels passed in.)");
-      }
+      // if ((size_t)pluginInstance->getMainBusNumOutputChannels() <
+      //     outputBlock.getNumChannels()) {
+      //   throw std::invalid_argument(
+      //       "Plugin '" + pluginInstance->getName().toStdString() +
+      //       "' produces " +
+      //       std::to_string(pluginInstance->getMainBusNumOutputChannels()) +
+      //       "-channel output, but data provided was " +
+      //       std::to_string(outputBlock.getNumChannels()) +
+      //       "-channel. (The number of channels returned must match the "
+      //       "number of channels passed in.)");
+      // }
 
-      std::vector<float *> channelPointers(
-          pluginInstance->getTotalNumInputChannels());
 
+      std::vector<float *> channelPointers(pluginInstance->getTotalNumOutputChannels());
       for (size_t i = 0; i < outputBlock.getNumChannels(); i++) {
         channelPointers[i] = outputBlock.getChannelPointer(i);
       }
@@ -816,7 +850,8 @@ public:
                                            channelPointers.size(),
                                            outputBlock.getNumSamples());
 
-      pluginInstance->processBlock(audioBuffer, emptyMidiBuffer);
+      auto midiBuffer = getNextBlock(audioBuffer.getNumSamples());
+      pluginInstance->processBlock(audioBuffer, midiBuffer);
       samplesProvided += outputBlock.getNumSamples();
 
       // To compensate for any latency added by the plugin,
@@ -873,6 +908,34 @@ public:
     StandalonePluginWindow::openWindowAndWait(*pluginInstance);
   }
 
+  bool addMidiEvent(juce::MidiMessage &midiMessage, int sampleNumber) {
+    return midiMessages.addEvent(midiMessage, sampleNumber);
+  }
+
+  bool midiNoteOn(const int channel=1, const int noteNumber=69,
+                  const float velocity=0.5, const int sampleNumber=0) {
+    auto midiMessage = juce::MidiMessage::noteOn(channel,
+                                                 noteNumber,
+                                                 velocity);
+    return midiMessages.addEvent(midiMessage, sampleNumber);
+  }
+
+  bool midiNoteOff(const int channel=1, const int noteNumber=69,
+                   const float velocity=0.0, const int sampleNumber=0) {
+    auto midiMessage = juce::MidiMessage::noteOff(channel,
+                                                  noteNumber,
+                                                  velocity);
+    return midiMessages.addEvent(midiMessage, sampleNumber);
+  }
+
+  int getNumMidiEvents() {
+    return midiMessages.getNumEvents();
+  }
+
+  void clearMidi() {
+    midiMessages.clear();
+  }
+
 private:
   constexpr static int ExternalLoadSampleRate = 44100,
                        ExternalLoadMaximumBlockSize = 8192;
@@ -880,6 +943,7 @@ private:
   juce::PluginDescription foundPluginDescription;
   juce::AudioPluginFormatManager pluginFormatManager;
   std::unique_ptr<juce::AudioPluginInstance> pluginInstance;
+  juce::MidiMessageSequence midiMessages;
 
   long samplesProvided = 0;
 
@@ -1064,7 +1128,24 @@ inline void init_external_plugins(py::module &m) {
            "Show the UI of this plugin as a native window. This method "
            "will "
            "block until the window is closed or a KeyboardInterrupt is "
-           "received.");
+           "received.")
+      .def("get_num_midi_events",
+           &ExternalPlugin<juce::VST3PluginFormat>::getNumMidiEvents,
+           "returns the number of MIDI events in the internal buffer")
+      .def("midi_note_on",
+           &ExternalPlugin<juce::VST3PluginFormat>::midiNoteOn,
+           "add a 'note on' MIDI event to the internal buffer",
+           py::arg("channel")=1, py::arg("noteNumber")=69, py::arg("velocity")=0.5,
+           py::arg("sampleNumber")=0)
+      .def("midi_note_off",
+           &ExternalPlugin<juce::VST3PluginFormat>::midiNoteOn,
+           "add a 'note off' MIDI event to the internal buffer",
+           py::arg("channel")=1, py::arg("noteNumber")=69, py::arg("velocity")=0.0,
+           py::arg("sampleNumber")=0)
+      .def("clear_midi",
+           &ExternalPlugin<juce::VST3PluginFormat>::clearMidi,
+           "clears the internal midi buffer of any and all events")
+      ;
 #endif
 
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
