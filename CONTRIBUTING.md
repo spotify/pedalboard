@@ -12,14 +12,15 @@ To compile Pedalboard from scratch, the following packages will need to be insta
 - A C++ compiler, e.g. `gcc`, `clang`, etc.
   - On macOS, a working Xcode installation should provide this.
 - On Linux:
-  - FreeType 2 (`libfreetype2-dev` or `freetype2-devel`)
+  - FreeType 2 (`libfreetype-dev`, `libfreetype2-dev`, or `freetype2-devel`)
+  - X11 (`xorg-dev` should do)
 
 ### Building Pedalboard
 
 ```shell
 git clone --recurse-submodules --shallow-submodules git@github.com:spotify/pedalboard.git
 cd pedalboard
-pip3 install pybind11
+pip3 install pybind11 tox
 pip3 install .
 ```
 
@@ -80,6 +81,7 @@ We follow the [GitHub Flow Workflow](https://guides.github.com/introduction/flow
 We use `tox` for testing - running tests from end-to-end should be as simple as:
 
 ```
+pip3 install tox
 tox
 ```
 
