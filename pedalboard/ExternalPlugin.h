@@ -29,6 +29,8 @@
 #include "Plugin.h"
 #include <pybind11/stl.h>
 
+#include "process.h"
+
 #if JUCE_MAC
 #include <AudioToolbox/AudioUnitUtilities.h>
 #endif
@@ -57,6 +59,65 @@ inline std::vector<std::string> findInstalledVSTPluginPaths() {
         format.getNameOfPluginFromIdentifier(pluginIdentifier).toStdString());
   }
   return pluginPaths;
+}
+
+/**
+ * Given a py::object representing a Python list object filled with Tuple[bytes,
+ * float], each representing a MIDI message at a specific timestamp, return a
+ * juce::MidiBuffer.
+ */
+juce::MidiBuffer parseMidiBufferFromPython(py::object midiMessages,
+                                           float sampleRate) {
+  juce::MidiBuffer buf;
+  py::object normalizeFunction = py::module_::import("pedalboard.midi_utils")
+                                     .attr("normalize_midi_messages");
+
+  {
+    py::gil_scoped_acquire acquire;
+    if (PyErr_Occurred() != nullptr)
+      throw py::error_already_set();
+  }
+
+  if (normalizeFunction == py::none()) {
+    throw std::runtime_error(
+        "Failed to import pedalboard.midi_utils.normalize_midi_messages! This "
+        "is an internal Pedalboard error and should be reported.");
+  }
+
+  py::object pyNormalizedBuffer = normalizeFunction(midiMessages);
+
+  {
+    py::gil_scoped_acquire acquire;
+    if (PyErr_Occurred() != nullptr)
+      throw py::error_already_set();
+  }
+
+  if (pyNormalizedBuffer == py::none()) {
+    throw std::runtime_error(
+        "pedalboard.midi_utils.normalize_midi_messages returned None without "
+        "throwing an exception. This is an internal Pedalboard error and "
+        "should be reported.");
+  }
+
+  std::vector<std::tuple<py::bytes, float>> normalizedBuffer =
+      pyNormalizedBuffer.cast<std::vector<std::tuple<py::bytes, float>>>();
+
+  for (const std::tuple<py::bytes, float> &tuple : normalizedBuffer) {
+    char *messagePointer;
+    py::ssize_t messageLength;
+
+    if (PYBIND11_BYTES_AS_STRING_AND_SIZE(std::get<0>(tuple).ptr(),
+                                          &messagePointer, &messageLength)) {
+      throw std::runtime_error(
+          "Failed to decode Python bytes object. This is an internal "
+          "Pedalboard error and should be reported.");
+    }
+
+    long sampleIndex = (std::get<1>(tuple) * sampleRate);
+    buf.addEvent(messagePointer, messageLength, sampleIndex);
+  }
+
+  return buf;
 }
 
 /**
@@ -543,13 +604,6 @@ public:
     auto mainInputBus = pluginInstance->getBus(true, 0);
     auto mainOutputBus = pluginInstance->getBus(false, 0);
 
-    if (!mainInputBus) {
-      throw std::invalid_argument(
-          "Plugin '" + pluginInstance->getName().toStdString() +
-          "' does not accept audio input. It may be an instrument plug-in "
-          "and not an audio effect processor.");
-    }
-
     // Try to disable all non-main input buses if possible:
     for (int i = 1; i < pluginInstance->getBusCount(true); i++) {
       auto *bus = pluginInstance->getBus(true, i);
@@ -564,34 +618,38 @@ public:
         bus->enable(false);
     }
 
-    if (mainInputBus->getNumberOfChannels() == numChannels &&
+    if ((!mainInputBus || mainInputBus->getNumberOfChannels() == numChannels) &&
         mainOutputBus->getNumberOfChannels() == numChannels) {
       return;
     }
 
     // Cache these values in case the plugin fails to update:
-    auto previousInputChannelCount = mainInputBus->getNumberOfChannels();
+    auto previousInputChannelCount =
+        mainInputBus ? mainInputBus->getNumberOfChannels() : 0;
     auto previousOutputChannelCount = mainOutputBus->getNumberOfChannels();
 
     // Try to change the input and output bus channel counts...
-    mainInputBus->setNumberOfChannels(numChannels);
+    if (mainInputBus)
+      mainInputBus->setNumberOfChannels(numChannels);
     mainOutputBus->setNumberOfChannels(numChannels);
 
     // If, post-reload, we still can't use the right number of channels, let's
     // conclude the plugin doesn't allow this channel count.
-    if (mainInputBus->getNumberOfChannels() != numChannels ||
+    if ((!mainInputBus || mainInputBus->getNumberOfChannels() != numChannels) ||
         mainOutputBus->getNumberOfChannels() != numChannels) {
 
       // Reset the bus configuration to what it was before, so we don't
       // leave one of the buses smaller than the other:
-      mainInputBus->setNumberOfChannels(previousInputChannelCount);
+      if (mainInputBus)
+        mainInputBus->setNumberOfChannels(previousInputChannelCount);
       mainOutputBus->setNumberOfChannels(previousOutputChannelCount);
 
       throw std::invalid_argument(
           "Plugin '" + pluginInstance->getName().toStdString() +
           "' does not support " + std::to_string(numChannels) +
-          "-channel input and output. (Main bus currently expects " +
-          std::to_string(mainInputBus->getNumberOfChannels()) +
+          "-channel output. (Main bus currently expects " +
+          std::to_string(mainInputBus ? mainInputBus->getNumberOfChannels()
+                                      : 0) +
           " input channels and " +
           std::to_string(mainOutputBus->getNumberOfChannels()) +
           " output channels.)");
@@ -627,6 +685,8 @@ public:
     const float sampleRate = 44100.0f;
 
     if (numInputChannels == 0) {
+      // TODO: For instrument plugins, figure out how to measure audio
+      // persistence across resets.
       return ExternalPluginReloadType::Unknown;
     }
 
@@ -760,40 +820,45 @@ public:
 
     if (pluginInstance) {
       juce::MidiBuffer emptyMidiBuffer;
-      if (context.usesSeparateInputAndOutputBlocks()) {
-        throw std::runtime_error("Not implemented yet - "
-                                 "no support for using separate "
-                                 "input and output blocks.");
+
+      if (pluginInstance->getMainBusNumInputChannels() == 0 &&
+          context.getInputBlock().getNumChannels() > 0) {
+        throw std::invalid_argument(
+            "Plugin '" + pluginInstance->getName().toStdString() +
+            "' does not accept audio input. It may be an instrument plugin "
+            "instead of an effect plugin.");
       }
 
+      const juce::dsp::AudioBlock<const float> &inputBlock =
+          context.getInputBlock();
       juce::dsp::AudioBlock<float> &outputBlock = context.getOutputBlock();
 
-      // This should already be true, as prepare() should have been called
-      // before this!
       if ((size_t)pluginInstance->getMainBusNumInputChannels() !=
-          outputBlock.getNumChannels()) {
+          inputBlock.getNumChannels()) {
         throw std::invalid_argument(
             "Plugin '" + pluginInstance->getName().toStdString() +
             "' was instantiated with " +
             std::to_string(pluginInstance->getMainBusNumInputChannels()) +
-            "-channel input, but data provided was " +
-            std::to_string(outputBlock.getNumChannels()) + "-channel.");
+            "-channel input, but provided audio data contained " +
+            std::to_string(inputBlock.getNumChannels()) + " channel" +
+            (inputBlock.getNumChannels() == 1 ? "" : "s") + ".");
       }
 
       if ((size_t)pluginInstance->getMainBusNumOutputChannels() <
-          outputBlock.getNumChannels()) {
+          inputBlock.getNumChannels()) {
         throw std::invalid_argument(
             "Plugin '" + pluginInstance->getName().toStdString() +
             "' produces " +
             std::to_string(pluginInstance->getMainBusNumOutputChannels()) +
-            "-channel output, but data provided was " +
-            std::to_string(outputBlock.getNumChannels()) +
-            "-channel. (The number of channels returned must match the "
+            "-channel output, but provided audio data contained " +
+            std::to_string(inputBlock.getNumChannels()) + " channel" +
+            (inputBlock.getNumChannels() == 1 ? " " : "s") +
+            ". (The number of channels returned must match the "
             "number of channels passed in.)");
       }
 
       std::vector<float *> channelPointers(
-          pluginInstance->getTotalNumInputChannels());
+          pluginInstance->getTotalNumOutputChannels());
 
       for (size_t i = 0; i < outputBlock.getNumChannels(); i++) {
         channelPointers[i] = outputBlock.getChannelPointer(i);
@@ -807,7 +872,7 @@ public:
            i++) {
         std::vector<float> dummyChannel(outputBlock.getNumSamples());
         channelPointers[i] = dummyChannel.data();
-        dummyChannels.push_back(dummyChannel);
+        dummyChannels.push_back(std::move(dummyChannel));
       }
 
       // Create an audio buffer that doesn't actually allocate anything, but
@@ -828,6 +893,73 @@ public:
     }
 
     return 0;
+  }
+
+  py::array_t<float> renderMIDIMessages(py::object midiMessages, float duration,
+                                        float sampleRate,
+                                        unsigned int numChannels,
+                                        unsigned long bufferSize, bool reset) {
+    py::array_t<float> outputArray;
+
+    unsigned long outputSampleCount = duration * sampleRate;
+
+    if (pluginInstance) {
+      if (reset)
+        this->reset();
+
+      juce::dsp::ProcessSpec spec;
+      spec.sampleRate = sampleRate;
+      spec.maximumBlockSize = (juce::uint32)bufferSize;
+      spec.numChannels = (juce::uint32)numChannels;
+      prepare(spec);
+
+      if ((size_t)pluginInstance->getMainBusNumOutputChannels() !=
+          numChannels) {
+        throw std::invalid_argument(
+            "Plugin '" + pluginInstance->getName().toStdString() +
+            "' produces " +
+            std::to_string(pluginInstance->getMainBusNumOutputChannels()) +
+            "-channel output, but " + std::to_string(numChannels) +
+            " channels of output were requested.");
+      }
+
+      juce::MidiBuffer midiInputBuffer =
+          parseMidiBufferFromPython(midiMessages, sampleRate);
+
+      outputArray =
+          py::array_t<float>({numChannels, (unsigned int)outputSampleCount});
+
+      float *outputArrayPointer =
+          static_cast<float *>(outputArray.request().ptr);
+
+      std::memset((void *)outputArrayPointer, 0,
+                  sizeof(float) * numChannels * outputSampleCount);
+
+      py::gil_scoped_release release;
+
+      for (unsigned long i = 0; i < outputSampleCount; i += bufferSize) {
+        unsigned long chunkSampleCount =
+            std::min((unsigned long)bufferSize, outputSampleCount - i);
+
+        std::vector<float *> channelPointers(numChannels);
+        for (size_t c = 0; c < numChannels; c++) {
+          channelPointers[c] =
+              (outputArrayPointer + (outputSampleCount * c) + i);
+        }
+
+        // Create an audio buffer that doesn't actually allocate anything, but
+        // just points to the data in the output array.
+        juce::AudioBuffer<float> audioChunk(
+            channelPointers.data(), channelPointers.size(), chunkSampleCount);
+
+        juce::MidiBuffer midiChunk;
+        midiChunk.addEvents(midiInputBuffer, i, chunkSampleCount, 0);
+
+        pluginInstance->processBlock(audioChunk, midiChunk);
+      }
+    }
+
+    return outputArray;
   }
 
   std::vector<juce::AudioProcessorParameter *> getParameters() const {
@@ -851,6 +983,10 @@ public:
     if (!pluginInstance)
       return 0;
     return pluginInstance->getLatencySamples();
+  }
+
+  virtual bool acceptsAudioInput() override {
+    return pluginInstance && pluginInstance->getMainBusNumInputChannels() > 0;
   }
 
   void showEditor() {
@@ -1064,7 +1200,53 @@ inline void init_external_plugins(py::module &m) {
            "Show the UI of this plugin as a native window. This method "
            "will "
            "block until the window is closed or a KeyboardInterrupt is "
-           "received.");
+           "received.")
+      .def(
+          "__call__",
+          [](std::shared_ptr<Plugin> self, const py::array inputArray,
+             double sampleRate, unsigned int bufferSize, bool reset) {
+            return process(inputArray, sampleRate, {self}, bufferSize, reset);
+          },
+          R"(
+Run a 32-bit or 64-bit floating point audio buffer through this plugin.
+(If calling this multiple times with multiple plugins, consider creating a
+:class:`pedalboard.Pedalboard` object instead.)
+
+The returned array may contain up to (but not more than) the same number of
+samples as were provided. If fewer samples were returned than expected, the
+plugin has likely buffered audio inside itself. To receive the remaining
+audio, pass another audio buffer into ``process`` with ``reset`` set to
+``True``.
+
+If the provided buffer uses a 64-bit datatype, it will be converted to 32-bit
+for processing.
+
+The provided ``buffer_size`` argument will be used to control the size of
+each chunk of audio provided to the plugin. Higher buffer sizes may speed up
+processing at the expense of memory usage.
+
+The ``reset`` flag determines if all of the plugins should be reset before
+processing begins, clearing any state from previous calls to ``process``.
+If calling ``process`` multiple times while processing the same audio file
+or buffer, set ``reset`` to ``False``.
+
+.. note::
+    The :py:meth:`process` method can also be used via :py:meth:`__call__`;
+    i.e.: just calling this object like a function (``my_plugin(...)``) will
+    automatically invoke :py:meth:`process` with the same arguments.
+
+          )",
+          py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
+      .def(
+          "__call__",
+          &ExternalPlugin<juce::VST3PluginFormat>::renderMIDIMessages,
+          "Pass MIDI messages into this plugin to render audio. Only supported "
+          "if this plugin is an instrument plugin, rather than an effect.",
+          py::arg("midi_messages"), py::arg("duration"), py::arg("sample_rate"),
+          py::arg("num_channels") = 2,
+          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+          py::arg("reset") = true);
 #endif
 
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
@@ -1129,7 +1311,53 @@ inline void init_external_plugins(py::module &m) {
            &ExternalPlugin<juce::AudioUnitPluginFormat>::showEditor,
            "Show the UI of this plugin as a native window. This method will "
            "block until the window is closed or a KeyboardInterrupt is "
-           "received.");
+           "received.")
+      .def(
+          "__call__",
+          [](std::shared_ptr<Plugin> self, const py::array inputArray,
+             double sampleRate, unsigned int bufferSize, bool reset) {
+            return process(inputArray, sampleRate, {self}, bufferSize, reset);
+          },
+          R"(
+Run a 32-bit or 64-bit floating point audio buffer through this plugin.
+(If calling this multiple times with multiple plugins, consider creating a
+:class:`pedalboard.Pedalboard` object instead.)
+
+The returned array may contain up to (but not more than) the same number of
+samples as were provided. If fewer samples were returned than expected, the
+plugin has likely buffered audio inside itself. To receive the remaining
+audio, pass another audio buffer into ``process`` with ``reset`` set to
+``True``.
+
+If the provided buffer uses a 64-bit datatype, it will be converted to 32-bit
+for processing.
+
+The provided ``buffer_size`` argument will be used to control the size of
+each chunk of audio provided to the plugin. Higher buffer sizes may speed up
+processing at the expense of memory usage.
+
+The ``reset`` flag determines if all of the plugins should be reset before
+processing begins, clearing any state from previous calls to ``process``.
+If calling ``process`` multiple times while processing the same audio file
+or buffer, set ``reset`` to ``False``.
+
+.. note::
+    The :py:meth:`process` method can also be used via :py:meth:`__call__`;
+    i.e.: just calling this object like a function (``my_plugin(...)``) will
+    automatically invoke :py:meth:`process` with the same arguments.
+
+          )",
+          py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
+      .def(
+          "__call__",
+          &ExternalPlugin<juce::AudioUnitPluginFormat>::renderMIDIMessages,
+          "Pass MIDI messages into this plugin to render audio. Only supported "
+          "if this plugin is an instrument plugin, rather than an effect.",
+          py::arg("midi_messages"), py::arg("duration"), py::arg("sample_rate"),
+          py::arg("num_channels") = 1,
+          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+          py::arg("reset") = true);
 #endif
 }
 

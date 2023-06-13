@@ -28,3 +28,6 @@ docutils==0.19; python_version > '3.6'
 m2r2==0.3.3; python_version > '3.6'
 furo==2022.9.29; python_version > '3.6'
 sphinxext-opengraph==0.7.3; python_version > '3.6'
+
+# For MIDI support - only in test though!
+mido

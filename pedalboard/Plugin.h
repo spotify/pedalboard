@@ -72,6 +72,11 @@ public:
    */
   virtual int getLatencyHint() { return 0; }
 
+  /**
+   * Returns true iff this plugin accepts audio input (i.e.: is an effect).
+   */
+  virtual bool acceptsAudioInput() { return true; }
+
   // A mutex to gate access to this plugin, as its internals may not be
   // thread-safe. Note: use std::lock or std::scoped_lock when locking multiple
   // plugins to avoid deadlocking.

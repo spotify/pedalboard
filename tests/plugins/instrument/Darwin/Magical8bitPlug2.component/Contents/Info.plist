@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AudioComponents</key>
+	<array>
+		<dict>
+			<key>description</key>
+			<string>8bit sound generator 2nd ver. by YMCK</string>
+			<key>factoryFunction</key>
+			<string>Magical8bitPlug2AUFactory</string>
+			<key>manufacturer</key>
+			<string>Ymck</string>
+			<key>name</key>
+			<string>Ymck: Magical 8bit Plug 2</string>
+			<key>sandboxSafe</key>
+			<true/>
+			<key>subtype</key>
+			<string>synj</string>
+			<key>type</key>
+			<string>aumu</string>
+			<key>version</key>
+			<integer>65537</integer>
+		</dict>
+	</array>
+	<key>BuildMachineOSBuild</key>
+	<string>19H1030</string>
+	<key>CFBundleDisplayName</key>
+	<string>Magical8bitPlug2</string>
+	<key>CFBundleExecutable</key>
+	<string>Magical8bitPlug2</string>
+	<key>CFBundleIconFile</key>
+	<string>Icon.icns</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.ymck.magical8bitPlug2Juce</string>
+	<key>CFBundleName</key>
+	<string>Magical8bitPlug2</string>
+	<key>CFBundlePackageType</key>
+	<string>BNDL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.1</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleSupportedPlatforms</key>
+	<array>
+		<string>MacOSX</string>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>1.0.1</string>
+	<key>DTCompiler</key>
+	<string>com.apple.compilers.llvm.clang.1_0</string>
+	<key>DTPlatformBuild</key>
+	<string>12D4e</string>
+	<key>DTPlatformName</key>
+	<string>macosx</string>
+	<key>DTPlatformVersion</key>
+	<string>11.1</string>
+	<key>DTSDKBuild</key>
+	<string>20C63</string>
+	<key>DTSDKName</key>
+	<string>macosx11.1</string>
+	<key>DTXcode</key>
+	<string>1240</string>
+	<key>DTXcodeBuild</key>
+	<string>12D4e</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>10.11</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string></string>
+</dict>
+</plist>
