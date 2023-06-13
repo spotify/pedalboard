@@ -913,6 +913,12 @@ public:
       spec.numChannels = (juce::uint32)numChannels;
       prepare(spec);
 
+      if (pluginInstance->getMainBusNumInputChannels() > 0) {
+        throw std::invalid_argument(
+            "Plugin '" + pluginInstance->getName().toStdString() +
+            "' expects audio as input, but was provided MIDI messages.");
+      }
+
       if ((size_t)pluginInstance->getMainBusNumOutputChannels() !=
           numChannels) {
         throw std::invalid_argument(

@@ -340,6 +340,23 @@ def test_instrument_plugin_accepts_notes(
     assert np.amax(np.abs(output)) > 0
 
 
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("num_channels,sample_rate", [(2, 48000), (2, 44100), (2, 22050)])
+def test_effect_plugin_does_not_accept_notes(
+    plugin_filename: str, num_channels: int, sample_rate: float
+):
+    notes = [
+        mido.Message("note_on", note=100, velocity=3, time=0),
+        mido.Message("note_off", note=100, time=5.0),
+    ]
+    plugin = load_test_plugin(plugin_filename)
+    assert plugin.is_effect
+    assert not plugin.is_instrument
+
+    with pytest.raises(ValueError):
+        plugin(notes, 6.0, sample_rate, num_channels=num_channels)
+
+
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT)
 @pytest.mark.parametrize("num_channels,sample_rate", [(2, 48000), (2, 44100), (2, 22050)])
 def test_instrument_plugin_accepts_buffer_size(
