@@ -60,6 +60,36 @@ REPLACEMENTS = [
     # MyPy chokes on classes that contain both __new__ and __init__.
     # Remove all bare, arg-free inits:
     (r"def __init__\(self\) -> None: ...", ""),
+    # Sphinx gets confused when inheriting twice from the same base class:
+    (r"\(ExternalPlugin, Plugin\)", "(ExternalPlugin)"),
+    # We allow passing an optional py::object to ExternalPlugin, but in truth,
+    # that needs to be Dict[str, Union[str, float, int, bool]]:
+    # (r": object = None", ": typing.Dict[str, typing.Union[str, float, int, bool]] = {}"),
+    (
+        "import typing",
+        """
+import typing
+
+original_overload = typing.overload
+__OVERLOADED_DOCSTRINGS = {}
+
+def patch_overload(func):
+    original_overload(func)
+    if func.__doc__:
+        __OVERLOADED_DOCSTRINGS[func.__qualname__] = func.__doc__
+    else:
+        func.__doc__ = __OVERLOADED_DOCSTRINGS.get(func.__qualname__)
+    if func.__doc__:
+        # Work around the fact that pybind11-stubgen generates
+        # duplicate docstrings sometimes, once for each overload:
+        docstring = func.__doc__
+        if docstring[len(docstring) // 2:].strip() == docstring[:-len(docstring) // 2].strip():
+            func.__doc__ = docstring[len(docstring) // 2:].strip()
+    return func
+
+typing.overload = patch_overload
+    """,
+    ),
 ]
 
 REMOVE_INDENTED_BLOCKS_STARTING_WITH = [

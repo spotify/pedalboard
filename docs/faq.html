@@ -6,15 +6,15 @@
 <meta property="og:title" content="Frequently Asked Questions" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://spotify.github.io/pedalboard/faq.html" />
-<meta property="og:site_name" content="Pedalboard v0.7.3 Documentation" />
-<meta property="og:description" content="Can Pedalboard be used with live (real-time) audio?: Technically, yes, Pedalboard could be used with live audio input/output. See: Pull request #98, which contains an experimental live audio interf..." />
+<meta property="og:site_name" content="Pedalboard v0.7.1 Documentation" />
+<meta property="og:description" content="Can Pedalboard be used with live (real-time) audio?: As of version 0.7.0, yes! See the pedalboard.io.AudioStream class for more details. Does Pedalboard support changing a plugin’s parameters over ..." />
 <meta property="og:image" content="https://repository-images.githubusercontent.com/383471193/0f79b949-9b91-4436-bfc4-05d30ef384cc" />
 <meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
-<meta name="description" content="Can Pedalboard be used with live (real-time) audio?: Technically, yes, Pedalboard could be used with live audio input/output. See: Pull request #98, which contains an experimental live audio interf..." />
+<meta name="description" content="Can Pedalboard be used with live (real-time) audio?: As of version 0.7.0, yes! See the pedalboard.io.AudioStream class for more details. Does Pedalboard support changing a plugin’s parameters over ..." />
 <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Plugin Compatibility" href="compatibility.html" /><link rel="prev" title="Examples" href="examples.html" />
 
     <link rel="shortcut icon" href="_static/favicon.ico"/><meta name="generator" content="sphinx-5.3.0, furo 2022.09.29"/>
-        <title>Frequently Asked Questions - Pedalboard v0.7.3 Documentation</title>
+        <title>Frequently Asked Questions - Pedalboard v0.7.1 Documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?digest=d81277517bee4d6b0349d71bb2661d4890b5617c" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css" />
@@ -132,7 +132,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">Pedalboard v0.7.3 Documentation</div></a>
+      <a href="index.html"><div class="brand">Pedalboard v0.7.1 Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -158,7 +158,7 @@
     <img class="sidebar-logo" src="_static/pedalboard_logo_small.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">Pedalboard v0.7.3 Documentation</span>
+  <span class="sidebar-brand-text">Pedalboard v0.7.1 Documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
@@ -167,7 +167,7 @@
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <ul>
-<li class="toctree-l1"><a class="reference internal" href="reference/pedalboard.html">API Reference (Audio Effects)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/pedalboard.html">API Reference (Audio Plugins)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/pedalboard.io.html">API Reference (Audio I/O)</a></li>
 </ul>
 <ul class="current">
@@ -215,13 +215,7 @@
 <h1>Frequently Asked Questions<a class="headerlink" href="#frequently-asked-questions" title="Permalink to this heading">#</a></h1>
 <section id="can-pedalboard-be-used-with-live-real-time-audio">
 <h2>Can Pedalboard be used with live (real-time) audio?<a class="headerlink" href="#can-pedalboard-be-used-with-live-real-time-audio" title="Permalink to this heading">#</a></h2>
-<p>Technically, yes, Pedalboard could be used with live audio input/output. See:</p>
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/spotify/pedalboard/pull/98">Pull request #98</a>, which contains an experimental live audio interface written in C++.</p></li>
-<li><p><a class="reference external" href="https://github.com/stefanobazzi">&#64;stefanobazzi</a>‘s <a class="reference external" href="https://github.com/stefanobazzi/guitarboard">guitarboard</a> project for an example that uses the <code class="docutils literal notranslate"><span class="pre">python-sounddevice</span></code> library.</p></li>
-</ul>
-<p>However, there are a couple big caveats when talking about using Pedalboard in a live context. Python, as a language, is <a class="reference external" href="https://devguide.python.org/garbage_collector/">garbage-collected</a>, meaning that your code randomly pauses on a regular interval to clean up unused objects. In most programs, this is not an issue at all. However, for live audio, garbage collection can result in random pops, clicks, or audio drop-outs that are very difficult to prevent. Python’s <a class="reference external" href="https://wiki.python.org/moin/GlobalInterpreterLock">Global Interpreter Lock</a> also adds potentially-unbounded delays when switching threads, and most operating systems use a separate high-priority thread for audio processing; meaning that Python could block this thread and cause stuttering if <em>any</em> Python objects are accessed or mutated in the audio thread.</p>
-<p>Note that if your application processes audio in a streaming fashion, but allows for large buffer sizes (multiple seconds of audio) or soft real-time requirements, Pedalboard can be used there without issue. Examples of this use case include streaming audio processing over the network, or processing data offline but chunk-by-chunk.</p>
+<p>As of version 0.7.0, yes! See the <a class="reference internal" href="reference/pedalboard.io.html#pedalboard.io.AudioStream" title="pedalboard.io.AudioStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.io.AudioStream</span></code></a> class for more details.</p>
 </section>
 <section id="does-pedalboard-support-changing-a-plugin-s-parameters-over-time">
 <h2>Does Pedalboard support changing a plugin’s parameters over time?<a class="headerlink" href="#does-pedalboard-support-changing-a-plugin-s-parameters-over-time" title="Permalink to this heading">#</a></h2>
@@ -269,11 +263,12 @@ vary the parameters of a plugin over time manually:</p>
 </section>
 <section id="can-pedalboard-be-used-with-vst-instruments-instead-of-effects">
 <h2>Can Pedalboard be used with VST instruments, instead of effects?<a class="headerlink" href="#can-pedalboard-be-used-with-vst-instruments-instead-of-effects" title="Permalink to this heading">#</a></h2>
-<p>Not yet! The underlying framework (JUCE) supports VST and AU instruments just fine, but Pedalboard itself would have to be modified to support instruments.</p>
+<p>As of version 0.7.4, yes! See the <a class="reference internal" href="reference/pedalboard.html#pedalboard.VST3Plugin" title="pedalboard.VST3Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.VST3Plugin</span></code></a> and <a class="reference internal" href="reference/pedalboard.html#pedalboard.AudioUnitPlugin" title="pedalboard.AudioUnitPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.AudioUnitPlugin</span></code></a> classed for more details.</p>
 </section>
 <section id="can-pedalboard-plugins-accept-midi">
 <h2>Can Pedalboard plugins accept MIDI?<a class="headerlink" href="#can-pedalboard-plugins-accept-midi" title="Permalink to this heading">#</a></h2>
-<p>Not yet, either - although the underlying framework (JUCE) supports passing MIDI to plugins, so this would also be possible to add.</p>
+<p>As of version 0.7.4, both <a class="reference internal" href="reference/pedalboard.html#pedalboard.VST3Plugin" title="pedalboard.VST3Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.VST3Plugin</span></code></a> and <a class="reference internal" href="reference/pedalboard.html#pedalboard.AudioUnitPlugin" title="pedalboard.AudioUnitPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.AudioUnitPlugin</span></code></a> support passing MIDI
+messages to instrument plugins for audio rendering. However, effect plugins cannot yet be passed MIDI data.</p>
 </section>
 </section>
 

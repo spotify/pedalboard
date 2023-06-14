@@ -47,6 +47,90 @@ static const std::string AUDIO_UNIT_NOT_INSTALLED_ERROR =
     "/Library/Audio/Plug-Ins/Components/ or "
     "~/Library/Audio/Plug-Ins/Components/ before loading.";
 
+static constexpr const char *EXTERNAL_PLUGIN_PROCESS_DOCSTRING = R"(
+Pass a buffer of audio (as a 32- or 64-bit NumPy array) *or* a list of
+MIDI messages to this plugin, returning audio.
+
+(If calling this multiple times with multiple effect plugins, consider
+creating a :class:`pedalboard.Pedalboard` object instead.)
+
+When provided audio as input, the returned array may contain up to (but not
+more than) the same number of samples as were provided. If fewer samples
+were returned than expected, the plugin has likely buffered audio inside
+itself. To receive the remaining audio, pass another audio buffer into 
+``process`` with ``reset`` set to ``True``.
+
+If the provided buffer uses a 64-bit datatype, it will be converted to 32-bit
+for processing.
+
+If provided MIDI messages as input, the provided ``midi_messages`` must be
+a Python ``List`` containing one of the following types:
+
+ - Objects with a ``bytes()`` method and ``time`` property (such as :doc:`mido:messages`
+   from :doc:`mido:index`, not included with Pedalboard)
+ - Tuples that look like: ``(midi_bytes: bytes, timestamp_in_seconds: float)``
+ - Tuples that look like: ``(midi_bytes: List[int], timestamp_in_seconds: float)``
+
+The returned array will contain ``duration`` seconds worth of audio at the
+provided ``sample_rate``.
+
+Each MIDI message will be sent to the plugin at its
+timestamp, where a timestamp of ``0`` indicates the start of the buffer, and
+a timestamp equal to ``duration`` indicates the end of the buffer. (Any MIDI
+messages whose timestamps are greater than ``duration`` will be ignored.)
+
+The provided ``buffer_size`` argument will be used to control the size of
+each chunk of audio returned by the plugin at once. Higher buffer sizes may
+speed up processing, but may cause increased memory usage.
+
+The ``reset`` flag determines if this plugin should be reset before
+processing begins, clearing any state from previous calls to ``process``.
+If calling ``process`` multiple times while processing the same audio or
+MIDI stream, set ``reset`` to ``False``.
+
+.. note::
+    The :py:meth:`process` method can also be used via :py:meth:`__call__`;
+    i.e.: just calling this object like a function (``my_plugin(...)``) will
+    automatically invoke :py:meth:`process` with the same arguments.
+
+
+Examples
+--------
+
+Running audio through an external effect plugin::
+
+   from pedalboard import load_plugin
+   from pedalboard.io import AudioFile
+
+   plugin = load_plugin("../path-to-my-plugin-file")
+   assert plugin.is_effect
+   with AudioFile("input-audio.wav") as f:
+       output_audio = plugin(f.read(), f.samplerate)
+
+
+Rendering MIDI via an external instrument plugin::
+
+   from pedalboard import load_plugin
+   from pedalboard.io import AudioFile
+   from mido import Message # not part of Pedalboard, but convenient!
+
+   plugin = load_plugin("../path-to-my-plugin-file")
+   assert plugin.is_instrument
+
+   sample_rate = 44100
+   num_channels = 2
+   with AudioFile("output-audio.wav", "w", sample_rate, num_channels) as f:
+       f.write(plugin(
+           [Message("note_on", note=60), Message("note_off", note=60, time=4)],
+           sample_rate=sample_rate,
+           duration=5,
+           num_channels=num_channels
+       ))
+
+
+*Support for instrument plugins introduced in v0.7.4.*
+          )";
+
 inline std::vector<std::string> findInstalledVSTPluginPaths() {
   // Ensure we have a MessageManager, which is required by the VST wrapper
   // Without this, we get an assert(false) from JUCE at runtime
@@ -899,8 +983,9 @@ public:
                                         float sampleRate,
                                         unsigned int numChannels,
                                         unsigned long bufferSize, bool reset) {
-    py::array_t<float> outputArray;
+    std::scoped_lock<std::mutex>(this->mutex);
 
+    py::array_t<float> outputArray;
     unsigned long outputSampleCount = duration * sampleRate;
 
     if (pluginInstance) {
@@ -1137,30 +1222,104 @@ inline void init_external_plugins(py::module &m) {
           },
           "Returns the current value of the parameter as a string.");
 
-  py::class_<AbstractExternalPlugin, Plugin,
-             std::shared_ptr<AbstractExternalPlugin>>(
-      m, "ExternalPlugin", "A wrapper around a third-party effect plugin.")
-      .def(py::init([]() {
-        throw py::type_error(
-            "Plugin is an abstract base class - don't instantiate this "
-            "directly, use its subclasses instead.");
-        return nullptr;
-      }));
+  py::object externalPlugin =
+      py::class_<AbstractExternalPlugin, Plugin,
+                 std::shared_ptr<AbstractExternalPlugin>>(
+          m, "ExternalPlugin", py::dynamic_attr(),
+          "A wrapper around a third-party effect plugin.\n\nDon't use this "
+          "directly; use one of :class:`pedalboard.VST3Plugin` or "
+          ":class:`pedalboard.AudioUnitPlugin` instead.")
+          .def(py::init([]() {
+            throw py::type_error(
+                "ExternalPlugin is an abstract base class - don't instantiate "
+                "this directly, use its subclasses instead.");
+            return nullptr;
+          }))
+          .def(
+              "process",
+              [](std::shared_ptr<AbstractExternalPlugin> self,
+                 py::object midiMessages, float duration, float sampleRate,
+                 unsigned int numChannels, unsigned long bufferSize,
+                 bool reset) -> py::array_t<float> {
+                throw py::type_error("ExternalPlugin is an abstract base class "
+                                     "- use its subclasses instead.");
+                py::array_t<float> nothing;
+                return nothing;
+              },
+              EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("midi_messages"),
+              py::arg("duration"), py::arg("sample_rate"),
+              py::arg("num_channels") = 2,
+              py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+              py::arg("reset") = true)
+          .def(
+              "process",
+              [](std::shared_ptr<Plugin> self, const py::array inputArray,
+                 double sampleRate, unsigned int bufferSize, bool reset) {
+                return process(inputArray, sampleRate, {self}, bufferSize,
+                               reset);
+              },
+              EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("input_array"),
+              py::arg("sample_rate"),
+              py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+              py::arg("reset") = true)
+          .def(
+              "__call__",
+              [](std::shared_ptr<Plugin> self, const py::array inputArray,
+                 double sampleRate, unsigned int bufferSize, bool reset) {
+                return process(inputArray, sampleRate, {self}, bufferSize,
+                               reset);
+              },
+              "Run an audio or MIDI buffer through this plugin, returning "
+              "audio. Alias for :py:meth:`process`.",
+              py::arg("input_array"), py::arg("sample_rate"),
+              py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+              py::arg("reset") = true)
+          .def(
+              "__call__",
+              [](std::shared_ptr<AbstractExternalPlugin> self,
+                 py::object midiMessages, float duration, float sampleRate,
+                 unsigned int numChannels, unsigned long bufferSize,
+                 bool reset) -> py::array_t<float> {
+                throw py::type_error("ExternalPlugin is an abstract base class "
+                                     "- use its subclasses instead.");
+                py::array_t<float> nothing;
+                return nothing;
+              },
+              "Run an audio or MIDI buffer through this plugin, returning "
+              "audio. Alias for :py:meth:`process`.",
+              py::arg("midi_messages"), py::arg("duration"),
+              py::arg("sample_rate"), py::arg("num_channels") = 2,
+              py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+              py::arg("reset") = true);
 
 #if JUCE_PLUGINHOST_VST3 && (JUCE_MAC || JUCE_WINDOWS || JUCE_LINUX)
   py::class_<ExternalPlugin<juce::VST3PluginFormat>, AbstractExternalPlugin,
              std::shared_ptr<ExternalPlugin<juce::VST3PluginFormat>>>(
-      m, "_VST3Plugin",
-      "A wrapper around any Steinberg® VST3 audio effect plugin. Note that "
-      "plugins must already support the operating system currently in use "
-      "(i.e.: if you're running Linux but trying to open a VST that does not "
-      "support Linux, this will fail).")
-      .def(py::init([](std::string &pathToPluginFile,
-                       std::optional<std::string> pluginName) {
-             return std::make_unique<ExternalPlugin<juce::VST3PluginFormat>>(
-                 pathToPluginFile, pluginName);
-           }),
-           py::arg("path_to_plugin_file"), py::arg("plugin_name") = py::none())
+      m, "VST3Plugin",
+      R"(A wrapper around third-party, audio effect or instrument plugins in
+`Steinberg GmbH's VST3® <https://en.wikipedia.org/wiki/Virtual_Studio_Technology>`_
+format.
+
+VST3® plugins are supported on macOS, Windows, and Linux. However, VST3® plugin
+files are not cross-compatible with different operating systems; a platform-specific
+build of each plugin is required to load that plugin on a given platform. (For
+example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
+
+*Support for instrument plugins introduced in v0.7.4.*
+)")
+      .def(
+          py::init([](std::string &pathToPluginFile, py::object parameterValues,
+                      std::optional<std::string> pluginName) {
+            std::shared_ptr<ExternalPlugin<juce::VST3PluginFormat>> plugin =
+                std::make_shared<ExternalPlugin<juce::VST3PluginFormat>>(
+                    pathToPluginFile, pluginName);
+            py::cast(plugin).attr("__set_initial_parameter_values__")(
+                parameterValues);
+            return plugin;
+          }),
+          py::arg("path_to_plugin_file"),
+          py::arg("parameter_values") = py::none(),
+          py::arg("plugin_name") = py::none())
       .def("__repr__",
            [](ExternalPlugin<juce::VST3PluginFormat> &plugin) {
              std::ostringstream ss;
@@ -1208,67 +1367,75 @@ inline void init_external_plugins(py::module &m) {
            "block until the window is closed or a KeyboardInterrupt is "
            "received.")
       .def(
+          "process",
+          [](std::shared_ptr<Plugin> self, const py::array inputArray,
+             double sampleRate, unsigned int bufferSize, bool reset) {
+            return process(inputArray, sampleRate, {self}, bufferSize, reset);
+          },
+          EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("input_array"),
+          py::arg("sample_rate"), py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+          py::arg("reset") = true)
+      .def(
           "__call__",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
              double sampleRate, unsigned int bufferSize, bool reset) {
             return process(inputArray, sampleRate, {self}, bufferSize, reset);
           },
-          R"(
-Run a 32-bit or 64-bit floating point audio buffer through this plugin.
-(If calling this multiple times with multiple plugins, consider creating a
-:class:`pedalboard.Pedalboard` object instead.)
-
-The returned array may contain up to (but not more than) the same number of
-samples as were provided. If fewer samples were returned than expected, the
-plugin has likely buffered audio inside itself. To receive the remaining
-audio, pass another audio buffer into ``process`` with ``reset`` set to
-``True``.
-
-If the provided buffer uses a 64-bit datatype, it will be converted to 32-bit
-for processing.
-
-The provided ``buffer_size`` argument will be used to control the size of
-each chunk of audio provided to the plugin. Higher buffer sizes may speed up
-processing at the expense of memory usage.
-
-The ``reset`` flag determines if all of the plugins should be reset before
-processing begins, clearing any state from previous calls to ``process``.
-If calling ``process`` multiple times while processing the same audio file
-or buffer, set ``reset`` to ``False``.
-
-.. note::
-    The :py:meth:`process` method can also be used via :py:meth:`__call__`;
-    i.e.: just calling this object like a function (``my_plugin(...)``) will
-    automatically invoke :py:meth:`process` with the same arguments.
-
-          )",
+          "Run an audio or MIDI buffer through this plugin, returning "
+          "audio. Alias for :py:meth:`process`.",
           py::arg("input_array"), py::arg("sample_rate"),
           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
-      .def(
-          "__call__",
-          &ExternalPlugin<juce::VST3PluginFormat>::renderMIDIMessages,
-          "Pass MIDI messages into this plugin to render audio. Only supported "
-          "if this plugin is an instrument plugin, rather than an effect.",
-          py::arg("midi_messages"), py::arg("duration"), py::arg("sample_rate"),
-          py::arg("num_channels") = 2,
-          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-          py::arg("reset") = true);
+      .def("process",
+           &ExternalPlugin<juce::VST3PluginFormat>::renderMIDIMessages,
+           EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("midi_messages"),
+           py::arg("duration"), py::arg("sample_rate"),
+           py::arg("num_channels") = 2,
+           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+           py::arg("reset") = true)
+      .def("__call__",
+           &ExternalPlugin<juce::VST3PluginFormat>::renderMIDIMessages,
+           "Run an audio or MIDI buffer through this plugin, returning "
+           "audio. Alias for :py:meth:`process`.",
+           py::arg("midi_messages"), py::arg("duration"),
+           py::arg("sample_rate"), py::arg("num_channels") = 2,
+           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+           py::arg("reset") = true);
 #endif
 
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
   py::class_<ExternalPlugin<juce::AudioUnitPluginFormat>,
              AbstractExternalPlugin,
              std::shared_ptr<ExternalPlugin<juce::AudioUnitPluginFormat>>>(
-      m, "_AudioUnitPlugin",
-      "A wrapper around any Apple Audio Unit audio effect plugin. Only "
-      "available on macOS.")
-      .def(py::init([](std::string &pathToPluginFile,
-                       std::optional<std::string> pluginName) {
-             return std::make_unique<
-                 ExternalPlugin<juce::AudioUnitPluginFormat>>(pathToPluginFile,
-                                                              pluginName);
-           }),
-           py::arg("path_to_plugin_file"), py::arg("plugin_name") = py::none())
+      m, "AudioUnitPlugin", R"(
+A wrapper around third-party, audio effect or instrument
+plugins in `Apple's Audio Unit <https://en.wikipedia.org/wiki/Audio_Units>`_
+format.
+
+Audio Unit plugins are only supported on macOS. This class will be
+unavailable on non-macOS platforms. Plugin files must be installed
+in the appropriate system-wide path for them to be
+loadable (usually ``/Library/Audio/Plug-Ins/Components/`` or
+``~/Library/Audio/Plug-Ins/Components/``).
+
+For a plugin wrapper that works on Windows and Linux as well,
+see :class:`pedalboard.VST3Plugin`.)
+
+*Support for instrument plugins introduced in v0.7.4.*
+)")
+      .def(
+          py::init([](std::string &pathToPluginFile, py::object parameterValues,
+                      std::optional<std::string> pluginName) {
+            std::shared_ptr<ExternalPlugin<juce::AudioUnitPluginFormat>>
+                plugin = std::make_shared<
+                    ExternalPlugin<juce::AudioUnitPluginFormat>>(
+                    pathToPluginFile, pluginName);
+            py::cast(plugin).attr("__set_initial_parameter_values__")(
+                parameterValues);
+            return plugin;
+          }),
+          py::arg("path_to_plugin_file"),
+          py::arg("parameter_values") = py::none(),
+          py::arg("plugin_name") = py::none())
       .def("__repr__",
            [](const ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
              std::ostringstream ss;
@@ -1319,51 +1486,39 @@ or buffer, set ``reset`` to ``False``.
            "block until the window is closed or a KeyboardInterrupt is "
            "received.")
       .def(
+          "process",
+          [](std::shared_ptr<Plugin> self, const py::array inputArray,
+             double sampleRate, unsigned int bufferSize, bool reset) {
+            return process(inputArray, sampleRate, {self}, bufferSize, reset);
+          },
+          EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("input_array"),
+          py::arg("sample_rate"), py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+          py::arg("reset") = true)
+      .def(
           "__call__",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
              double sampleRate, unsigned int bufferSize, bool reset) {
             return process(inputArray, sampleRate, {self}, bufferSize, reset);
           },
-          R"(
-Run a 32-bit or 64-bit floating point audio buffer through this plugin.
-(If calling this multiple times with multiple plugins, consider creating a
-:class:`pedalboard.Pedalboard` object instead.)
-
-The returned array may contain up to (but not more than) the same number of
-samples as were provided. If fewer samples were returned than expected, the
-plugin has likely buffered audio inside itself. To receive the remaining
-audio, pass another audio buffer into ``process`` with ``reset`` set to
-``True``.
-
-If the provided buffer uses a 64-bit datatype, it will be converted to 32-bit
-for processing.
-
-The provided ``buffer_size`` argument will be used to control the size of
-each chunk of audio provided to the plugin. Higher buffer sizes may speed up
-processing at the expense of memory usage.
-
-The ``reset`` flag determines if all of the plugins should be reset before
-processing begins, clearing any state from previous calls to ``process``.
-If calling ``process`` multiple times while processing the same audio file
-or buffer, set ``reset`` to ``False``.
-
-.. note::
-    The :py:meth:`process` method can also be used via :py:meth:`__call__`;
-    i.e.: just calling this object like a function (``my_plugin(...)``) will
-    automatically invoke :py:meth:`process` with the same arguments.
-
-          )",
+          "Run an audio or MIDI buffer through this plugin, returning "
+          "audio. Alias for :py:meth:`process`.",
           py::arg("input_array"), py::arg("sample_rate"),
           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
-      .def(
-          "__call__",
-          &ExternalPlugin<juce::AudioUnitPluginFormat>::renderMIDIMessages,
-          "Pass MIDI messages into this plugin to render audio. Only supported "
-          "if this plugin is an instrument plugin, rather than an effect.",
-          py::arg("midi_messages"), py::arg("duration"), py::arg("sample_rate"),
-          py::arg("num_channels") = 1,
-          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-          py::arg("reset") = true);
+      .def("process",
+           &ExternalPlugin<juce::AudioUnitPluginFormat>::renderMIDIMessages,
+           EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("midi_messages"),
+           py::arg("duration"), py::arg("sample_rate"),
+           py::arg("num_channels") = 2,
+           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+           py::arg("reset") = true)
+      .def("__call__",
+           &ExternalPlugin<juce::AudioUnitPluginFormat>::renderMIDIMessages,
+           "Run an audio or MIDI buffer through this plugin, returning "
+           "audio. Alias for :py:meth:`process`.",
+           py::arg("midi_messages"), py::arg("duration"),
+           py::arg("sample_rate"), py::arg("num_channels") = 2,
+           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+           py::arg("reset") = true);
 #endif
 }
 

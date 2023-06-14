@@ -1,6 +1,27 @@
 from __future__ import annotations
 import pedalboard_native._internal
+
 import typing
+
+original_overload = typing.overload
+__OVERLOADED_DOCSTRINGS = {}
+
+def patch_overload(func):
+    original_overload(func)
+    if func.__doc__:
+        __OVERLOADED_DOCSTRINGS[func.__qualname__] = func.__doc__
+    else:
+        func.__doc__ = __OVERLOADED_DOCSTRINGS.get(func.__qualname__)
+    if func.__doc__:
+        # Work around the fact that pybind11-stubgen generates
+        # duplicate docstrings sometimes, once for each overload:
+        docstring = func.__doc__
+        if docstring[len(docstring) // 2 :].strip() == docstring[: -len(docstring) // 2].strip():
+            func.__doc__ = docstring[len(docstring) // 2 :].strip()
+    return func
+
+typing.overload = patch_overload
+
 from typing_extensions import Literal
 from enum import Enum
 import pedalboard_native

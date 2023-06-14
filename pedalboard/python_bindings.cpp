@@ -176,15 +176,15 @@ or buffer, set ``reset`` to ``False``.
           [](std::shared_ptr<Plugin> self) {
             return self->acceptsAudioInput();
           },
-          "True iff this plugin is an audio effect (i.e.: accepts audio "
-          "input.)")
+          "True iff this plugin is an audio effect and accepts audio "
+          "as input.\n\n*Introduced in v0.7.4.*")
       .def_property_readonly(
           "is_instrument",
           [](std::shared_ptr<Plugin> self) {
             return !self->acceptsAudioInput();
           },
-          "True iff this plugin is not an audio effect (i.e.: accepts only "
-          "MIDI input, not audio.)");
+          "True iff this plugin is not an audio effect and accepts only "
+          "MIDI input, not audio.\n\n*Introduced in v0.7.4.*");
 
   init_plugin_container(m);
 

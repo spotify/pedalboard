@@ -40,10 +40,13 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "sphinxext.opengraph",
     "m2r2",
 ]
+
+intersphinx_mapping = {"mido": ("https://mido.readthedocs.io/en/latest/", None)}
 
 autosummary_generate = True
 autodoc_docstring_signature = True
@@ -51,6 +54,7 @@ autodoc_member_order = "bysource"
 autodoc_default_options = {
     "autosummary": True,
 }
+autodoc_inherit_docstrings = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
