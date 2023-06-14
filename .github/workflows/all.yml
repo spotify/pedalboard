@@ -99,8 +99,9 @@ jobs:
         run: brew install jq
         if: runner.os == 'macOS'
       - name: Install JQ for coverage badge on Windows
-        run: chocolatey install jq
+        run: install jq
         if: runner.os == 'Windows'
+        uses: crazy-max/ghaction-chocolatey@v2
       - name: Build pedalboard locally
         run: python setup.py develop
       - name: Install VSTs for testing
