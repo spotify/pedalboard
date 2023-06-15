@@ -73,11 +73,11 @@ using namespace Pedalboard;
 
 PYBIND11_MODULE(pedalboard_native, m) {
   m.doc() =
-      ("This module provides classes and functions for adding effects to "
-       "audio. Most classes in this module are subclasses of ``Plugin``, each "
-       "of which allows applying effects to an audio buffer or stream.\n\nFor "
-       "audio I/O classes (i.e.: reading and writing audio files), see "
-       "``pedalboard.io``.");
+      ("This module provides classes and functions for generating and adding "
+       "effects to audio. Most classes in this module are subclasses of "
+       "``Plugin``, each of which allows applying effects to an audio buffer "
+       "or stream.\n\nFor audio I/O classes (i.e.: reading and writing audio "
+       "files), see ``pedalboard.io``.");
 
   auto plugin = py::class_<Plugin, std::shared_ptr<Plugin>>(
       m, "Plugin",
@@ -170,8 +170,21 @@ or buffer, set ``reset`` to ``False``.
           "Run an audio buffer through this plugin. Alias for "
           ":py:meth:`process`.",
           py::arg("input_array"), py::arg("sample_rate"),
-          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-          py::arg("reset") = true);
+          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
+      .def_property_readonly(
+          "is_effect",
+          [](std::shared_ptr<Plugin> self) {
+            return self->acceptsAudioInput();
+          },
+          "True iff this plugin is an audio effect and accepts audio "
+          "as input.\n\n*Introduced in v0.7.4.*")
+      .def_property_readonly(
+          "is_instrument",
+          [](std::shared_ptr<Plugin> self) {
+            return !self->acceptsAudioInput();
+          },
+          "True iff this plugin is not an audio effect and accepts only "
+          "MIDI input, not audio.\n\n*Introduced in v0.7.4.*");
 
   init_plugin_container(m);
 

@@ -2,7 +2,7 @@
 :og:description: 🎛 🔊 Documentation for Pedalboard: A Python library for working with audio.
 
 .. mdinclude:: ../../README.md
-   :end-line: 72
+   :end-line: 74
 
 Reference
 ---------
@@ -10,7 +10,7 @@ Reference
 .. toctree::
    :maxdepth: 1
 
-   API Reference (Audio Effects) <reference/pedalboard>
+   API Reference (Audio Plugins) <reference/pedalboard>
    API Reference (Audio I/O) <reference/pedalboard.io>
 
 

@@ -3,7 +3,28 @@
 *Introduced in v0.5.1.*"""
 from __future__ import annotations
 import pedalboard_native.io
+
 import typing
+
+original_overload = typing.overload
+__OVERLOADED_DOCSTRINGS = {}
+
+def patch_overload(func):
+    original_overload(func)
+    if func.__doc__:
+        __OVERLOADED_DOCSTRINGS[func.__qualname__] = func.__doc__
+    else:
+        func.__doc__ = __OVERLOADED_DOCSTRINGS.get(func.__qualname__)
+    if func.__doc__:
+        # Work around the fact that pybind11-stubgen generates
+        # duplicate docstrings sometimes, once for each overload:
+        docstring = func.__doc__
+        if docstring[len(docstring) // 2 :].strip() == docstring[: -len(docstring) // 2].strip():
+            func.__doc__ = docstring[len(docstring) // 2 :].strip()
+    return func
+
+typing.overload = patch_overload
+
 from typing_extensions import Literal
 from enum import Enum
 import numpy
@@ -216,22 +237,7 @@ class AudioStream:
         sample_rate: typing.Optional[float] = None,
         buffer_size: int = 512,
         allow_feedback: bool = False,
-    ) -> None:
-        """
-        Create a new :class:`AudioStream` instance.
-
-        Creating this object does not start an audio stream; it merely prepares
-        the stream to run.
-
-        Use the :py:meth:`input_device_names` and :py:meth:`output_device_names`
-        properties to fetch the currently-available input and output device names
-        on the current system.
-
-        Note that if the provided input device name looks like a microphone and
-        the provided output device name looks like a speaker, this constructor will
-        throw an exception to prevent audio feedback from occurring. To bypass this,
-        pass ``allow_feedback=True`` (and ensure your volume is turned down!).
-        """
+    ) -> None: ...
     def __repr__(self) -> str: ...
     def run(self) -> None:
         """
@@ -256,8 +262,9 @@ class AudioStream:
 
 
         """
-    input_device_names: typing.List[str]
-    output_device_names: typing.List[str]
+    input_device_names: typing.List[str] = []
+    output_device_names: typing.List[str] = []
+    pass
 
 class ReadableAudioFile(AudioFile):
     """

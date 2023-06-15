@@ -23,6 +23,7 @@
 
 #include "BufferUtils.h"
 #include "Plugin.h"
+#include "PluginContainer.h"
 
 namespace py = pybind11;
 

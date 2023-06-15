@@ -14,7 +14,7 @@
 [![GitHub Repo stars](https://img.shields.io/github/stars/spotify/pedalboard?style=social)](https://github.com/spotify/pedalboard/stargazers)
 
 
-`pedalboard` is a Python library for working with audio: reading, writing, adding effects, and more. It supports most popular audio file formats and a number of common audio effects out of the box, and also allows the use of [VST3®](https://www.steinberg.net/en/company/technologies/vst3.html) and [Audio Unit](https://en.wikipedia.org/wiki/Audio_Units) formats for third-party plugins.
+`pedalboard` is a Python library for working with audio: reading, writing, rendering, adding effects, and more. It supports most popular audio file formats and a number of common audio effects out of the box, and also allows the use of [VST3®](https://www.steinberg.net/en/company/technologies/vst3.html) and [Audio Unit](https://en.wikipedia.org/wiki/Audio_Units) formats for loading third-party software instruments and effects.
 
 `pedalboard` was built by [Spotify's Audio Intelligence Lab](https://research.atspotify.com/audio-intelligence/) to enable using studio-quality audio effects from within Python and TensorFlow. Internally at Spotify, `pedalboard` is used for [data augmentation](https://en.wikipedia.org/wiki/Data_augmentation) to improve machine learning models and to help power features like [Spotify's AI DJ](https://newsroom.spotify.com/2023-02-22/spotify-debuts-a-new-ai-dj-right-in-your-pocket/). `pedalboard` also helps in the process of content creation, making it possible to add effects to audio without using a Digital Audio Workstation.
 
@@ -35,8 +35,8 @@
    - Pitch effects: `PitchShift`
    - Lossy compression: `GSMFullRateCompressor`, `MP3Compressor`
    - Quality reduction: `Resample`, `Bitcrush`
- - Supports VST3® plugins on macOS, Windows, and Linux ([`pedalboard.load_plugin`](https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.load_plugin))
- - Supports Audio Units on macOS
+ - Supports VST3® instrument and effect plugins on macOS, Windows, and Linux ([`pedalboard.load_plugin`](https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.load_plugin))
+ - Supports instrument and effect Audio Units on macOS
  - Strong thread-safety, memory usage, and speed guarantees
    - Releases Python's Global Interpreter Lock (GIL) to allow use of multiple CPU cores
      - No need to use `multiprocessing`!
@@ -146,16 +146,18 @@ with AudioFile('processed-output.wav', 'w', samplerate, effected.shape[0]) as f:
   f.write(effected)
 ```
 
-### Using VST3® or Audio Unit plugins
+### Using VST3® or Audio Unit instrument and effect plugins
 
 ```python
 from pedalboard import Pedalboard, Reverb, load_plugin
 from pedalboard.io import AudioFile
+from mido import Message # not part of Pedalboard, but convenient!
 
 # Load a VST3 or Audio Unit plugin from a known path on disk:
-vst = load_plugin("./VSTs/RoughRider3.vst3")
+instrument = load_plugin("./VSTs/Magical8BitPlug2.vst3")
+effect = load_plugin("./VSTs/RoughRider3.vst3")
 
-print(vst.parameters.keys())
+print(effect.parameters.keys())
 # dict_keys([
 #   'sc_hpf_hz', 'input_lvl_db', 'sensitivity_db',
 #   'ratio', 'attack_ms', 'release_ms', 'makeup_db',
@@ -164,16 +166,21 @@ print(vst.parameters.keys())
 # ])
 
 # Set the "ratio" parameter to 15
-vst.ratio = 15
+effect.ratio = 15
 
-# Use this VST to process some audio:
-with AudioFile('some-file.wav', 'r') as f:
-  audio = f.read(f.frames)
-  samplerate = f.samplerate
-effected = vst(audio, samplerate)
+# Render some audio by passing MIDI to an instrument:
+samplerate = 44100
+audio = instrument(
+  [Message("note_on", note=60), Message("note_off", note=60, time=5)],
+  samplerate,
+  duration=5, # seconds
+)
 
-# ...or put this VST into a chain with other plugins:
-board = Pedalboard([vst, Reverb()])
+# Apply effects to this audio:
+effected = effect(audio, samplerate)
+
+# ...or put the effect into a chain with other plugins:
+board = Pedalboard([effect, Reverb()])
 # ...and run that pedalboard with the same VST instance!
 effected = board(audio, samplerate)
 ```

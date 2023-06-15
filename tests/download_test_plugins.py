@@ -27,20 +27,21 @@ def main():
     credentials = service_account.Credentials.from_service_account_info(json_acct_info)
     client = storage.Client(credentials=credentials)
 
-    target_filepath = os.path.join(".", "tests", "plugins", platform.system())
-    bucket = client.bucket(GCS_ASSET_BUCKET_NAME)
-    prefix = f"test-plugins/{platform.system()}"
+    for plugin_type in ("effect", "instrument"):
+        target_filepath = os.path.join(".", "tests", "plugins", plugin_type, platform.system())
+        bucket = client.bucket(GCS_ASSET_BUCKET_NAME)
+        prefix = f"test-plugins/{plugin_type}/{platform.system()}"
 
-    # Manually iterate here instead of just calling gsutil on the command line as
-    # GSUtil on Windows is not 100% guaranteed to install properly on GitHub Actions.
-    print("Downloading test plugin files from Google Cloud Storage...")
-    for blob in tqdm(list(bucket.list_blobs(prefix=prefix))):
-        local_path = os.path.join(target_filepath, blob.name.replace(prefix + "/", ""))
-        if local_path.endswith("/"):
-            os.makedirs(local_path, exist_ok=True)
-        else:
-            os.makedirs(os.path.dirname(local_path), exist_ok=True)
-            blob.download_to_filename(local_path)
+        # Manually iterate here instead of just calling gsutil on the command line as
+        # GSUtil on Windows is not 100% guaranteed to install properly on GitHub Actions.
+        print(f"Downloading test {plugin_type} plugin files from Google Cloud Storage...")
+        for blob in tqdm(list(bucket.list_blobs(prefix=prefix))):
+            local_path = os.path.join(target_filepath, blob.name.replace(prefix + "/", ""))
+            if local_path.endswith("/"):
+                os.makedirs(local_path, exist_ok=True)
+            else:
+                os.makedirs(os.path.dirname(local_path), exist_ok=True)
+                blob.download_to_filename(local_path)
     print("Done!")
 
 

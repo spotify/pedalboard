@@ -6,7 +6,7 @@
 <meta property="og:title" content="Examples" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://spotify.github.io/pedalboard/examples.html" />
-<meta property="og:site_name" content="Pedalboard v0.7.3 Documentation" />
+<meta property="og:site_name" content="Pedalboard v0.7.4 Documentation" />
 <meta property="og:description" content="Note: If you’d rather watch a video instead of reading examples or documentation,** watch*Working with Audio in Python (feat. Pedalboard)* on YouTube**. Quick start: Note: For more information abou..." />
 <meta property="og:image" content="https://repository-images.githubusercontent.com/383471193/0f79b949-9b91-4436-bfc4-05d30ef384cc" />
 <meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
@@ -14,7 +14,7 @@
 <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Frequently Asked Questions" href="faq.html" /><link rel="prev" title="The pedalboard.io API" href="reference/pedalboard.io.html" />
 
     <link rel="shortcut icon" href="_static/favicon.ico"/><meta name="generator" content="sphinx-5.3.0, furo 2022.09.29"/>
-        <title>Examples - Pedalboard v0.7.3 Documentation</title>
+        <title>Examples - Pedalboard v0.7.4 Documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?digest=d81277517bee4d6b0349d71bb2661d4890b5617c" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css" />
@@ -132,7 +132,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">Pedalboard v0.7.3 Documentation</div></a>
+      <a href="index.html"><div class="brand">Pedalboard v0.7.4 Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -158,7 +158,7 @@
     <img class="sidebar-logo" src="_static/pedalboard_logo_small.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">Pedalboard v0.7.3 Documentation</span>
+  <span class="sidebar-brand-text">Pedalboard v0.7.4 Documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
@@ -167,7 +167,7 @@
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <ul>
-<li class="toctree-l1"><a class="reference internal" href="reference/pedalboard.html">API Reference (Audio Effects)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/pedalboard.html">API Reference (Audio Plugins)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/pedalboard.io.html">API Reference (Audio I/O)</a></li>
 </ul>
 <ul class="current">
@@ -286,15 +286,17 @@ see <cite>the documentation for ``pedalboard.Plugin.process`</cite> &lt;<a class
 </pre></div>
 </div>
 </section>
-<section id="using-vst3-or-audio-unit-plugins">
-<h2>Using VST3® or Audio Unit plugins<a class="headerlink" href="#using-vst3-or-audio-unit-plugins" title="Permalink to this heading">#</a></h2>
+<section id="using-vst3-or-audio-unit-instrument-and-effect-plugins">
+<h2>Using VST3® or Audio Unit instrument and effect plugins<a class="headerlink" href="#using-vst3-or-audio-unit-instrument-and-effect-plugins" title="Permalink to this heading">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pedalboard</span> <span class="kn">import</span> <span class="n">Pedalboard</span><span class="p">,</span> <span class="n">Reverb</span><span class="p">,</span> <span class="n">load_plugin</span>
 <span class="kn">from</span> <span class="nn">pedalboard.io</span> <span class="kn">import</span> <span class="n">AudioFile</span>
+<span class="kn">from</span> <span class="nn">mido</span> <span class="kn">import</span> <span class="n">Message</span> <span class="c1"># not part of Pedalboard, but convenient!</span>
 
 <span class="c1"># Load a VST3 or Audio Unit plugin from a known path on disk:</span>
-<span class="n">vst</span> <span class="o">=</span> <span class="n">load_plugin</span><span class="p">(</span><span class="s2">&quot;./VSTs/RoughRider3.vst3&quot;</span><span class="p">)</span>
+<span class="n">instrument</span> <span class="o">=</span> <span class="n">load_plugin</span><span class="p">(</span><span class="s2">&quot;./VSTs/Magical8BitPlug2.vst3&quot;</span><span class="p">)</span>
+<span class="n">effect</span> <span class="o">=</span> <span class="n">load_plugin</span><span class="p">(</span><span class="s2">&quot;./VSTs/RoughRider3.vst3&quot;</span><span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="n">vst</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">effect</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
 <span class="c1"># dict_keys([</span>
 <span class="c1">#   &#39;sc_hpf_hz&#39;, &#39;input_lvl_db&#39;, &#39;sensitivity_db&#39;,</span>
 <span class="c1">#   &#39;ratio&#39;, &#39;attack_ms&#39;, &#39;release_ms&#39;, &#39;makeup_db&#39;,</span>
@@ -303,16 +305,21 @@ see <cite>the documentation for ``pedalboard.Plugin.process`</cite> &lt;<a class
 <span class="c1"># ])</span>
 
 <span class="c1"># Set the &quot;ratio&quot; parameter to 15</span>
-<span class="n">vst</span><span class="o">.</span><span class="n">ratio</span> <span class="o">=</span> <span class="mi">15</span>
+<span class="n">effect</span><span class="o">.</span><span class="n">ratio</span> <span class="o">=</span> <span class="mi">15</span>
 
-<span class="c1"># Use this VST to process some audio:</span>
-<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;some-file.wav&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-  <span class="n">audio</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span>
-  <span class="n">samplerate</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">samplerate</span>
-<span class="n">effected</span> <span class="o">=</span> <span class="n">vst</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">)</span>
+<span class="c1"># Render some audio by passing MIDI to an instrument:</span>
+<span class="n">samplerate</span> <span class="o">=</span> <span class="mi">44100</span>
+<span class="n">audio</span> <span class="o">=</span> <span class="n">instrument</span><span class="p">(</span>
+  <span class="p">[</span><span class="n">Message</span><span class="p">(</span><span class="s2">&quot;note_on&quot;</span><span class="p">,</span> <span class="n">note</span><span class="o">=</span><span class="mi">60</span><span class="p">),</span> <span class="n">Message</span><span class="p">(</span><span class="s2">&quot;note_off&quot;</span><span class="p">,</span> <span class="n">note</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="mi">5</span><span class="p">)],</span>
+  <span class="n">samplerate</span><span class="p">,</span>
+  <span class="n">duration</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="c1"># seconds</span>
+<span class="p">)</span>
 
-<span class="c1"># ...or put this VST into a chain with other plugins:</span>
-<span class="n">board</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span><span class="n">vst</span><span class="p">,</span> <span class="n">Reverb</span><span class="p">()])</span>
+<span class="c1"># Apply effects to this audio:</span>
+<span class="n">effected</span> <span class="o">=</span> <span class="n">effect</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">)</span>
+
+<span class="c1"># ...or put the effect into a chain with other plugins:</span>
+<span class="n">board</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span><span class="n">effect</span><span class="p">,</span> <span class="n">Reverb</span><span class="p">()])</span>
 <span class="c1"># ...and run that pedalboard with the same VST instance!</span>
 <span class="n">effected</span> <span class="o">=</span> <span class="n">board</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">)</span>
 </pre></div>
@@ -389,9 +396,6 @@ allowing for real-time manipulation of audio by adding effects in Python.</p>
 <li><p><a class="reference external" href="https://www.youtube.com/watch?v=NYhkqXpFAlg">*Working with Audio in Python (feat. Pedalboard)* by Peter Sobot at EuroPython 2022</a></p></li>
 <li><p><a class="reference external" href="https://huggingface.co/spaces/akhaliq/pedalboard">an interactive web demo on Hugging Face Spaces and Gradio</a> (via <a class="reference external" href="https://github.com/AK391">&#64;AK391</a>)</p></li>
 </ul>
-<section id="contributing">
-<h3>Contributing<a class="headerlink" href="#contributing" title="Permalink to this heading">#</a></h3>
-</section>
 </section>
 </section>
 
@@ -461,12 +465,9 @@ allowing for real-time manipulation of audio by adding effects in Python.</p>
 <li><a class="reference internal" href="#">Examples</a><ul>
 <li><a class="reference internal" href="#quick-start">Quick start</a></li>
 <li><a class="reference internal" href="#making-a-guitar-style-pedalboard">Making a guitar-style pedalboard</a></li>
-<li><a class="reference internal" href="#using-vst3-or-audio-unit-plugins">Using VST3® or Audio Unit plugins</a></li>
+<li><a class="reference internal" href="#using-vst3-or-audio-unit-instrument-and-effect-plugins">Using VST3® or Audio Unit instrument and effect plugins</a></li>
 <li><a class="reference internal" href="#creating-parallel-effects-chains">Creating parallel effects chains</a></li>
-<li><a class="reference internal" href="#running-pedalboard-on-live-audio">Running Pedalboard on Live Audio</a><ul>
-<li><a class="reference internal" href="#contributing">Contributing</a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#running-pedalboard-on-live-audio">Running Pedalboard on Live Audio</a></li>
 </ul>
 </li>
 </ul>

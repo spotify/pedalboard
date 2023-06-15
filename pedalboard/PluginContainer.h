@@ -29,8 +29,31 @@ namespace Pedalboard {
  */
 class PluginContainer : public Plugin {
 public:
-  PluginContainer(std::vector<std::shared_ptr<Plugin>> plugins)
-      : plugins(plugins) {}
+  PluginContainer(std::vector<std::shared_ptr<Plugin>> _plugins) {
+    std::vector<std::shared_ptr<Plugin>> nonEffectPlugins;
+    for (std::shared_ptr<Plugin> plugin : _plugins) {
+      if (plugin && !plugin->acceptsAudioInput()) {
+        nonEffectPlugins.push_back(plugin);
+      }
+    }
+
+    if (!nonEffectPlugins.empty()) {
+      std::string number = nonEffectPlugins.size() == 1 ? "One" : "Some";
+      std::string description =
+          nonEffectPlugins.size() == 1
+              ? "is an instrument plugin, which does not accept"
+              : "are instrument plugins, which do not accept";
+      throw std::domain_error(number + " of the " +
+                              std::to_string(nonEffectPlugins.size()) +
+                              " provided plugins " + description +
+                              " audio input. Instrument plugins cannot be "
+                              "added to Pedalboard, Mix, "
+                              "or Chain objects.");
+    }
+
+    plugins = _plugins;
+  }
+
   virtual ~PluginContainer(){};
 
   std::vector<std::shared_ptr<Plugin>> &getPlugins() { return plugins; }
@@ -102,6 +125,14 @@ inline void init_plugin_container(py::module &m) {
               throw py::index_error("index out of range");
             if (i >= s.getPlugins().size())
               throw py::index_error("index out of range");
+
+            if (plugin && !plugin->acceptsAudioInput()) {
+              throw std::domain_error(
+                  "Provided plugin is an instrument plugin "
+                  "that does not accept audio input. Instrument plugins cannot "
+                  "be added to Pedalboard, Mix, or Chain objects.");
+            }
+
             s.getPlugins()[i] = plugin;
           },
           py::arg("index"), py::arg("plugin"),
@@ -140,6 +171,14 @@ inline void init_plugin_container(py::module &m) {
               throw py::index_error("index out of range");
             if (i > s.getPlugins().size())
               throw py::index_error("index out of range");
+
+            if (plugin && !plugin->acceptsAudioInput()) {
+              throw std::domain_error(
+                  "Provided plugin is an instrument plugin "
+                  "that does not accept audio input. Instrument plugins cannot "
+                  "be added to Pedalboard, Mix, or Chain objects.");
+            }
+
             auto &plugins = s.getPlugins();
             plugins.insert(plugins.begin() + i, plugin);
           },
@@ -149,6 +188,14 @@ inline void init_plugin_container(py::module &m) {
           "append",
           [](PluginContainer &s, std::shared_ptr<Plugin> plugin) {
             std::scoped_lock lock(s.mutex);
+
+            if (plugin && !plugin->acceptsAudioInput()) {
+              throw std::domain_error(
+                  "Provided plugin is an instrument plugin "
+                  "that does not accept audio input. Instrument plugins cannot "
+                  "be added to Pedalboard, Mix, or Chain objects.");
+            }
+
             s.getPlugins().push_back(plugin);
           },
           py::arg("plugin"), "Append a plugin to the end of this container.")

@@ -8,6 +8,8 @@ import shutil
 import difflib
 import importlib
 import pathlib
+import psutil
+import subprocess
 import traceback
 from tempfile import TemporaryDirectory
 from contextlib import contextmanager
@@ -93,7 +95,7 @@ def patch_pybind11_stubgen():
                     else "",
                 ),
             ]
-            for (name, value, docstring) in sorted(
+            for name, value, docstring in sorted(
                 list(zip(self.enum_names, self.enum_values, self.enum_docstrings)),
                 key=lambda x: x[1],
             ):
@@ -305,6 +307,12 @@ def main():
                         ]
                     )
                 )
+        # Re-run this same script in a fresh interpreter, but with skip_regenerating_type_hints
+        # enabled:
+        subprocess.check_call(
+            [psutil.Process(os.getpid()).exe()] + sys.argv + ["--skip-regenerating-type-hints"]
+        )
+        return
 
     # Why is this necessary? I don't know, but without it, things fail.
     print("Importing numpy to ensure a successful Pedalboard stub import...")
@@ -323,7 +331,7 @@ def main():
             postprocess_sphinx_output(tempdir, SPHINX_REPLACEMENTS)
             remove_non_public_files(tempdir)
 
-            for (dirpath, _dirnames, filenames) in os.walk(tempdir):
+            for dirpath, _dirnames, filenames in os.walk(tempdir):
                 prefix = dirpath.replace(tempdir, "").lstrip(os.path.sep)
                 for filename in filenames:
                     if glob_matches(filename, args.skip_comparing):

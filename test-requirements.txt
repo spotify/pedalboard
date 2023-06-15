@@ -2,7 +2,7 @@ coverage
 pytest>6.2
 pytest-cov
 pytest-mock
-pybind11>=2.6.0
+pybind11>=2.10.4
 setuptools>=59
 pip>22; python_version > '3.6'
 pip>21; python_version < '3.7'
@@ -28,3 +28,6 @@ docutils==0.19; python_version > '3.6'
 m2r2==0.3.3; python_version > '3.6'
 furo==2022.9.29; python_version > '3.6'
 sphinxext-opengraph==0.7.3; python_version > '3.6'
+
+# For MIDI support - only in test though!
+mido

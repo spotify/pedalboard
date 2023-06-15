@@ -27,6 +27,8 @@ import subprocess
 from glob import glob
 from pathlib import Path
 
+import mido
+
 from pedalboard._pedalboard import (
     WrappedBool,
     strip_common_float_suffixes,
@@ -38,20 +40,38 @@ import numpy as np
 from typing import Optional
 
 
-TEST_PLUGIN_BASE_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), "plugins")
+TEST_EFFECT_PLUGIN_BASE_PATH = os.path.join(
+    os.path.abspath(os.path.dirname(__file__)), "plugins", "effect"
+)
+TEST_INSTRUMENT_PLUGIN_BASE_PATH = os.path.join(
+    os.path.abspath(os.path.dirname(__file__)), "plugins", "instrument"
+)
 TEST_PRESET_BASE_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), "presets")
+TEST_MIDI_BASE_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), "midi")
 
-AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT = [
+AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT = [
     os.path.basename(filename)
-    for filename in glob(os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), "*"))
+    for filename in glob(os.path.join(TEST_EFFECT_PLUGIN_BASE_PATH, platform.system(), "*"))
+]
+
+AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT = [
+    os.path.basename(filename)
+    for filename in glob(os.path.join(TEST_INSTRUMENT_PLUGIN_BASE_PATH, platform.system(), "*"))
 ]
 
 # Disable Audio Unit tests on GitHub Actions, as the
 # action container fails to load Audio Units:
 if os.getenv("CIBW_TEST_REQUIRES") or os.getenv("CI"):
-    AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT = [
-        f for f in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT if "component" not in f
+    AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT = [
+        f for f in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT if "component" not in f
     ]
+    AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT = [
+        f for f in AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT if "component" not in f
+    ]
+
+AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT = (
+    AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT + AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT
+)
 
 
 def is_container_plugin(filename: str):
@@ -63,8 +83,10 @@ def is_container_plugin(filename: str):
     return False
 
 
-AVAILABLE_CONTAINER_PLUGINS_IN_TEST_ENVIRONMENT = [
-    filename for filename in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT if is_container_plugin(filename)
+AVAILABLE_CONTAINER_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT = [
+    filename
+    for filename in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
+    if is_container_plugin(filename)
 ]
 
 
@@ -80,6 +102,17 @@ PLUGIN_FILES_TO_DELETE = set()
 MACOS_PLUGIN_INSTALL_PATH = Path.home() / "Library" / "Audio" / "Plug-Ins" / "Components"
 
 
+def find_plugin_path(plugin_filename: str) -> str:
+    plugin_path = os.path.join(TEST_EFFECT_PLUGIN_BASE_PATH, platform.system(), plugin_filename)
+    if not os.path.exists(plugin_path):
+        plugin_path = os.path.join(
+            TEST_INSTRUMENT_PLUGIN_BASE_PATH, platform.system(), plugin_filename
+        )
+    if not os.path.exists(plugin_path):
+        raise ValueError(f"Failed to find plugin named {plugin_path}!")
+    return plugin_path
+
+
 def load_test_plugin(plugin_filename: str, disable_caching: bool = False, *args, **kwargs):
     """
     Load a plugin file from disk, or use an existing instance to save
@@ -91,7 +124,7 @@ def load_test_plugin(plugin_filename: str, disable_caching: bool = False, *args,
 
     key = repr((plugin_filename, args, tuple(kwargs.items())))
     if key not in TEST_PLUGIN_CACHE or disable_caching:
-        plugin_path = os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_filename)
+        plugin_path = find_plugin_path(plugin_filename)
 
         if platform.system() == "Darwin" and plugin_filename.endswith(".component"):
             # On macOS, AudioUnit components must be installed in
@@ -150,14 +183,14 @@ if os.environ.get("ENABLE_TESTING_WITH_LOCAL_PLUGINS", False):
         for plugin_path in plugin_class.installed_plugins:
             try:
                 load_test_plugin(plugin_path)
-                AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT.append(plugin_path)
+                AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT.append(plugin_path)
             except Exception as e:
                 print(f"Tried to load {plugin_path} for local testing, but failed with: {e}")
 
             # Even if the plugin failed to load, add it to
             # the list of known container plugins if necessary:
             if is_container_plugin(plugin_path):
-                AVAILABLE_CONTAINER_PLUGINS_IN_TEST_ENVIRONMENT.append(plugin_path)
+                AVAILABLE_CONTAINER_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT.append(plugin_path)
 
 
 def plugin_named(*substrings: str) -> Optional[str]:
@@ -166,7 +199,7 @@ def plugin_named(*substrings: str) -> Optional[str]:
     provided substrings from the list of available test plugins.
     """
     for plugin_filename in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT:
-        if all([s in plugin_filename for s in substrings]):
+        if all([s.lower() in plugin_filename.lower() for s in substrings]):
             return plugin_filename
 
 
@@ -175,7 +208,7 @@ def max_volume_of(x: np.ndarray) -> float:
 
 
 def test_at_least_one_plugin_is_available_for_testing():
-    assert AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
+    assert AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
 
 
 @pytest.mark.parametrize(
@@ -212,7 +245,7 @@ def test_at_least_one_parameter(plugin_filename: str):
     "plugin_filename,plugin_preset",
     [
         (plugin, os.path.join(TEST_PRESET_BASE_PATH, plugin + ".vstpreset"))
-        for plugin in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
+        for plugin in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
         if os.path.isfile(os.path.join(TEST_PRESET_BASE_PATH, plugin + ".vstpreset"))
     ],
 )
@@ -279,15 +312,126 @@ def test_import_error_on_missing_path(loader):
         loader("./")
 
 
-@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("num_channels,sample_rate", [(2, 48000), (2, 44100), (2, 22050)])
+@pytest.mark.parametrize(
+    "notes",
+    [
+        # Accept note-like objects via duck typing:
+        [
+            mido.Message("note_on", note=100, velocity=3, time=0),
+            mido.Message("note_off", note=100, time=5.0),
+        ],
+        # Accept tuples of MIDI bytes and their timestamps:
+        [
+            (mido.Message("note_on", note=100, velocity=3).bytes(), 0),
+            (mido.Message("note_off", note=100).bytes(), 5),
+        ],
+        # Accept bytes objects representing MIDI messages, plus their timestamps:
+        [
+            (bytes(mido.Message("note_on", note=100, velocity=3).bytes()), 0),
+            (bytes(mido.Message("note_off", note=100).bytes()), 5),
+        ],
+    ],
+)
+def test_instrument_plugin_accepts_notes(
+    plugin_filename: str, num_channels: int, sample_rate: float, notes
+):
+    plugin = load_test_plugin(plugin_filename)
+    assert plugin.is_instrument
+    assert not plugin.is_effect
+    output = plugin(notes, 6.0, sample_rate, num_channels=num_channels)
+    assert np.amax(np.abs(output)) > 0
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_instrument_plugin_rejects_switched_duration_and_sample_rate(plugin_filename: str):
+    plugin = load_test_plugin(plugin_filename)
+    assert plugin.is_instrument
+    assert not plugin.is_effect
+    with pytest.raises(ValueError) as e:
+        plugin([], 44100, 6.0)
+    assert "reversing the order" in str(e)
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_instrument_plugin_rejects_notes_naively_read_from_midi_file(plugin_filename: str):
+    plugin = load_test_plugin(plugin_filename)
+    assert plugin.is_instrument
+    assert not plugin.is_effect
+    midifile = mido.MidiFile(os.path.join(TEST_MIDI_BASE_PATH, "ascending_chromatic.mid"))
+    with pytest.raises(ValueError) as e:
+        plugin(midifile.tracks[0], 6.0, 44100)
+    assert "timestamp" in str(e)
+    assert "seconds" in str(e)
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("num_channels,sample_rate", [(2, 48000), (2, 44100), (2, 22050)])
+def test_effect_plugin_does_not_accept_notes(
+    plugin_filename: str, num_channels: int, sample_rate: float
+):
+    notes = [
+        mido.Message("note_on", note=100, velocity=3, time=0),
+        mido.Message("note_off", note=100, time=5.0),
+    ]
+    plugin = load_test_plugin(plugin_filename)
+    assert plugin.is_effect
+    assert not plugin.is_instrument
+
+    with pytest.raises(ValueError):
+        plugin(notes, 6.0, sample_rate, num_channels=num_channels)
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("num_channels,sample_rate", [(2, 48000), (2, 44100), (2, 22050)])
+def test_instrument_plugin_accepts_buffer_size(
+    plugin_filename: str, num_channels: int, sample_rate: float
+):
+    notes = [
+        mido.Message("note_on", note=100, velocity=3, time=0),
+        mido.Message("note_off", note=100, time=5.0),
+    ]
+    plugin = load_test_plugin(plugin_filename)
+    assert plugin.is_instrument
+    assert not plugin.is_effect
+
+    outputs = [
+        plugin(notes, 6.0, sample_rate, num_channels=num_channels, buffer_size=buffer_size)
+        for buffer_size in [1, 32, 1024]
+    ]
+    for a, b in zip(outputs, outputs[1:]):
+        np.testing.assert_allclose(a, b, atol=0.02)
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("num_channels,sample_rate", [(2, 48000), (2, 44100), (2, 22050)])
+def test_instrument_plugin_does_not_accept_audio(
+    plugin_filename: str, num_channels: int, sample_rate: float
+):
+    plugin = load_test_plugin(plugin_filename)
+    assert plugin.is_instrument
+    assert not plugin.is_effect
+    with pytest.raises(ValueError):
+        plugin(np.random.rand(num_channels, sample_rate), sample_rate)
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_pedalboard_does_not_accept_instruments(plugin_filename: str):
+    with pytest.raises(ValueError):
+        pedalboard.Pedalboard([load_test_plugin(plugin_filename)])
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
 @pytest.mark.parametrize(
     "num_channels,sample_rate",
     [(1, 48000), (2, 48000), (1, 44100), (2, 44100), (1, 22050), (2, 22050)],
 )
-def test_plugin_accepts_variable_channel_count(
+def test_effect_plugin_accepts_variable_channel_count(
     plugin_filename: str, num_channels: int, sample_rate: float
 ):
     plugin = load_test_plugin(plugin_filename)
+    assert plugin.is_effect
     noise = np.random.rand(num_channels, sample_rate)
     try:
         effected = plugin(noise, sample_rate)
@@ -297,8 +441,8 @@ def test_plugin_accepts_variable_channel_count(
             raise
 
 
-@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
-def test_plugin_accepts_variable_channel_count_without_reloading(plugin_filename: str):
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_effect_plugin_accepts_variable_channel_count_without_reloading(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename)
     for num_channels, sample_rate in [
         (1, 48000),
@@ -317,7 +461,7 @@ def test_plugin_accepts_variable_channel_count_without_reloading(plugin_filename
                 raise
 
 
-@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_all_parameters_are_accessible_as_properties(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename)
     assert plugin.parameters
@@ -325,7 +469,7 @@ def test_all_parameters_are_accessible_as_properties(plugin_filename: str):
         assert hasattr(plugin, parameter_name)
 
 
-@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_parameters_cant_be_assigned_to_directly(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename)
     assert plugin.parameters
@@ -335,7 +479,7 @@ def test_parameters_cant_be_assigned_to_directly(plugin_filename: str):
             plugin.parameters[parameter_name] = current_value
 
 
-@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_all_parameters_have_accessors(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename)
     assert plugin.parameters
@@ -349,7 +493,7 @@ def test_all_parameters_have_accessors(plugin_filename: str):
         assert parameter_value.range is not None
 
 
-@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_attributes_proxy(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename)
 
@@ -365,7 +509,7 @@ def test_attributes_proxy(plugin_filename: str):
     "plugin_filename,parameter_name",
     [
         (path, parameter)
-        for path in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
+        for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
         for parameter in [k for k, v in get_parameters(path).items() if v.type == bool]
     ],
 )
@@ -390,7 +534,7 @@ def test_bool_parameters(plugin_filename: str, parameter_name: str):
     "plugin_filename,parameter_name",
     [
         (path, parameter)
-        for path in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
+        for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
         for parameter in [k for k, v in get_parameters(path).items() if v.type == bool]
     ],
 )
@@ -404,7 +548,7 @@ def test_bool_parameter_valdation(plugin_filename: str, parameter_name: str):
     "plugin_filename,parameter_name",
     [
         (path, parameter)
-        for path in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
+        for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
         for parameter in [k for k, v in get_parameters(path).items() if v.type == float]
     ],
 )
@@ -443,7 +587,7 @@ def test_float_parameters(plugin_filename: str, parameter_name: str):
     "plugin_filename,parameter_name",
     [
         (path, parameter)
-        for path in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
+        for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
         for parameter in [k for k, v in get_parameters(path).items() if v.type == float]
     ],
 )
@@ -477,7 +621,7 @@ def test_float_parameter_valdation(plugin_filename: str, parameter_name: str):
     "plugin_filename,parameter_name",
     [
         (path, parameter)
-        for path in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
+        for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
         for parameter in [k for k, v in get_parameters(path).items() if v.type == str]
     ],
 )
@@ -502,7 +646,7 @@ def test_str_parameters(plugin_filename: str, parameter_name: str):
     "plugin_filename,parameter_name",
     [
         (path, parameter)
-        for path in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
+        for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
         for parameter in [k for k, v in get_parameters(path).items() if v.type == str]
     ],
 )
@@ -517,7 +661,7 @@ def test_string_parameter_valdation(plugin_filename: str, parameter_name: str):
         setattr(plugin, parameter_name, "some value not present")
 
 
-@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_plugin_parameters_persist_between_calls(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename)
     sr = 44100
@@ -565,7 +709,7 @@ def test_plugin_parameters_persist_between_calls(plugin_filename: str):
         ), f"Expected {name} to match saved value"
 
 
-@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_plugin_state_cleared_between_invocations_by_default(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename, disable_caching=True)
 
@@ -582,7 +726,7 @@ def test_plugin_state_cleared_between_invocations_by_default(plugin_filename: st
         assert max_volume_of(plugin(silence, sr)) < 0.00001
 
 
-@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_plugin_state_not_cleared_between_invocations_if_reset_is_false(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename, disable_caching=True)
 
@@ -597,8 +741,8 @@ def test_plugin_state_not_cleared_between_invocations_if_reset_is_false(plugin_f
     assert max_volume_of(plugin(silence, sr, reset=False)) > 0.00001
 
 
-@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
-def test_explicit_reset(plugin_filename: str):
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_explicit_effect_reset(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename, disable_caching=True)
 
     sr = 44100
@@ -613,7 +757,17 @@ def test_explicit_reset(plugin_filename: str):
     assert max_volume_of(plugin(silence, sr, reset=False)) < 0.00001
 
 
-@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.skipif(not plugin_named("Magical8BitPlug"), reason="Missing Magical8BitPlug 2 plugin.")
+def test_explicit_instrument_reset():
+    plugin = load_test_plugin(plugin_named("Magical8BitPlug"), disable_caching=True)
+    sr = 44100
+    notes = [mido.Message("note_on", note=100, velocity=127, time=0)]
+    assert max_volume_of(plugin(notes, 5.0, sr, reset=False)) >= 0.5
+    plugin.reset()
+    assert max_volume_of(plugin([], 5.0, sr, reset=False)) < 0.00001
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_explicit_reset_in_pedalboard(plugin_filename: str):
     sr = 44100
     board = pedalboard.Pedalboard([load_test_plugin(plugin_filename, disable_caching=True)])
@@ -683,7 +837,7 @@ def test_external_plugin_latency_compensation(buffer_size: int, oversampling: in
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_show_editor(plugin_filename: str):
     # Run this test in a subprocess, as otherwise we'd block this thread:
-    full_plugin_filename = os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_filename)
+    full_plugin_filename = find_plugin_path(plugin_filename)
     try:
         subprocess.check_output(
             [
@@ -713,10 +867,10 @@ def test_show_editor(plugin_filename: str):
 
 
 @pytest.mark.skipif(
-    not AVAILABLE_CONTAINER_PLUGINS_IN_TEST_ENVIRONMENT,
+    not AVAILABLE_CONTAINER_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT,
     reason="No plugin containers installed in test environment!",
 )
-@pytest.mark.parametrize("plugin_filename", AVAILABLE_CONTAINER_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_CONTAINER_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_plugin_container_handling(plugin_filename: str):
     """
     Some plugins can have multiple sub-plugins within them.
@@ -741,7 +895,7 @@ def test_plugin_container_handling(plugin_filename: str):
 
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_get_plugin_name_from_regular_plugin(plugin_filename: str):
-    plugin_path = os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_filename)
+    plugin_path = find_plugin_path(plugin_filename)
     if ".vst3" in plugin_filename:
         names = pedalboard.VST3Plugin.get_plugin_names_for_file(plugin_path)
     elif ".component" in plugin_filename:
@@ -754,12 +908,12 @@ def test_get_plugin_name_from_regular_plugin(plugin_filename: str):
 
 
 @pytest.mark.skipif(
-    not AVAILABLE_CONTAINER_PLUGINS_IN_TEST_ENVIRONMENT,
+    not AVAILABLE_CONTAINER_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT,
     reason="No plugin containers installed in test environment!",
 )
-@pytest.mark.parametrize("plugin_filename", AVAILABLE_CONTAINER_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_CONTAINER_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_get_plugin_names_from_container(plugin_filename: str):
-    plugin_path = os.path.join(TEST_PLUGIN_BASE_PATH, platform.system(), plugin_filename)
+    plugin_path = find_plugin_path(plugin_filename)
     if ".vst3" in plugin_filename:
         names = pedalboard.VST3Plugin.get_plugin_names_for_file(plugin_path)
     elif ".component" in plugin_filename:

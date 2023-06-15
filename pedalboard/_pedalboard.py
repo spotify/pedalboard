@@ -37,6 +37,11 @@ class Pedalboard(Chain):
         my_pedalboard = Pedalboard()
         my_pedalboard.append(Reverb())
         output_audio = my_pedalboard(input_audio)
+
+    .. warning::
+        :class:`Pedalboard` objects may only contain effects plugins (i.e.: those for which
+        :attr:`is_effect` is ``True``), and cannot contain instrument plugins (i.e.: those
+        for which :attr:`is_instrument` is ``True``).
     """
 
     def __init__(self, plugins: Optional[List[Plugin]] = None):
@@ -59,7 +64,7 @@ FLOAT_SUFFIXES_TO_IGNORE: Set[str] = set(
 def strip_common_float_suffixes(
     s: Union[float, str, bool], strip_si_prefixes: bool = True
 ) -> Union[float, str, bool]:
-    if not isinstance(s, str) or (hasattr(s, "type") and s.type != str):
+    if not isinstance(s, str) or (hasattr(s, "type") and s.type != str):  # type: ignore
         return s
 
     s = s.strip()
@@ -573,8 +578,16 @@ def normalize_python_parameter_name(name: str) -> str:
 
 class _PythonExternalPluginMixin:
     def __set_initial_parameter_values__(
-        self, parameter_values: Dict[str, Union[str, int, float, bool]] = {}
+        self, parameter_values: Optional[Dict[str, Union[str, int, float, bool]]]
     ):
+        if parameter_values is None:
+            parameter_values = {}
+        if not isinstance(parameter_values, dict):
+            raise TypeError(
+                "Expected a dictionary to be passed to parameter_values, but received a"
+                f" {type(parameter_values).__name__}. (If passing a plugin name, pass"
+                ' "plugin_name=..." as a keyword argument instead.)'
+            )
         parameters = self.parameters
         for key, value in parameter_values.items():
             if key not in parameters:
@@ -670,40 +683,13 @@ class _PythonExternalPluginMixin:
         super().__setattr__(name, value)
 
 
+ExternalPlugin.__bases__ = ExternalPlugin.__bases__ + (_PythonExternalPluginMixin,)
+
+
 _AVAILABLE_PLUGIN_CLASSES: List[Type[ExternalPlugin]] = []
 
 try:
-    from pedalboard_native import _VST3Plugin
-
-    class VST3Plugin(_VST3Plugin, _PythonExternalPluginMixin):
-        """
-        A wrapper around third-party, non-Pedalboard audio effects
-        plugins in
-        `Steinberg GmbH's VST3® <https://en.wikipedia.org/wiki/Virtual_Studio_Technology>`_
-        format.
-
-        VST3® plugins are supported on macOS, Windows, and Linux.
-        However, VST3® plugin files are not cross-compatible with
-        different operating systems; a platform-specific build of each plugin
-        is required to load that plugin on a given platform. (For example:
-        a Windows VST3 plugin bundle will not load on Linux or macOS.)
-        """
-
-        def __init__(
-            self,
-            path_to_plugin_file: str,
-            parameter_values: Dict[str, Union[str, int, float, bool]] = {},
-            plugin_name: Optional[str] = None,
-        ):
-            if not isinstance(parameter_values, dict):
-                raise TypeError(
-                    "Expected a dictionary to be passed to parameter_values, but received a"
-                    f" {type(parameter_values).__name__}. (If passing a plugin name, pass"
-                    ' "plugin_name=..." as a keyword argument instead.)'
-                )
-
-            _VST3Plugin.__init__(self, path_to_plugin_file, plugin_name)
-            self.__set_initial_parameter_values__(parameter_values)
+    from pedalboard_native import VST3Plugin  # type: ignore
 
     _AVAILABLE_PLUGIN_CLASSES.append(VST3Plugin)
 except ImportError:
@@ -711,39 +697,7 @@ except ImportError:
     pass
 
 try:
-    from pedalboard_native import _AudioUnitPlugin
-
-    class AudioUnitPlugin(_AudioUnitPlugin, _PythonExternalPluginMixin):
-        """
-        A wrapper around third-party, non-Pedalboard audio effects
-        plugins in
-        `Apple's Audio Unit <https://en.wikipedia.org/wiki/Audio_Units>`_
-        format.
-
-        Audio Unit plugins are only supported on macOS. This class will be
-        unavailable on non-macOS platforms. Plugin files must be installed
-        in the appropriate system-wide path for them to be
-        loadable (usually ``/Library/Audio/Plug-Ins/Components/`` or
-        ``~/Library/Audio/Plug-Ins/Components/``).
-
-        For a plugin wrapper that works on Windows and Linux as well,
-        see :class:`pedalboard.VST3Plugin`.
-        """
-
-        def __init__(
-            self,
-            path_to_plugin_file: str,
-            parameter_values: Dict[str, Union[str, int, float, bool]] = {},
-            plugin_name: Optional[str] = None,
-        ):
-            if not isinstance(parameter_values, dict):
-                raise TypeError(
-                    "Expected a dictionary to be passed to parameter_values, but received a"
-                    f" {type(parameter_values).__name__}. (If passing a plugin name, pass"
-                    ' "plugin_name=..." as a keyword argument instead.)'
-                )
-            _AudioUnitPlugin.__init__(self, path_to_plugin_file, plugin_name)
-            self.__set_initial_parameter_values__(parameter_values)
+    from pedalboard_native import AudioUnitPlugin  # type: ignore
 
     _AVAILABLE_PLUGIN_CLASSES.append(AudioUnitPlugin)
 except ImportError:
