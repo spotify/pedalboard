@@ -47,6 +47,7 @@ TEST_INSTRUMENT_PLUGIN_BASE_PATH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), "plugins", "instrument"
 )
 TEST_PRESET_BASE_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), "presets")
+TEST_MIDI_BASE_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), "midi")
 
 AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT = [
     os.path.basename(filename)
@@ -341,6 +342,28 @@ def test_instrument_plugin_accepts_notes(
     assert not plugin.is_effect
     output = plugin(notes, 6.0, sample_rate, num_channels=num_channels)
     assert np.amax(np.abs(output)) > 0
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_instrument_plugin_rejects_switched_duration_and_sample_rate(plugin_filename: str):
+    plugin = load_test_plugin(plugin_filename)
+    assert plugin.is_instrument
+    assert not plugin.is_effect
+    with pytest.raises(ValueError) as e:
+        plugin([], 44100, 6.0)
+    assert "reversing the order" in str(e)
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_instrument_plugin_rejects_notes_naively_read_from_midi_file(plugin_filename: str):
+    plugin = load_test_plugin(plugin_filename)
+    assert plugin.is_instrument
+    assert not plugin.is_effect
+    midifile = mido.MidiFile(os.path.join(TEST_MIDI_BASE_PATH, "ascending_chromatic.mid"))
+    with pytest.raises(ValueError) as e:
+        plugin(midifile.tracks[0], 6.0, 44100)
+    assert "timestamp" in str(e)
+    assert "seconds" in str(e)
 
 
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)

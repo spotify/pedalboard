@@ -983,6 +983,22 @@ public:
                                         float sampleRate,
                                         unsigned int numChannels,
                                         unsigned long bufferSize, bool reset) {
+
+    // Tiny quality-of-life improvement to try to detect if people have swapped
+    // the duration and sample_rate arguments:
+    if ((duration == 48000 || duration == 44100 || duration == 22050 ||
+         duration == 11025) &&
+        sampleRate < 8000) {
+      throw std::invalid_argument(
+          "Plugin '" + pluginInstance->getName().toStdString() +
+          "' was called with a duration argument of " +
+          std::to_string(duration) + " and a sample_rate argument of " +
+          std::to_string(sampleRate) +
+          ". These arguments appear to be flipped, and may cause distorted "
+          "audio to be rendered. Try reversing the order of the sample_rate "
+          "and duration arguments provided to this method.");
+    }
+
     std::scoped_lock<std::mutex>(this->mutex);
 
     py::array_t<float> outputArray;
