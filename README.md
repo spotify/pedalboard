@@ -172,7 +172,7 @@ effect.ratio = 15
 samplerate = 44100
 audio = instrument(
   [Message("note_on", note=60), Message("note_off", note=60, time=5)],
-  samplerate,
+  sample_rate=samplerate,
   duration=5, # seconds
 )
 
