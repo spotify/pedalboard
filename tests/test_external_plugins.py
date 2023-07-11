@@ -922,3 +922,30 @@ def test_get_plugin_names_from_container(plugin_filename: str):
         raise ValueError("Plugin does not seem to be a .vst3 or .component.")
 
     assert len(names) > 1
+
+
+@pytest.mark.parametrize("plugin_filename", ["UnityGain32Channel"])
+def test_poly_channel_plugins(plugin_filename):
+
+    plugin_path = find_plugin_path(plugin_filename)
+    plugin = pedalboard.load_plugin(plugin_path)
+
+    fs = 48000
+    f0 = 1000
+    T = 4 / f0
+    N = int(T * fs)
+    time_vector = np.arange(0, N) / fs
+    stimulus = np.sin(2 * np.pi * f0 * time_vector)
+
+    inputs = []
+    for i in range(1, 33):
+        inputs.append(stimulus / i)
+    inputs = np.vstack(inputs)
+
+    outputs = plugin(
+        input_array=inputs,
+        sample_rate=fs)
+
+    assert outputs.shape == inputs.shape
+
+    assert np.all(np.isclose(inputs, outputs))
