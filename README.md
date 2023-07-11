@@ -169,20 +169,20 @@ print(effect.parameters.keys())
 effect.ratio = 15
 
 # Render some audio by passing MIDI to an instrument:
-samplerate = 44100
+sample_rate = 44100
 audio = instrument(
   [Message("note_on", note=60), Message("note_off", note=60, time=5)],
-  samplerate,
   duration=5, # seconds
+  sample_rate=sample_rate,
 )
 
 # Apply effects to this audio:
-effected = effect(audio, samplerate)
+effected = effect(audio, sample_rate)
 
 # ...or put the effect into a chain with other plugins:
 board = Pedalboard([effect, Reverb()])
 # ...and run that pedalboard with the same VST instance!
-effected = board(audio, samplerate)
+effected = board(audio, sample_rate)
 ```
 
 ### Creating parallel effects chains
