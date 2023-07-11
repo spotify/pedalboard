@@ -663,6 +663,10 @@ def test_string_parameter_valdation(plugin_filename: str, parameter_name: str):
 
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_plugin_parameters_persist_between_calls(plugin_filename: str):
+
+    if plugin_filename == "UnityGain32Channel.vst3":
+        pytest.skip("No parameters in this plugin.")
+
     plugin = load_test_plugin(plugin_filename)
     sr = 44100
     noise = np.random.rand(2, sr)
@@ -728,6 +732,10 @@ def test_plugin_state_cleared_between_invocations_by_default(plugin_filename: st
 
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_plugin_state_not_cleared_between_invocations_if_reset_is_false(plugin_filename: str):
+
+    if plugin_filename == "UnityGain32Channel.vst3":
+        pytest.skip("No internal state stored in this plugin.")
+
     plugin = load_test_plugin(plugin_filename, disable_caching=True)
 
     sr = 44100
