@@ -80,7 +80,7 @@ ALL_CPPFLAGS.extend(
 )
 ALL_INCLUDES.extend(["JUCE/modules/", "JUCE/modules/juce_audio_processors/format_types/VST3_SDK/"])
 
-if os.getenv("CIBW_BUILD").contains("musllinux"):
+if "musllinux" in os.getenv("CIBW_BUILD", ""):
     # For Alpine/musllinux compatibility:
     ALL_CPPFLAGS.extend(
         [
