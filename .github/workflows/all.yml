@@ -248,8 +248,12 @@ jobs:
         - { os: 'ubuntu-20.04', build: cp39-manylinux_aarch64 }
         - { os: 'ubuntu-20.04', build: cp310-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: cp310-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp310-musllinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp310-musllinux_aarch64 }
         - { os: 'ubuntu-20.04', build: cp311-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: cp311-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp311-musllinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp311-musllinux_aarch64 }
         - { os: 'ubuntu-20.04', build: pp37-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: pp37-manylinux_aarch64 }
         - { os: 'ubuntu-20.04', build: pp38-manylinux_x86_64 }
