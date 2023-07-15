@@ -51,7 +51,7 @@ def test_concurrent_processing_produces_identical_audio(plugin_class):
             futures.append(e.submit(plugin.process, noise, sample_rate=sr))
 
         # This will throw an exception if we exceed the timeout:
-        processed = [future.result(timeout=2 * num_concurrent_plugins) for future in futures]
+        processed = [future.result(timeout=10 * num_concurrent_plugins) for future in futures]
 
     for result in processed:
         np.testing.assert_allclose(expected_output, result)

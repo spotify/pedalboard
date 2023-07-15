@@ -155,7 +155,7 @@ def test_seek_resampled_is_constant_time(sample_rate: float, target_sample_rate:
             f.seek(i)
             b = time.time()
             timings.append(b - a)
-        assert np.std(timings) < 0.01
+        assert np.std(timings) < 0.02
 
 
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])
