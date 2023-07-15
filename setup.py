@@ -76,6 +76,9 @@ ALL_CPPFLAGS.extend(
         "-DJUCE_USE_FLAC=0",  # We've patched this out
         # "-DJUCE_USE_FREETYPE=0",
         "-DJUCE_MODAL_LOOPS_PERMITTED=1",
+        # For Alpine/musllinux compatibility:
+        "-D_NL_IDENTIFICATION_LANGUAGE=0x42",
+        "-D_NL_IDENTIFICATION_TERRITORY=0x43",
     ]
 )
 ALL_INCLUDES.extend(["JUCE/modules/", "JUCE/modules/juce_audio_processors/format_types/VST3_SDK/"])
