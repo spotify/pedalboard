@@ -248,8 +248,12 @@ jobs:
         - { os: 'ubuntu-20.04', build: cp39-manylinux_aarch64 }
         - { os: 'ubuntu-20.04', build: cp310-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: cp310-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp310-musllinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp310-musllinux_aarch64 }
         - { os: 'ubuntu-20.04', build: cp311-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: cp311-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp311-musllinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp311-musllinux_aarch64 }
         - { os: 'ubuntu-20.04', build: pp37-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: pp37-manylinux_aarch64 }
         - { os: 'ubuntu-20.04', build: pp38-manylinux_x86_64 }
@@ -282,7 +286,7 @@ jobs:
           CIBW_ARCHS_LINUX: auto64 aarch64 # Useful for building linux images with Apple Silicon
           CIBW_ARCHS_MACOS: x86_64 universal2 arm64 # Support Apple Silicon
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
-          CIBW_ENVIRONMENT: NPY_BLAS_ORDER="" NPY_LAPACK_ORDER=""
+          CIBW_ENVIRONMENT: NPY_BLAS_ORDER="" NPY_LAPACK_ORDER="" CIBW_BUILD="${{ matrix.build }}"
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: pip install auditwheel-symbols && (auditwheel repair -w {dest_dir} {wheel} || auditwheel-symbols --manylinux 2010 {wheel})
           # The manylinux container doesn't have a new enough glibc version,
           # so we can't run post-wheel-build tests there.

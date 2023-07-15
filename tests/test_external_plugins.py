@@ -69,6 +69,13 @@ if os.getenv("CIBW_TEST_REQUIRES") or os.getenv("CI"):
         f for f in AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT if "component" not in f
     ]
 
+IS_TESTING_MUSL_LIBC_ON_CI = "musl" in os.getenv("CIBW_BUILD", "")
+if IS_TESTING_MUSL_LIBC_ON_CI:
+    # We can't load any external plugins at all on musl libc (unless they don't require glibc,
+    # but I don't know of any that fit that description)
+    AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT = []
+    AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT = []
+
 AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT = (
     AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT + AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT
 )
@@ -207,6 +214,10 @@ def max_volume_of(x: np.ndarray) -> float:
     return np.amax(np.abs(x))
 
 
+@pytest.mark.skipif(
+    IS_TESTING_MUSL_LIBC_ON_CI,
+    reason="External plugins are not officially supported without glibc.",
+)
 def test_at_least_one_plugin_is_available_for_testing():
     assert AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
 

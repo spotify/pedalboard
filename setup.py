@@ -80,6 +80,15 @@ ALL_CPPFLAGS.extend(
 )
 ALL_INCLUDES.extend(["JUCE/modules/", "JUCE/modules/juce_audio_processors/format_types/VST3_SDK/"])
 
+if "musllinux" in os.getenv("CIBW_BUILD", ""):
+    # For Alpine/musllinux compatibility:
+    ALL_CPPFLAGS.extend(
+        [
+            "-D_NL_IDENTIFICATION_LANGUAGE=0x42",
+            "-D_NL_IDENTIFICATION_TERRITORY=0x43",
+        ]
+    )
+
 # Rubber Band library:
 ALL_CPPFLAGS.extend(
     [
