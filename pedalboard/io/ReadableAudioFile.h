@@ -102,7 +102,13 @@ public:
 
     if (!reader) {
       std::ostringstream ss;
-      ss.imbue(std::locale(""));
+      try {
+        ss.imbue(std::locale(""));
+      } catch (const std::runtime_error &e) {
+        // On some systems (like Alpine Linux) we only have "C" and "POSIX"
+        // locales:
+        ss.imbue(std::locale("C"));
+      }
 
       ss << "Failed to open audio file-like object: ";
       ss << inputStream->getRepresentation();
@@ -521,7 +527,13 @@ private:
   void throwReadError(long long currentPosition, long long numSamples,
                       long long samplesRead = -1) {
     std::ostringstream ss;
-    ss.imbue(std::locale(""));
+    try {
+      ss.imbue(std::locale(""));
+    } catch (const std::runtime_error &e) {
+      // On some systems (like Alpine Linux) we only have "C" and "POSIX"
+      // locales:
+      ss.imbue(std::locale("C"));
+    }
 
     ss << "Failed to read audio data";
 
