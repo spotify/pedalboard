@@ -42,6 +42,13 @@ namespace Pedalboard {
 static std::mutex EXTERNAL_PLUGIN_MUTEX;
 static int NUM_ACTIVE_EXTERNAL_PLUGINS = 0;
 
+// The default amount of time (in seconds) to pump the dispatch loop
+// on a plugin that has just been initialized. Most plugins don't need this,
+// but some plugins expect the dispatch loop to be constantly running
+// in the background - and without that run loop, they may not come up
+// properly.
+static const float DEFAULT_INITIALIZATION_DELAY_SECONDS = 0.25;
+
 static const std::string AUDIO_UNIT_NOT_INSTALLED_ERROR =
     "macOS requires plugin files to be moved to "
     "/Library/Audio/Plug-Ins/Components/ or "
@@ -425,8 +432,10 @@ template <typename ExternalPluginType>
 class ExternalPlugin : public AbstractExternalPlugin {
 public:
   ExternalPlugin(std::string &_pathToPluginFile,
-                 std::optional<std::string> pluginName = {})
-      : pathToPluginFile(_pathToPluginFile) {
+                 std::optional<std::string> pluginName = {},
+                 float initializationDelay = {})
+      : pathToPluginFile(_pathToPluginFile),
+        initializationDelay(initializationDelay) {
     py::gil_scoped_release release;
     // Ensure we have a MessageManager, which is required by the VST wrapper
     // Without this, we get an assert(false) from JUCE at runtime
@@ -676,6 +685,22 @@ public:
     }
 
     pluginInstance->reset();
+
+    // Some plugins send messages to the system run loop to initialize;
+    // make sure we give those plugins time to initialize now, and again
+    // when calling process:
+    if (initializationDelay > 0) {
+      if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        throw std::runtime_error(
+            "When loading Pedalboard plugins with a non-zero initialization "
+            "delay, plugin methods must be called from the main thread (or "
+            "the first thread that was used to instantiate any external "
+            "plugin).");
+      }
+      for (int i = 0; i < (int)(initializationDelay * 1000); i++) {
+        juce::MessageManager::getInstance()->runDispatchLoopUntil(1);
+      }
+    }
   }
 
   void setNumChannels(int numChannels) {
@@ -1116,6 +1141,8 @@ public:
     StandalonePluginWindow::openWindowAndWait(*pluginInstance);
   }
 
+  float getInitializationDelay() const { return initializationDelay; }
+
 private:
   constexpr static int ExternalLoadSampleRate = 44100,
                        ExternalLoadMaximumBlockSize = 8192;
@@ -1125,6 +1152,7 @@ private:
   std::unique_ptr<juce::AudioPluginInstance> pluginInstance;
 
   long samplesProvided = 0;
+  float initializationDelay = DEFAULT_INITIALIZATION_DELAY_SECONDS;
 
   ExternalPluginReloadType reloadType = ExternalPluginReloadType::Unknown;
 };
@@ -1321,21 +1349,38 @@ files are not cross-compatible with different operating systems; a platform-spec
 build of each plugin is required to load that plugin on a given platform. (For
 example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
 
+.. note::
+    Some plugins perform background tasks at startup, such as loading audio
+    samples or checking license keys. These plugins may not provide audio output
+    until these background tasks complete, and there may be a race condition
+    between their completion and any methods called on this plugin object.
+
+    To give these plugins time to initialize, Pedalboard provides a parameter
+    called ``initialization_delay``, which specifies the number of seconds that
+    Pedalboard should spend trying to initialize that plugin.
+
+    If a VST3 plugin is not producing audio as expected, try setting
+    this parameter to a larger value to ensure that the plugin has enough time
+    to complete its background loading tasks.
+
 *Support for instrument plugins introduced in v0.7.4.*
 )")
       .def(
           py::init([](std::string &pathToPluginFile, py::object parameterValues,
-                      std::optional<std::string> pluginName) {
+                      std::optional<std::string> pluginName,
+                      float initializationDelay) {
             std::shared_ptr<ExternalPlugin<juce::VST3PluginFormat>> plugin =
                 std::make_shared<ExternalPlugin<juce::VST3PluginFormat>>(
-                    pathToPluginFile, pluginName);
+                    pathToPluginFile, pluginName, initializationDelay);
             py::cast(plugin).attr("__set_initial_parameter_values__")(
                 parameterValues);
             return plugin;
           }),
           py::arg("path_to_plugin_file"),
           py::arg("parameter_values") = py::none(),
-          py::arg("plugin_name") = py::none())
+          py::arg("plugin_name") = py::none(),
+          py::arg("initialization_delay") =
+              DEFAULT_INITIALIZATION_DELAY_SECONDS)
       .def("__repr__",
            [](ExternalPlugin<juce::VST3PluginFormat> &plugin) {
              std::ostringstream ss;
@@ -1382,6 +1427,14 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
            "will "
            "block until the window is closed or a KeyboardInterrupt is "
            "received.")
+      .def_property_readonly(
+          "initialization_delay",
+          &ExternalPlugin<juce::VST3PluginFormat>::getInitializationDelay,
+          "The number of seconds that Pedalboard will spend trying to load "
+          "this VST3. This parameter cannot be modified once "
+          "set in the :py:class:`VST3Plugin` constructor (or in "
+          ":py:meth:`load_plugin`). Try using larger values of this parameter "
+          " if a plugin fails to produce audio.\n\n*Introduced in v0.7.6.*")
       .def(
           "process",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
@@ -1436,11 +1489,28 @@ loadable (usually ``/Library/Audio/Plug-Ins/Components/`` or
 For a plugin wrapper that works on Windows and Linux as well,
 see :class:`pedalboard.VST3Plugin`.)
 
+
+.. note::
+    Some plugins perform background tasks at startup, such as loading audio
+    samples or checking license keys. These plugins may not provide audio output
+    until these background tasks complete, and there may be a race condition
+    between their completion and any methods called on this plugin object.
+
+    To give these plugins time to initialize, Pedalboard provides a parameter
+    called ``initialization_delay``, which specifies the number of seconds that
+    Pedalboard should spend trying to initialize that plugin.
+
+    If an Audio Unit plugin is not producing audio as expected, try setting
+    this parameter to a larger value to ensure that the plugin has enough
+    time to complete its background loading tasks.
+
+
 *Support for instrument plugins introduced in v0.7.4.*
 )")
       .def(
           py::init([](std::string &pathToPluginFile, py::object parameterValues,
-                      std::optional<std::string> pluginName) {
+                      std::optional<std::string> pluginName,
+                      float initializationDelay) {
             std::shared_ptr<ExternalPlugin<juce::AudioUnitPluginFormat>>
                 plugin = std::make_shared<
                     ExternalPlugin<juce::AudioUnitPluginFormat>>(
@@ -1451,7 +1521,9 @@ see :class:`pedalboard.VST3Plugin`.)
           }),
           py::arg("path_to_plugin_file"),
           py::arg("parameter_values") = py::none(),
-          py::arg("plugin_name") = py::none())
+          py::arg("plugin_name") = py::none(),
+          py::arg("initialization_delay") =
+              DEFAULT_INITIALIZATION_DELAY_SECONDS)
       .def("__repr__",
            [](const ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
              std::ostringstream ss;
@@ -1501,6 +1573,14 @@ see :class:`pedalboard.VST3Plugin`.)
            "Show the UI of this plugin as a native window. This method will "
            "block until the window is closed or a KeyboardInterrupt is "
            "received.")
+      .def_property_readonly(
+          "initialization_delay",
+          &ExternalPlugin<juce::AudioUnitPluginFormat>::getInitializationDelay,
+          "The number of seconds that Pedalboard will spend trying to load "
+          "this Audio Unit. This parameter cannot be modified once set in the "
+          ":py:class:`AudioUnitPlugin` constructor (or in "
+          ":py:meth:`load_plugin`). Try using larger values of this parameter "
+          "if a plugin fails to produce audio.\n\n*Introduced in v0.7.6.*")
       .def(
           "process",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,

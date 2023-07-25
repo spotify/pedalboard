@@ -339,7 +339,7 @@ automatically invoke <a class="reference internal" href="#pedalboard.Pedalboard.
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pedalboard.load_plugin">
-<span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">load_plugin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_to_plugin_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plugin_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pedalboard.ExternalPlugin" title="pedalboard.ExternalPlugin"><span class="pre">ExternalPlugin</span></a></span></span><a class="headerlink" href="#pedalboard.load_plugin" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">load_plugin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_to_plugin_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plugin_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialization_delay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.25</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pedalboard.ExternalPlugin" title="pedalboard.ExternalPlugin"><span class="pre">ExternalPlugin</span></a></span></span><a class="headerlink" href="#pedalboard.load_plugin" title="Permalink to this definition">#</a></dt>
 <dd><p>Load an audio plugin.</p>
 <dl class="simple">
 <dt>Two plugin formats are supported:</dt><dd><ul class="simple">
@@ -351,16 +351,22 @@ automatically invoke <a class="reference internal" href="#pedalboard.Pedalboard.
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>path_to_plugin_file</strong> (<em>str</em>) – The path of a VST3® or Audio Unit plugin file or bundle.</p></li>
-<li><p><strong>parameter_values</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Union</em><em>[</em><em>str</em><em>, </em><em>int</em><em>, </em><em>float</em><em>, </em><em>bool</em><em>]</em><em>]</em>) – An optional dictionary of initial values to provide to the plugin
+<li><p><strong>path_to_plugin_file</strong> (<code class="docutils literal notranslate"><span class="pre">str</span></code>) – The path of a VST3® or Audio Unit plugin file or bundle.</p></li>
+<li><p><strong>parameter_values</strong> (<code class="docutils literal notranslate"><span class="pre">Dict[str,</span> <span class="pre">Union[str,</span> <span class="pre">int,</span> <span class="pre">float,</span> <span class="pre">bool]]</span></code>) – An optional dictionary of initial values to provide to the plugin
 after loading. Keys in this dictionary are expected to match the
 parameter names reported by the plugin, but normalized to strings
 that can be used as Python identifiers. (These are the same
 identifiers that are used as keys in the <code class="docutils literal notranslate"><span class="pre">.parameters</span></code> dictionary
 of a loaded plugin.)</p></li>
-<li><p><strong>plugin_name</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – An optional plugin name that can be used to load a specific plugin
+<li><p><strong>plugin_name</strong> (<code class="docutils literal notranslate"><span class="pre">Optional[str]</span></code>) – An optional plugin name that can be used to load a specific plugin
 from a multi-plugin package. If a package is loaded but a
 <code class="docutils literal notranslate"><span class="pre">plugin_name</span></code> is not provided, an exception will be thrown.</p></li>
+<li><p><strong>initialization_delay</strong> (<code class="docutils literal notranslate"><span class="pre">float</span></code>) – <p>The number of seconds that Pedalboard will spend trying to load this plugin.
+Some plugins load resources asynchronously in the background on startup;
+using larger values for this parameter can give these plugins time to
+load properly.</p>
+<p><em>Introduced in v0.7.6.</em></p>
+</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -451,8 +457,8 @@ for processing.</p>
 a Python <code class="docutils literal notranslate"><span class="pre">List</span></code> containing one of the following types:</p>
 <blockquote>
 <div><ul class="simple">
-<li><p>Objects with a <code class="docutils literal notranslate"><span class="pre">bytes()</span></code> method and <code class="docutils literal notranslate"><span class="pre">time</span></code> property (such as <a class="reference external" href="https://mido.readthedocs.io/en/latest/messages.html" title="(in Mido v1.2.10)"><span>Messages</span></a>
-from <a class="reference external" href="https://mido.readthedocs.io/en/latest/index.html" title="(in Mido v1.2.10)"><span>Mido - MIDI Objects for Python</span></a>, not included with Pedalboard)</p></li>
+<li><p>Objects with a <code class="docutils literal notranslate"><span class="pre">bytes()</span></code> method and <code class="docutils literal notranslate"><span class="pre">time</span></code> property (such as <span class="xref std std-doc">mido:messages</span>
+from <a class="reference external" href="https://mido.readthedocs.io/en/latest/index.html" title="(in Mido v1.3)"><span>Mido - MIDI Objects for Python</span></a>, not included with Pedalboard)</p></li>
 <li><p>Tuples that look like: <code class="docutils literal notranslate"><span class="pre">(midi_bytes:</span> <span class="pre">bytes,</span> <span class="pre">timestamp_in_seconds:</span> <span class="pre">float)</span></code></p></li>
 <li><p>Tuples that look like: <code class="docutils literal notranslate"><span class="pre">(midi_bytes:</span> <span class="pre">List[int],</span> <span class="pre">timestamp_in_seconds:</span> <span class="pre">float)</span></code></p></li>
 </ul>
@@ -533,7 +539,7 @@ automatically invoke <a class="reference internal" href="#pedalboard.ExternalPlu
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.AudioUnitPlugin">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">AudioUnitPlugin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_to_plugin_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">object</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plugin_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.AudioUnitPlugin" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">AudioUnitPlugin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_to_plugin_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">object</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plugin_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialization_delay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.25</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.AudioUnitPlugin" title="Permalink to this definition">#</a></dt>
 <dd><p>A wrapper around third-party, audio effect or instrument
 plugins in <a class="reference external" href="https://en.wikipedia.org/wiki/Audio_Units">Apple’s Audio Unit</a>
 format.</p>
@@ -544,6 +550,19 @@ loadable (usually <code class="docutils literal notranslate"><span class="pre">/
 <code class="docutils literal notranslate"><span class="pre">~/Library/Audio/Plug-Ins/Components/</span></code>).</p>
 <p>For a plugin wrapper that works on Windows and Linux as well,
 see <a class="reference internal" href="#pedalboard.VST3Plugin" title="pedalboard.VST3Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.VST3Plugin</span></code></a>.)</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Some plugins perform background tasks at startup, such as loading audio
+samples or checking license keys. These plugins may not provide audio output
+until these background tasks complete, and there may be a race condition
+between their completion and any methods called on this plugin object.</p>
+<p>To give these plugins time to initialize, Pedalboard provides a parameter
+called <code class="docutils literal notranslate"><span class="pre">initialization_delay</span></code>, which specifies the number of seconds that
+Pedalboard should spend trying to initialize that plugin.</p>
+<p>If an Audio Unit plugin is not producing audio as expected, try setting
+this parameter to a larger value to ensure that the plugin has enough
+time to complete its background loading tasks.</p>
+</div>
 <p><em>Support for instrument plugins introduced in v0.7.4.</em></p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.AudioUnitPlugin.__call__">
@@ -580,8 +599,8 @@ for processing.</p>
 a Python <code class="docutils literal notranslate"><span class="pre">List</span></code> containing one of the following types:</p>
 <blockquote>
 <div><ul class="simple">
-<li><p>Objects with a <code class="docutils literal notranslate"><span class="pre">bytes()</span></code> method and <code class="docutils literal notranslate"><span class="pre">time</span></code> property (such as <a class="reference external" href="https://mido.readthedocs.io/en/latest/messages.html" title="(in Mido v1.2.10)"><span>Messages</span></a>
-from <a class="reference external" href="https://mido.readthedocs.io/en/latest/index.html" title="(in Mido v1.2.10)"><span>Mido - MIDI Objects for Python</span></a>, not included with Pedalboard)</p></li>
+<li><p>Objects with a <code class="docutils literal notranslate"><span class="pre">bytes()</span></code> method and <code class="docutils literal notranslate"><span class="pre">time</span></code> property (such as <span class="xref std std-doc">mido:messages</span>
+from <a class="reference external" href="https://mido.readthedocs.io/en/latest/index.html" title="(in Mido v1.3)"><span>Mido - MIDI Objects for Python</span></a>, not included with Pedalboard)</p></li>
 <li><p>Tuples that look like: <code class="docutils literal notranslate"><span class="pre">(midi_bytes:</span> <span class="pre">bytes,</span> <span class="pre">timestamp_in_seconds:</span> <span class="pre">float)</span></code></p></li>
 <li><p>Tuples that look like: <code class="docutils literal notranslate"><span class="pre">(midi_bytes:</span> <span class="pre">List[int],</span> <span class="pre">timestamp_in_seconds:</span> <span class="pre">float)</span></code></p></li>
 </ul>
@@ -642,6 +661,13 @@ automatically invoke <a class="reference internal" href="#pedalboard.AudioUnitPl
 <dt class="sig sig-object py" id="pedalboard.AudioUnitPlugin.show_editor">
 <span class="sig-name descname"><span class="pre">show_editor</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.AudioUnitPlugin.show_editor" title="Permalink to this definition">#</a></dt>
 <dd><p>Show the UI of this plugin as a native window. This method will block until the window is closed or a KeyboardInterrupt is received.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.AudioUnitPlugin.initialization_delay">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialization_delay</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#pedalboard.AudioUnitPlugin.initialization_delay" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of seconds that Pedalboard will spend trying to load this Audio Unit. This parameter cannot be modified once set in the <a class="reference internal" href="#pedalboard.AudioUnitPlugin" title="pedalboard.AudioUnitPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioUnitPlugin</span></code></a> constructor (or in <a class="reference internal" href="#pedalboard.load_plugin" title="pedalboard.load_plugin"><code class="xref py py-meth docutils literal notranslate"><span class="pre">load_plugin()</span></code></a>). Try using larger values of this parameter if a plugin fails to produce audio.</p>
+<p><em>Introduced in v0.7.6.</em></p>
 </dd></dl>
 
 <dl class="py property">
@@ -2521,7 +2547,7 @@ automatically invoke <a class="reference internal" href="#pedalboard.Reverb.proc
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.VST3Plugin">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">VST3Plugin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_to_plugin_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">object</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plugin_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.VST3Plugin" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">VST3Plugin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_to_plugin_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">object</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plugin_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialization_delay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.25</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.VST3Plugin" title="Permalink to this definition">#</a></dt>
 <dd><p>A wrapper around third-party, audio effect or instrument plugins in
 <a class="reference external" href="https://en.wikipedia.org/wiki/Virtual_Studio_Technology">Steinberg GmbH’s VST3®</a>
 format.</p>
@@ -2529,6 +2555,19 @@ format.</p>
 files are not cross-compatible with different operating systems; a platform-specific
 build of each plugin is required to load that plugin on a given platform. (For
 example: a Windows VST3 plugin bundle will not load on Linux or macOS.)</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Some plugins perform background tasks at startup, such as loading audio
+samples or checking license keys. These plugins may not provide audio output
+until these background tasks complete, and there may be a race condition
+between their completion and any methods called on this plugin object.</p>
+<p>To give these plugins time to initialize, Pedalboard provides a parameter
+called <code class="docutils literal notranslate"><span class="pre">initialization_delay</span></code>, which specifies the number of seconds that
+Pedalboard should spend trying to initialize that plugin.</p>
+<p>If a VST3 plugin is not producing audio as expected, try setting
+this parameter to a larger value to ensure that the plugin has enough time
+to complete its background loading tasks.</p>
+</div>
 <p><em>Support for instrument plugins introduced in v0.7.4.</em></p>
 <dl class="py property">
 <dt class="sig sig-object py" id="pedalboard.VST3Plugin.is_effect">
@@ -2590,8 +2629,8 @@ for processing.</p>
 a Python <code class="docutils literal notranslate"><span class="pre">List</span></code> containing one of the following types:</p>
 <blockquote>
 <div><ul class="simple">
-<li><p>Objects with a <code class="docutils literal notranslate"><span class="pre">bytes()</span></code> method and <code class="docutils literal notranslate"><span class="pre">time</span></code> property (such as <a class="reference external" href="https://mido.readthedocs.io/en/latest/messages.html" title="(in Mido v1.2.10)"><span>Messages</span></a>
-from <a class="reference external" href="https://mido.readthedocs.io/en/latest/index.html" title="(in Mido v1.2.10)"><span>Mido - MIDI Objects for Python</span></a>, not included with Pedalboard)</p></li>
+<li><p>Objects with a <code class="docutils literal notranslate"><span class="pre">bytes()</span></code> method and <code class="docutils literal notranslate"><span class="pre">time</span></code> property (such as <span class="xref std std-doc">mido:messages</span>
+from <a class="reference external" href="https://mido.readthedocs.io/en/latest/index.html" title="(in Mido v1.3)"><span>Mido - MIDI Objects for Python</span></a>, not included with Pedalboard)</p></li>
 <li><p>Tuples that look like: <code class="docutils literal notranslate"><span class="pre">(midi_bytes:</span> <span class="pre">bytes,</span> <span class="pre">timestamp_in_seconds:</span> <span class="pre">float)</span></code></p></li>
 <li><p>Tuples that look like: <code class="docutils literal notranslate"><span class="pre">(midi_bytes:</span> <span class="pre">List[int],</span> <span class="pre">timestamp_in_seconds:</span> <span class="pre">float)</span></code></p></li>
 </ul>
@@ -2652,6 +2691,13 @@ automatically invoke <a class="reference internal" href="#pedalboard.VST3Plugin.
 <dt class="sig sig-object py" id="pedalboard.VST3Plugin.show_editor">
 <span class="sig-name descname"><span class="pre">show_editor</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pedalboard.VST3Plugin.show_editor" title="Permalink to this definition">#</a></dt>
 <dd><p>Show the UI of this plugin as a native window. This method will block until the window is closed or a KeyboardInterrupt is received.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.VST3Plugin.initialization_delay">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialization_delay</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#pedalboard.VST3Plugin.initialization_delay" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of seconds that Pedalboard will spend trying to load this VST3. This parameter cannot be modified once set in the <a class="reference internal" href="#pedalboard.VST3Plugin" title="pedalboard.VST3Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">VST3Plugin</span></code></a> constructor (or in <a class="reference internal" href="#pedalboard.load_plugin" title="pedalboard.load_plugin"><code class="xref py py-meth docutils literal notranslate"><span class="pre">load_plugin()</span></code></a>). Try using larger values of this parameter  if a plugin fails to produce audio.</p>
+<p><em>Introduced in v0.7.6.</em></p>
 </dd></dl>
 
 <dl class="py property">
@@ -2758,6 +2804,7 @@ automatically invoke <a class="reference internal" href="#pedalboard.VST3Plugin.
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.get_plugin_names_for_file"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.get_plugin_names_for_file()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.process"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.process()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.show_editor"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.show_editor()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.initialization_delay"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.initialization_delay</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.name"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.name</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.is_effect"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.is_effect</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.is_instrument"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.is_instrument</span></code></a></li>
@@ -3027,6 +3074,7 @@ automatically invoke <a class="reference internal" href="#pedalboard.VST3Plugin.
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.load_preset"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.load_preset()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.process"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.process()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.show_editor"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.show_editor()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.VST3Plugin.initialization_delay"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.initialization_delay</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.name"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.name</span></code></a></li>
 </ul>
 </li>
