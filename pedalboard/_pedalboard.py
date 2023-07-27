@@ -719,9 +719,9 @@ def load_plugin(
      - Audio Units are supported on macOS
 
     Args:
-        path_to_plugin_file (``str``): The path of a VST3® or Audio Unit plugin file or bundle.
+        path_to_plugin_file (str): The path of a VST3® or Audio Unit plugin file or bundle.
 
-        parameter_values (``Dict[str, Union[str, int, float, bool]]``):
+        parameter_values (Dict[str, Union[str, int, float, bool]]):
             An optional dictionary of initial values to provide to the plugin
             after loading. Keys in this dictionary are expected to match the
             parameter names reported by the plugin, but normalized to strings
@@ -729,7 +729,7 @@ def load_plugin(
             identifiers that are used as keys in the ``.parameters`` dictionary
             of a loaded plugin.)
 
-        plugin_name (``Optional[str]``):
+        plugin_name (Optional[str]):
             An optional plugin name that can be used to load a specific plugin
             from a multi-plugin package. If a package is loaded but a
             ``plugin_name`` is not provided, an exception will be thrown.
