@@ -1538,7 +1538,6 @@ loadable (usually ``/Library/Audio/Plug-Ins/Components/`` or
 For a plugin wrapper that works on Windows and Linux as well,
 see :class:`pedalboard.VST3Plugin`.)
 
-
 *Support for instrument plugins introduced in v0.7.4.*
 )")
       .def(
