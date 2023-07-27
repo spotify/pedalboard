@@ -1007,14 +1007,6 @@ public:
     if (pluginInstance) {
       juce::MidiBuffer emptyMidiBuffer;
 
-      if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
-        // Pump the event loop 5 times to try to clear out up to 5
-        // callbacks or messages that it may be waiting on:
-        for (int i = 0; i < 5; i++) {
-          juce::MessageManager::getInstance()->runDispatchLoopUntil(1);
-        }
-      }
-
       if (pluginInstance->getMainBusNumInputChannels() == 0 &&
           context.getInputBlock().getNumChannels() > 0) {
         throw std::invalid_argument(
@@ -1153,14 +1145,6 @@ public:
                   sizeof(float) * numChannels * outputSampleCount);
 
       py::gil_scoped_release release;
-
-      if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
-        // Pump the event loop 5 times to try to clear out up to 5
-        // callbacks or messages that it may be waiting on:
-        for (int i = 0; i < 5; i++) {
-          juce::MessageManager::getInstance()->runDispatchLoopUntil(1);
-        }
-      }
 
       for (unsigned long i = 0; i < outputSampleCount; i += bufferSize) {
         unsigned long chunkSampleCount =
