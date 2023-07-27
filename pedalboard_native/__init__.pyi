@@ -944,21 +944,6 @@ class AudioUnitPlugin(ExternalPlugin):
     see :class:`pedalboard.VST3Plugin`.)
 
 
-    .. note::
-        Some plugins perform background tasks at startup, such as loading audio
-        samples or checking license keys. These plugins may not provide audio output
-        until these background tasks complete, and there may be a race condition
-        between their completion and any methods called on this plugin object.
-
-        To give these plugins time to initialize, Pedalboard provides a parameter
-        called ``initialization_delay``, which specifies the number of seconds that
-        Pedalboard should spend trying to initialize that plugin.
-
-        If an Audio Unit plugin is not producing audio as expected, try setting
-        this parameter to a larger value to ensure that the plugin has enough
-        time to complete its background loading tasks.
-
-
     *Support for instrument plugins introduced in v0.7.4.*
     """
 
@@ -990,7 +975,6 @@ class AudioUnitPlugin(ExternalPlugin):
         path_to_plugin_file: str,
         parameter_values: object = None,
         plugin_name: typing.Optional[str] = None,
-        initialization_delay: float = 0.25,
     ) -> None: ...
     def __repr__(self) -> str: ...
     def _get_parameter(self, arg0: str) -> _AudioProcessorParameter: ...
@@ -1195,15 +1179,6 @@ class AudioUnitPlugin(ExternalPlugin):
     def _parameters(self) -> typing.List[_AudioProcessorParameter]:
         """ """
     @property
-    def initialization_delay(self) -> float:
-        """
-        The number of seconds that Pedalboard will spend trying to load this Audio Unit. This parameter cannot be modified once set in the :py:class:`AudioUnitPlugin` constructor (or in :py:meth:`load_plugin`). Try using larger values of this parameter if a plugin fails to produce audio.
-
-        *Introduced in v0.7.6.*
-
-
-        """
-    @property
     def name(self) -> str:
         """
         The name of this plugin, as reported by the plugin itself.
@@ -1379,20 +1354,6 @@ class VST3Plugin(ExternalPlugin):
     build of each plugin is required to load that plugin on a given platform. (For
     example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
 
-    .. note::
-        Some plugins perform background tasks at startup, such as loading audio
-        samples or checking license keys. These plugins may not provide audio output
-        until these background tasks complete, and there may be a race condition
-        between their completion and any methods called on this plugin object.
-
-        To give these plugins time to initialize, Pedalboard provides a parameter
-        called ``initialization_delay``, which specifies the number of seconds that
-        Pedalboard should spend trying to initialize that plugin.
-
-        If a VST3 plugin is not producing audio as expected, try setting
-        this parameter to a larger value to ensure that the plugin has enough time
-        to complete its background loading tasks.
-
     *Support for instrument plugins introduced in v0.7.4.*
     """
 
@@ -1424,7 +1385,6 @@ class VST3Plugin(ExternalPlugin):
         path_to_plugin_file: str,
         parameter_values: object = None,
         plugin_name: typing.Optional[str] = None,
-        initialization_delay: float = 0.25,
     ) -> None: ...
     def __repr__(self) -> str: ...
     def _get_parameter(self, arg0: str) -> _AudioProcessorParameter: ...
@@ -1630,15 +1590,6 @@ class VST3Plugin(ExternalPlugin):
     @property
     def _parameters(self) -> typing.List[_AudioProcessorParameter]:
         """ """
-    @property
-    def initialization_delay(self) -> float:
-        """
-        The number of seconds that Pedalboard will spend trying to load this VST3. This parameter cannot be modified once set in the :py:class:`VST3Plugin` constructor (or in :py:meth:`load_plugin`). Try using larger values of this parameter  if a plugin fails to produce audio.
-
-        *Introduced in v0.7.6.*
-
-
-        """
     @property
     def name(self) -> str:
         """

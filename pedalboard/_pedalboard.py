@@ -710,7 +710,6 @@ def load_plugin(
     path_to_plugin_file: str,
     parameter_values: Dict[str, Union[str, int, float, bool]] = {},
     plugin_name: Union[str, None] = None,
-    initialization_delay: float = 0.25,
 ) -> ExternalPlugin:
     """
     Load an audio plugin.
@@ -734,14 +733,6 @@ def load_plugin(
             An optional plugin name that can be used to load a specific plugin
             from a multi-plugin package. If a package is loaded but a
             ``plugin_name`` is not provided, an exception will be thrown.
-
-        initialization_delay (``float``):
-            The number of seconds that Pedalboard will spend trying to load this plugin.
-            Some plugins load resources asynchronously in the background on startup;
-            using larger values for this parameter can give these plugins time to
-            load properly.
-
-            *Introduced in v0.7.6.*
 
     Returns:
         an instance of :class:`pedalboard.VST3Plugin` or :class:`pedalboard.AudioUnitPlugin`
