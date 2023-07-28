@@ -42,6 +42,8 @@ namespace Pedalboard {
 static std::mutex EXTERNAL_PLUGIN_MUTEX;
 static int NUM_ACTIVE_EXTERNAL_PLUGINS = 0;
 
+static const float DEFAULT_INITIALIZATION_TIMEOUT_SECONDS = 10.0f;
+
 static const std::string AUDIO_UNIT_NOT_INSTALLED_ERROR =
     "macOS requires plugin files to be moved to "
     "/Library/Audio/Plug-Ins/Components/ or "
@@ -424,9 +426,12 @@ public:
 template <typename ExternalPluginType>
 class ExternalPlugin : public AbstractExternalPlugin {
 public:
-  ExternalPlugin(std::string &_pathToPluginFile,
-                 std::optional<std::string> pluginName = {})
-      : pathToPluginFile(_pathToPluginFile) {
+  ExternalPlugin(
+      std::string &_pathToPluginFile,
+      std::optional<std::string> pluginName = {},
+      float initializationTimeout = DEFAULT_INITIALIZATION_TIMEOUT_SECONDS)
+      : pathToPluginFile(_pathToPluginFile),
+        initializationTimeout(initializationTimeout) {
     py::gil_scoped_release release;
     // Ensure we have a MessageManager, which is required by the VST wrapper
     // Without this, we get an assert(false) from JUCE at runtime
@@ -769,11 +774,15 @@ public:
    * loading assets from disk, etc). These background tasks may depend on the
    * event loop, which Pedalboard does not pump by default.
    *
-   * Returns true iff the plugin rendered audio; false if no audio was received.
+   * Returns true if the plugin rendered audio within the alloted timeout; false
+   * if no audio was received before the timeout expired.
    */
-  bool attemptToWarmUp(int timeoutMilliseconds = 5000) {
-    if (!pluginInstance)
+  bool attemptToWarmUp() {
+    if (!pluginInstance || initializationTimeout <= 0)
       return false;
+
+    auto endTime = juce::Time::currentTimeMillis() +
+                   (long)(initializationTimeout * 1000.0);
 
     const int numInputChannels = pluginInstance->getMainBusNumInputChannels();
     const float sampleRate = 44100.0f;
@@ -805,6 +814,8 @@ public:
 
     if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
       for (int i = 0; i < 10; i++) {
+        if (juce::Time::currentTimeMillis() >= endTime)
+          return false;
         juce::MessageManager::getInstance()->runDispatchLoopUntil(1);
       }
     }
@@ -827,7 +838,7 @@ public:
 
     // Then keep pumping the message thread until we get some louder output:
     bool magnitudeIncreased = false;
-    for (int attempt = 0; attempt < timeoutMilliseconds / 10; attempt++) {
+    while (true) {
       auto magnitudeWithNoteHeld = audioBuffer.getMagnitude(0, bufferSize);
       if (magnitudeWithNoteHeld > noiseFloor * 5) {
         magnitudeIncreased = true;
@@ -840,11 +851,17 @@ public:
         }
       }
 
+      if (juce::Time::currentTimeMillis() >= endTime)
+        break;
+
       audioBuffer.clear();
       {
         juce::MidiBuffer noteOnBuffer(noteOn);
         pluginInstance->processBlock(audioBuffer, noteOnBuffer);
       }
+
+      if (juce::Time::currentTimeMillis() >= endTime)
+        break;
     }
 
     // Send in an All Notes Off and then reset, just to make sure we clear any
@@ -1227,6 +1244,7 @@ private:
   std::unique_ptr<juce::AudioPluginInstance> pluginInstance;
 
   long samplesProvided = 0;
+  float initializationTimeout = DEFAULT_INITIALIZATION_TIMEOUT_SECONDS;
 
   ExternalPluginReloadType reloadType = ExternalPluginReloadType::Unknown;
 };
@@ -1427,17 +1445,20 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
 )")
       .def(
           py::init([](std::string &pathToPluginFile, py::object parameterValues,
-                      std::optional<std::string> pluginName) {
+                      std::optional<std::string> pluginName,
+                      float initializationTimeout) {
             std::shared_ptr<ExternalPlugin<juce::VST3PluginFormat>> plugin =
                 std::make_shared<ExternalPlugin<juce::VST3PluginFormat>>(
-                    pathToPluginFile, pluginName);
+                    pathToPluginFile, pluginName, initializationTimeout);
             py::cast(plugin).attr("__set_initial_parameter_values__")(
                 parameterValues);
             return plugin;
           }),
           py::arg("path_to_plugin_file"),
           py::arg("parameter_values") = py::none(),
-          py::arg("plugin_name") = py::none())
+          py::arg("plugin_name") = py::none(),
+          py::arg("initialization_timeout") =
+              DEFAULT_INITIALIZATION_TIMEOUT_SECONDS)
       .def("__repr__",
            [](ExternalPlugin<juce::VST3PluginFormat> &plugin) {
              std::ostringstream ss;
@@ -1542,18 +1563,21 @@ see :class:`pedalboard.VST3Plugin`.)
 )")
       .def(
           py::init([](std::string &pathToPluginFile, py::object parameterValues,
-                      std::optional<std::string> pluginName) {
+                      std::optional<std::string> pluginName,
+                      float initializationTimeout) {
             std::shared_ptr<ExternalPlugin<juce::AudioUnitPluginFormat>>
                 plugin = std::make_shared<
                     ExternalPlugin<juce::AudioUnitPluginFormat>>(
-                    pathToPluginFile, pluginName);
+                    pathToPluginFile, pluginName, initializationTimeout);
             py::cast(plugin).attr("__set_initial_parameter_values__")(
                 parameterValues);
             return plugin;
           }),
           py::arg("path_to_plugin_file"),
           py::arg("parameter_values") = py::none(),
-          py::arg("plugin_name") = py::none())
+          py::arg("plugin_name") = py::none(),
+          py::arg("initialization_timeout") =
+              DEFAULT_INITIALIZATION_TIMEOUT_SECONDS)
       .def("__repr__",
            [](const ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
              std::ostringstream ss;
