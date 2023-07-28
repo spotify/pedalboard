@@ -17,6 +17,6 @@
 
 MAJOR = 0
 MINOR = 7
-PATCH = 5
+PATCH = 6
 
 __version__ = "%d.%d.%d" % (MAJOR, MINOR, PATCH)
