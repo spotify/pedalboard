@@ -351,6 +351,8 @@ def test_instrument_plugin_accepts_notes(
     plugin = load_test_plugin(plugin_filename)
     assert plugin.is_instrument
     assert not plugin.is_effect
+    output = plugin([], 6.0, sample_rate, num_channels=num_channels)
+    assert np.amax(np.abs(output)) < 1e-5
     output = plugin(notes, 6.0, sample_rate, num_channels=num_channels)
     assert np.amax(np.abs(output)) > 0
 
