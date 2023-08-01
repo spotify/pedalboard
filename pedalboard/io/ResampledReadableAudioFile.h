@@ -99,7 +99,8 @@ public:
 
   ResamplingQuality getQuality() const { return resampler.getQuality(); }
 
-  py::array_t<float> read(long long numSamples) {
+  py::array_t<float> read(std::variant<double, long long> numSamplesVariant) {
+    long long numSamples = parseNumSamples(numSamplesVariant);
     if (numSamples == 0)
       throw std::domain_error(
           "ResampledReadableAudioFile will not read an entire file at once, "
@@ -382,6 +383,11 @@ in which this may occur.)
 
 For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the
 maximum sample value will be ``+1.0f``.
+
+.. note::
+    For convenience, the ``num_frames`` argument may be a floating-point number. However, if the
+    provided number of frames contains a fractional part (i.e.: ``1.01`` instead of ``1.00``) then
+    an exception will be thrown, as a fractional number of samples cannot be returned.
 )")
       .def("seekable", &ResampledReadableAudioFile::isSeekable,
            "Returns True if this file is currently open and calls to seek() "

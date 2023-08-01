@@ -33,6 +33,29 @@ namespace py = pybind11;
 
 namespace Pedalboard {
 
+inline long long parseNumSamples(std::variant<double, long long> numSamples) {
+  // Unfortunately, std::visit cannot be used here due to macOS version
+  // issues: https://stackoverflow.com/q/52310835/679081
+  if (auto *i = std::get_if<long long>(&numSamples)) {
+    return *i;
+  } else if (auto *i = std::get_if<double>(&numSamples)) {
+    double integerPart;
+    double fractionalPart = std::modf(*i, &integerPart);
+    if (fractionalPart != 0) {
+      throw std::domain_error(
+          "ReadableAudioFile cannot read a fractional "
+          "number of samples; was asked to read " +
+          std::to_string(*i) +
+          " samples. Please provide a whole (integer) number of "
+          "samples to read instead.");
+    }
+    return (long long)integerPart;
+  } else {
+    throw std::domain_error(
+        "ReadableAudioFile::read received an input that was not a number!");
+  }
+}
+
 class ReadableAudioFile
     : public AudioFile,
       public std::enable_shared_from_this<ReadableAudioFile> {
@@ -217,7 +240,10 @@ public:
     }
   }
 
-  py::array_t<float, py::array::c_style> read(long long numSamples) {
+  py::array_t<float, py::array::c_style>
+  read(std::variant<double, long long> numSamplesVariant) {
+    long long numSamples = parseNumSamples(numSamplesVariant);
+
     if (numSamples == 0)
       throw std::domain_error(
           "ReadableAudioFile will not read an entire file at once, due to the "
@@ -336,7 +362,8 @@ public:
     return buffer;
   }
 
-  py::array readRaw(long long numSamples) {
+  py::array readRaw(std::variant<double, long long> numSamplesVariant) {
+    long long numSamples = parseNumSamples(numSamplesVariant);
     if (numSamples == 0)
       throw std::domain_error(
           "ReadableAudioFile will not read an entire file at once, due to the "
@@ -699,6 +726,11 @@ in which this may occur.)
 
 For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the
 maximum sample value will be ``+1.0f``.
+
+.. note::
+    For convenience, the ``num_frames`` argument may be a floating-point number. However, if the
+    provided number of frames contains a fractional part (i.e.: ``1.01`` instead of ``1.00``) then
+    an exception will be thrown, as a fractional number of samples cannot be returned.
 )")
       .def("read_raw", &ReadableAudioFile::readRaw, py::arg("num_frames") = 0,
            R"(
@@ -719,6 +751,11 @@ If the file does not contain enough audio data to fill ``num_frames``, the retur
 passing :py:attr:`frames` as ``num_frames`` may still return less data than expected. See documentation
 for :py:attr:`frames` and :py:attr:`exact_duration_known` for more information about situations
 in which this may occur.)
+
+.. note::
+    For convenience, the ``num_frames`` argument may be a floating-point number. However, if the
+    provided number of frames contains a fractional part (i.e.: ``1.01`` instead of ``1.00``) then
+    an exception will be thrown, as a fractional number of samples cannot be returned.
 )")
       .def("seekable", &ReadableAudioFile::isSeekable,
            "Returns True if this file is currently open and calls to seek() "

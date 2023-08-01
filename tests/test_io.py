@@ -159,7 +159,7 @@ def test_basic_read(audio_filename: str, samplerate: float):
     else:
         assert af.frames >= int(samplerate * EXPECTED_DURATION_SECONDS)
 
-    samples = af.read(int(samplerate * EXPECTED_DURATION_SECONDS))
+    samples = af.read(samplerate * EXPECTED_DURATION_SECONDS)
     assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS))
 
     # File should no longer be useful:
@@ -743,7 +743,7 @@ def test_unusable_sample_rates(tmp_path: pathlib.Path, extension: str, samplerat
 
 
 @pytest.mark.parametrize("samplerate", [1234, 44100, 48000])
-def test_sample_rate_is_int_by_default(tmp_path: pathlib.Path, samplerate: int):
+def test_sample_rate_is_int_by_default(samplerate: int):
     buf = io.BytesIO()
     buf.name = "foo.wav"
     with pedalboard.io.AudioFile(buf, "w", samplerate=samplerate, num_channels=1) as f:
