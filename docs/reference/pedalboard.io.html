@@ -635,8 +635,8 @@ trailing non-audio data and lacked <code class="docutils literal notranslate"><s
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.samplerate">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">samplerate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.samplerate" title="Permalink to this definition">#</a></dt>
-<dd><p>The sample rate of this file in samples (per channel) per second (Hz).</p>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">samplerate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.samplerate" title="Permalink to this definition">#</a></dt>
+<dd><p>The sample rate of this file in samples (per channel) per second (Hz). Sample rates are represented as floating-point numbers by default, but this property will be an integer if the file’s sample rate has no fractional part.</p>
 </dd></dl>
 
 </dd></dl>
@@ -802,8 +802,8 @@ when reading certain MP3 files. For files in other formats than MP3,
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.samplerate">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">samplerate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.samplerate" title="Permalink to this definition">#</a></dt>
-<dd><p>The sample rate of this file in samples (per channel) per second (Hz). This will be equal to the <code class="docutils literal notranslate"><span class="pre">target_sample_rate</span></code> parameter passed when this object was created.</p>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">samplerate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.samplerate" title="Permalink to this definition">#</a></dt>
+<dd><p>The sample rate of this file in samples (per channel) per second (Hz). This will be equal to the <code class="docutils literal notranslate"><span class="pre">target_sample_rate</span></code> parameter passed when this object was created. Sample rates are represented as floating-point numbers by default, but this property will be an integer if the file’s target sample rate has no fractional part.</p>
 </dd></dl>
 
 </dd></dl>
@@ -952,8 +952,8 @@ second argument.</p>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile.samplerate">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">samplerate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.samplerate" title="Permalink to this definition">#</a></dt>
-<dd><p>The sample rate of this file in samples (per channel) per second (Hz).</p>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">samplerate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.samplerate" title="Permalink to this definition">#</a></dt>
+<dd><p>The sample rate of this file in samples (per channel) per second (Hz). Sample rates are represented as floating-point numbers by default, but this property will be an integer if the file’s sample rate has no fractional part.</p>
 </dd></dl>
 
 </dd></dl>

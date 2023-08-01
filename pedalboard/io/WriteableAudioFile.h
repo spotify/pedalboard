@@ -670,9 +670,24 @@ public:
     return !writer;
   }
 
-  double getSampleRate() const {
+  std::variant<double, long> getSampleRate() const {
     if (!writer)
       throw std::runtime_error("I/O operation on a closed file.");
+
+    double integerPart;
+    double fractionalPart = std::modf(writer->getSampleRate(), &integerPart);
+
+    if (fractionalPart > 0) {
+      return writer->getSampleRate();
+    } else {
+      return (long)(writer->getSampleRate());
+    }
+  }
+
+  double getSampleRateAsDouble() const {
+    if (!writer)
+      throw std::runtime_error("I/O operation on a closed file.");
+
     return writer->getSampleRate();
   }
 
@@ -931,7 +946,7 @@ inline void init_writeable_audio_file(
              if (file.isClosed()) {
                ss << " closed";
              } else {
-               ss << " samplerate=" << file.getSampleRate();
+               ss << " samplerate=" << file.getSampleRateAsDouble();
                ss << " num_channels=" << file.getNumChannels();
                if (file.getQuality()) {
                  ss << " quality=\"" << *file.getQuality() << "\"";
@@ -945,9 +960,12 @@ inline void init_writeable_audio_file(
       .def_property_readonly(
           "closed", &WriteableAudioFile::isClosed,
           "If this file has been closed, this property will be True.")
-      .def_property_readonly("samplerate", &WriteableAudioFile::getSampleRate,
-                             "The sample rate of this file in samples "
-                             "(per channel) per second (Hz).")
+      .def_property_readonly(
+          "samplerate", &WriteableAudioFile::getSampleRate,
+          "The sample rate of this file in samples (per channel) per second "
+          "(Hz). Sample rates are represented as floating-point numbers by "
+          "default, but this property will be an integer if the file's sample "
+          "rate has no fractional part.")
       .def_property_readonly("num_channels",
                              &WriteableAudioFile::getNumChannels,
                              "The number of channels in this file.")

@@ -742,6 +742,19 @@ def test_unusable_sample_rates(tmp_path: pathlib.Path, extension: str, samplerat
     assert "44100" in str(e), "Expected exception to include details about supported sample rates."
 
 
+@pytest.mark.parametrize("samplerate", [1234, 44100, 48000])
+def test_sample_rate_is_int_by_default(tmp_path: pathlib.Path, samplerate: int):
+    buf = io.BytesIO()
+    buf.name = "foo.wav"
+    with pedalboard.io.AudioFile(buf, "w", samplerate=samplerate, num_channels=1) as f:
+        f.write(np.random.rand(100))
+
+    buf.seek(0)
+    with pedalboard.io.AudioFile(buf) as f:
+        assert isinstance(f.samplerate, int)
+        assert f.samplerate == samplerate
+
+
 @pytest.mark.parametrize("dtype", [np.uint8, np.uint16, np.uint32, np.uint64])
 def test_fail_to_write_unsigned(tmp_path: pathlib.Path, dtype):
     filename = str(tmp_path / "test.wav")

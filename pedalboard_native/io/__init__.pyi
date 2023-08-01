@@ -496,9 +496,9 @@ class ReadableAudioFile(AudioFile):
 
         """
     @property
-    def samplerate(self) -> float:
+    def samplerate(self) -> typing.Union[float, int]:
         """
-        The sample rate of this file in samples (per channel) per second (Hz).
+        The sample rate of this file in samples (per channel) per second (Hz). Sample rates are represented as floating-point numbers by default, but this property will be an integer if the file's sample rate has no fractional part.
 
 
         """
@@ -685,9 +685,9 @@ class ResampledReadableAudioFile(AudioFile):
 
         """
     @property
-    def samplerate(self) -> float:
+    def samplerate(self) -> typing.Union[float, int]:
         """
-        The sample rate of this file in samples (per channel) per second (Hz). This will be equal to the ``target_sample_rate`` parameter passed when this object was created.
+        The sample rate of this file in samples (per channel) per second (Hz). This will be equal to the ``target_sample_rate`` parameter passed when this object was created. Sample rates are represented as floating-point numbers by default, but this property will be an integer if the file's target sample rate has no fractional part.
 
 
         """
@@ -901,9 +901,9 @@ class WriteableAudioFile(AudioFile):
 
         """
     @property
-    def samplerate(self) -> float:
+    def samplerate(self) -> typing.Union[float, int]:
         """
-        The sample rate of this file in samples (per channel) per second (Hz).
+        The sample rate of this file in samples (per channel) per second (Hz). Sample rates are represented as floating-point numbers by default, but this property will be an integer if the file's sample rate has no fractional part.
 
 
         """

@@ -139,9 +139,24 @@ public:
     PythonException::raise();
   }
 
-  double getSampleRate() const {
+  std::variant<double, long> getSampleRate() const {
     if (!reader)
       throw std::runtime_error("I/O operation on a closed file.");
+
+    double integerPart;
+    double fractionalPart = std::modf(reader->sampleRate, &integerPart);
+
+    if (fractionalPart > 0) {
+      return reader->sampleRate;
+    } else {
+      return (long)(reader->sampleRate);
+    }
+  }
+
+  double getSampleRateAsDouble() const {
+    if (!reader)
+      throw std::runtime_error("I/O operation on a closed file.");
+
     return reader->sampleRate;
   }
 
@@ -739,7 +754,7 @@ in which this may occur.)
              if (file.isClosed()) {
                ss << " closed";
              } else {
-               ss << " samplerate=" << file.getSampleRate();
+               ss << " samplerate=" << file.getSampleRateAsDouble();
                ss << " num_channels=" << file.getNumChannels();
                ss << " frames=" << file.getLengthInSamples();
                ss << " file_dtype=" << file.getFileDatatype();
@@ -755,9 +770,12 @@ in which this may occur.)
       .def_property_readonly("closed", &ReadableAudioFile::isClosed,
                              "True iff this file is closed (and no longer "
                              "usable), False otherwise.")
-      .def_property_readonly("samplerate", &ReadableAudioFile::getSampleRate,
-                             "The sample rate of this file in samples "
-                             "(per channel) per second (Hz).")
+      .def_property_readonly(
+          "samplerate", &ReadableAudioFile::getSampleRate,
+          "The sample rate of this file in samples (per channel) per second "
+          "(Hz). Sample rates are represented as floating-point numbers by "
+          "default, but this property will be an integer if the file's sample "
+          "rate has no fractional part.")
       .def_property_readonly("num_channels", &ReadableAudioFile::getNumChannels,
                              "The number of channels in this file.")
       .def_property_readonly("exact_duration_known",
