@@ -290,8 +290,9 @@ jobs:
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: pip install auditwheel-symbols && (auditwheel repair -w {dest_dir} {wheel} || auditwheel-symbols --manylinux 2010 {wheel})
           # The manylinux container doesn't have a new enough glibc version,
           # so we can't run post-wheel-build tests there.
+          # The musllinux containers on aarch64 take 6+ hours to test.
           # Also testing any pypy versions fails, as TensorFlow isn't pypy compatible.
-          CIBW_TEST_SKIP: "*manylinux* *pp* *-macosx_universal2:arm64"
+          CIBW_TEST_SKIP: "*manylinux* *musllinux_aarch* *pp* *-macosx_universal2:arm64"
           # Use the minimum macOS deployment target that has C++17 support:
           MACOSX_DEPLOYMENT_TARGET: "10.13"
       - uses: actions/upload-artifact@v2
