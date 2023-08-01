@@ -319,7 +319,9 @@ class ReadableAudioFile(AudioFile):
         """
         Close this file, rendering this object unusable.
         """
-    def read(self, num_frames: int = 0) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+    def read(
+        self, num_frames: typing.Union[float, int] = 0
+    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
         """
         Read the given number of frames (samples in each channel) from this audio file at its current position.
 
@@ -340,8 +342,13 @@ class ReadableAudioFile(AudioFile):
 
         For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the
         maximum sample value will be ``+1.0f``.
+
+        .. note::
+            For convenience, the ``num_frames`` argument may be a floating-point number. However, if the
+            provided number of frames contains a fractional part (i.e.: ``1.01`` instead of ``1.00``) then
+            an exception will be thrown, as a fractional number of samples cannot be returned.
         """
-    def read_raw(self, num_frames: int = 0) -> numpy.ndarray:
+    def read_raw(self, num_frames: typing.Union[float, int] = 0) -> numpy.ndarray:
         """
         Read the given number of frames (samples in each channel) from this audio file at its current position.
 
@@ -360,6 +367,11 @@ class ReadableAudioFile(AudioFile):
         passing :py:attr:`frames` as ``num_frames`` may still return less data than expected. See documentation
         for :py:attr:`frames` and :py:attr:`exact_duration_known` for more information about situations
         in which this may occur.)
+
+        .. note::
+            For convenience, the ``num_frames`` argument may be a floating-point number. However, if the
+            provided number of frames contains a fractional part (i.e.: ``1.01`` instead of ``1.00``) then
+            an exception will be thrown, as a fractional number of samples cannot be returned.
         """
     def resampled_to(
         self,
@@ -496,9 +508,9 @@ class ReadableAudioFile(AudioFile):
 
         """
     @property
-    def samplerate(self) -> float:
+    def samplerate(self) -> typing.Union[float, int]:
         """
-        The sample rate of this file in samples (per channel) per second (Hz).
+        The sample rate of this file in samples (per channel) per second (Hz). Sample rates are represented as floating-point numbers by default, but this property will be an integer if the file's sample rate has no fractional part.
 
 
         """
@@ -560,7 +572,9 @@ class ResampledReadableAudioFile(AudioFile):
         """
         Close this file, rendering this object unusable. Note that the :class:`ReadableAudioFile` instance that is wrapped by this object will not be closed, and will remain usable.
         """
-    def read(self, num_frames: int = 0) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+    def read(
+        self, num_frames: typing.Union[float, int] = 0
+    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
         """
         Read the given number of frames (samples in each channel, at the target sample rate)
         from this audio file at its current position, automatically resampling on-the-fly to
@@ -583,6 +597,11 @@ class ResampledReadableAudioFile(AudioFile):
 
         For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the
         maximum sample value will be ``+1.0f``.
+
+        .. note::
+            For convenience, the ``num_frames`` argument may be a floating-point number. However, if the
+            provided number of frames contains a fractional part (i.e.: ``1.01`` instead of ``1.00``) then
+            an exception will be thrown, as a fractional number of samples cannot be returned.
         """
     def seek(self, position: int) -> None:
         """
@@ -685,9 +704,9 @@ class ResampledReadableAudioFile(AudioFile):
 
         """
     @property
-    def samplerate(self) -> float:
+    def samplerate(self) -> typing.Union[float, int]:
         """
-        The sample rate of this file in samples (per channel) per second (Hz). This will be equal to the ``target_sample_rate`` parameter passed when this object was created.
+        The sample rate of this file in samples (per channel) per second (Hz). This will be equal to the ``target_sample_rate`` parameter passed when this object was created. Sample rates are represented as floating-point numbers by default, but this property will be an integer if the file's target sample rate has no fractional part.
 
 
         """
@@ -901,9 +920,9 @@ class WriteableAudioFile(AudioFile):
 
         """
     @property
-    def samplerate(self) -> float:
+    def samplerate(self) -> typing.Union[float, int]:
         """
-        The sample rate of this file in samples (per channel) per second (Hz).
+        The sample rate of this file in samples (per channel) per second (Hz). Sample rates are represented as floating-point numbers by default, but this property will be an integer if the file's sample rate has no fractional part.
 
 
         """

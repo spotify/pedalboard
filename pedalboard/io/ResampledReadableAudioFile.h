@@ -57,15 +57,29 @@ public:
   ResampledReadableAudioFile(std::shared_ptr<ReadableAudioFile> audioFile,
                              float targetSampleRate, ResamplingQuality quality)
       : audioFile(audioFile),
-        resampler(audioFile->getSampleRate(), targetSampleRate,
+        resampler(audioFile->getSampleRateAsDouble(), targetSampleRate,
                   audioFile->getNumChannels(), quality) {}
 
-  double getSampleRate() const { return resampler.getTargetSampleRate(); }
+  std::variant<double, long> getSampleRate() const {
+    double integerPart;
+    double fractionalPart =
+        std::modf(resampler.getTargetSampleRate(), &integerPart);
+
+    if (fractionalPart > 0) {
+      return resampler.getTargetSampleRate();
+    } else {
+      return (long)(resampler.getTargetSampleRate());
+    }
+  }
+
+  double getSampleRateAsDouble() const {
+    return resampler.getTargetSampleRate();
+  }
 
   long getLengthInSamples() const {
     double length = (((double)audioFile->getLengthInSamples() *
                       resampler.getTargetSampleRate()) /
-                     audioFile->getSampleRate());
+                     audioFile->getSampleRateAsDouble());
     if (resampler.getOutputLatency() > 0) {
       length -= (std::round(resampler.getOutputLatency()) -
                  resampler.getOutputLatency());
@@ -85,7 +99,8 @@ public:
 
   ResamplingQuality getQuality() const { return resampler.getQuality(); }
 
-  py::array_t<float> read(long long numSamples) {
+  py::array_t<float> read(std::variant<double, long long> numSamplesVariant) {
+    long long numSamples = parseNumSamples(numSamplesVariant);
     if (numSamples == 0)
       throw std::domain_error(
           "ResampledReadableAudioFile will not read an entire file at once, "
@@ -130,7 +145,7 @@ public:
 
     long long inputSamplesRequired =
         (long long)(((numSamples - samplesToPullFromOutputBuffer) *
-                     audioFile->getSampleRate()) /
+                     audioFile->getSampleRateAsDouble()) /
                     resampler.getTargetSampleRate());
 
     while (samplesInResampledBuffer < numSamples) {
@@ -368,6 +383,11 @@ in which this may occur.)
 
 For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the
 maximum sample value will be ``+1.0f``.
+
+.. note::
+    For convenience, the ``num_frames`` argument may be a floating-point number. However, if the
+    provided number of frames contains a fractional part (i.e.: ``1.01`` instead of ``1.00``) then
+    an exception will be thrown, as a fractional number of samples cannot be returned.
 )")
       .def("seekable", &ResampledReadableAudioFile::isSeekable,
            "Returns True if this file is currently open and calls to seek() "
@@ -412,7 +432,7 @@ maximum sample value will be ``+1.0f``.
              if (file.isClosed()) {
                ss << " closed";
              } else {
-               ss << " samplerate=" << file.getSampleRate();
+               ss << " samplerate=" << file.getSampleRateAsDouble();
                ss << " num_channels=" << file.getNumChannels();
                ss << " frames=" << file.getLengthInSamples();
                ss << " file_dtype=" << file.getFileDatatype();
@@ -435,7 +455,9 @@ maximum sample value will be ``+1.0f``.
           "samplerate", &ResampledReadableAudioFile::getSampleRate,
           "The sample rate of this file in samples (per channel) per second "
           "(Hz). This will be equal to the ``target_sample_rate`` parameter "
-          "passed when this object was created.")
+          "passed when this object was created. Sample rates are represented "
+          "as floating-point numbers by default, but this property will be an "
+          "integer if the file's target sample rate has no fractional part.")
       .def_property_readonly("num_channels",
                              &ResampledReadableAudioFile::getNumChannels,
                              "The number of channels in this file.")

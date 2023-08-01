@@ -91,7 +91,7 @@ def test_read_resampled(
         f.write(sine_wave)
 
     with AudioFile(BytesIO(read_buffer.getvalue())).resampled_to(target_sample_rate, quality) as f:
-        actual = f.read(f.frames)
+        actual = f.read(float(f.frames))
         np.testing.assert_allclose(expected_sine_wave, actual)
 
 
