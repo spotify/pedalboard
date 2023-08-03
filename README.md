@@ -93,7 +93,7 @@ with AudioFile('some-file.wav') as f:
   
     # Read one second of audio at a time, until the file is empty:
     while f.tell() < f.frames:
-      chunk = f.read(int(f.samplerate))
+      chunk = f.read(f.samplerate)
       
       # Run the audio through our pedalboard:
       effected = board(chunk, f.samplerate, reset=False)
