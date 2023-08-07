@@ -234,7 +234,7 @@ public:
     pybind11::gil_scoped_release release;
 
     if (!isInteger(writeSampleRate)) {
-      throw std::domain_error(
+      throw py::type_error(
           "Opening an audio file for writing requires an integer sample rate.");
     }
 
@@ -244,8 +244,22 @@ public:
     }
 
     if (numChannels == 0) {
-      throw py::type_error("Opening an audio file for writing requires a "
-                           "non-zero num_channels.");
+      throw std::domain_error("Opening an audio file for writing requires a "
+                              "non-zero num_channels.");
+    }
+
+    // Tiny quality-of-life improvement to try to detect if people have swapped
+    // the num_channels and samplerate arguments:
+    if ((numChannels == 48000 || numChannels == 44100 || numChannels == 22050 ||
+         numChannels == 11025) &&
+        writeSampleRate < 8000) {
+      throw std::domain_error(
+          "Arguments of num_channels=" + std::to_string(numChannels) +
+          " and samplerate=" + std::to_string(writeSampleRate) +
+          " were provided when opening a file for writing. These arguments "
+          "appear to be flipped, and may cause an invalid audio file to be "
+          "written. Try reversing the order of the samplerate "
+          "and num_channels arguments.");
     }
 
     registerPedalboardAudioFormats(formatManager, true);
