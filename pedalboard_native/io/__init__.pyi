@@ -377,9 +377,11 @@ class ReadableAudioFile(AudioFile):
         self,
         target_sample_rate: float,
         quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc,
-    ) -> ResampledReadableAudioFile:
+    ) -> typing.Union[ReadableAudioFile, ResampledReadableAudioFile]:
         """
         Return a :class:`ResampledReadableAudioFile` that will automatically resample this :class:`ReadableAudioFile` to the provided `target_sample_rate`, using a constant amount of memory.
+
+        If `target_sample_rate` matches the existing sample rate of the file, the original file will be returned.
 
         *Introduced in v0.6.0.*
         """

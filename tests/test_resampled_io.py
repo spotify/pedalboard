@@ -53,6 +53,19 @@ def test_read_resampled_constructor():
     assert f.closed
 
 
+def test_read_resampled_constructor_does_nothing():
+    sine_wave = generate_sine_at(44100, 440, num_seconds=1, num_channels=1).astype(np.float32)
+
+    read_buffer = BytesIO()
+    read_buffer.name = "test.wav"
+    with AudioFile(read_buffer, "w", 44100, 1, bit_depth=32) as f:
+        f.write(sine_wave)
+
+    with AudioFile(BytesIO(read_buffer.getvalue())) as f:
+        with f.resampled_to(44100) as r:
+            assert r is f
+
+
 def test_read_zero():
     sine_wave = generate_sine_at(44100, 440, num_seconds=1, num_channels=1).astype(np.float32)
 
