@@ -30,7 +30,10 @@ def expected_output(
     input_signal, sample_rate: float, target_sample_rate: float, num_channels: int, quality
 ) -> np.ndarray:
     if sample_rate == target_sample_rate:
-        return input_signal
+        if len(input_signal.shape) == 1:
+            return np.expand_dims(input_signal, 0)
+        else:
+            return input_signal
     resampler = StreamResampler(sample_rate, target_sample_rate, num_channels, quality)
     output = np.concatenate([resampler.process(input_signal), resampler.process(None)], axis=1)
     return output
