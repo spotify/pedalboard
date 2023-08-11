@@ -232,7 +232,7 @@
 
     <span class="c1"># Read one second of audio at a time, until the file is empty:</span>
     <span class="k">while</span> <span class="n">f</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">f</span><span class="o">.</span><span class="n">frames</span><span class="p">:</span>
-      <span class="n">chunk</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span><span class="p">))</span>
+      <span class="n">chunk</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
 
       <span class="c1"># Run the audio through our pedalboard:</span>
       <span class="n">effected</span> <span class="o">=</span> <span class="n">board</span><span class="p">(</span><span class="n">chunk</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span> <span class="n">reset</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
