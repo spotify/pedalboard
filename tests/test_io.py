@@ -1110,11 +1110,12 @@ def test_mp3_duration_estimate(samplerate: float, target_samplerate: float, chun
     ) as f:
         original_frame_estimate = f.frames
         total_frames_read = 0
-        while f.tell() < f.frames:
+        # When resampling, we may need to call read() one more time after getting f.frames
+        # out of the file to ensure that we've pulled all of the data from the original file
+        # _and_ exhausted any resampler buffers.
+        while f.tell() < f.frames or not f.exact_duration_known:
             frames_read = f.read(chunk_size).shape[1]
             total_frames_read += frames_read
-            if not frames_read:
-                break
         assert f.exact_duration_known
         assert abs(total_frames_read - int(audio.shape[1] * (target_samplerate / samplerate))) <= 1
         assert total_frames_read == f.frames
