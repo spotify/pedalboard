@@ -2125,6 +2125,7 @@ private:
     auto oldPos = stream.getPosition();
     int offset = -3;
     uint32 header = 0;
+    bool isFirstScanAtThisPosition = true;
 
     for (;;) {
       auto streamPos = stream.getPosition();
@@ -2155,7 +2156,7 @@ private:
           break;
       }
 
-      if (offset == -3 && isParsingFirstFrame) {
+      if (isFirstScanAtThisPosition && isParsingFirstFrame) {
         // If we're parsing the first frame of a file/stream, that frame must be
         // at the start of the stream. This prevents accidentally parsing .mp4
         // files (among others) as MP3 files that start with junk.
@@ -2163,6 +2164,7 @@ private:
       }
 
       ++offset;
+      isFirstScanAtThisPosition = false;
     }
 
     if (offset >= 0) {
