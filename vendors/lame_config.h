@@ -49,7 +49,7 @@
 /* Define if compiler has function prototypes */
 #define PROTOTYPES 1
 
-/* faster log implementation with less but enough precission */
+/* faster log implementation with less but enough precision */
 #define USE_FAST_LOG 1
 
 #define HAVE_STRCHR
