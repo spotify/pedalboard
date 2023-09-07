@@ -610,7 +610,7 @@ class ResampledReadableAudioFile(AudioFile):
         Seek this file to the provided location in frames at the target sample rate. Future reads will start from this position.
 
         .. note::
-            Prior to version 0.7.3, this method operated in linear time with respect to the seek position (i.e.: the file was seeked to its beginning and pushed through the resampler) to ensure that the resampled audio output was sample-accurate. This was optimized in version 0.7.3 to operate in effectively constant time while retaining sample-accuracy.
+            Prior to version 0.7.3, this method operated in linear time with respect to the seek position (i.e.: the file was sought to its beginning and pushed through the resampler) to ensure that the resampled audio output was sample-accurate. This was optimized in version 0.7.3 to operate in effectively constant time while retaining sample-accuracy.
         """
     def seekable(self) -> bool:
         """

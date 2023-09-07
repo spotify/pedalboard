@@ -1071,7 +1071,7 @@ def test_mp3_duration_estimate(samplerate: float, target_samplerate: float, chun
         # Seek back to the start
         f.seek(0)
         # Now that we've read the whole file and
-        # seeked back, our duration should be accurate:
+        # sought back, our duration should be accurate:
         assert f.exact_duration_known
         # Number of frames read should match reported value:
         assert f.frames == audio.shape[1]

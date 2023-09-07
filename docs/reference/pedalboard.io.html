@@ -729,7 +729,7 @@ an exception will be thrown, as a fractional number of samples cannot be returne
 <dd><p>Seek this file to the provided location in frames at the target sample rate. Future reads will start from this position.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Prior to version 0.7.3, this method operated in linear time with respect to the seek position (i.e.: the file was seeked to its beginning and pushed through the resampler) to ensure that the resampled audio output was sample-accurate. This was optimized in version 0.7.3 to operate in effectively constant time while retaining sample-accuracy.</p>
+<p>Prior to version 0.7.3, this method operated in linear time with respect to the seek position (i.e.: the file was sought to its beginning and pushed through the resampler) to ensure that the resampled audio output was sample-accurate. This was optimized in version 0.7.3 to operate in effectively constant time while retaining sample-accuracy.</p>
 </div>
 </dd></dl>
 

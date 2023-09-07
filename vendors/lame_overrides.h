@@ -9,7 +9,7 @@
 /*
  * For hip_decode:  return code
  *  -1     error
- *   0     ok, but need more data before outputing any samples
+ *   0     ok, but need more data before outputting any samples
  *   n     number of samples output.  a multiple of 576 or 1152 depending on MP3
  * file.
  */

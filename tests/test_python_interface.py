@@ -37,7 +37,7 @@ def test_fail_on_invalid_plugin():
 
 def test_fail_on_invalid_sample_rate():
     with pytest.raises(TypeError):
-        Pedalboard([]).process([], "fourty four one hundred")
+        Pedalboard([]).process([], "forty four one hundred")
 
 
 def test_fail_on_invalid_buffer_size():
