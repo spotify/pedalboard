@@ -21,6 +21,8 @@ using namespace RubberBand;
 
 namespace Pedalboard {
 
+static const int MAX_SEMITONES_TO_PITCH_SHIFT = 72;
+
 /*
  * A wrapper around Rubber Band that allows calling it independently of a plugin
  * context, to allow for both pitch shifting and time stretching on fixed-size
@@ -31,18 +33,17 @@ namespace Pedalboard {
  */
 static juce::AudioBuffer<float>
 timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
-            double speedFactor, double pitchShiftInSemitones) {
+            double stretchFactor, double pitchShiftInSemitones) {
   RubberBandStretcher rubberBandStretcher(
       sampleRate, input.getNumChannels(),
       RubberBandStretcher::OptionProcessOffline |
           RubberBandStretcher::OptionThreadingNever |
           RubberBandStretcher::OptionChannelsTogether |
           RubberBandStretcher::OptionPitchHighQuality,
-      1.0 / speedFactor, pow(2.0, (pitchShiftInSemitones / 12.0)));
+      1.0 / stretchFactor, pow(2.0, (pitchShiftInSemitones / 12.0)));
   rubberBandStretcher.setMaxProcessSize(input.getNumSamples());
   rubberBandStretcher.setExpectedInputDuration(input.getNumSamples());
 
-  const float **inChannels = input.getArrayOfReadPointers();
   rubberBandStretcher.study(input.getArrayOfReadPointers(),
                             input.getNumSamples(), true);
 
@@ -60,19 +61,28 @@ inline void init_time_stretch(py::module &m) {
   m.def(
       "time_stretch",
       [](py::array_t<float, py::array::c_style> input, double sampleRate,
-         double speedFactor, double pitchShiftInSemitones) {
-        if (speedFactor == 0)
-          throw std::domain_error("speed_factor must be greater than 0.0x.");
-        if (pitchShiftInSemitones < -72 || pitchShiftInSemitones > 72)
+         double stretchFactor, double pitchShiftInSemitones) {
+        if (stretchFactor == 0)
           throw std::domain_error(
-              "pitch_shift_in_semitones must be between -72 and +72.");
+              "stretch_factor must be greater than 0.0x, but was passed " +
+              std::to_string(stretchFactor) + "x.");
+
+        if (pitchShiftInSemitones < -MAX_SEMITONES_TO_PITCH_SHIFT ||
+            pitchShiftInSemitones > MAX_SEMITONES_TO_PITCH_SHIFT)
+          throw std::domain_error(
+              "pitch_shift_in_semitones must be between -" +
+              std::to_string(MAX_SEMITONES_TO_PITCH_SHIFT) + " and +" +
+              std::to_string(MAX_SEMITONES_TO_PITCH_SHIFT) +
+              " semitones, but was passed " +
+              std::to_string(pitchShiftInSemitones) + " semitones.");
+
         juce::AudioBuffer<float> inputBuffer =
             convertPyArrayIntoJuceBuffer(input, detectChannelLayout(input));
 
         juce::AudioBuffer<float> output;
         {
           py::gil_scoped_release release;
-          output = timeStretch(inputBuffer, sampleRate, speedFactor,
+          output = timeStretch(inputBuffer, sampleRate, stretchFactor,
                                pitchShiftInSemitones);
         }
 
@@ -83,6 +93,7 @@ inline void init_time_stretch(py::module &m) {
       "instance, and cannot be used in :py:class:`Pedalboard` objects, as it "
       "changes the duration of the audio stream.",
       py::arg("input_audio"), py::arg("samplerate"),
-      py::arg("speed_factor") = 1.0, py::arg("pitch_shift_in_semitones") = 0.0);
+      py::arg("stretch_factor") = 1.0,
+      py::arg("pitch_shift_in_semitones") = 0.0);
 }
 }; // namespace Pedalboard
