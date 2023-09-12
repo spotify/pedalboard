@@ -88,10 +88,23 @@ inline void init_time_stretch(py::module &m) {
 
         return copyJuceBufferIntoPyArray(output, detectChannelLayout(input), 0);
       },
-      "Time-stretch (and optionally pitch-shift) a buffer of audio, changing "
-      "its length. Note that this is a function, not a :py:class:`Plugin` "
-      "instance, and cannot be used in :py:class:`Pedalboard` objects, as it "
-      "changes the duration of the audio stream.",
+      R"(
+Time-stretch (and optionally pitch-shift) a buffer of audio, changing its length.
+
+Using a higher ``stretch_factor`` will shorten the audio - i.e., a ``stretch_factor``
+of ``2.0`` will double the *speed* of the audio and halve the *length* fo the audio,
+without changing the pitch of the audio.
+
+This function allows for changing the pitch of the audio during the time stretching
+operation. The ``stretch_factor`` and ``pitch_shift_in_semitones`` arguments are
+independent and do not affect each other (i.e.: you can change one, the other, or both
+without worrying about how they interact).
+
+.. warning::
+    This is a function, not a :py:class:`Plugin` instance, and cannot be
+    used in :py:class:`Pedalboard` objects, as it changes the duration of
+    the audio stream.
+)",
       py::arg("input_audio"), py::arg("samplerate"),
       py::arg("stretch_factor") = 1.0,
       py::arg("pitch_shift_in_semitones") = 0.0);

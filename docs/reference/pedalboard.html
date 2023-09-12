@@ -2668,6 +2668,25 @@ automatically invoke <a class="reference internal" href="#pedalboard.VST3Plugin.
 
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="pedalboard.time_stretch">
+<span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">time_stretch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_audio</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">samplerate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stretch_factor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pitch_shift_in_semitones</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.time_stretch" title="Permalink to this definition">#</a></dt>
+<dd><p>Time-stretch (and optionally pitch-shift) a buffer of audio, changing its length.</p>
+<p>Using a higher <code class="docutils literal notranslate"><span class="pre">stretch_factor</span></code> will shorten the audio - i.e., a <code class="docutils literal notranslate"><span class="pre">stretch_factor</span></code>
+of <code class="docutils literal notranslate"><span class="pre">2.0</span></code> will double the <em>speed</em> of the audio and halve the <em>length</em> fo the audio,
+without changing the pitch of the audio.</p>
+<p>This function allows for changing the pitch of the audio during the time stretching
+operation. The <code class="docutils literal notranslate"><span class="pre">stretch_factor</span></code> and <code class="docutils literal notranslate"><span class="pre">pitch_shift_in_semitones</span></code> arguments are
+independent and do not affect each other (i.e.: you can change one, the other, or both
+without worrying about how they interact).</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This is a function, not a <a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> instance, and cannot be
+used in <a class="reference internal" href="#pedalboard.Pedalboard" title="pedalboard.Pedalboard"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pedalboard</span></code></a> objects, as it changes the duration of
+the audio stream.</p>
+</div>
+</dd></dl>
+
 </section>
 
         </article>
@@ -3036,6 +3055,7 @@ automatically invoke <a class="reference internal" href="#pedalboard.VST3Plugin.
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.name"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.name</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#pedalboard.time_stretch"><code class="docutils literal notranslate"><span class="pre">time_stretch()</span></code></a></li>
 </ul>
 </li>
 </ul>
