@@ -24,9 +24,12 @@ typing.overload = patch_overload
 
 from typing_extensions import Literal
 from enum import Enum
+import numpy
 import pedalboard_native
 
-__all__ = ["Chain", "Mix"]
+_Shape = typing.Tuple[int, ...]
+
+__all__ = ["Chain", "Mix", "time_stretch"]
 
 class Chain(pedalboard_native.PluginContainer, pedalboard_native.Plugin):
     """
@@ -49,3 +52,27 @@ class Mix(pedalboard_native.PluginContainer, pedalboard_native.Plugin):
     def __init__(self, plugins: typing.List[pedalboard_native.Plugin]) -> None: ...
     def __repr__(self) -> str: ...
     pass
+
+def time_stretch(
+    input_audio: numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]],
+    samplerate: float,
+    stretch_factor: float = 1.0,
+    pitch_shift_in_semitones: float = 0.0,
+) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+    """
+    Time-stretch (and optionally pitch-shift) a buffer of audio, changing its length.
+
+    Using a higher ``stretch_factor`` will shorten the audio - i.e., a ``stretch_factor``
+    of ``2.0`` will double the *speed* of the audio and halve the *length* fo the audio,
+    without changing the pitch of the audio.
+
+    This function allows for changing the pitch of the audio during the time stretching
+    operation. The ``stretch_factor`` and ``pitch_shift_in_semitones`` arguments are
+    independent and do not affect each other (i.e.: you can change one, the other, or both
+    without worrying about how they interact).
+
+    .. warning::
+        This is a function, not a :py:class:`Plugin` instance, and cannot be
+        used in :py:class:`Pedalboard` objects, as it changes the duration of
+        the audio stream.
+    """

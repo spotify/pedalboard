@@ -31,6 +31,7 @@ namespace py = pybind11;
 #include "JucePlugin.h"
 #include "Plugin.h"
 #include "PluginContainer.h"
+#include "TimeStretch.h"
 #include "process.h"
 
 #include "plugin_templates/FixedBlockSize.h"
@@ -216,10 +217,11 @@ or buffer, set ``reset`` to ``False``.
 
   init_external_plugins(m);
 
-  // Plugins that don't perform any audio effects, but that add other utilities:
+  // Classes that don't perform any audio effects, but that add other utilities:
   py::module utils = m.def_submodule("utils");
   init_mix(utils);
   init_chain(utils);
+  init_time_stretch(utils);
 
   // Internal plugins for testing, debugging, etc:
   py::module internal = m.def_submodule("_internal");
