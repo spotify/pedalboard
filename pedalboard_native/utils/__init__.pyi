@@ -58,18 +58,52 @@ def time_stretch(
     samplerate: float,
     stretch_factor: float = 1.0,
     pitch_shift_in_semitones: float = 0.0,
+    transient_mode: str = "crisp",
+    transient_detector: str = "compound",
+    retain_phase_continuity: bool = True,
+    use_long_fft_window: typing.Optional[bool] = None,
+    use_time_domain_smoothing: bool = False,
+    preserve_formants: bool = True,
 ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
     """
     Time-stretch (and optionally pitch-shift) a buffer of audio, changing its length.
 
     Using a higher ``stretch_factor`` will shorten the audio - i.e., a ``stretch_factor``
-    of ``2.0`` will double the *speed* of the audio and halve the *length* fo the audio,
+    of ``2.0`` will double the *speed* of the audio and halve the *length* of the audio,
     without changing the pitch of the audio.
 
     This function allows for changing the pitch of the audio during the time stretching
     operation. The ``stretch_factor`` and ``pitch_shift_in_semitones`` arguments are
     independent and do not affect each other (i.e.: you can change one, the other, or both
     without worrying about how they interact).
+
+    The additional arguments provided to this function allow for more fine-grained control
+    over the behavior of the time stretcher:
+
+      - ``transient_mode`` controls the behavior of the stretcher around transients
+        (percussive parts of the audio). Valid options are ``"crisp"`` (the default),
+        ``"mixed"``, or ``"smooth"``.
+
+      - ``transient_detector`` controls which method is used to detect transients in the
+        audio signal. Valid options are ``"compound"`` (the default), ``"percussive"``,
+        or ``"soft"``.
+
+      - ``retain_phase_continuity`` ensures that the phases of adjacent frequency bins in
+        the audio stream are kept as similar as possible. Set this to ``False`` for a
+        softer, phasier sound.
+
+      - ``use_long_fft_window`` controls the size of the fast-Fourier transform window
+        used during stretching. The default (``None``) will result in a window size that
+        varies based on other parameters and should produce better results in most
+        situations. Set this option to ``True`` to result in a smoother sound (at the
+        expense of clarity and timing), or ``False`` to result in a crisper sound.
+
+      - ``use_time_domain_smoothing`` can be enabled to produce a softer sound with
+        audible artifacts around sharp transients. This option mixes well with
+        ``use_long_fft_window=False``.
+
+      - ``preserve_formants`` allows shifting the pitch of notes without substantially
+        affecting the pitch profile (formants) of a voice or instrument.
 
     .. warning::
         This is a function, not a :py:class:`Plugin` instance, and cannot be

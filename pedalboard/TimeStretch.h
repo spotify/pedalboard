@@ -16,6 +16,7 @@
  */
 
 #include "../vendors/rubberband/rubberband/RubberBandStretcher.h"
+#include "StreamUtils.h"
 
 using namespace RubberBand;
 
@@ -33,14 +34,67 @@ static const int MAX_SEMITONES_TO_PITCH_SHIFT = 72;
  */
 static juce::AudioBuffer<float>
 timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
-            double stretchFactor, double pitchShiftInSemitones) {
-  RubberBandStretcher rubberBandStretcher(
-      sampleRate, input.getNumChannels(),
+            double stretchFactor, double pitchShiftInSemitones,
+            std::string transientMode, std::string transientDetector,
+            bool retainPhaseContinuity, std::optional<bool> useLongFFTWindow,
+            bool useTimeDomainSmoothing, bool preserveFormants) {
+  RubberBandStretcher::Options options =
       RubberBandStretcher::OptionProcessOffline |
-          RubberBandStretcher::OptionThreadingNever |
-          RubberBandStretcher::OptionChannelsTogether |
-          RubberBandStretcher::OptionPitchHighQuality,
-      1.0 / stretchFactor, pow(2.0, (pitchShiftInSemitones / 12.0)));
+      RubberBandStretcher::OptionThreadingNever |
+      RubberBandStretcher::OptionChannelsTogether |
+      RubberBandStretcher::OptionPitchHighQuality;
+
+  if (transientMode == "crisp") {
+    options |= RubberBandStretcher::OptionTransientsCrisp;
+  } else if (transientMode == "mixed") {
+    options |= RubberBandStretcher::OptionTransientsMixed;
+  } else if (transientMode == "smooth") {
+    options |= RubberBandStretcher::OptionTransientsSmooth;
+  } else {
+    throw std::domain_error("time_stretch got an unknown value for "
+                            "transient_mode; expected one of \"crisp\", "
+                            "\"mixed\", or \"smooth\", but was passed: \"" +
+                            transientMode + "\"");
+  }
+
+  if (transientDetector == "compound") {
+    options |= RubberBandStretcher::OptionDetectorCompound;
+  } else if (transientDetector == "percussive") {
+    options |= RubberBandStretcher::OptionDetectorPercussive;
+  } else if (transientDetector == "soft") {
+    options |= RubberBandStretcher::OptionDetectorSoft;
+  } else {
+    throw std::domain_error("time_stretch got an unknown value for "
+                            "transient_mode; expected one of \"compound\", "
+                            "\"percussive\", or \"soft\", but was passed: \"" +
+                            transientDetector + "\"");
+  }
+
+  if (!retainPhaseContinuity) {
+    options |= RubberBandStretcher::OptionPhaseIndependent;
+  }
+
+  // useLongFFTWindow is an optional type:
+  if (useLongFFTWindow) {
+    if (*useLongFFTWindow) {
+      options |= RubberBandStretcher::OptionWindowLong;
+    } else {
+      options |= RubberBandStretcher::OptionWindowShort;
+    }
+  }
+
+  if (useTimeDomainSmoothing) {
+    options |= RubberBandStretcher::OptionSmoothingOn;
+  }
+
+  if (preserveFormants) {
+    options |= RubberBandStretcher::OptionFormantPreserved;
+  }
+
+  SuppressOutput suppress_cerr(std::cerr);
+  RubberBandStretcher rubberBandStretcher(
+      sampleRate, input.getNumChannels(), options, 1.0 / stretchFactor,
+      pow(2.0, (pitchShiftInSemitones / 12.0)));
   rubberBandStretcher.setMaxProcessSize(input.getNumSamples());
   rubberBandStretcher.setExpectedInputDuration(input.getNumSamples());
 
@@ -61,7 +115,10 @@ inline void init_time_stretch(py::module &m) {
   m.def(
       "time_stretch",
       [](py::array_t<float, py::array::c_style> input, double sampleRate,
-         double stretchFactor, double pitchShiftInSemitones) {
+         double stretchFactor, double pitchShiftInSemitones,
+         std::string transientMode, std::string transientDetector,
+         bool retainPhaseContinuity, std::optional<bool> useLongFFTWindow,
+         bool useTimeDomainSmoothing, bool preserveFormants) {
         if (stretchFactor == 0)
           throw std::domain_error(
               "stretch_factor must be greater than 0.0x, but was passed " +
@@ -82,8 +139,10 @@ inline void init_time_stretch(py::module &m) {
         juce::AudioBuffer<float> output;
         {
           py::gil_scoped_release release;
-          output = timeStretch(inputBuffer, sampleRate, stretchFactor,
-                               pitchShiftInSemitones);
+          output = timeStretch(
+              inputBuffer, sampleRate, stretchFactor, pitchShiftInSemitones,
+              transientMode, transientDetector, retainPhaseContinuity,
+              useLongFFTWindow, useTimeDomainSmoothing, preserveFormants);
         }
 
         return copyJuceBufferIntoPyArray(output, detectChannelLayout(input), 0);
@@ -92,13 +151,41 @@ inline void init_time_stretch(py::module &m) {
 Time-stretch (and optionally pitch-shift) a buffer of audio, changing its length.
 
 Using a higher ``stretch_factor`` will shorten the audio - i.e., a ``stretch_factor``
-of ``2.0`` will double the *speed* of the audio and halve the *length* fo the audio,
+of ``2.0`` will double the *speed* of the audio and halve the *length* of the audio,
 without changing the pitch of the audio.
 
 This function allows for changing the pitch of the audio during the time stretching
 operation. The ``stretch_factor`` and ``pitch_shift_in_semitones`` arguments are
 independent and do not affect each other (i.e.: you can change one, the other, or both
 without worrying about how they interact).
+
+The additional arguments provided to this function allow for more fine-grained control
+over the behavior of the time stretcher:
+
+  - ``transient_mode`` controls the behavior of the stretcher around transients
+    (percussive parts of the audio). Valid options are ``"crisp"`` (the default),
+    ``"mixed"``, or ``"smooth"``.
+ 
+  - ``transient_detector`` controls which method is used to detect transients in the
+    audio signal. Valid options are ``"compound"`` (the default), ``"percussive"``,
+    or ``"soft"``.
+ 
+  - ``retain_phase_continuity`` ensures that the phases of adjacent frequency bins in
+    the audio stream are kept as similar as possible. Set this to ``False`` for a
+    softer, phasier sound.
+ 
+  - ``use_long_fft_window`` controls the size of the fast-Fourier transform window
+    used during stretching. The default (``None``) will result in a window size that
+    varies based on other parameters and should produce better results in most
+    situations. Set this option to ``True`` to result in a smoother sound (at the
+    expense of clarity and timing), or ``False`` to result in a crisper sound.
+ 
+  - ``use_time_domain_smoothing`` can be enabled to produce a softer sound with
+    audible artifacts around sharp transients. This option mixes well with
+    ``use_long_fft_window=False``.
+   
+  - ``preserve_formants`` allows shifting the pitch of notes without substantially
+    affecting the pitch profile (formants) of a voice or instrument.
 
 .. warning::
     This is a function, not a :py:class:`Plugin` instance, and cannot be
@@ -107,6 +194,12 @@ without worrying about how they interact).
 )",
       py::arg("input_audio"), py::arg("samplerate"),
       py::arg("stretch_factor") = 1.0,
-      py::arg("pitch_shift_in_semitones") = 0.0);
+      py::arg("pitch_shift_in_semitones") = 0.0,
+      py::arg("transient_mode") = "crisp",
+      py::arg("transient_detector") = "compound",
+      py::arg("retain_phase_continuity") = true,
+      py::arg("use_long_fft_window") = py::none(),
+      py::arg("use_time_domain_smoothing") = false,
+      py::arg("preserve_formants") = true);
 }
 }; // namespace Pedalboard

@@ -21,7 +21,7 @@ from pedalboard import time_stretch
 
 
 @pytest.mark.parametrize("semitones", [-1, 0, 1])
-@pytest.mark.parametrize("stretch_factor", [0.75, 1, 1.25])
+@pytest.mark.parametrize("stretch_factor", [0.1, 0.75, 1, 1.25])
 @pytest.mark.parametrize("fundamental_hz", [440])
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
 def test_time_stretch(semitones, stretch_factor, fundamental_hz, sample_rate):
@@ -38,3 +38,39 @@ def test_time_stretch(semitones, stretch_factor, fundamental_hz, sample_rate):
     if stretch_factor != 1 or semitones != 0:
         min_samples = min(output.shape[1], sine_wave.shape[0])
         assert not np.allclose(output[:, :min_samples], sine_wave[:min_samples])
+
+
+@pytest.mark.parametrize("transient_mode", ["crisp", "mixed", "smooth"])
+@pytest.mark.parametrize("transient_detector", ["compound", "percussive", "soft"])
+@pytest.mark.parametrize("retain_phase_continuity", [True, False])
+@pytest.mark.parametrize("use_long_fft_window", [None, True, False])
+@pytest.mark.parametrize("use_time_domain_smoothing", [True, False])
+@pytest.mark.parametrize("preserve_formants", [True, False])
+def test_time_stretch_extra_options(
+    transient_mode,
+    transient_detector,
+    retain_phase_continuity,
+    use_long_fft_window,
+    use_time_domain_smoothing,
+    preserve_formants,
+):
+    sample_rate = 22050
+    num_seconds = 0.5
+    fundamental_hz = 440
+    samples = np.arange(num_seconds * sample_rate)
+    sine_wave = np.sin(2 * np.pi * fundamental_hz * samples / sample_rate).astype(np.float32)
+
+    output = time_stretch(
+        sine_wave,
+        sample_rate,
+        stretch_factor=1.5,
+        pitch_shift_in_semitones=1,
+        transient_mode=transient_mode,
+        transient_detector=transient_detector,
+        retain_phase_continuity=retain_phase_continuity,
+        use_long_fft_window=use_long_fft_window,
+        use_time_domain_smoothing=use_time_domain_smoothing,
+        preserve_formants=preserve_formants,
+    )
+
+    assert np.all(np.isfinite(output))
