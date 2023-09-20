@@ -35,14 +35,21 @@ static const int MAX_SEMITONES_TO_PITCH_SHIFT = 72;
 static juce::AudioBuffer<float>
 timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
             double stretchFactor, double pitchShiftInSemitones,
-            std::string transientMode, std::string transientDetector,
-            bool retainPhaseContinuity, std::optional<bool> useLongFFTWindow,
-            bool useTimeDomainSmoothing, bool preserveFormants) {
+            bool highQuality, std::string transientMode,
+            std::string transientDetector, bool retainPhaseContinuity,
+            std::optional<bool> useLongFFTWindow, bool useTimeDomainSmoothing,
+            bool preserveFormants) {
   RubberBandStretcher::Options options =
       RubberBandStretcher::OptionProcessOffline |
       RubberBandStretcher::OptionThreadingNever |
       RubberBandStretcher::OptionChannelsTogether |
       RubberBandStretcher::OptionPitchHighQuality;
+
+  if (highQuality) {
+    options |= RubberBandStretcher::OptionEngineFiner;
+  } else {
+    options |= RubberBandStretcher::OptionEngineFaster;
+  }
 
   if (transientMode == "crisp") {
     options |= RubberBandStretcher::OptionTransientsCrisp;
@@ -115,7 +122,7 @@ inline void init_time_stretch(py::module &m) {
   m.def(
       "time_stretch",
       [](py::array_t<float, py::array::c_style> input, double sampleRate,
-         double stretchFactor, double pitchShiftInSemitones,
+         double stretchFactor, double pitchShiftInSemitones, bool highQuality,
          std::string transientMode, std::string transientDetector,
          bool retainPhaseContinuity, std::optional<bool> useLongFFTWindow,
          bool useTimeDomainSmoothing, bool preserveFormants) {
@@ -139,10 +146,11 @@ inline void init_time_stretch(py::module &m) {
         juce::AudioBuffer<float> output;
         {
           py::gil_scoped_release release;
-          output = timeStretch(
-              inputBuffer, sampleRate, stretchFactor, pitchShiftInSemitones,
-              transientMode, transientDetector, retainPhaseContinuity,
-              useLongFFTWindow, useTimeDomainSmoothing, preserveFormants);
+          output = timeStretch(inputBuffer, sampleRate, stretchFactor,
+                               pitchShiftInSemitones, highQuality,
+                               transientMode, transientDetector,
+                               retainPhaseContinuity, useLongFFTWindow,
+                               useTimeDomainSmoothing, preserveFormants);
         }
 
         return copyJuceBufferIntoPyArray(output, detectChannelLayout(input), 0);
@@ -161,6 +169,9 @@ without worrying about how they interact).
 
 The additional arguments provided to this function allow for more fine-grained control
 over the behavior of the time stretcher:
+
+  - ``high_quality`` (the default) enables a higher quality time stretching mode.
+    Set this option to ``False`` to use less CPU power.
 
   - ``transient_mode`` controls the behavior of the stretcher around transients
     (percussive parts of the audio). Valid options are ``"crisp"`` (the default),
@@ -194,7 +205,7 @@ over the behavior of the time stretcher:
 )",
       py::arg("input_audio"), py::arg("samplerate"),
       py::arg("stretch_factor") = 1.0,
-      py::arg("pitch_shift_in_semitones") = 0.0,
+      py::arg("pitch_shift_in_semitones") = 0.0, py::arg("high_quality") = true,
       py::arg("transient_mode") = "crisp",
       py::arg("transient_detector") = "compound",
       py::arg("retain_phase_continuity") = true,

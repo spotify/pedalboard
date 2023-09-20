@@ -24,13 +24,18 @@ from pedalboard import time_stretch
 @pytest.mark.parametrize("stretch_factor", [0.1, 0.75, 1, 1.25])
 @pytest.mark.parametrize("fundamental_hz", [440])
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
-def test_time_stretch(semitones, stretch_factor, fundamental_hz, sample_rate):
+@pytest.mark.parametrize("high_quality", [True, False])
+def test_time_stretch(semitones, stretch_factor, fundamental_hz, sample_rate, high_quality):
     num_seconds = 1.0
     samples = np.arange(num_seconds * sample_rate)
     sine_wave = np.sin(2 * np.pi * fundamental_hz * samples / sample_rate).astype(np.float32)
 
     output = time_stretch(
-        sine_wave, sample_rate, stretch_factor=stretch_factor, pitch_shift_in_semitones=semitones
+        sine_wave,
+        sample_rate,
+        stretch_factor=stretch_factor,
+        pitch_shift_in_semitones=semitones,
+        high_quality=high_quality,
     )
 
     assert np.all(np.isfinite(output))
@@ -40,6 +45,7 @@ def test_time_stretch(semitones, stretch_factor, fundamental_hz, sample_rate):
         assert not np.allclose(output[:, :min_samples], sine_wave[:min_samples])
 
 
+@pytest.mark.parametrize("high_quality", [True, False])
 @pytest.mark.parametrize("transient_mode", ["crisp", "mixed", "smooth"])
 @pytest.mark.parametrize("transient_detector", ["compound", "percussive", "soft"])
 @pytest.mark.parametrize("retain_phase_continuity", [True, False])
@@ -47,6 +53,7 @@ def test_time_stretch(semitones, stretch_factor, fundamental_hz, sample_rate):
 @pytest.mark.parametrize("use_time_domain_smoothing", [True, False])
 @pytest.mark.parametrize("preserve_formants", [True, False])
 def test_time_stretch_extra_options(
+    high_quality,
     transient_mode,
     transient_detector,
     retain_phase_continuity,
@@ -65,6 +72,7 @@ def test_time_stretch_extra_options(
         sample_rate,
         stretch_factor=1.5,
         pitch_shift_in_semitones=1,
+        high_quality=high_quality,
         transient_mode=transient_mode,
         transient_detector=transient_detector,
         retain_phase_continuity=retain_phase_continuity,

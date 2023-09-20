@@ -58,6 +58,7 @@ def time_stretch(
     samplerate: float,
     stretch_factor: float = 1.0,
     pitch_shift_in_semitones: float = 0.0,
+    high_quality: bool = True,
     transient_mode: str = "crisp",
     transient_detector: str = "compound",
     retain_phase_continuity: bool = True,
@@ -79,6 +80,9 @@ def time_stretch(
 
     The additional arguments provided to this function allow for more fine-grained control
     over the behavior of the time stretcher:
+
+      - ``high_quality`` (the default) enables a higher quality time stretching mode.
+        Set this option to ``False`` to use less CPU power.
 
       - ``transient_mode`` controls the behavior of the stretcher around transients
         (percussive parts of the audio). Valid options are ``"crisp"`` (the default),
