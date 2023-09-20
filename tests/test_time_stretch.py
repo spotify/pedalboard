@@ -82,3 +82,25 @@ def test_time_stretch_extra_options(
     )
 
     assert np.all(np.isfinite(output))
+
+
+@pytest.mark.parametrize("semitones", [0])
+@pytest.mark.parametrize("stretch_factor", [1.0])
+@pytest.mark.parametrize("fundamental_hz", [440, 220, 110])
+@pytest.mark.parametrize("sample_rate", [22050, 44100])
+@pytest.mark.parametrize("high_quality", [True, False])
+def test_time_stretch_long_passthrough(
+    semitones, stretch_factor, fundamental_hz, sample_rate, high_quality
+):
+    num_seconds = 30.0
+    samples = np.arange(num_seconds * sample_rate)
+    sine_wave = np.sin(2 * np.pi * fundamental_hz * samples / sample_rate).astype(np.float32)
+
+    output = time_stretch(
+        sine_wave,
+        sample_rate,
+        stretch_factor=stretch_factor,
+        pitch_shift_in_semitones=semitones,
+        high_quality=high_quality,
+    )
+    np.testing.assert_allclose(output[0], sine_wave, atol=0.25)

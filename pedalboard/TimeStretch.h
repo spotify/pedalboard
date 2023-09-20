@@ -108,13 +108,56 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
   rubberBandStretcher.study(input.getArrayOfReadPointers(),
                             input.getNumSamples(), true);
 
-  rubberBandStretcher.process(input.getArrayOfReadPointers(),
-                              input.getNumSamples(), true);
-
+  size_t expectedNumberOfOutputSamples =
+      (((double)input.getNumSamples()) / stretchFactor);
   juce::AudioBuffer<float> output(input.getNumChannels(),
-                                  rubberBandStretcher.available());
-  rubberBandStretcher.retrieve(output.getArrayOfWritePointers(),
-                               output.getNumSamples());
+                                  expectedNumberOfOutputSamples);
+
+  // Keep the buffer we just allocated, but set the size to 0 so we can
+  // grow this buffer "for free".
+  output.setSize(output.getNumChannels(), 0,
+                 /* keepExistingContent */ false, /* clearExtraSpace */ false,
+                 /* avoidReallocating */ true);
+
+  size_t blockSize = rubberBandStretcher.getProcessSizeLimit();
+  const float **inputChannelPointers =
+      (const float **)alloca(sizeof(float *) * input.getNumChannels());
+  float **outputChannelPointers =
+      (float **)alloca(sizeof(float *) * output.getNumChannels());
+
+  for (size_t i = 0;
+       rubberBandStretcher.available() > 0 || i < input.getNumSamples();
+       i += blockSize) {
+    if (i < input.getNumSamples()) {
+      size_t chunkSize = std::min(blockSize, input.getNumSamples() - i);
+      bool isLastCall = i + blockSize >= input.getNumSamples();
+
+      for (int c = 0; c < input.getNumChannels(); c++) {
+        inputChannelPointers[c] = input.getReadPointer(c, i);
+      }
+
+      rubberBandStretcher.process(inputChannelPointers, chunkSize, isLastCall);
+    }
+
+    if (rubberBandStretcher.available() > 0) {
+      size_t outputIndex = output.getNumSamples();
+      output.setSize(output.getNumChannels(),
+                     output.getNumSamples() + rubberBandStretcher.available(),
+                     /* keepExistingContent */ true,
+                     /* clearExtraSpace */ false,
+                     /* avoidReallocating */ true);
+      for (int c = 0; c < output.getNumChannels(); c++) {
+        outputChannelPointers[c] = output.getWritePointer(c, outputIndex);
+      }
+      rubberBandStretcher.retrieve(outputChannelPointers,
+                                   rubberBandStretcher.available());
+    }
+  }
+
+  if (rubberBandStretcher.available() > 0) {
+    throw std::runtime_error("More samples remained after stretch was done!");
+  }
+
   return output;
 }
 
