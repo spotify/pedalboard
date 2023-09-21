@@ -158,7 +158,7 @@ if DEBUG:
         ALL_CPPFLAGS += ["-fsanitize=address", "-fno-omit-frame-pointer"]
         ALL_LINK_ARGS += ["-fsanitize=address"]
         if platform.system() == "Linux":
-            ALL_LINK_ARGS += ["-shared-libasan"]
+            ALL_LINK_ARGS += ["-shared-libasan", "-latomic"]
     elif bool(int(os.environ.get("USE_TSAN", 0))):
         ALL_CPPFLAGS += ["-fsanitize=thread"]
         ALL_LINK_ARGS += ["-fsanitize=thread"]
