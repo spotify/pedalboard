@@ -154,19 +154,21 @@ else:
 if DEBUG:
     ALL_CPPFLAGS += ["-DDEBUG=1", "-D_DEBUG=1"]
     ALL_CPPFLAGS += ["-O0", "-g"]
-    if bool(int(os.environ.get("USE_ASAN", 0))):
-        ALL_CPPFLAGS += ["-fsanitize=address", "-fno-omit-frame-pointer"]
-        ALL_LINK_ARGS += ["-fsanitize=address"]
-        if platform.system() == "Linux":
-            ALL_LINK_ARGS += ["-shared-libasan", "-latomic"]
-    elif bool(int(os.environ.get("USE_TSAN", 0))):
-        ALL_CPPFLAGS += ["-fsanitize=thread"]
-        ALL_LINK_ARGS += ["-fsanitize=thread"]
-    elif bool(int(os.environ.get("USE_MSAN", 0))):
-        ALL_CPPFLAGS += ["-fsanitize=memory", "-fsanitize-memory-track-origins"]
-        ALL_LINK_ARGS += ["-fsanitize=memory"]
 else:
     ALL_CPPFLAGS += ["/Ox" if platform.system() == "Windows" else "-O3"]
+
+if bool(int(os.environ.get("USE_ASAN", 0))):
+    ALL_CPPFLAGS += ["-fsanitize=address", "-fno-omit-frame-pointer"]
+    ALL_LINK_ARGS += ["-fsanitize=address"]
+    if platform.system() == "Linux":
+        ALL_LINK_ARGS += ["-shared-libasan", "-latomic"]
+elif bool(int(os.environ.get("USE_TSAN", 0))):
+    ALL_CPPFLAGS += ["-fsanitize=thread"]
+    ALL_LINK_ARGS += ["-fsanitize=thread"]
+elif bool(int(os.environ.get("USE_MSAN", 0))):
+    ALL_CPPFLAGS += ["-fsanitize=memory", "-fsanitize-memory-track-origins"]
+    ALL_LINK_ARGS += ["-fsanitize=memory"]
+
 
 
 # Regardless of platform, allow our compiler to compile .mm files as Objective-C (required on MacOS)
