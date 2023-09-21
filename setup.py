@@ -170,7 +170,6 @@ elif bool(int(os.environ.get("USE_MSAN", 0))):
     ALL_LINK_ARGS += ["-fsanitize=memory"]
 
 
-
 # Regardless of platform, allow our compiler to compile .mm files as Objective-C (required on MacOS)
 UnixCCompiler.src_extensions.append(".mm")
 UnixCCompiler.language_map[".mm"] = "objc++"
