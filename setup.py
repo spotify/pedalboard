@@ -226,7 +226,7 @@ elif platform.system() == "Linux":
         )
         include_paths = [flag[2:] for flag in flags]
         ALL_INCLUDES += include_paths
-    ALL_LINK_ARGS += ["-lfreetype", "-latomic"]
+    ALL_LINK_ARGS += ["-lfreetype"]
 
     ALL_RESOLVED_SOURCE_PATHS = [str(p.resolve()) for p in ALL_SOURCE_PATHS]
 elif platform.system() == "Windows":
