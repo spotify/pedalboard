@@ -29,6 +29,11 @@ from .utils import generate_sine_at
 def expected_output(
     input_signal, sample_rate: float, target_sample_rate: float, num_channels: int, quality
 ) -> np.ndarray:
+    if sample_rate == target_sample_rate:
+        if len(input_signal.shape) == 1:
+            return np.expand_dims(input_signal, 0)
+        else:
+            return input_signal
     resampler = StreamResampler(sample_rate, target_sample_rate, num_channels, quality)
     output = np.concatenate([resampler.process(input_signal), resampler.process(None)], axis=1)
     return output
@@ -51,6 +56,19 @@ def test_read_resampled_constructor():
         assert r.closed
         assert not f.closed
     assert f.closed
+
+
+def test_read_resampled_constructor_does_nothing():
+    sine_wave = generate_sine_at(44100, 440, num_seconds=1, num_channels=1).astype(np.float32)
+
+    read_buffer = BytesIO()
+    read_buffer.name = "test.wav"
+    with AudioFile(read_buffer, "w", 44100, 1, bit_depth=32) as f:
+        f.write(sine_wave)
+
+    with AudioFile(BytesIO(read_buffer.getvalue())) as f:
+        with f.resampled_to(44100) as r:
+            assert r is f
 
 
 def test_read_zero():

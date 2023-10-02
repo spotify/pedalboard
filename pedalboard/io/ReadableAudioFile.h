@@ -897,16 +897,23 @@ The duration of this file in seconds (``frames`` divided by ``samplerate``).
       .def(
           "resampled_to",
           [](std::shared_ptr<ReadableAudioFile> file, double targetSampleRate,
-             ResamplingQuality quality) {
-            return std::make_shared<ResampledReadableAudioFile>(
-                file, targetSampleRate, quality);
+             ResamplingQuality quality)
+              -> std::variant<std::shared_ptr<ReadableAudioFile>,
+                              std::shared_ptr<ResampledReadableAudioFile>> {
+            if (file->getSampleRateAsDouble() == targetSampleRate)
+              return {file};
+
+            return {std::make_shared<ResampledReadableAudioFile>(
+                file, targetSampleRate, quality)};
           },
           py::arg("target_sample_rate"),
           py::arg("quality") = ResamplingQuality::WindowedSinc,
           "Return a :class:`ResampledReadableAudioFile` that will "
           "automatically resample this :class:`ReadableAudioFile` to the "
           "provided `target_sample_rate`, using a constant amount of "
-          "memory.\n\n*Introduced in v0.6.0.*");
+          "memory.\n\nIf `target_sample_rate` matches the existing sample rate "
+          "of the file, the original file will be returned.\n\n*Introduced in "
+          "v0.6.0.*");
 
   m.def("get_supported_read_formats", []() {
     juce::AudioFormatManager manager;

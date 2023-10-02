@@ -1925,6 +1925,12 @@ struct PatchedMP3Stream {
           bufferSpace[bufferSpaceIndex] + 512 + sideInfoSize + dataSize;
       dataParsed = true;
       result = 0;
+
+      // We decoded a frame correctly, so increase the amount of patience
+      // we have when scanning for the next frame header:
+      if (maximumScanLength < 0xFFFFFFF) {
+        maximumScanLength *= 2;
+      }
     }
 
     if (isFreeFormat) {
@@ -2016,6 +2022,7 @@ private:
   float synthBuffers[2][2][0x110];
   float hybridIn[2][32][18];
   float hybridOut[2][18][32];
+  unsigned int maximumScanLength = 1024;
 
   void reset() noexcept {
     headerParsed = sideParsed = dataParsed = isFreeFormat = wasFreeFormat =
@@ -2026,6 +2033,7 @@ private:
     lastFrameSizeNoPadding = bufferSpaceIndex = 0;
     bufferPointer = bufferSpace[bufferSpaceIndex] + 512;
     synthBo = 1;
+    maximumScanLength = 1024;
 
     zerostruct(sideinfo);
     zeromem(bufferSpace, sizeof(bufferSpace));
@@ -2117,6 +2125,7 @@ private:
     auto oldPos = stream.getPosition();
     int offset = -3;
     uint32 header = 0;
+    bool isFirstScanAtThisPosition = true;
 
     for (;;) {
       auto streamPos = stream.getPosition();
@@ -2147,7 +2156,7 @@ private:
           break;
       }
 
-      if (isParsingFirstFrame) {
+      if (isFirstScanAtThisPosition && isParsingFirstFrame) {
         // If we're parsing the first frame of a file/stream, that frame must be
         // at the start of the stream. This prevents accidentally parsing .mp4
         // files (among others) as MP3 files that start with junk.
@@ -2155,6 +2164,7 @@ private:
       }
 
       ++offset;
+      isFirstScanAtThisPosition = false;
     }
 
     if (offset >= 0) {

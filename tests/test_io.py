@@ -719,7 +719,7 @@ def test_write_twice_overwrites(
 @pytest.mark.parametrize("samplerate", [1234.5, 23.0000000001])
 def test_fractional_sample_rates(tmp_path: pathlib.Path, extension: str, samplerate):
     filename = str(tmp_path / f"test{extension}")
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         pedalboard.io.WriteableAudioFile(filename, samplerate=samplerate, num_channels=1)
 
 
@@ -753,6 +753,17 @@ def test_sample_rate_is_int_by_default(samplerate: int):
     with pedalboard.io.AudioFile(buf) as f:
         assert isinstance(f.samplerate, int)
         assert f.samplerate == samplerate
+
+
+@pytest.mark.parametrize("extension", [".flac"])
+@pytest.mark.parametrize("samplerate", [22050, 44100, 48000])
+def test_swapped_parameter_exception(tmp_path: pathlib.Path, extension: str, samplerate):
+    filename = str(tmp_path / f"test{extension}")
+    with pytest.raises(ValueError) as e:
+        pedalboard.io.WriteableAudioFile(filename, samplerate=1, num_channels=samplerate)
+    assert "reversing" in str(
+        e
+    ), "Expected exception to include details about reversing parameters."
 
 
 @pytest.mark.parametrize("dtype", [np.uint8, np.uint16, np.uint32, np.uint64])
@@ -1099,11 +1110,12 @@ def test_mp3_duration_estimate(samplerate: float, target_samplerate: float, chun
     ) as f:
         original_frame_estimate = f.frames
         total_frames_read = 0
-        while f.tell() < f.frames:
+        # When resampling, we may need to call read() one more time after getting f.frames
+        # out of the file to ensure that we've pulled all of the data from the original file
+        # _and_ exhausted any resampler buffers.
+        while f.tell() < f.frames or not f.exact_duration_known:
             frames_read = f.read(chunk_size).shape[1]
             total_frames_read += frames_read
-            if not frames_read:
-                break
         assert f.exact_duration_known
         assert abs(total_frames_read - int(audio.shape[1] * (target_samplerate / samplerate))) <= 1
         assert total_frames_read == f.frames
