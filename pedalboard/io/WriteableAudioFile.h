@@ -986,6 +986,10 @@ inline void init_writeable_audio_file(
       .def_property_readonly("frames", &WriteableAudioFile::getFramesWritten,
                              "The total number of frames (samples per "
                              "channel) written to this file so far.")
+      .def("tell", &WriteableAudioFile::getFramesWritten,
+           "Return the current position of the write pointer in this audio "
+           "file, in frames at the target sample rate. This value will "
+           "increase as :meth:`write` is called, and will never decrease.")
       .def_property_readonly(
           "file_dtype", &WriteableAudioFile::getFileDatatype,
           "The data type stored natively by this file. Note that write(...) "
