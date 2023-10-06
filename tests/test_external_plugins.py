@@ -780,6 +780,23 @@ def test_explicit_instrument_reset():
     assert max_volume_of(plugin([], 5.0, sr, reset=False)) < 0.00001
 
 
+@pytest.mark.skipif(not plugin_named("Magical8BitPlug"), reason="Missing Magical8BitPlug 2 plugin.")
+@pytest.mark.parametrize("buffer_size", [1, 10, 10000])
+def test_instrument_notes_span_across_buffers(buffer_size: int):
+    plugin = load_test_plugin(plugin_named("Magical8BitPlug"), disable_caching=True)
+    sr = 44100
+    notes = [
+        mido.Message("note_on", note=127, velocity=127, time=0.5),
+        mido.Message("note_off", note=127, velocity=127, time=1.0),
+    ]
+
+    output = plugin(notes, duration=2, sample_rate=sr, buffer_size=buffer_size)
+    output /= np.amax(np.abs(output))
+    assert np.mean(np.abs(output[:, : int(sr * 0.5)])) < 0.001
+    assert np.mean(np.abs(output[:, int(sr * 0.5) : int(sr * 1)])) > 0.999
+    assert np.mean(np.abs(output[:, int(sr * 1) :])) < 0.001
+
+
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_explicit_reset_in_pedalboard(plugin_filename: str):
     sr = 44100

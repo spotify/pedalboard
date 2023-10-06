@@ -1179,7 +1179,7 @@ public:
             channelPointers.data(), channelPointers.size(), chunkSampleCount);
 
         juce::MidiBuffer midiChunk;
-        midiChunk.addEvents(midiInputBuffer, i, chunkSampleCount, 0);
+        midiChunk.addEvents(midiInputBuffer, i, chunkSampleCount, -i);
 
         pluginInstance->processBlock(audioChunk, midiChunk);
       }
