@@ -928,7 +928,13 @@ def test_show_editor_passed_something_else(plugin_filename: str, bad_input):
     plugin = pedalboard.load_plugin(full_plugin_filename)
 
     with pytest.raises(TypeError):
-        plugin.show_editor(bad_input)
+        try:
+            plugin.show_editor(bad_input)
+        except RuntimeError as e:
+            if "no visual display devices available" in repr(e):
+                pass
+            else:
+                raise
 
 
 @pytest.mark.skipif(
