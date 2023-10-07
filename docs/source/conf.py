@@ -46,7 +46,10 @@ extensions = [
     "m2r2",
 ]
 
-intersphinx_mapping = {"mido": ("https://mido.readthedocs.io/en/latest/", None)}
+intersphinx_mapping = {
+    "mido": ("https://mido.readthedocs.io/en/latest/", None),
+    "python": ("https://docs.python.org/3", None),
+}
 
 autosummary_generate = True
 autodoc_docstring_signature = True

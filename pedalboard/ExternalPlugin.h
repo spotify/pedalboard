@@ -133,6 +133,38 @@ Rendering MIDI via an external instrument plugin::
 *Support for instrument plugins introduced in v0.7.4.*
           )";
 
+static constexpr const char *SHOW_EDITOR_DOCSTRING = R"(
+Show the UI of this plugin as a native window.
+
+This method may only be called on the main thread, and will block
+the main thread until any of the following things happens:
+
+ - the window is closed by clicking the close button
+ - the window is closed by pressing the appropriate (OS-specific) keyboard shortcut
+ - a KeyboardInterrupt (Ctrl-C) is sent to the program
+ - the :py:meth:`threading.Event.set` method is called (by another thread)
+   on a provided :py:class:`threading.Event` object
+
+An example of how to programmatically close an editor window::
+
+   import pedalboard
+   from threading import Event, Thread
+
+   plugin = pedalboard.load_plugin("../path-to-my-plugin-file")
+   close_window_event = Event()
+
+   def other_thread():
+       # do something to determine when to close the window
+       if should_close_window:
+           close_window_event.set()
+
+   thread = Thread(target=other_thread)
+   thread.run()
+
+   # This will block until the other thread calls .set():
+   plugin.show_editor(close_window_event)
+)";
+
 inline std::vector<std::string> findInstalledVSTPluginPaths() {
   // Ensure we have a MessageManager, which is required by the VST wrapper
   // Without this, we get an assert(false) from JUCE at runtime
@@ -338,9 +370,19 @@ public:
    * Open a native window to show a given AudioProcessor's editor UI,
    * pumping the juce::MessageManager run loop as necessary to service
    * UI events.
+   *
+   * Check the passed threading.Event object every 10ms to close the
+   * window if necessary.
    */
-  static void openWindowAndWait(juce::AudioProcessor &processor) {
+  static void openWindowAndWait(juce::AudioProcessor &processor,
+                                py::object optionalEvent) {
     bool shouldThrowErrorAlreadySet = false;
+
+    // Check the provided Event object before even opening the window:
+    if (optionalEvent != py::none() &&
+        optionalEvent.attr("is_set")().cast<bool>()) {
+      return;
+    }
 
     JUCE_AUTORELEASEPOOL {
       StandalonePluginWindow window(processor);
@@ -348,12 +390,16 @@ public:
 
       // Run in a tight loop so that we don't have to call ->stopDispatchLoop(),
       // which causes the MessageManager to become unusable in the future.
-      // The window can be closed by sending a KeyboardInterrupt or closing
-      // the window in the UI.
+      // The window can be closed by sending a KeyboardInterrupt, closing
+      // the window in the UI, or setting the provided Event object.
       while (window.isVisible()) {
-        if (PyErr_CheckSignals() != 0) {
+        bool errorThrown = PyErr_CheckSignals() != 0;
+        bool eventSet = optionalEvent != py::none() &&
+                        optionalEvent.attr("is_set")().cast<bool>();
+
+        if (errorThrown || eventSet) {
           window.closeButtonPressed();
-          shouldThrowErrorAlreadySet = true;
+          shouldThrowErrorAlreadySet = errorThrown;
           break;
         }
 
@@ -1215,7 +1261,7 @@ public:
     return pluginInstance && pluginInstance->getMainBusNumInputChannels() > 0;
   }
 
-  void showEditor() {
+  void showEditor(py::object optionalEvent) {
     if (!pluginInstance) {
       throw std::runtime_error(
           "Editor cannot be shown - plugin not loaded. This is an internal "
@@ -1232,7 +1278,15 @@ public:
           "Plugin UI windows can only be shown from the main thread.");
     }
 
-    StandalonePluginWindow::openWindowAndWait(*pluginInstance);
+    if (optionalEvent != py::none() && !py::hasattr(optionalEvent, "is_set")) {
+      throw py::type_error(
+          "Pedalboard expected a threading.Event object to be "
+          "passed to show_editor, but the provided object (\"" +
+          py::repr(optionalEvent).cast<std::string>() +
+          "\") does not have an 'is_set' method.");
+    }
+
+    StandalonePluginWindow::openWindowAndWait(*pluginInstance, optionalEvent);
   }
 
 private:
@@ -1501,10 +1555,7 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
            &ExternalPlugin<juce::VST3PluginFormat>::getParameter,
            py::return_value_policy::reference_internal)
       .def("show_editor", &ExternalPlugin<juce::VST3PluginFormat>::showEditor,
-           "Show the UI of this plugin as a native window. This method "
-           "will "
-           "block until the window is closed or a KeyboardInterrupt is "
-           "received.")
+           SHOW_EDITOR_DOCSTRING, py::arg("close_event") = py::none())
       .def(
           "process",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
@@ -1624,9 +1675,7 @@ see :class:`pedalboard.VST3Plugin`.)
            py::return_value_policy::reference_internal)
       .def("show_editor",
            &ExternalPlugin<juce::AudioUnitPluginFormat>::showEditor,
-           "Show the UI of this plugin as a native window. This method will "
-           "block until the window is closed or a KeyboardInterrupt is "
-           "received.")
+           SHOW_EDITOR_DOCSTRING, py::arg("close_event") = py::none())
       .def(
           "process",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,

@@ -23,6 +23,7 @@ import atexit
 import random
 import shutil
 import platform
+import threading
 import subprocess
 from glob import glob
 from pathlib import Path
@@ -894,6 +895,42 @@ def test_show_editor(plugin_filename: str):
     except subprocess.TimeoutExpired:
         # This is good: the UI was shown, no issues.
         pass
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("delay", [0.0, 0.5, 1.0])
+def test_show_editor_in_process(plugin_filename: str, delay: float):
+    # Run this test in this process:
+    full_plugin_filename = find_plugin_path(plugin_filename)
+    try:
+        cancel = threading.Event()
+
+        if delay:
+            threading.Thread(target=lambda: time.sleep(delay) or cancel.set()).start()
+        else:
+            cancel.set()
+
+        pedalboard.load_plugin(full_plugin_filename).show_editor(cancel)
+    except Exception as e:
+        if "no visual display devices available" in repr(e):
+            pass
+        else:
+            raise
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize(
+    "bad_input", [False, 1, {"foo": "bar"}, {"is_set": "False"}, threading.Event]
+)
+def test_show_editor_passed_something_else(plugin_filename: str, bad_input):
+    # Run this test in this process:
+    full_plugin_filename = find_plugin_path(plugin_filename)
+    plugin = pedalboard.load_plugin(full_plugin_filename)
+
+    with pytest.raises((TypeError, RuntimeError)) as e:
+        plugin.show_editor(bad_input)
+    if e.type is RuntimeError and "no visual display devices available" not in repr(e.value):
+        raise e.value
 
 
 @pytest.mark.skipif(
