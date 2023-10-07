@@ -37,12 +37,15 @@ REPLACEMENTS = [
     ("mode: str = 'w'", r'mode: Literal["w"]'),
     # ndarrays need to be corrected as well:
     (r"numpy\.ndarray\[(.*?)\]", r"numpy.ndarray[typing.Any, numpy.dtype[\1]]"),
-    # None of our enums are properly detected by pybind11-stubgen:
     (
-        # For Python 3.6 compatibility:
         r"import typing",
         "\n".join(
-            ["import typing", "from typing_extensions import Literal", "from enum import Enum"]
+            [
+                "import typing",
+                "from typing_extensions import Literal",
+                "from enum import Enum",
+                "import threading",
+            ]
         ),
     ),
     # None of our enums are properly detected by pybind11-stubgen. These are brittle hacks:
@@ -62,6 +65,8 @@ REPLACEMENTS = [
     (r"def __init__\(self\) -> None: ...", ""),
     # Sphinx gets confused when inheriting twice from the same base class:
     (r"\(ExternalPlugin, Plugin\)", "(ExternalPlugin)"),
+    # pybind11 has trouble when trying to include a type hint for a Python type from C++:
+    (r"close_event: object = None", r"close_event: typing.Optional[threading.Event] = None"),
     # We allow passing an optional py::object to ExternalPlugin, but in truth,
     # that needs to be Dict[str, Union[str, float, int, bool]]:
     # (r": object = None", ": typing.Dict[str, typing.Union[str, float, int, bool]] = {}"),
