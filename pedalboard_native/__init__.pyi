@@ -27,6 +27,7 @@ typing.overload = patch_overload
 
 from typing_extensions import Literal
 from enum import Enum
+import threading
 import numpy
 
 _Shape = typing.Tuple[int, ...]
@@ -1171,9 +1172,37 @@ class AudioUnitPlugin(ExternalPlugin):
         buffer_size: int = 8192,
         reset: bool = True,
     ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]: ...
-    def show_editor(self) -> None:
+    def show_editor(self, close_event: typing.Optional[threading.Event] = None) -> None:
         """
-        Show the UI of this plugin as a native window. This method will block until the window is closed or a KeyboardInterrupt is received.
+        Show the UI of this plugin as a native window.
+
+        This method may only be called on the main thread, and will block
+        the main thread until any of the following things happens:
+
+         - the window is closed by clicking the close button
+         - the window is closed by pressing the appropriate (OS-specific) keyboard shortcut
+         - a KeyboardInterrupt (Ctrl-C) is sent to the program
+         - the :py:meth:`threading.Event.set` method is called (by another thread)
+           on a provided :py:class:`threading.Event` object
+
+        An example of how to programmatically close an editor window::
+
+           import pedalboard
+           from threading import Event, Thread
+
+           plugin = pedalboard.load_plugin("../path-to-my-plugin-file")
+           close_window_event = Event()
+
+           def other_thread():
+               # do something to determine when to close the window
+               if should_close_window:
+                   close_window_event.set()
+
+           thread = Thread(target=other_thread)
+           thread.run()
+
+           # This will block until the other thread calls .set():
+           plugin.show_editor(close_window_event)
         """
     @property
     def _parameters(self) -> typing.List[_AudioProcessorParameter]:
@@ -1584,9 +1613,37 @@ class VST3Plugin(ExternalPlugin):
         buffer_size: int = 8192,
         reset: bool = True,
     ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]: ...
-    def show_editor(self) -> None:
+    def show_editor(self, close_event: typing.Optional[threading.Event] = None) -> None:
         """
-        Show the UI of this plugin as a native window. This method will block until the window is closed or a KeyboardInterrupt is received.
+        Show the UI of this plugin as a native window.
+
+        This method may only be called on the main thread, and will block
+        the main thread until any of the following things happens:
+
+         - the window is closed by clicking the close button
+         - the window is closed by pressing the appropriate (OS-specific) keyboard shortcut
+         - a KeyboardInterrupt (Ctrl-C) is sent to the program
+         - the :py:meth:`threading.Event.set` method is called (by another thread)
+           on a provided :py:class:`threading.Event` object
+
+        An example of how to programmatically close an editor window::
+
+           import pedalboard
+           from threading import Event, Thread
+
+           plugin = pedalboard.load_plugin("../path-to-my-plugin-file")
+           close_window_event = Event()
+
+           def other_thread():
+               # do something to determine when to close the window
+               if should_close_window:
+                   close_window_event.set()
+
+           thread = Thread(target=other_thread)
+           thread.run()
+
+           # This will block until the other thread calls .set():
+           plugin.show_editor(close_window_event)
         """
     @property
     def _parameters(self) -> typing.List[_AudioProcessorParameter]:

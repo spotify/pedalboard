@@ -27,6 +27,7 @@ typing.overload = patch_overload
 
 from typing_extensions import Literal
 from enum import Enum
+import threading
 import numpy
 import pedalboard_native.utils
 
@@ -877,6 +878,10 @@ class WriteableAudioFile(AudioFile):
     def flush(self) -> None:
         """
         Attempt to flush this audio file's contents to disk. Not all formats support flushing, so this may throw a RuntimeError. (If this happens, closing the file will reliably force a flush to occur.)
+        """
+    def tell(self) -> int:
+        """
+        Return the current position of the write pointer in this audio file, in frames at the target sample rate. This value will increase as :meth:`write` is called, and will never decrease.
         """
     def write(self, samples: numpy.ndarray) -> None:
         """

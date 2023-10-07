@@ -24,6 +24,7 @@ typing.overload = patch_overload
 
 from typing_extensions import Literal
 from enum import Enum
+import threading
 import pedalboard_native
 
 __all__ = [
