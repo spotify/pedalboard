@@ -154,19 +154,20 @@ else:
 if DEBUG:
     ALL_CPPFLAGS += ["-DDEBUG=1", "-D_DEBUG=1"]
     ALL_CPPFLAGS += ["-O0", "-g"]
-    if bool(int(os.environ.get("USE_ASAN", 0))):
-        ALL_CPPFLAGS += ["-fsanitize=address", "-fno-omit-frame-pointer"]
-        ALL_LINK_ARGS += ["-fsanitize=address"]
-        if platform.system() == "Linux":
-            ALL_LINK_ARGS += ["-shared-libasan"]
-    elif bool(int(os.environ.get("USE_TSAN", 0))):
-        ALL_CPPFLAGS += ["-fsanitize=thread"]
-        ALL_LINK_ARGS += ["-fsanitize=thread"]
-    elif bool(int(os.environ.get("USE_MSAN", 0))):
-        ALL_CPPFLAGS += ["-fsanitize=memory", "-fsanitize-memory-track-origins"]
-        ALL_LINK_ARGS += ["-fsanitize=memory"]
 else:
     ALL_CPPFLAGS += ["/Ox" if platform.system() == "Windows" else "-O3"]
+
+if bool(int(os.environ.get("USE_ASAN", 0))):
+    ALL_CPPFLAGS += ["-fsanitize=address", "-fno-omit-frame-pointer"]
+    ALL_LINK_ARGS += ["-fsanitize=address"]
+    if platform.system() == "Linux":
+        ALL_LINK_ARGS += ["-shared-libasan", "-latomic"]
+elif bool(int(os.environ.get("USE_TSAN", 0))):
+    ALL_CPPFLAGS += ["-fsanitize=thread"]
+    ALL_LINK_ARGS += ["-fsanitize=thread"]
+elif bool(int(os.environ.get("USE_MSAN", 0))):
+    ALL_CPPFLAGS += ["-fsanitize=memory", "-fsanitize-memory-track-origins"]
+    ALL_LINK_ARGS += ["-fsanitize=memory"]
 
 
 # Regardless of platform, allow our compiler to compile .mm files as Objective-C (required on MacOS)
@@ -340,13 +341,14 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
     ],
     ext_modules=[pedalboard_cpp],
-    install_requires=['numpy'],
-    packages=['pedalboard', 'pedalboard.io', 'pedalboard_native'],
+    install_requires=["numpy"],
+    packages=["pedalboard", "pedalboard.io", "pedalboard_native"],
     package_data={
-        'pedalboard': ['py.typed', '*.pyi', '**/*.pyi'],
-        'pedalboard_native': ['py.typed', '*.pyi', '**/*.pyi']
+        "pedalboard": ["py.typed", "*.pyi", "**/*.pyi"],
+        "pedalboard_native": ["py.typed", "*.pyi", "**/*.pyi"],
     },
     cmdclass={"build_ext": BuildC_CxxExtensions},
 )

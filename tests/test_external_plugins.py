@@ -23,6 +23,7 @@ import atexit
 import random
 import shutil
 import platform
+import threading
 import subprocess
 from glob import glob
 from pathlib import Path
@@ -780,6 +781,23 @@ def test_explicit_instrument_reset():
     assert max_volume_of(plugin([], 5.0, sr, reset=False)) < 0.00001
 
 
+@pytest.mark.skipif(not plugin_named("Magical8BitPlug"), reason="Missing Magical8BitPlug 2 plugin.")
+@pytest.mark.parametrize("buffer_size", [1, 10, 10000])
+def test_instrument_notes_span_across_buffers(buffer_size: int):
+    plugin = load_test_plugin(plugin_named("Magical8BitPlug"), disable_caching=True)
+    sr = 44100
+    notes = [
+        mido.Message("note_on", note=127, velocity=127, time=0.5),
+        mido.Message("note_off", note=127, velocity=127, time=1.0),
+    ]
+
+    output = plugin(notes, duration=2, sample_rate=sr, buffer_size=buffer_size)
+    output /= np.amax(np.abs(output))
+    assert np.mean(np.abs(output[:, : int(sr * 0.5)])) < 0.001
+    assert np.mean(np.abs(output[:, int(sr * 0.5) : int(sr * 1)])) > 0.999
+    assert np.mean(np.abs(output[:, int(sr * 1) :])) < 0.001
+
+
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_explicit_reset_in_pedalboard(plugin_filename: str):
     sr = 44100
@@ -877,6 +895,42 @@ def test_show_editor(plugin_filename: str):
     except subprocess.TimeoutExpired:
         # This is good: the UI was shown, no issues.
         pass
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("delay", [0.0, 0.5, 1.0])
+def test_show_editor_in_process(plugin_filename: str, delay: float):
+    # Run this test in this process:
+    full_plugin_filename = find_plugin_path(plugin_filename)
+    try:
+        cancel = threading.Event()
+
+        if delay:
+            threading.Thread(target=lambda: time.sleep(delay) or cancel.set()).start()
+        else:
+            cancel.set()
+
+        pedalboard.load_plugin(full_plugin_filename).show_editor(cancel)
+    except Exception as e:
+        if "no visual display devices available" in repr(e):
+            pass
+        else:
+            raise
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize(
+    "bad_input", [False, 1, {"foo": "bar"}, {"is_set": "False"}, threading.Event]
+)
+def test_show_editor_passed_something_else(plugin_filename: str, bad_input):
+    # Run this test in this process:
+    full_plugin_filename = find_plugin_path(plugin_filename)
+    plugin = pedalboard.load_plugin(full_plugin_filename)
+
+    with pytest.raises((TypeError, RuntimeError)) as e:
+        plugin.show_editor(bad_input)
+    if e.type is RuntimeError and "no visual display devices available" not in repr(e.value):
+        raise e.value
 
 
 @pytest.mark.skipif(
