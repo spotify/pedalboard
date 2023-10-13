@@ -109,10 +109,7 @@ public:
 
     if (!PythonException::isPending()) {
       try {
-        if (fileLike.attr("seekable")().cast<bool>()) {
-          fileLike.attr("seek")(pos);
-        }
-
+        fileLike.attr("seek")(pos);
         return fileLike.attr("tell")().cast<juce::int64>() == pos;
       } catch (py::error_already_set e) {
         e.restore();

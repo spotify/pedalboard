@@ -398,6 +398,19 @@ def test_no_crash_if_type_error_on_file_like():
     assert "bool" in str(e)
 
 
+def test_file_like_must_be_seekable_for_write():
+    stream = io.BytesIO()
+    stream.seek = lambda x: (_ for _ in ()).throw(
+        ValueError(f"Failed to seek from {stream.tell():,} to {x:,} because I don't wanna")
+    )
+
+    with pytest.raises(ValueError) as e:
+        with pedalboard.io.AudioFile(stream, "w", 44100, 2, format="flac"):
+            pass
+
+    assert "I don't wanna" in str(e)
+
+
 def test_write_fails_without_extension(tmp_path: pathlib.Path):
     dest_path = str(tmp_path / "no_extension")
     with pytest.raises(ValueError):
