@@ -2125,12 +2125,10 @@ private:
     auto oldPos = stream.getPosition();
     int offset = -3;
     uint32 header = 0;
-
-    auto streamPos = stream.getPosition();
-    bool isParsingFirstFrame = streamPos == 0;
+    bool isParsingFirstFrame = oldPos == 0;
 
     for (;;) {
-      streamPos = stream.getPosition();
+      auto streamPos = stream.getPosition();
 
       if (stream.isExhausted() || streamPos > oldPos + 32768) {
         offset = -1;
