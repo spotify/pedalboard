@@ -1052,6 +1052,13 @@ def test_real_mp3_parsing_with_lyrics3():
         assert f.read(f.frames).shape[1] == f.frames
 
 
+def test_real_mp3_parsing_with_no_header():
+    filename = os.path.join(os.path.dirname(__file__), "audio", "correct", "no_header.mp3")
+    with pedalboard.io.AudioFile(filename) as f:
+        assert f.frames >= 40000 and f.frames <= 45000
+        assert f.read(f.frames).shape[1] == f.frames
+
+
 @pytest.mark.parametrize("samplerate", [44100, 32000])
 @pytest.mark.parametrize("chunk_size", [1, 2, 16])
 @pytest.mark.parametrize("target_samplerate", [44100, 32000, 22050, 1234.56])

@@ -2125,11 +2125,10 @@ private:
     auto oldPos = stream.getPosition();
     int offset = -3;
     uint32 header = 0;
-    bool isFirstScanAtThisPosition = true;
+    bool isParsingFirstFrame = oldPos == 0;
 
     for (;;) {
       auto streamPos = stream.getPosition();
-      bool isParsingFirstFrame = streamPos == 0;
 
       if (stream.isExhausted() || streamPos > oldPos + 32768) {
         offset = -1;
@@ -2156,15 +2155,22 @@ private:
           break;
       }
 
-      if (isFirstScanAtThisPosition && isParsingFirstFrame) {
+      if (isParsingFirstFrame && offset == 0) {
         // If we're parsing the first frame of a file/stream, that frame must be
-        // at the start of the stream. This prevents accidentally parsing .mp4
-        // files (among others) as MP3 files that start with junk.
+        // at the start of the stream (i.e.: the first four bytes must be a
+        // valid MP3 header).
+        //
+        // If the first four bytes were a valid MP3 header, the above `if (...
+        // isValidHeader)` check would have exited the `for` loop, and we'd
+        // never get here.
+        //
+        // This prevents accidentally parsing .mp4 files (among others) as MP3
+        // files that start with junk.
+        offset = -1;
         break;
       }
 
       ++offset;
-      isFirstScanAtThisPosition = false;
     }
 
     if (offset >= 0) {
