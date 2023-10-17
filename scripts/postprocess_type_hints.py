@@ -28,6 +28,15 @@ OMIT_LINES_CONTAINING = [
     "_AVAILABLE_PLUGIN_CLASSES: list",
 ]
 
+MULTILINE_REPLACEMENTS = [
+    # Users don't want "Peter Sobot’s iPhone Microphone" to show up in their type hints:
+    (r"input_device_names = \[[^]]*\]\n", "input_device_names: typing.List[str] = []\n"),
+    (
+        r"output_device_names = \[[^]]*\]\n",
+        "output_device_names: typing.List[str] = []\n",
+    ),
+]
+
 REPLACEMENTS = [
     # object is a superclass of `str`, which would make these declarations ambiguous:
     ("file_like: object", "file_like: typing.BinaryIO"),
@@ -157,9 +166,16 @@ def main(args=None):
         for source_file in source_files:
             module_name = output_file_name.replace("__init__.pyi", "").replace("/", ".").rstrip(".")
             with open(source_file) as f:
+                source_file_contents = f.read()
+                for find, replace in MULTILINE_REPLACEMENTS:
+                    source_file_contents = re.sub(
+                        find, replace, source_file_contents, flags=re.DOTALL
+                    )
+                lines = [x + "\n" for x in source_file_contents.split("\n")]
+
                 in_excluded_indented_block = False
                 in_moved_indented_block = False
-                for line in f:
+                for line in lines:
                     if all(x not in line for x in OMIT_LINES_CONTAINING):
                         if any(line.startswith(x) for x in REMOVE_INDENTED_BLOCKS_STARTING_WITH):
                             in_excluded_indented_block = True
