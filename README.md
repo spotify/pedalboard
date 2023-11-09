@@ -252,6 +252,29 @@ with AudioStream(
 # The live AudioStream is now closed, and audio has stopped.
 ```
 
+### Using Pedalboard in `tf.data` Pipelines
+
+```python
+import tensorflow as tf 
+
+sr = 48000 
+
+# Put whatever plugins you like in here:
+plugins = pedalboard.Pedalboard([pedalboard.Gain(), pedalboard.Reverb()]) 
+
+# Make a dataset containing random noise:
+# NOTE: for real training, here's where you'd want to load your audio somehow:
+ds = tf.data.Dataset.from_tensor_slices([np.random.rand(sr)])
+
+# Apply our Pedalboard instance to the tf.data Pipeline:
+ds = ds.map(lambda audio: tf.numpy_function(plugins.process, [audio, sr], tf.float32)) 
+
+# Create and train a (dummy) ML model on this audio:
+model = tf.keras.models.Sequential([tf.keras.layers.InputLayer(input_shape=(sr,)), tf.keras.layers.Dense(1)])
+model.compile(loss="mse") 
+model.fit(ds.map(lambda effected: (effected, 1)).batch(1), epochs=10)
+```
+
 For more examples, see:
  - [the "examples" folder of this repository](https://github.com/spotify/pedalboard/tree/master/examples)
  - [the "Pedalboard Demo" Colab notebook](https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_lOfG99Xs3qWVrhch)

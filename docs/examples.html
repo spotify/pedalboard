@@ -389,6 +389,29 @@ allowing for real-time manipulation of audio by adding effects in Python.</p>
 <span class="c1"># The live AudioStream is now closed, and audio has stopped.</span>
 </pre></div>
 </div>
+</section>
+<section id="using-pedalboard-in-tf-data-pipelines">
+<h2>Using Pedalboard in <code class="docutils literal notranslate"><span class="pre">tf.data</span></code> Pipelines<a class="headerlink" href="#using-pedalboard-in-tf-data-pipelines" title="Permalink to this heading">#</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+
+<span class="n">sr</span> <span class="o">=</span> <span class="mi">48000</span>
+
+<span class="c1"># Put whatever plugins you like in here:</span>
+<span class="n">plugins</span> <span class="o">=</span> <span class="n">pedalboard</span><span class="o">.</span><span class="n">Pedalboard</span><span class="p">([</span><span class="n">pedalboard</span><span class="o">.</span><span class="n">Gain</span><span class="p">(),</span> <span class="n">pedalboard</span><span class="o">.</span><span class="n">Reverb</span><span class="p">()])</span>
+
+<span class="c1"># Make a dataset containing random noise:</span>
+<span class="c1"># NOTE: for real training, here&#39;s where you&#39;d want to load your audio somehow:</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="o">.</span><span class="n">from_tensor_slices</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">sr</span><span class="p">)])</span>
+
+<span class="c1"># Apply our Pedalboard instance to the tf.data Pipeline:</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">audio</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">numpy_function</span><span class="p">(</span><span class="n">plugins</span><span class="o">.</span><span class="n">process</span><span class="p">,</span> <span class="p">[</span><span class="n">audio</span><span class="p">,</span> <span class="n">sr</span><span class="p">],</span> <span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+
+<span class="c1"># Create and train a (dummy) ML model on this audio:</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Sequential</span><span class="p">([</span><span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">InputLayer</span><span class="p">(</span><span class="n">input_shape</span><span class="o">=</span><span class="p">(</span><span class="n">sr</span><span class="p">,)),</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Dense</span><span class="p">(</span><span class="mi">1</span><span class="p">)])</span>
+<span class="n">model</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s2">&quot;mse&quot;</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">effected</span><span class="p">:</span> <span class="p">(</span><span class="n">effected</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">batch</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
 <p>For more examples, see:</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://github.com/spotify/pedalboard/tree/master/examples">the “examples” folder of this repository</a></p></li>
@@ -468,6 +491,7 @@ allowing for real-time manipulation of audio by adding effects in Python.</p>
 <li><a class="reference internal" href="#using-vst3-or-audio-unit-instrument-and-effect-plugins">Using VST3® or Audio Unit instrument and effect plugins</a></li>
 <li><a class="reference internal" href="#creating-parallel-effects-chains">Creating parallel effects chains</a></li>
 <li><a class="reference internal" href="#running-pedalboard-on-live-audio">Running Pedalboard on Live Audio</a></li>
+<li><a class="reference internal" href="#using-pedalboard-in-tf-data-pipelines">Using Pedalboard in <code class="docutils literal notranslate"><span class="pre">tf.data</span></code> Pipelines</a></li>
 </ul>
 </li>
 </ul>

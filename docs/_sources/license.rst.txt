@@ -2,5 +2,5 @@ License
 =======
 
 .. mdinclude:: ../../README.md
-   :start-line: 283
-   :end-line: 295
+   :start-line: 306
+   :end-line: 318
