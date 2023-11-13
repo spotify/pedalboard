@@ -31,3 +31,4 @@ sphinxext-opengraph==0.7.3; python_version > '3.6'
 
 # For MIDI support - only in test though!
 mido
+mutagen

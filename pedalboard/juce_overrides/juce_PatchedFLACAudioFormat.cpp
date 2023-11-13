@@ -144,6 +144,7 @@ JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE("-Wconversion", "-Wshadow",
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/stream_encoder.c"
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/stream_encoder_framing.c"
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/window_flac.c"
+#include "../../vendors/libFLAC/metadata_object.c"
 #undef VERSION
 #else
 #include <FLAC/all.h>
@@ -396,6 +397,33 @@ public:
     FLAC__stream_encoder_set_blocksize(encoder, 0);
     FLAC__stream_encoder_set_do_escape_coding(encoder, true);
 
+    // Create seek table template:
+    seektable = PatchedFlacNamespace::FLAC__metadata_object_new(
+        PatchedFlacNamespace::FLAC__METADATA_TYPE_SEEKTABLE);
+    if (!seektable) {
+      ok = false;
+      return;
+    }
+
+    if (!PatchedFlacNamespace::
+            FLAC__metadata_object_seektable_template_append_placeholders(
+                seektable, 1)) {
+      ok = false;
+      return;
+    }
+
+    if (!PatchedFlacNamespace::FLAC__metadata_object_seektable_template_sort(
+            seektable, /*compact=*/true)) {
+      ok = false;
+      return;
+    }
+
+    if (!PatchedFlacNamespace::FLAC__stream_encoder_set_metadata(
+            encoder, &seektable, 1)) {
+      ok = false;
+      return;
+    }
+
     ok = FLAC__stream_encoder_init_stream(
              encoder, encodeWriteCallback, encodeSeekCallback,
              encodeTellCallback, encodeMetadataCallback,
@@ -412,6 +440,10 @@ public:
     }
 
     PatchedFlacNamespace::FLAC__stream_encoder_delete(encoder);
+    if (seektable) {
+      PatchedFlacNamespace::FLAC__metadata_object_delete(seektable);
+      seektable = nullptr;
+    }
   }
 
   //==============================================================================
@@ -539,6 +571,7 @@ public:
 
 private:
   PatchedFlacNamespace::FLAC__StreamEncoder *encoder;
+  PatchedFlacNamespace::FLAC__StreamMetadata *seektable;
   int64 streamStartPos;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PatchedFlacWriter)
