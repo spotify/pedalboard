@@ -397,30 +397,24 @@ public:
     FLAC__stream_encoder_set_blocksize(encoder, 0);
     FLAC__stream_encoder_set_do_escape_coding(encoder, true);
 
-    // Create seek table template:
+    // Create a seek table, which is empty by default:
     seektable = PatchedFlacNamespace::FLAC__metadata_object_new(
         PatchedFlacNamespace::FLAC__METADATA_TYPE_SEEKTABLE);
-    if (!seektable) {
-      ok = false;
+    if (!seektable)
       return;
-    }
 
+    // Write a single placeholder to the seek table.
     if (!PatchedFlacNamespace::
             FLAC__metadata_object_seektable_template_append_placeholders(
-                seektable, 1)) {
-      ok = false;
+                seektable, /* number of placeholder elements */ 1))
       return;
-    }
 
     if (!PatchedFlacNamespace::FLAC__metadata_object_seektable_template_sort(
-            seektable, /*compact=*/true)) {
-      ok = false;
+            seektable, /*compact=*/true))
       return;
-    }
 
     if (!PatchedFlacNamespace::FLAC__stream_encoder_set_metadata(
             encoder, &seektable, 1)) {
-      ok = false;
       return;
     }
 
@@ -542,8 +536,14 @@ public:
 
   static PatchedFlacNamespace::FLAC__StreamEncoderSeekStatus
   encodeSeekCallback(const PatchedFlacNamespace::FLAC__StreamEncoder *,
-                     PatchedFlacNamespace::FLAC__uint64, void *) {
-    return PatchedFlacNamespace::FLAC__STREAM_ENCODER_SEEK_STATUS_UNSUPPORTED;
+                     PatchedFlacNamespace::FLAC__uint64 position,
+                     void *client_data) {
+    if (client_data == nullptr)
+      return PatchedFlacNamespace::FLAC__STREAM_ENCODER_SEEK_STATUS_UNSUPPORTED;
+    auto *writer = static_cast<PatchedFlacWriter *>(client_data);
+    return writer->output->setPosition(writer->streamStartPos + position)
+               ? PatchedFlacNamespace::FLAC__STREAM_ENCODER_SEEK_STATUS_OK
+               : PatchedFlacNamespace::FLAC__STREAM_ENCODER_SEEK_STATUS_ERROR;
   }
 
   static PatchedFlacNamespace::FLAC__StreamEncoderTellStatus
@@ -553,10 +553,10 @@ public:
     if (client_data == nullptr)
       return PatchedFlacNamespace::FLAC__STREAM_ENCODER_TELL_STATUS_UNSUPPORTED;
 
+    auto *writer = static_cast<PatchedFlacWriter *>(client_data);
     *absolute_byte_offset =
-        (PatchedFlacNamespace::FLAC__uint64) static_cast<PatchedFlacWriter *>(
-            client_data)
-            ->output->getPosition();
+        (PatchedFlacNamespace::FLAC__uint64)writer->output->getPosition() -
+        writer->streamStartPos;
     return PatchedFlacNamespace::FLAC__STREAM_ENCODER_TELL_STATUS_OK;
   }
 
