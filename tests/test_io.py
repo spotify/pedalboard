@@ -24,6 +24,7 @@ import shutil
 import pytest
 import platform
 import pedalboard
+import mutagen
 from typing import Optional
 
 import numpy as np
@@ -1201,6 +1202,14 @@ def test_real_world_flac_seek_accuracy(filename: str, seek_seconds: float, read_
         chunk_again = f.read(int(f.samplerate * read_seconds))
         assert np.amax(np.abs(chunk)) > 0
         np.testing.assert_allclose(chunk, chunk_again)
+
+
+def test_flac_files_have_seektable():
+    buf = io.BytesIO()
+    buf.name = "test.flac"
+    with pedalboard.io.AudioFile(buf, "w", 44100) as o:
+        o.write(np.random.rand(44100))
+    assert mutagen.File(buf).seektable, "Expected to write a FLAC seek table"
 
 
 @pytest.mark.parametrize(

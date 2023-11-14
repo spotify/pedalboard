@@ -144,6 +144,7 @@ JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE("-Wconversion", "-Wshadow",
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/stream_encoder.c"
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/stream_encoder_framing.c"
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/window_flac.c"
+#include "../../vendors/libFLAC/metadata_object.c"
 #undef VERSION
 #else
 #include <FLAC/all.h>
@@ -396,10 +397,31 @@ public:
     FLAC__stream_encoder_set_blocksize(encoder, 0);
     FLAC__stream_encoder_set_do_escape_coding(encoder, true);
 
-    ok = FLAC__stream_encoder_init_stream(
-             encoder, encodeWriteCallback, encodeSeekCallback,
-             encodeTellCallback, encodeMetadataCallback,
-             this) == PatchedFlacNamespace::FLAC__STREAM_ENCODER_INIT_STATUS_OK;
+    // Create a seek table, which is empty by default:
+    seektable = PatchedFlacNamespace::FLAC__metadata_object_new(
+        PatchedFlacNamespace::FLAC__METADATA_TYPE_SEEKTABLE);
+    if (!seektable)
+      return;
+
+    // Write a single placeholder to the seek table.
+    if (!PatchedFlacNamespace::
+            FLAC__metadata_object_seektable_template_append_placeholders(
+                seektable, /* number of placeholder elements */ 1))
+      return;
+
+    if (!PatchedFlacNamespace::FLAC__metadata_object_seektable_template_sort(
+            seektable, /*compact=*/true))
+      return;
+
+    if (!PatchedFlacNamespace::FLAC__stream_encoder_set_metadata(
+            encoder, &seektable, 1)) {
+      return;
+    }
+
+    ok = FLAC__stream_encoder_init_stream(encoder, encodeWriteCallback,
+                                          encodeSeekCallback,
+                                          encodeTellCallback, nullptr, this) ==
+         PatchedFlacNamespace::FLAC__STREAM_ENCODER_INIT_STATUS_OK;
   }
 
   ~PatchedFlacWriter() override {
@@ -412,6 +434,10 @@ public:
     }
 
     PatchedFlacNamespace::FLAC__stream_encoder_delete(encoder);
+    if (seektable) {
+      PatchedFlacNamespace::FLAC__metadata_object_delete(seektable);
+      seektable = nullptr;
+    }
   }
 
   //==============================================================================
@@ -461,40 +487,6 @@ public:
     }
   }
 
-  void
-  writeMetaData(const PatchedFlacNamespace::FLAC__StreamMetadata *metadata) {
-    using namespace PatchedFlacNamespace;
-    auto &info = metadata->data.stream_info;
-
-    unsigned char buffer[FLAC__STREAM_METADATA_STREAMINFO_LENGTH];
-    const unsigned int channelsMinus1 = info.channels - 1;
-    const unsigned int bitsMinus1 = info.bits_per_sample - 1;
-
-    packUint32(info.min_blocksize, buffer, 2);
-    packUint32(info.max_blocksize, buffer + 2, 2);
-    packUint32(info.min_framesize, buffer + 4, 3);
-    packUint32(info.max_framesize, buffer + 7, 3);
-    buffer[10] = (uint8)((info.sample_rate >> 12) & 0xff);
-    buffer[11] = (uint8)((info.sample_rate >> 4) & 0xff);
-    buffer[12] = (uint8)(((info.sample_rate & 0x0f) << 4) |
-                         (channelsMinus1 << 1) | (bitsMinus1 >> 4));
-    buffer[13] =
-        (FLAC__byte)(((bitsMinus1 & 0x0f) << 4) |
-                     (unsigned int)((info.total_samples >> 32) & 0x0f));
-    packUint32((FLAC__uint32)info.total_samples, buffer + 14, 4);
-    memcpy(buffer + 18, info.md5sum, 16);
-
-    const bool seekOk = output->setPosition(streamStartPos + 4);
-    ignoreUnused(seekOk);
-
-    // if this fails, you've given it an output stream that can't seek! It needs
-    // to be able to seek back to write the header
-    jassert(seekOk);
-
-    output->writeIntBigEndian(FLAC__STREAM_METADATA_STREAMINFO_LENGTH);
-    output->write(buffer, FLAC__STREAM_METADATA_STREAMINFO_LENGTH);
-  }
-
   //==============================================================================
   static PatchedFlacNamespace::FLAC__StreamEncoderWriteStatus
   encodeWriteCallback(const PatchedFlacNamespace::FLAC__StreamEncoder *,
@@ -510,8 +502,14 @@ public:
 
   static PatchedFlacNamespace::FLAC__StreamEncoderSeekStatus
   encodeSeekCallback(const PatchedFlacNamespace::FLAC__StreamEncoder *,
-                     PatchedFlacNamespace::FLAC__uint64, void *) {
-    return PatchedFlacNamespace::FLAC__STREAM_ENCODER_SEEK_STATUS_UNSUPPORTED;
+                     PatchedFlacNamespace::FLAC__uint64 position,
+                     void *client_data) {
+    if (client_data == nullptr)
+      return PatchedFlacNamespace::FLAC__STREAM_ENCODER_SEEK_STATUS_UNSUPPORTED;
+    auto *writer = static_cast<PatchedFlacWriter *>(client_data);
+    return writer->output->setPosition(writer->streamStartPos + position)
+               ? PatchedFlacNamespace::FLAC__STREAM_ENCODER_SEEK_STATUS_OK
+               : PatchedFlacNamespace::FLAC__STREAM_ENCODER_SEEK_STATUS_ERROR;
   }
 
   static PatchedFlacNamespace::FLAC__StreamEncoderTellStatus
@@ -521,24 +519,18 @@ public:
     if (client_data == nullptr)
       return PatchedFlacNamespace::FLAC__STREAM_ENCODER_TELL_STATUS_UNSUPPORTED;
 
+    auto *writer = static_cast<PatchedFlacWriter *>(client_data);
     *absolute_byte_offset =
-        (PatchedFlacNamespace::FLAC__uint64) static_cast<PatchedFlacWriter *>(
-            client_data)
-            ->output->getPosition();
+        (PatchedFlacNamespace::FLAC__uint64)writer->output->getPosition() -
+        writer->streamStartPos;
     return PatchedFlacNamespace::FLAC__STREAM_ENCODER_TELL_STATUS_OK;
-  }
-
-  static void encodeMetadataCallback(
-      const PatchedFlacNamespace::FLAC__StreamEncoder *,
-      const PatchedFlacNamespace::FLAC__StreamMetadata *metadata,
-      void *client_data) {
-    static_cast<PatchedFlacWriter *>(client_data)->writeMetaData(metadata);
   }
 
   bool ok = false;
 
 private:
   PatchedFlacNamespace::FLAC__StreamEncoder *encoder;
+  PatchedFlacNamespace::FLAC__StreamMetadata *seektable;
   int64 streamStartPos;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PatchedFlacWriter)
