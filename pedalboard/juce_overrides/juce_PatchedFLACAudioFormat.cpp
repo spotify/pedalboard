@@ -418,10 +418,10 @@ public:
       return;
     }
 
-    ok = FLAC__stream_encoder_init_stream(
-             encoder, encodeWriteCallback, encodeSeekCallback,
-             encodeTellCallback, encodeMetadataCallback,
-             this) == PatchedFlacNamespace::FLAC__STREAM_ENCODER_INIT_STATUS_OK;
+    ok = FLAC__stream_encoder_init_stream(encoder, encodeWriteCallback,
+                                          encodeSeekCallback,
+                                          encodeTellCallback, nullptr, this) ==
+         PatchedFlacNamespace::FLAC__STREAM_ENCODER_INIT_STATUS_OK;
   }
 
   ~PatchedFlacWriter() override {
@@ -487,40 +487,6 @@ public:
     }
   }
 
-  void
-  writeMetaData(const PatchedFlacNamespace::FLAC__StreamMetadata *metadata) {
-    using namespace PatchedFlacNamespace;
-    auto &info = metadata->data.stream_info;
-
-    unsigned char buffer[FLAC__STREAM_METADATA_STREAMINFO_LENGTH];
-    const unsigned int channelsMinus1 = info.channels - 1;
-    const unsigned int bitsMinus1 = info.bits_per_sample - 1;
-
-    packUint32(info.min_blocksize, buffer, 2);
-    packUint32(info.max_blocksize, buffer + 2, 2);
-    packUint32(info.min_framesize, buffer + 4, 3);
-    packUint32(info.max_framesize, buffer + 7, 3);
-    buffer[10] = (uint8)((info.sample_rate >> 12) & 0xff);
-    buffer[11] = (uint8)((info.sample_rate >> 4) & 0xff);
-    buffer[12] = (uint8)(((info.sample_rate & 0x0f) << 4) |
-                         (channelsMinus1 << 1) | (bitsMinus1 >> 4));
-    buffer[13] =
-        (FLAC__byte)(((bitsMinus1 & 0x0f) << 4) |
-                     (unsigned int)((info.total_samples >> 32) & 0x0f));
-    packUint32((FLAC__uint32)info.total_samples, buffer + 14, 4);
-    memcpy(buffer + 18, info.md5sum, 16);
-
-    const bool seekOk = output->setPosition(streamStartPos + 4);
-    ignoreUnused(seekOk);
-
-    // if this fails, you've given it an output stream that can't seek! It needs
-    // to be able to seek back to write the header
-    jassert(seekOk);
-
-    output->writeIntBigEndian(FLAC__STREAM_METADATA_STREAMINFO_LENGTH);
-    output->write(buffer, FLAC__STREAM_METADATA_STREAMINFO_LENGTH);
-  }
-
   //==============================================================================
   static PatchedFlacNamespace::FLAC__StreamEncoderWriteStatus
   encodeWriteCallback(const PatchedFlacNamespace::FLAC__StreamEncoder *,
@@ -558,13 +524,6 @@ public:
         (PatchedFlacNamespace::FLAC__uint64)writer->output->getPosition() -
         writer->streamStartPos;
     return PatchedFlacNamespace::FLAC__STREAM_ENCODER_TELL_STATUS_OK;
-  }
-
-  static void encodeMetadataCallback(
-      const PatchedFlacNamespace::FLAC__StreamEncoder *,
-      const PatchedFlacNamespace::FLAC__StreamMetadata *metadata,
-      void *client_data) {
-    static_cast<PatchedFlacWriter *>(client_data)->writeMetaData(metadata);
   }
 
   bool ok = false;
