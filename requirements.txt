@@ -1,1 +1,3 @@
-numpy
+numpy==1.26.1
+pedalboard==0.8.5
+pybind11==2.11.1
