@@ -223,7 +223,6 @@ public:
   }
 
   void seek(long long targetPosition) {
-    py::gil_scoped_release release;
     long long positionToSeekToIncludingBuffers = targetPosition;
 
     long long targetPositionInSourceSampleRate =
@@ -246,11 +245,14 @@ public:
     positionInTargetSampleRate =
         (long long)(floatingPositionInTargetSampleRate);
 
-    resampler.reset();
+    {
+      py::gil_scoped_release release;
+      resampler.reset();
 
-    long long inputSamplesUsed =
-        resampler.advanceResamplerState(positionInTargetSampleRate);
-    targetPositionInSourceSampleRate = inputSamplesUsed;
+      long long inputSamplesUsed =
+          resampler.advanceResamplerState(positionInTargetSampleRate);
+      targetPositionInSourceSampleRate = inputSamplesUsed;
+    }
 
     audioFile->seek(std::max(0LL, targetPositionInSourceSampleRate));
 
