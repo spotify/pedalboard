@@ -100,13 +100,14 @@ public:
   ResamplingQuality getQuality() const { return resampler.getQuality(); }
 
   py::array_t<float> read(std::variant<double, long long> numSamplesVariant) {
+    py::gil_scoped_release release;
     long long numSamples = parseNumSamples(numSamplesVariant);
     if (numSamples == 0)
       throw std::domain_error(
           "ResampledReadableAudioFile will not read an entire file at once, "
           "due to the possibility that a file may be larger than available "
-          "memory. Please pass a number of frames to read (available from the "
-          "'frames' attribute).");
+          "memory. Please pass a number of frames to read (available from "
+          "the 'frames' attribute).");
 
     const juce::ScopedLock scopedLock(objectLock);
 
@@ -153,9 +154,12 @@ public:
 
       juce::AudioBuffer<float> sourceSamples;
       if (inputSamplesRequired > 0) {
-        sourceSamples =
-            copyPyArrayIntoJuceBuffer(audioFile->read(inputSamplesRequired),
-                                      {ChannelLayout::NotInterleaved});
+        {
+          py::gil_scoped_acquire gil;
+          sourceSamples =
+              copyPyArrayIntoJuceBuffer(audioFile->read(inputSamplesRequired),
+                                        {ChannelLayout::NotInterleaved});
+        }
 
         if (sourceSamples.getNumSamples() == 0) {
           resamplerInput = {};
@@ -213,6 +217,7 @@ public:
       inputSamplesRequired = 1;
     }
     positionInTargetSampleRate += resampledBuffer.getNumSamples();
+    py::gil_scoped_acquire acquire;
     return copyJuceBufferIntoPyArray(resampledBuffer,
                                      ChannelLayout::NotInterleaved, 0);
   }
@@ -240,11 +245,14 @@ public:
     positionInTargetSampleRate =
         (long long)(floatingPositionInTargetSampleRate);
 
-    resampler.reset();
+    {
+      py::gil_scoped_release release;
+      resampler.reset();
 
-    long long inputSamplesUsed =
-        resampler.advanceResamplerState(positionInTargetSampleRate);
-    targetPositionInSourceSampleRate = inputSamplesUsed;
+      long long inputSamplesUsed =
+          resampler.advanceResamplerState(positionInTargetSampleRate);
+      targetPositionInSourceSampleRate = inputSamplesUsed;
+    }
 
     audioFile->seek(std::max(0LL, targetPositionInSourceSampleRate));
 
