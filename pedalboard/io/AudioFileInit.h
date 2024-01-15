@@ -91,7 +91,7 @@ Writing an audio file on disk::
 Writing encoded audio to a file-like object::
 
    wav_buffer = io.BytesIO()
-   with AudioFile(wav_buffer, "w", samplerate=44100, num_channels=2) as f:
+   with AudioFile(wav_buffer, "w", samplerate=44100, num_channels=2, format="wav") as f:
        f.write(np.random.rand(2, 44100))
    wav_buffer.getvalue()  # do something with the file-like object
 
