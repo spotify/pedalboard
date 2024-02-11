@@ -31,6 +31,8 @@
 
 #include "process.h"
 
+#include <fstream>
+
 #if JUCE_MAC
 #include <AudioToolbox/AudioUnitUtilities.h>
 #endif
@@ -732,6 +734,116 @@ public:
     // Some plugins (mostly instrument plugins) may load resources on start;
     // this call attempts to give them time to load those resources.
     attemptToWarmUp();
+  }
+
+  // Save the current state of the plugin to disk.
+  /*  Certain plugins have settings that can only be modified through the editor
+     window, which means they can't be easily configured by a computer program.
+     A workaround for this is to have a human configure the plugin via the
+     editor window, save the plugin's configuration state to disk using the
+     savePluginState function, and then later the Python program can load the
+     configuration state using the loadPluginState function without direct human
+      assistance.
+  */
+  void savePluginState(const std::string &filePathAndName) {
+    juce::MemoryBlock savedState;
+    std::map<int, float> currentParameters;
+
+    if (pluginInstance) {
+      pluginInstance->getStateInformation(savedState);
+
+      for (auto *parameter : pluginInstance->getParameters()) {
+        currentParameters[parameter->getParameterIndex()] =
+            parameter->getValue();
+      }
+
+      // Convert MemoryBlock to base64
+      std::string base64State = savedState.toBase64Encoding().toStdString();
+
+      // Convert parameters to base64
+      std::string base64Parameters;
+      for (const auto &pair : currentParameters) {
+        base64Parameters += std::to_string(pair.first) + ":" +
+                            std::to_string(pair.second) + ";";
+      }
+
+      // Combine the base64-encoded state and parameters
+      std::string combinedData = base64State + "|" + base64Parameters;
+
+      // Save the combined string to a file
+      std::ofstream file(filePathAndName);
+      if (file.is_open()) {
+        file << combinedData;
+        file.close();
+      } else {
+        throw pybind11::import_error(
+            "Error: Unable to open file for saving state.");
+      }
+    }
+  }
+
+  // Load a saved plugin configuration state from disk
+  // This is the companion to the savePluginState function
+  void loadPluginState(const std::string &filePathAndName) {
+    if (pluginInstance) {
+      // Load data from the "saved_state.txt" file
+      std::ifstream file(filePathAndName);
+      if (file.is_open()) {
+        std::string savedData((std::istreambuf_iterator<char>(file)),
+                              std::istreambuf_iterator<char>());
+        file.close();
+
+        // Parse the combined string to retrieve base64-encoded state and
+        // parameters
+        size_t separatorIndex = savedData.find("|");
+        if (separatorIndex != std::string::npos) {
+          std::string base64State = savedData.substr(0, separatorIndex);
+          std::string base64Parameters = savedData.substr(separatorIndex + 1);
+
+          // Convert base64-encoded state back to MemoryBlock
+          juce::MemoryBlock savedState;
+          savedState.fromBase64Encoding(base64State);
+
+          // Restore state information to the pluginInstance
+          pluginInstance->setStateInformation(
+              savedState.getData(), static_cast<int>(savedState.getSize()));
+
+          // Parse and restore parameters
+          std::map<int, float> loadedParameters;
+          size_t pos = 0;
+          while ((pos = base64Parameters.find(";")) != std::string::npos) {
+            std::string pair = base64Parameters.substr(0, pos);
+            size_t colonIndex = pair.find(":");
+            if (colonIndex != std::string::npos) {
+              int paramIndex = std::stoi(pair.substr(0, colonIndex));
+              float paramValue = std::stof(pair.substr(colonIndex + 1));
+              loadedParameters[paramIndex] = paramValue;
+            }
+            base64Parameters.erase(0, pos + 1);
+          }
+
+          // Set the loaded parameters to the pluginInstance twice
+          // There may be meta-parameters that change the validity of other
+          // `setValue` calls. (i.e.: param1 can't be set until param2 is set.)
+          for (int i = 0; i < 2; i++) {
+            for (const auto &pair : loadedParameters) {
+              juce::AudioProcessorParameter *parameter =
+                  pluginInstance->getParameters()[pair.first];
+              if (parameter) {
+                parameter->setValue(pair.second);
+              }
+            }
+          }
+        } else {
+          throw pybind11::import_error("Error: Invalid saved data format.");
+        }
+      } else {
+        throw pybind11::import_error(
+            "Error: Unable to open file for loading state.");
+      }
+    } else {
+      throw pybind11::import_error("Error: No plugin instance available");
+    }
   }
 
   void setNumChannels(int numChannels) {
@@ -1556,6 +1668,10 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
            py::return_value_policy::reference_internal)
       .def("show_editor", &ExternalPlugin<juce::VST3PluginFormat>::showEditor,
            SHOW_EDITOR_DOCSTRING, py::arg("close_event") = py::none())
+      .def("save_plugin_state",
+           &ExternalPlugin<juce::VST3PluginFormat>::savePluginState)
+      .def("load_plugin_state",
+           &ExternalPlugin<juce::VST3PluginFormat>::loadPluginState)
       .def(
           "process",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
