@@ -22,8 +22,18 @@
 
   ==============================================================================
 */
+#pragma once
 
-#include "../JuceHeader.h"
+#include <juce_gui_basics/juce_gui_basics.h>
+#ifdef None
+#undef None // Defined in X11/X.h, clashes with struct None imported below
+#endif
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_dsp/juce_dsp.h>
 
 namespace juce {
 
@@ -32,7 +42,7 @@ namespace juce {
 
     @tags{Audio}
 */
-class JUCE_API PatchedVST3PluginFormat : public AudioPluginFormat {
+class PatchedVST3PluginFormat : public AudioPluginFormat {
 public:
   /** Constructor */
   PatchedVST3PluginFormat();

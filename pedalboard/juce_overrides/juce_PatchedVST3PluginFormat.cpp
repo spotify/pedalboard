@@ -28,6 +28,8 @@
 
 #include "juce_PatchedVST3PluginFormat.h"
 
+#include "../../JUCE/modules/juce_audio_processors/juce_audio_processors.h"
+
 #include "../../JUCE/modules/juce_core/native/juce_BasicNativeHeaders.h"
 
 #include "../../JUCE/modules/juce_core/juce_core.h"
