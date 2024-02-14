@@ -28,13 +28,13 @@
 #ifdef None
 #undef None // Defined in X11/X.h, clashes with struct None imported below
 #endif
-#include <juce_gui_extra/juce_gui_extra.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_dsp/juce_dsp.h>
+#include <juce_gui_extra/juce_gui_extra.h>
 
 namespace juce {
 
