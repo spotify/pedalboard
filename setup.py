@@ -67,7 +67,7 @@ ALL_CPPFLAGS.extend(
         "-DJucePlugin_Build_Standalone=0",
         "-DJucePlugin_Build_Unity=0",
         # "-DJUCE_PLUGINHOST_VST=1", # Include for VST2 support, not licensed by Steinberg
-        "-DJUCE_PLUGINHOST_VST3=1",
+        # "-DJUCE_PLUGINHOST_VST3=1", # Disable the built-in VST3 support, as we include our own.
         # "-DJUCE_PLUGINHOST_LADSPA=1", # Include for LADSPA plugin support, Linux only.
         "-DJUCE_DISABLE_JUCE_VERSION_PRINTING=1",
         "-DJUCE_WEB_BROWSER=0",

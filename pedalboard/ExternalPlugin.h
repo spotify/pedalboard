@@ -29,6 +29,7 @@
 #include "Plugin.h"
 #include <pybind11/stl.h>
 
+#include "juce_overrides/juce_PatchedVST3PluginFormat.h"
 #include "process.h"
 
 #if JUCE_MAC
@@ -169,7 +170,7 @@ inline std::vector<std::string> findInstalledVSTPluginPaths() {
   // Ensure we have a MessageManager, which is required by the VST wrapper
   // Without this, we get an assert(false) from JUCE at runtime
   juce::MessageManager::getInstance();
-  juce::VST3PluginFormat format;
+  juce::PatchedVST3PluginFormat format;
   std::vector<std::string> pluginPaths;
   for (juce::String pluginIdentifier : format.searchPathsForPlugins(
            format.getDefaultLocationsToSearch(), true, false)) {
@@ -487,6 +488,7 @@ public:
     ExternalPluginType format;
 
     pluginFormatManager.addDefaultFormats();
+    pluginFormatManager.addFormat(new juce::PatchedVST3PluginFormat());
 
     auto pluginFileStripped =
         pathToPluginFile.trimCharactersAtEnd(juce::File::getSeparatorString());
@@ -1482,9 +1484,10 @@ inline void init_external_plugins(py::module &m) {
               py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
               py::arg("reset") = true);
 
-#if JUCE_PLUGINHOST_VST3 && (JUCE_MAC || JUCE_WINDOWS || JUCE_LINUX)
-  py::class_<ExternalPlugin<juce::VST3PluginFormat>, AbstractExternalPlugin,
-             std::shared_ptr<ExternalPlugin<juce::VST3PluginFormat>>>(
+#if (JUCE_MAC || JUCE_WINDOWS || JUCE_LINUX)
+  py::class_<ExternalPlugin<juce::PatchedVST3PluginFormat>,
+             AbstractExternalPlugin,
+             std::shared_ptr<ExternalPlugin<juce::PatchedVST3PluginFormat>>>(
       m, "VST3Plugin",
       R"(A wrapper around third-party, audio effect or instrument plugins in
 `Steinberg GmbH's VST3® <https://en.wikipedia.org/wiki/Virtual_Studio_Technology>`_
@@ -1501,8 +1504,9 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           py::init([](std::string &pathToPluginFile, py::object parameterValues,
                       std::optional<std::string> pluginName,
                       float initializationTimeout) {
-            std::shared_ptr<ExternalPlugin<juce::VST3PluginFormat>> plugin =
-                std::make_shared<ExternalPlugin<juce::VST3PluginFormat>>(
+            std::shared_ptr<ExternalPlugin<juce::PatchedVST3PluginFormat>>
+                plugin = std::make_shared<
+                    ExternalPlugin<juce::PatchedVST3PluginFormat>>(
                     pathToPluginFile, pluginName, initializationTimeout);
             py::cast(plugin).attr("__set_initial_parameter_values__")(
                 parameterValues);
@@ -1514,7 +1518,7 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           py::arg("initialization_timeout") =
               DEFAULT_INITIALIZATION_TIMEOUT_SECONDS)
       .def("__repr__",
-           [](ExternalPlugin<juce::VST3PluginFormat> &plugin) {
+           [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
              std::ostringstream ss;
              ss << "<pedalboard.VST3Plugin";
              ss << " \"" << plugin.getName() << "\"";
@@ -1523,13 +1527,14 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
              return ss.str();
            })
       .def("load_preset",
-           &ExternalPlugin<juce::VST3PluginFormat>::loadPresetData,
+           &ExternalPlugin<juce::PatchedVST3PluginFormat>::loadPresetData,
            "Load a VST3 preset file in .vstpreset format.",
            py::arg("preset_file_path"))
       .def_static(
           "get_plugin_names_for_file",
           [](std::string filename) {
-            return getPluginNamesForFile<juce::VST3PluginFormat>(filename);
+            return getPluginNamesForFile<juce::PatchedVST3PluginFormat>(
+                filename);
           },
           "Return a list of plugin names contained within a given VST3 "
           "plugin (i.e.: a \".vst3\"). If the provided file cannot be "
@@ -1544,17 +1549,19 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           "Pedalboard.")
       .def_property_readonly(
           "name",
-          [](ExternalPlugin<juce::VST3PluginFormat> &plugin) {
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             return plugin.getName().toStdString();
           },
           "The name of this plugin.")
       .def_property_readonly(
-          "_parameters", &ExternalPlugin<juce::VST3PluginFormat>::getParameters,
+          "_parameters",
+          &ExternalPlugin<juce::PatchedVST3PluginFormat>::getParameters,
           py::return_value_policy::reference_internal)
       .def("_get_parameter",
-           &ExternalPlugin<juce::VST3PluginFormat>::getParameter,
+           &ExternalPlugin<juce::PatchedVST3PluginFormat>::getParameter,
            py::return_value_policy::reference_internal)
-      .def("show_editor", &ExternalPlugin<juce::VST3PluginFormat>::showEditor,
+      .def("show_editor",
+           &ExternalPlugin<juce::PatchedVST3PluginFormat>::showEditor,
            SHOW_EDITOR_DOCSTRING, py::arg("close_event") = py::none())
       .def(
           "process",
@@ -1576,14 +1583,14 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           py::arg("input_array"), py::arg("sample_rate"),
           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
       .def("process",
-           &ExternalPlugin<juce::VST3PluginFormat>::renderMIDIMessages,
+           &ExternalPlugin<juce::PatchedVST3PluginFormat>::renderMIDIMessages,
            EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("midi_messages"),
            py::arg("duration"), py::arg("sample_rate"),
            py::arg("num_channels") = 2,
            py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
            py::arg("reset") = true)
       .def("__call__",
-           &ExternalPlugin<juce::VST3PluginFormat>::renderMIDIMessages,
+           &ExternalPlugin<juce::PatchedVST3PluginFormat>::renderMIDIMessages,
            "Run an audio or MIDI buffer through this plugin, returning "
            "audio. Alias for :py:meth:`process`.",
            py::arg("midi_messages"), py::arg("duration"),
