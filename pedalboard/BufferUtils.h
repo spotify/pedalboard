@@ -91,8 +91,8 @@ juce::AudioBuffer<T> copyPyArrayIntoJuceBuffer(
 
   if (numChannels == 0) {
     throw std::runtime_error("No channels passed!");
-  } else if (numChannels > 2) {
-    throw std::runtime_error("More than two channels received!");
+  } else if (numChannels > 32) {
+    throw std::runtime_error("More than 32 channels received!");
   }
 
   juce::AudioBuffer<T> ioBuffer(numChannels, numSamples);
@@ -173,8 +173,8 @@ const juce::AudioBuffer<T> convertPyArrayIntoJuceBuffer(
 
     if (numChannels == 0) {
       throw std::runtime_error("No channels passed!");
-    } else if (numChannels > 2) {
-      throw std::runtime_error("More than two channels received!");
+    } else if (numChannels > 32) {
+      throw std::runtime_error("More than 32 channels received!");
     }
 
     T **channelPointers = (T **)alloca(numChannels * sizeof(T *));

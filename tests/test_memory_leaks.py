@@ -23,9 +23,12 @@ from .test_external_plugins import load_test_plugin, AVAILABLE_PLUGINS_IN_TEST_E
 
 
 def get_first_parameter_from(plugin):
-    param_name, param = next(
-        iter([(name, param) for name, param in plugin.parameters.items() if param.type is float])
-    )
+    try:
+        param_name, param = next(
+            iter([(name, param) for name, param in plugin.parameters.items() if param.type is float])
+        )
+    except StopIteration:
+        pytest.skip("No float parameter in plugin.")
     value = getattr(plugin, param_name)
     return param_name, param, value
 
@@ -33,6 +36,7 @@ def get_first_parameter_from(plugin):
 @pytest.mark.parametrize("plugin_path", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_plugin_can_be_garbage_collected(plugin_path: str):
     # Load a VST3 or Audio Unit plugin from disk:
+        
     plugin = load_test_plugin(plugin_path, disable_caching=True)
 
     _plugin_ref = weakref.ref(plugin)
