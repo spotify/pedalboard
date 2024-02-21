@@ -672,6 +672,7 @@ public:
     juce::String loadError;
     {
       std::lock_guard<std::mutex> lock(EXTERNAL_PLUGIN_MUTEX);
+
       pluginInstance = pluginFormatManager.createPluginInstance(
           foundPluginDescription, ExternalLoadSampleRate,
           ExternalLoadMaximumBlockSize, loadError);
@@ -1181,13 +1182,12 @@ public:
     unsigned long outputSampleCount = duration * sampleRate;
 
     juce::MidiBuffer midiInputBuffer =
-      parseMidiBufferFromPython(midiMessages, sampleRate);
+        parseMidiBufferFromPython(midiMessages, sampleRate);
 
     outputArray =
-      py::array_t<float>({numChannels, (unsigned int)outputSampleCount});
+        py::array_t<float>({numChannels, (unsigned int)outputSampleCount});
 
-    float *outputArrayPointer =
-      static_cast<float *>(outputArray.request().ptr);
+    float *outputArrayPointer = static_cast<float *>(outputArray.request().ptr);
 
     py::gil_scoped_release release;
 
@@ -1316,14 +1316,21 @@ private:
 
 inline void init_external_plugins(py::module &m) {
   py::enum_<ExternalPluginReloadType>(
-    m, "ExternalPluginReloadType", "Indicates the behavior of an external plugin when reset() is called.")
-    .value("Unknown", ExternalPluginReloadType::Unknown,
-            "The behavior of the plugin is unknown. This will force a full reinstantiation of the plugin every time reset is called.")
-    .value("ClearsAudioOnReset", ExternalPluginReloadType::ClearsAudioOnReset,
-            "This plugin clears its internal buffers correctly when reset() is called. The plugin will not be reinstantiated when reset is called.")
-    .value("PersistsAudioOnReset", ExternalPluginReloadType::PersistsAudioOnReset,
-            "This plugin does not clear its internal buffers as expected when reset() is called. This will force a full reinstantiation of the plugin every time reset is called.")
-    .export_values();
+      m, "ExternalPluginReloadType",
+      "Indicates the behavior of an external plugin when reset() is called.")
+      .value("Unknown", ExternalPluginReloadType::Unknown,
+             "The behavior of the plugin is unknown. This will force a full "
+             "reinstantiation of the plugin every time reset is called.")
+      .value(
+          "ClearsAudioOnReset", ExternalPluginReloadType::ClearsAudioOnReset,
+          "This plugin clears its internal buffers correctly when reset() is "
+          "called. The plugin will not be reinstantiated when reset is called.")
+      .value("PersistsAudioOnReset",
+             ExternalPluginReloadType::PersistsAudioOnReset,
+             "This plugin does not clear its internal buffers as expected when "
+             "reset() is called. This will force a full reinstantiation of the "
+             "plugin every time reset is called.")
+      .export_values();
 
   py::class_<juce::AudioProcessorParameter>(
       m, "_AudioProcessorParameter",
@@ -1617,11 +1624,12 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
            py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
            py::arg("reset") = true)
       .def_readwrite(
-        "_reload_type",
-        &ExternalPlugin<juce::PatchedVST3PluginFormat>::reloadType,
-        "The behavior that this plugin exhibits when .reset() is called. "
-        "This is an internal attribute which gets set on plugin "
-        "instantiation and should only be accessed for debugging and testing.");
+          "_reload_type",
+          &ExternalPlugin<juce::PatchedVST3PluginFormat>::reloadType,
+          "The behavior that this plugin exhibits when .reset() is called. "
+          "This is an internal attribute which gets set on plugin "
+          "instantiation and should only be accessed for debugging and "
+          "testing.");
 #endif
 
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
@@ -1743,11 +1751,12 @@ see :class:`pedalboard.VST3Plugin`.)
            py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
            py::arg("reset") = true)
       .def_readwrite(
-        "_reload_type",
-        &ExternalPlugin<juce::AudioUnitPluginFormat>::reloadType,
-        "The behavior that this plugin exhibits when .reset() is called. "
-        "This is an internal attribute which gets set on plugin "
-        "instantiation and should only be accessed for debugging and testing.");
+          "_reload_type",
+          &ExternalPlugin<juce::AudioUnitPluginFormat>::reloadType,
+          "The behavior that this plugin exhibits when .reset() is called. "
+          "This is an internal attribute which gets set on plugin "
+          "instantiation and should only be accessed for debugging and "
+          "testing.");
 #endif
 }
 

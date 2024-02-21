@@ -15,13 +15,12 @@
 # limitations under the License.
 
 
-import pytest
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
+import pytest
 
 import pedalboard
-
 
 TESTABLE_PLUGINS = []
 for plugin_class in pedalboard.Plugin.__subclasses__():

@@ -2204,7 +2204,7 @@ public:
     };
 
     /* if (MessageManager::getInstance()->isThisTheMessageThread()) { */
-      cleanup();
+    cleanup();
     /* } else {
       WaitableEvent completionEvent;
       (new VST3Deleter(*this, completionEvent))->post();
@@ -2365,11 +2365,12 @@ public:
     // The VST3 spec requires that IComponent::setupProcessing() is called on
     // the message thread. If you call it from a different thread, some plugins
     // may break.
-    // 
+    //
     // NOTE(psobot, 2024-02-21): Pedalboard intentionally comments out the below
     // two lines, which violates the VST3 spec. However, this allows for
-    // parallelism when using VST3 plugins, at the risk of breaking some plugins.
-    // 
+    // parallelism when using VST3 plugins, at the risk of breaking some
+    // plugins.
+    //
     // JUCE_ASSERT_MESSAGE_THREAD
     // MessageManagerLock lock;
 
