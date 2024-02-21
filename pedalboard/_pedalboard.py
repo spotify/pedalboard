@@ -676,7 +676,10 @@ class _PythonExternalPluginMixin:
                         float(strip_common_float_suffixes(string_value)), wrapped=parameter
                     )  # type: ignore
                 elif parameter.type is bool:
-                    return BooleanWithParameter(parameter.raw_value >= 0.5, wrapped=parameter)  # type: ignore
+                    return BooleanWithParameter(
+                        parameter.raw_value >= 0.5,
+                        wrapped=parameter,
+                    )  # type: ignore
                 elif parameter.type is str:
                     return StringWithParameter(str(string_value), wrapped=parameter)  # type: ignore
                 else:
