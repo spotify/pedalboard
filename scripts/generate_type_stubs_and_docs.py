@@ -1,28 +1,29 @@
-import os
-import re
-import sys
 import argparse
-import inspect
-import typing
-import shutil
 import difflib
 import importlib
+import inspect
+import os
 import pathlib
-import psutil
+import re
+import shutil
 import subprocess
+import sys
 import traceback
-from tempfile import TemporaryDirectory
+import typing
 from contextlib import contextmanager
+from tempfile import TemporaryDirectory
 from typing import Dict, List
 
+import mypy.stubtest
+import psutil
+import sphinx.ext.autodoc.importer
+from mypy.stubtest import parse_options as mypy_parse_options
+from mypy.stubtest import test_stubs
 from pybind11_stubgen import ClassStubsGenerator, StubsGenerator
 from pybind11_stubgen import main as pybind11_stubgen_main
-import mypy.stubtest
-from mypy.stubtest import test_stubs, parse_options as mypy_parse_options
-import sphinx.ext.autodoc.importer
 from sphinx.cmd.build import main as sphinx_build_main
-from scripts.postprocess_type_hints import main as postprocess_type_hints_main
 
+from scripts.postprocess_type_hints import main as postprocess_type_hints_main
 
 MAX_DIFF_LINE_LENGTH = 150
 
@@ -76,7 +77,7 @@ def patch_pybind11_stubgen():
             self.enum_docstrings = []
 
         def get_involved_modules_names(self):
-            return []
+            return set()
 
         def parse(self):
             self.doc_string = self.klass.__doc__ or ""

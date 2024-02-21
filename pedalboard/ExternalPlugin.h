@@ -639,6 +639,15 @@ public:
   }
 
   void reinstantiatePlugin() {
+    // JUCE only allows creating new plugin instances from the main
+    // thread, which we may not be on:
+    if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+      throw std::runtime_error(
+          "Plugin " + pathToPluginFile.toStdString() +
+          " must be reloaded on the main thread. Please pass `reset=False` " +
+          "if calling this plugin from a non-main thread.");
+    }
+
     // If we have an existing plugin, save its state and reload its state
     // later:
     juce::MemoryBlock savedState;
@@ -663,6 +672,7 @@ public:
     juce::String loadError;
     {
       std::lock_guard<std::mutex> lock(EXTERNAL_PLUGIN_MUTEX);
+
       pluginInstance = pluginFormatManager.createPluginInstance(
           foundPluginDescription, ExternalLoadSampleRate,
           ExternalLoadMaximumBlockSize, loadError);
@@ -1013,7 +1023,7 @@ public:
   /**
    * reset() is only called if reset=True is passed.
    */
-  void reset() noexcept override {
+  void reset() override {
     if (pluginInstance) {
       switch (reloadType) {
       case ExternalPluginReloadType::ClearsAudioOnReset:
@@ -1171,6 +1181,16 @@ public:
     py::array_t<float> outputArray;
     unsigned long outputSampleCount = duration * sampleRate;
 
+    juce::MidiBuffer midiInputBuffer =
+        parseMidiBufferFromPython(midiMessages, sampleRate);
+
+    outputArray =
+        py::array_t<float>({numChannels, (unsigned int)outputSampleCount});
+
+    float *outputArrayPointer = static_cast<float *>(outputArray.request().ptr);
+
+    py::gil_scoped_release release;
+
     if (pluginInstance) {
       if (reset)
         this->reset();
@@ -1197,19 +1217,8 @@ public:
             " channels of output were requested.");
       }
 
-      juce::MidiBuffer midiInputBuffer =
-          parseMidiBufferFromPython(midiMessages, sampleRate);
-
-      outputArray =
-          py::array_t<float>({numChannels, (unsigned int)outputSampleCount});
-
-      float *outputArrayPointer =
-          static_cast<float *>(outputArray.request().ptr);
-
       std::memset((void *)outputArrayPointer, 0,
                   sizeof(float) * numChannels * outputSampleCount);
-
-      py::gil_scoped_release release;
 
       for (unsigned long i = 0; i < outputSampleCount; i += bufferSize) {
         unsigned long chunkSampleCount =
@@ -1291,6 +1300,8 @@ public:
     StandalonePluginWindow::openWindowAndWait(*pluginInstance, optionalEvent);
   }
 
+  ExternalPluginReloadType reloadType = ExternalPluginReloadType::Unknown;
+
 private:
   constexpr static int ExternalLoadSampleRate = 44100,
                        ExternalLoadMaximumBlockSize = 8192;
@@ -1301,11 +1312,26 @@ private:
 
   long samplesProvided = 0;
   float initializationTimeout = DEFAULT_INITIALIZATION_TIMEOUT_SECONDS;
-
-  ExternalPluginReloadType reloadType = ExternalPluginReloadType::Unknown;
 };
 
 inline void init_external_plugins(py::module &m) {
+  py::enum_<ExternalPluginReloadType>(
+      m, "ExternalPluginReloadType",
+      "Indicates the behavior of an external plugin when reset() is called.")
+      .value("Unknown", ExternalPluginReloadType::Unknown,
+             "The behavior of the plugin is unknown. This will force a full "
+             "reinstantiation of the plugin every time reset is called.")
+      .value(
+          "ClearsAudioOnReset", ExternalPluginReloadType::ClearsAudioOnReset,
+          "This plugin clears its internal buffers correctly when reset() is "
+          "called. The plugin will not be reinstantiated when reset is called.")
+      .value("PersistsAudioOnReset",
+             ExternalPluginReloadType::PersistsAudioOnReset,
+             "This plugin does not clear its internal buffers as expected when "
+             "reset() is called. This will force a full reinstantiation of the "
+             "plugin every time reset is called.")
+      .export_values();
+
   py::class_<juce::AudioProcessorParameter>(
       m, "_AudioProcessorParameter",
       "An abstract base class for parameter objects that can be added to an "
@@ -1498,7 +1524,17 @@ files are not cross-compatible with different operating systems; a platform-spec
 build of each plugin is required to load that plugin on a given platform. (For
 example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
 
+.. warning::
+    Some VST3® plugins may throw errors, hang, generate incorrect output, or
+    outright crash if called from background threads. If you find that a VST3®
+    plugin is not working as expected, try calling it from the main thread
+    instead and `open a GitHub Issue to track the incompatibility
+    <https://github.com/spotify/pedalboard/issues/new>`_.
+
+
 *Support for instrument plugins introduced in v0.7.4.*
+
+*Support for running VST3® plugins on background threads introduced in v0.8.8.*
 )")
       .def(
           py::init([](std::string &pathToPluginFile, py::object parameterValues,
@@ -1596,7 +1632,14 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
            py::arg("midi_messages"), py::arg("duration"),
            py::arg("sample_rate"), py::arg("num_channels") = 2,
            py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-           py::arg("reset") = true);
+           py::arg("reset") = true)
+      .def_readwrite(
+          "_reload_type",
+          &ExternalPlugin<juce::PatchedVST3PluginFormat>::reloadType,
+          "The behavior that this plugin exhibits when .reset() is called. "
+          "This is an internal attribute which gets set on plugin "
+          "instantiation and should only be accessed for debugging and "
+          "testing.");
 #endif
 
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
@@ -1617,7 +1660,16 @@ loadable (usually ``/Library/Audio/Plug-Ins/Components/`` or
 For a plugin wrapper that works on Windows and Linux as well,
 see :class:`pedalboard.VST3Plugin`.)
 
+.. warning::
+    Some Audio Unit plugins may throw errors, hang, generate incorrect output, or
+    outright crash if called from background threads. If you find that a Audio Unit
+    plugin is not working as expected, try calling it from the main thread
+    instead and `open a GitHub Issue to track the incompatibility
+    <https://github.com/spotify/pedalboard/issues/new>`_.
+
 *Support for instrument plugins introduced in v0.7.4.*
+
+*Support for running Audio Unit plugins on background threads introduced in v0.8.8.*
 )")
       .def(
           py::init([](std::string &pathToPluginFile, py::object parameterValues,
@@ -1716,7 +1768,14 @@ see :class:`pedalboard.VST3Plugin`.)
            py::arg("midi_messages"), py::arg("duration"),
            py::arg("sample_rate"), py::arg("num_channels") = 2,
            py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-           py::arg("reset") = true);
+           py::arg("reset") = true)
+      .def_readwrite(
+          "_reload_type",
+          &ExternalPlugin<juce::AudioUnitPluginFormat>::reloadType,
+          "The behavior that this plugin exhibits when .reset() is called. "
+          "This is an internal attribute which gets set on plugin "
+          "instantiation and should only be accessed for debugging and "
+          "testing.");
 #endif
 }
 

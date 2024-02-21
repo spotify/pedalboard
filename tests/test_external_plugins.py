@@ -15,31 +15,31 @@
 # limitations under the License.
 
 
-import os
-import time
-import math
-import psutil
 import atexit
+import math
+import os
+import platform
 import random
 import shutil
-import platform
-import threading
 import subprocess
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from glob import glob
 from pathlib import Path
-
-import mido
-
-from pedalboard._pedalboard import (
-    WrappedBool,
-    strip_common_float_suffixes,
-    normalize_python_parameter_name,
-)
-import pytest
-import pedalboard
-import numpy as np
 from typing import Optional
 
+import mido
+import numpy as np
+import psutil
+import pytest
+
+import pedalboard
+from pedalboard._pedalboard import (
+    WrappedBool,
+    normalize_python_parameter_name,
+    strip_common_float_suffixes,
+)
 
 TEST_EFFECT_PLUGIN_BASE_PATH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), "plugins", "effect"
@@ -989,3 +989,64 @@ def test_get_plugin_names_from_container(plugin_filename: str):
         raise ValueError("Plugin does not seem to be a .vst3 or .component.")
 
     assert len(names) > 1
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("num_plugins", [2, 4])
+def test_external_effect_plugin_concurrency(plugin_filename: str, num_plugins: int):
+    plugins = [load_test_plugin(plugin_filename, disable_caching=True) for _ in range(num_plugins)]
+
+    if plugins[0]._reload_type != pedalboard.ExternalPluginReloadType.ClearsAudioOnReset:
+        pytest.skip("Cannot test concurrency if a plugin does not clear audio on reset.")
+
+    sr = 44100
+    noise = np.random.rand(sr, 2)
+    assert max_volume_of(noise) > 0.95
+
+    with ThreadPoolExecutor(num_plugins) as executor:
+        futures = [executor.submit(lambda: plugin(noise, sr)) for plugin in plugins]
+        outputs = [future.result() for future in futures]
+
+    for a, b in zip(outputs, outputs[1:]):
+        np.testing.assert_allclose(a, b, atol=0.05)
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT)
+@pytest.mark.parametrize("num_plugins", [2, 4])
+@pytest.mark.parametrize(
+    "notes",
+    [
+        [
+            mido.Message("note_on", note=100, velocity=3, time=0),
+            mido.Message("note_off", note=100, time=5.0),
+        ]
+    ],
+)
+def test_external_instrument_plugin_concurrency(plugin_filename: str, num_plugins: int, notes):
+    plugins = [load_test_plugin(plugin_filename, disable_caching=True) for _ in range(num_plugins)]
+    with ThreadPoolExecutor(num_plugins) as executor:
+        futures = [
+            executor.submit(lambda: plugin(notes, 6.0, 44100, 2, reset=False)) for plugin in plugins
+        ]
+        outputs = [future.result() for future in futures]
+
+    for a, b in zip(outputs, outputs[1:]):
+        np.testing.assert_allclose(a, b, atol=0.05)
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_external_effect_cannot_be_reset_on_non_main_thread(plugin_filename: str):
+    with ThreadPoolExecutor(1) as executor:
+        plugin = load_test_plugin(plugin_filename)
+        # Set the reload type manually to force the behaviour we want to test:
+        plugin._reload_type = pedalboard.ExternalPluginReloadType.Unknown
+        with pytest.raises(RuntimeError, match="main thread"):
+            executor.submit(plugin.reset).result()
+
+
+@pytest.mark.parametrize("plugin_filename", AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT)
+def test_external_instrument_cannot_be_reset_on_non_main_thread(plugin_filename: str):
+    with ThreadPoolExecutor(1) as executor:
+        plugin = load_test_plugin(plugin_filename)
+        with pytest.raises(RuntimeError, match="main thread"):
+            executor.submit(plugin.reset).result()

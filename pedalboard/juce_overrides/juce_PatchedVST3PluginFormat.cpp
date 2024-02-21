@@ -2112,7 +2112,7 @@ public:
     }
 
     String getText(float value, int maximumLength) const override {
-      MessageManagerLock lock;
+      // MessageManagerLock lock;
 
       if (pluginInstance.editController != nullptr) {
         Vst::String128 result;
@@ -2126,7 +2126,7 @@ public:
     }
 
     float getValueForText(const String &text) const override {
-      MessageManagerLock lock;
+      // MessageManagerLock lock;
 
       if (pluginInstance.editController != nullptr) {
         Vst::ParamValue result;
@@ -2203,13 +2203,13 @@ public:
       WaitableEvent &completionSignal;
     };
 
-    if (MessageManager::getInstance()->isThisTheMessageThread()) {
-      cleanup();
-    } else {
+    /* if (MessageManager::getInstance()->isThisTheMessageThread()) { */
+    cleanup();
+    /* } else {
       WaitableEvent completionEvent;
       (new VST3Deleter(*this, completionEvent))->post();
       completionEvent.wait();
-    }
+    } */
   }
 
   void cleanup() {
@@ -2365,8 +2365,14 @@ public:
     // The VST3 spec requires that IComponent::setupProcessing() is called on
     // the message thread. If you call it from a different thread, some plugins
     // may break.
-    JUCE_ASSERT_MESSAGE_THREAD
-    MessageManagerLock lock;
+    //
+    // NOTE(psobot, 2024-02-21): Pedalboard intentionally comments out the below
+    // two lines, which violates the VST3 spec. However, this allows for
+    // parallelism when using VST3 plugins, at the risk of breaking some
+    // plugins.
+    //
+    // JUCE_ASSERT_MESSAGE_THREAD
+    // MessageManagerLock lock;
 
     const SpinLock::ScopedLockType processLock(processMutex);
 
@@ -2874,8 +2880,8 @@ public:
     // We'll lock the message manager here as a safety precaution, but some
     // plugins may still misbehave!
 
-    JUCE_ASSERT_MESSAGE_THREAD
-    MessageManagerLock lock;
+    // JUCE_ASSERT_MESSAGE_THREAD
+    // MessageManagerLock lock;
 
     parameterDispatcher.flush();
 
@@ -2893,8 +2899,8 @@ public:
     // We'll lock the message manager here as a safety precaution, but some
     // plugins may still misbehave!
 
-    JUCE_ASSERT_MESSAGE_THREAD
-    MessageManagerLock lock;
+    // JUCE_ASSERT_MESSAGE_THREAD
+    // MessageManagerLock lock;
 
     parameterDispatcher.flush();
 

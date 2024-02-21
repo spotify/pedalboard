@@ -14,14 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
 import platform
-
+import re
 import weakref
 from contextlib import contextmanager
-from typing import cast, List, Optional, Dict, Tuple, Iterable, Type, Union, Set, no_type_check
+from typing import (
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    cast,
+    no_type_check,
+)
 
-from pedalboard_native import Plugin, ExternalPlugin, _AudioProcessorParameter  # type: ignore
+from pedalboard_native import (  # type: ignore
+    ExternalPlugin,
+    Plugin,
+    _AudioProcessorParameter,
+)
 from pedalboard_native.utils import Chain  # type: ignore
 
 
@@ -663,7 +677,8 @@ class _PythonExternalPluginMixin:
                     )  # type: ignore
                 elif parameter.type is bool:
                     return BooleanWithParameter(
-                        parameter.raw_value >= 0.5, wrapped=parameter
+                        parameter.raw_value >= 0.5,
+                        wrapped=parameter,
                     )  # type: ignore
                 elif parameter.type is str:
                     return StringWithParameter(str(string_value), wrapped=parameter)  # type: ignore
