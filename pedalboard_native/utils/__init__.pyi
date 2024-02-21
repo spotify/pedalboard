@@ -38,8 +38,8 @@ class Chain(pedalboard_native.PluginContainer, pedalboard_native.Plugin):
     """
 
     @typing.overload
-    @typing.overload
     def __init__(self, plugins: typing.List[pedalboard_native.Plugin]) -> None: ...
+    @typing.overload
     def __repr__(self) -> str: ...
     pass
 
@@ -49,8 +49,8 @@ class Mix(pedalboard_native.PluginContainer, pedalboard_native.Plugin):
     """
 
     @typing.overload
-    @typing.overload
     def __init__(self, plugins: typing.List[pedalboard_native.Plugin]) -> None: ...
+    @typing.overload
     def __repr__(self) -> str: ...
     pass
 

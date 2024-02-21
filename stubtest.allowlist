@@ -15,3 +15,4 @@ pedalboard.utils.__all__
 pedalboard.version.__all__
 .*?AudioUnitPlugin.*
 .*?metaclass.*
+.*?ExternalPluginReloadType.*

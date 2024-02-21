@@ -5,14 +5,15 @@ A number of changes must be made to produce valid type hint files out-of-the-box
 Think of this as a more intelligent (or less intelligent) application of `git patch`.
 """
 
-import os
-import io
-import re
-import difflib
-from pathlib import Path
-from collections import defaultdict
-import black
 import argparse
+import difflib
+import io
+import os
+import re
+from collections import defaultdict
+from pathlib import Path
+
+import black
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -67,6 +68,15 @@ REPLACEMENTS = [
         r"pedalboard_native\.Resample\.Quality = Quality",
         "pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality",
     ),
+    (
+        r".*: pedalboard_native.ExternalPluginReloadType.*",
+        "",
+    ),
+    # Enum values that should not be in __all__:
+    (r'.*"ClearsAudioOnReset",.*', ""),
+    (r'.*"PersistsAudioOnReset",.*', ""),
+    (r'.*"Unknown",.*', ""),
+    (r'.*"ExternalPluginReloadType",.*', ""),
     # Remove type hints in docstrings, added unnecessarily by pybind11-stubgen
     (r".*?:type:.*$", ""),
     # MyPy chokes on classes that contain both __new__ and __init__.
@@ -110,6 +120,7 @@ REMOVE_INDENTED_BLOCKS_STARTING_WITH = [
     # TODO(psobot): Add a conditional to _AudioUnitPlugin
     # to ensure type stubs only show up on macOS:
     # "class _AudioUnitPlugin(Plugin):"
+    "class ExternalPluginReloadType",
 ]
 
 # .pyi files usually don't care about dependent types being present in order in the file;
@@ -181,6 +192,7 @@ def main(args=None):
                             in_excluded_indented_block = True
                             continue
                         elif any(line.startswith(x) for x in INDENTED_BLOCKS_TO_MOVE_TO_END):
+                            in_excluded_indented_block = False
                             in_moved_indented_block = True
                         elif line.strip() and not line.startswith(" "):
                             in_excluded_indented_block = False

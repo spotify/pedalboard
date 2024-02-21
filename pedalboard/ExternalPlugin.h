@@ -1524,7 +1524,17 @@ files are not cross-compatible with different operating systems; a platform-spec
 build of each plugin is required to load that plugin on a given platform. (For
 example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
 
+.. warning::
+    Some VST3® plugins may throw errors, hang, generate incorrect output, or
+    outright crash if called from background threads. If you find that a VST3®
+    plugin is not working as expected, try calling it from the main thread
+    instead and `open a GitHub Issue to track the incompatibility
+    <https://github.com/spotify/pedalboard/issues/new>`_.
+
+
 *Support for instrument plugins introduced in v0.7.4.*
+
+*Support for running VST3® plugins on background threads introduced in v0.8.8.*
 )")
       .def(
           py::init([](std::string &pathToPluginFile, py::object parameterValues,
@@ -1650,7 +1660,16 @@ loadable (usually ``/Library/Audio/Plug-Ins/Components/`` or
 For a plugin wrapper that works on Windows and Linux as well,
 see :class:`pedalboard.VST3Plugin`.)
 
+.. warning::
+    Some Audio Unit plugins may throw errors, hang, generate incorrect output, or
+    outright crash if called from background threads. If you find that a Audio Unit
+    plugin is not working as expected, try calling it from the main thread
+    instead and `open a GitHub Issue to track the incompatibility
+    <https://github.com/spotify/pedalboard/issues/new>`_.
+
 *Support for instrument plugins introduced in v0.7.4.*
+
+*Support for running Audio Unit plugins on background threads introduced in v0.8.8.*
 )")
       .def(
           py::init([](std::string &pathToPluginFile, py::object parameterValues,
