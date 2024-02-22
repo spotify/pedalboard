@@ -2445,8 +2445,8 @@ public:
   void releaseResources() override {
     const SpinLock::ScopedLockType lock(processMutex);
 
-    if (!isActive)
-      return; // Avoids redundantly calling things like setActive
+    // if (!isActive)
+    //   return; // Avoids redundantly calling things like setActive
 
     isActive = false;
 
