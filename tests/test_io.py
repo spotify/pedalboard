@@ -453,6 +453,7 @@ def test_file_like_must_be_seekable():
     with open(audio_filename, "rb") as f:
         stream = io.BytesIO(f.read())
     stream.seekable = lambda: False
+    stream.getbuffer = lambda: False  # avoid triggering the fast-path for memoryview
 
     with pytest.raises(ValueError) as e:
         with pedalboard.io.AudioFile(stream):
@@ -469,6 +470,7 @@ def test_no_crash_if_type_error_on_file_like():
 
     # Seekable should be a method, not a property:
     stream.seekable = False
+    stream.getbuffer = lambda: False  # avoid triggering the fast-path for memoryview
 
     with pytest.raises(TypeError) as e:
         with pedalboard.io.AudioFile(stream):
