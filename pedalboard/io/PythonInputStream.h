@@ -32,20 +32,35 @@ bool isReadableFileLike(py::object fileLike) {
          py::hasattr(fileLike, "tell") && py::hasattr(fileLike, "seekable");
 }
 
+std::optional<py::buffer> tryConvertingToBuffer(py::object bufferLike) {
+  try {
+    py::buffer b(bufferLike);
+    return {b};
+  } catch (std::exception &e) {
+    // If not already a buffer, can we call getbuffer() on it and do we then get
+    // a buffer?
+    if (py::hasattr(bufferLike, "getbuffer")) {
+      py::object getBufferResult = bufferLike.attr("getbuffer")();
+      try {
+        py::buffer b(getBufferResult);
+        return {b};
+      } catch (std::exception &e) {
+      }
+    }
+
+    return {};
+  }
+}
+
 /**
  * A juce::InputStream subclass that fetches its
  * data from a provided Python file-like object.
  */
 class PythonInputStream : public juce::InputStream, public PythonFileLike {
 public:
-  PythonInputStream(py::object fileLike) : PythonFileLike(fileLike) {
-    if (!isReadableFileLike(fileLike)) {
-      throw py::type_error("Expected a file-like object (with read, seek, "
-                           "seekable, and tell methods).");
-    }
-  }
+  PythonInputStream(py::object fileLike) : PythonFileLike(fileLike) {}
 
-  bool isSeekable() noexcept {
+  virtual bool isSeekable() noexcept {
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -62,7 +77,7 @@ public:
     }
   }
 
-  juce::int64 getTotalLength() noexcept {
+  virtual juce::int64 getTotalLength() noexcept {
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -94,7 +109,7 @@ public:
     return totalLength;
   }
 
-  int read(void *buffer, int bytesToRead) noexcept {
+  virtual int read(void *buffer, int bytesToRead) noexcept {
     // The buffer should never be null, and a negative size is probably a
     // sign that something is broken!
     jassert(buffer != nullptr && bytesToRead >= 0);
@@ -155,7 +170,7 @@ public:
     }
   }
 
-  bool isExhausted() noexcept {
+  virtual bool isExhausted() noexcept {
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -176,7 +191,7 @@ public:
     }
   }
 
-  juce::int64 getPosition() noexcept {
+  virtual juce::int64 getPosition() noexcept override {
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -193,7 +208,7 @@ public:
     }
   }
 
-  bool setPosition(juce::int64 pos) noexcept {
+  virtual bool setPosition(juce::int64 pos) noexcept override {
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -219,4 +234,63 @@ private:
   juce::int64 totalLength = -1;
   bool lastReadWasSmallerThanExpected = false;
 };
+
+/**
+ * A juce::InputStream subclass that fetches its
+ * data from a provided Python file-like object.
+ */
+class PythonMemoryViewInputStream : public PythonInputStream {
+public:
+  PythonMemoryViewInputStream(py::buffer bufferLike, py::object passedObject)
+      : PythonInputStream(bufferLike) {
+    info = bufferLike.request();
+    totalLength = info.size * info.itemsize;
+    repr = py::repr(passedObject).cast<std::string>();
+
+    if (py::hasattr(passedObject, "tell")) {
+      try {
+        offset = std::min(
+            std::max(0LL, passedObject.attr("tell")().cast<juce::int64>()),
+            totalLength);
+      } catch (py::error_already_set e) {
+        e.restore();
+      } catch (std::exception e) {
+        // If we can't call tell(), that's fine; just assume an offset of 0.
+      }
+    }
+  }
+
+  virtual std::string getRepresentation() override { return repr; }
+
+  virtual bool isSeekable() noexcept override { return true; }
+
+  virtual juce::int64 getTotalLength() noexcept override { return totalLength; }
+
+  virtual int read(void *buffer, int bytesToRead) noexcept override {
+    int start = offset;
+    int end = std::min(offset + bytesToRead, totalLength);
+    std::memcpy(buffer, ((const char *)info.ptr) + start, end - start);
+    offset = end;
+    return end - start;
+  }
+
+  virtual bool isExhausted() noexcept override { return offset >= totalLength; }
+
+  virtual juce::int64 getPosition() noexcept override { return offset; }
+
+  virtual bool setPosition(juce::int64 pos) noexcept override {
+    if (pos >= 0 && pos <= totalLength) {
+      offset = pos;
+      return true;
+    }
+    return false;
+  }
+
+private:
+  juce::int64 totalLength = -1;
+  juce::int64 offset = 0;
+  py::buffer_info info;
+  std::string repr;
+};
+
 }; // namespace Pedalboard

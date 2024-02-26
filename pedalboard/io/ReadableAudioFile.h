@@ -695,15 +695,24 @@ inline void init_readable_audio_file(
       .def_static(
           "__new__",
           [](const py::object *, py::object filelike) {
-            if (!isReadableFileLike(filelike)) {
+            if (!isReadableFileLike(filelike) &&
+                !tryConvertingToBuffer(filelike)) {
               throw py::type_error(
-                  "Expected either a filename or a file-like object (with "
-                  "read, seek, seekable, and tell methods), but received: " +
+                  "Expected either a filename, a file-like object (with "
+                  "read, seek, seekable, and tell methods) or a memory view, "
+                  "but received: " +
                   py::repr(filelike).cast<std::string>());
             }
 
-            return std::make_shared<ReadableAudioFile>(
-                std::make_unique<PythonInputStream>(filelike));
+            if (std::optional<py::buffer> buf =
+                    tryConvertingToBuffer(filelike)) {
+              return std::make_shared<ReadableAudioFile>(
+                  std::make_unique<PythonMemoryViewInputStream>(*buf,
+                                                                filelike));
+            } else {
+              return std::make_shared<ReadableAudioFile>(
+                  std::make_unique<PythonInputStream>(filelike));
+            }
           },
           py::arg("cls"), py::arg("file_like"))
       .def("read", &ReadableAudioFile::read, py::arg("num_frames") = 0, R"(

@@ -52,7 +52,7 @@ class PythonFileLike {
 public:
   PythonFileLike(py::object fileLike) : fileLike(fileLike) {}
 
-  std::string getRepresentation() {
+  virtual std::string getRepresentation() {
     py::gil_scoped_acquire acquire;
     if (PythonException::isPending())
       return "<__repr__ failed>";
@@ -72,7 +72,7 @@ public:
     }
   }
 
-  bool isSeekable() noexcept {
+  virtual bool isSeekable() noexcept {
     py::gil_scoped_acquire acquire;
 
     if (!PythonException::isPending()) {
@@ -88,7 +88,7 @@ public:
     return false;
   }
 
-  juce::int64 getPosition() noexcept {
+  virtual juce::int64 getPosition() noexcept {
     py::gil_scoped_acquire acquire;
 
     if (!PythonException::isPending()) {
@@ -104,7 +104,7 @@ public:
     return -1;
   }
 
-  bool setPosition(juce::int64 pos) noexcept {
+  virtual bool setPosition(juce::int64 pos) noexcept {
     py::gil_scoped_acquire acquire;
 
     if (!PythonException::isPending()) {
