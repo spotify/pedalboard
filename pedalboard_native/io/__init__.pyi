@@ -60,7 +60,7 @@ class AudioFile:
        the sample rate of the file.
      - A file-like object can be provided to :class:`AudioFile`, allowing for reading and
        writing to in-memory streams or buffers. The provided file-like object must be seekable
-       and must be opened in binary mode (i.e.: ``io.BinaryIO`` instead of ``io.StringIO``.).
+       and must be opened in binary mode (i.e.: ``io.BytesIO`` instead of ``io.StringIO``).
        A :class:`memoryview` object may also be provided when reading audio.
 
 
@@ -134,7 +134,7 @@ class AudioFile:
         """
         Open an audio file for reading.
 
-        Open a file-like object for reading. The provided object must have ``read``, ``seek``, ``tell``, and ``seekable`` methods, and must return binary data (i.e.: ``open(..., "w")`` or ``io.BinaryIO``, etc.).
+        Open a file-like object for reading. The provided object must have ``read``, ``seek``, ``tell``, and ``seekable`` methods, and must return binary data (i.e.: ``open(..., "w")`` or ``io.BytesIO``, etc.).
         """
     @classmethod
     @typing.overload
