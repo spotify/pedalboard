@@ -355,6 +355,9 @@ def test_read_from_bytes_io_with_offset():
     with pedalboard.io.AudioFile(garbo) as af:
         assert af.num_channels == 1
         assert af.frames == 44100
+        # Ensure that if we attempt to read past the end of the BytesIO buffer,
+        # we still only get the data we want:
+        assert af.read(af.frames + 10).shape[1] == 44100
 
 
 @pytest.mark.skipif(bool(os.getenv("CI", False)), reason="This test is very flaky on CI runners.")
