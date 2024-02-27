@@ -40,6 +40,14 @@ MULTILINE_REPLACEMENTS = [
 
 REPLACEMENTS = [
     # object is a superclass of `str`, which would make these declarations ambiguous:
+    (
+        r"file_like: object, mode: str = 'r'",
+        r"file_like: typing.Union[typing.BinaryIO, memoryview], mode: str = 'r'",
+    ),
+    (
+        r"file_like: object\) -> ReadableAudioFile:",
+        "file_like: typing.Union[typing.BinaryIO, memoryview]) -> ReadableAudioFile:",
+    ),
     ("file_like: object", "file_like: typing.BinaryIO"),
     # "r" is the default file open/reading mode:
     ("mode: str = 'r'", r'mode: Literal["r"] = "r"'),

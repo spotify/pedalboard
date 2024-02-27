@@ -15,19 +15,22 @@
 # limitations under the License.
 
 
+import glob
 import io
 import os
-import glob
-import wave
 import pathlib
-import shutil
-import pytest
 import platform
-import pedalboard
-import mutagen
+import shutil
+import time
+import wave
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
+import mutagen
 import numpy as np
+import pytest
+
+import pedalboard
 
 from .utils import generate_sine_at
 
@@ -312,6 +315,85 @@ def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
         af.read(1)
 
 
+def test_read_from_bytes_io_memoryview():
+    """
+    Reading from a `memoryview` should be possible; and should be faster
+    as we can release the GIL instead of calling back into Python for
+    every .read() call.
+    """
+    stream = io.BytesIO()
+
+    with pedalboard.io.AudioFile(stream, "w", 44100, 1, format="wav") as af:
+        af.write(np.random.rand(44100))
+
+    stream.seek(0)
+
+    # Should be able to pass in a memoryview:
+    _memoryview = stream.getbuffer()
+    with pedalboard.io.AudioFile(_memoryview) as af:
+        assert af.num_channels == 1
+        assert af.frames == 44100
+        af.read(af.frames)
+        assert repr(_memoryview) in repr(af)
+
+    # Should be able to pass in the BytesIO object itself and that should still work:
+    with pedalboard.io.AudioFile(stream) as af:
+        assert repr(stream) in repr(af)
+
+
+def test_read_from_bytes_io_with_offset():
+    stream = io.BytesIO()
+
+    with pedalboard.io.AudioFile(stream, "w", 44100, 1, format="wav") as af:
+        af.write(np.random.rand(44100))
+
+    # Prepend this buffer with random garbage:
+    garbo = io.BytesIO(b"foobar" + stream.getvalue())
+    # ...but skip the first 6 bytes, after which the stream should be valid:
+    garbo.seek(6)
+
+    with pedalboard.io.AudioFile(garbo) as af:
+        assert af.num_channels == 1
+        assert af.frames == 44100
+        # Ensure that if we attempt to read past the end of the BytesIO buffer,
+        # we still only get the data we want:
+        assert af.read(af.frames + 10).shape[1] == 44100
+
+
+@pytest.mark.skipif(bool(os.getenv("CI", False)), reason="This test is very flaky on CI runners.")
+def test_read_from_bytes_io_memoryview_without_gil():
+    stream = io.BytesIO()
+    num_frames = 44100 * 1000
+
+    with pedalboard.io.AudioFile(stream, "w", 44100, 1, format="wav") as af:
+        af.write(np.random.rand(num_frames))
+
+    num_cpus = os.cpu_count()
+
+    ios = [io.BytesIO(stream.getvalue()) for _ in range(num_cpus)]
+
+    with ThreadPoolExecutor(num_cpus) as executor:
+        a = time.time()
+        futures = [executor.submit(pedalboard.io.AudioFile(_io).read, num_frames) for _io in ios]
+        for future in futures:
+            future.result()
+        b = time.time()
+        threaded_duration = b - a
+
+    ios = [io.BytesIO(stream.getvalue()) for _ in range(num_cpus)]
+
+    a = time.time()
+    for _io in ios:
+        pedalboard.io.AudioFile(_io).read(num_frames)
+    b = time.time()
+    serial_duration = b - a
+
+    # Threaded access should be faster than serial access.
+    # If the GIL is held when we read from the BytesIO stream, then the threaded
+    # version of this will be 2-3x slower than the serial version.
+    assert threaded_duration <= serial_duration
+
+
 @pytest.mark.parametrize(
     "mp3_filename",
     [f for f in sum(TEST_AUDIO_FILES.values(), []) if f.endswith("mp3")],
@@ -375,6 +457,7 @@ def test_file_like_must_be_seekable():
     with open(audio_filename, "rb") as f:
         stream = io.BytesIO(f.read())
     stream.seekable = lambda: False
+    stream.getbuffer = lambda: False  # avoid triggering the fast-path for memoryview
 
     with pytest.raises(ValueError) as e:
         with pedalboard.io.AudioFile(stream):
@@ -391,6 +474,7 @@ def test_no_crash_if_type_error_on_file_like():
 
     # Seekable should be a method, not a property:
     stream.seekable = False
+    stream.getbuffer = lambda: False  # avoid triggering the fast-path for memoryview
 
     with pytest.raises(TypeError) as e:
         with pedalboard.io.AudioFile(stream):

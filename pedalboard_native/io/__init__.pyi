@@ -60,8 +60,8 @@ class AudioFile:
        the sample rate of the file.
      - A file-like object can be provided to :class:`AudioFile`, allowing for reading and
        writing to in-memory streams or buffers. The provided file-like object must be seekable
-       and must be opened in binary mode (i.e.: ``io.BinaryIO`` instead of ``io.StringIO``,
-       if using the `io` package).
+       and must be opened in binary mode (i.e.: ``io.BinaryIO`` instead of ``io.StringIO``.).
+       A :class:`memoryview` object may also be provided when reading audio.
 
 
     Examples
@@ -138,7 +138,9 @@ class AudioFile:
         """
     @classmethod
     @typing.overload
-    def __new__(cls, file_like: typing.BinaryIO, mode: Literal["r"] = "r") -> ReadableAudioFile: ...
+    def __new__(
+        cls, file_like: typing.Union[typing.BinaryIO, memoryview], mode: Literal["r"] = "r"
+    ) -> ReadableAudioFile: ...
     @classmethod
     @typing.overload
     def __new__(
@@ -312,7 +314,7 @@ class ReadableAudioFile(AudioFile):
     def __new__(cls, filename: str) -> ReadableAudioFile: ...
     @classmethod
     @typing.overload
-    def __new__(cls, file_like: typing.BinaryIO) -> ReadableAudioFile: ...
+    def __new__(cls, file_like: typing.Union[typing.BinaryIO, memoryview]) -> ReadableAudioFile: ...
     def __repr__(self) -> str: ...
     def close(self) -> None:
         """
