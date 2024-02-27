@@ -357,7 +357,7 @@ def test_read_from_bytes_io_with_offset():
         assert af.frames == 44100
 
 
-@pytest.mark.skipif(os.getenv("CI"), reason="This test is very flaky on CI runners.")
+@pytest.mark.skipif(bool(os.getenv("CI", False)), reason="This test is very flaky on CI runners.")
 def test_read_from_bytes_io_memoryview_without_gil():
     stream = io.BytesIO()
     num_frames = 44100 * 1000
