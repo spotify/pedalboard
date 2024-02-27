@@ -45,7 +45,7 @@ REPLACEMENTS = [
         r"file_like: typing.Union[typing.BinaryIO, memoryview], mode: str = 'r'",
     ),
     (
-        "file_like: object\) -> ReadableAudioFile:",
+        r"file_like: object\) -> ReadableAudioFile:",
         "file_like: typing.Union[typing.BinaryIO, memoryview]) -> ReadableAudioFile:",
     ),
     ("file_like: object", "file_like: typing.BinaryIO"),
