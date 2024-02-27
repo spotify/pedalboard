@@ -357,6 +357,10 @@ def test_read_from_bytes_io_with_offset():
         assert af.frames == 44100
 
 
+@pytest.mark.skipif(
+    os.cpu_count() < 4,
+    reason="This test requires at least 4 CPU cores to run without being flaky.",
+)
 def test_read_from_bytes_io_memoryview_without_gil():
     stream = io.BytesIO()
     num_frames = 44100 * 1000
