@@ -56,8 +56,8 @@ Unlike a typical ``open`` call:
    the sample rate of the file.
  - A file-like object can be provided to :class:`AudioFile`, allowing for reading and
    writing to in-memory streams or buffers. The provided file-like object must be seekable
-   and must be opened in binary mode (i.e.: ``io.BinaryIO`` instead of ``io.StringIO``, 
-   if using the `io` package).
+   and must be opened in binary mode (i.e.: ``io.BinaryIO`` instead of ``io.StringIO``.).
+   A :class:`memoryview` object may also be provided when reading audio.
 
 
 Examples

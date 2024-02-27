@@ -699,7 +699,7 @@ inline void init_readable_audio_file(
                 !tryConvertingToBuffer(filelike)) {
               throw py::type_error(
                   "Expected either a filename, a file-like object (with "
-                  "read, seek, seekable, and tell methods) or a memory view, "
+                  "read, seek, seekable, and tell methods) or a memoryview, "
                   "but received: " +
                   py::repr(filelike).cast<std::string>());
             }
