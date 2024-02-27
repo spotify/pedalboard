@@ -178,7 +178,8 @@ public:
           // have no channel pointers to pass into the juce::AudioFile
           // constructor!
           std::max(1LL, audioFile->getNumChannels() * inputSamplesRequired));
-      std::fill_n(contiguousSourceSampleBuffer.begin(), contiguousSourceSampleBuffer.size(), 0);
+      std::fill_n(contiguousSourceSampleBuffer.begin(),
+                  contiguousSourceSampleBuffer.size(), 0);
       for (int c = 0; c < audioFile->getNumChannels(); c++) {
         contiguousSourceSampleBufferPointers[c] =
             contiguousSourceSampleBuffer.data() + (c * inputSamplesRequired);
