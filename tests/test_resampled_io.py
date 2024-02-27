@@ -15,13 +15,13 @@
 # limitations under the License.
 
 import time
-import pytest
-from pedalboard import Resample
-from pedalboard.io import AudioFile, StreamResampler, ResampledReadableAudioFile
 from io import BytesIO
 
 import numpy as np
+import pytest
 
+from pedalboard import Resample
+from pedalboard.io import AudioFile, ResampledReadableAudioFile, StreamResampler
 
 from .utils import generate_sine_at
 
@@ -191,8 +191,9 @@ def test_read_resampled_in_chunks(
     read_buffer.name = "test.wav"
     with AudioFile(read_buffer, "w", sample_rate, 1, bit_depth=32) as f:
         f.write(signal)
+    read_buffer.seek(0)
 
-    with AudioFile(BytesIO(read_buffer.getvalue())).resampled_to(target_sample_rate, quality) as f:
+    with AudioFile(read_buffer).resampled_to(target_sample_rate, quality) as f:
         samples_received = 0
         while f.tell() < expected_signal.shape[-1]:
             expected_num_frames = min(chunk_size, expected_signal.shape[-1] - f.tell())
