@@ -268,11 +268,13 @@ public:
   juce::int64 getTotalLength() noexcept override { return totalLength; }
 
   int read(void *buffer, int bytesToRead) noexcept override {
-    int start = offset;
-    int end = std::min(offset + bytesToRead, totalLength);
-    std::memcpy(buffer, ((const char *)info.ptr) + start, end - start);
-    offset = end;
-    return end - start;
+    if (offset + bytesToRead >= totalLength) {
+      bytesToRead = totalLength - offset;
+    }
+
+    std::memcpy(buffer, ((const char *)info.ptr) + offset, bytesToRead);
+    offset += bytesToRead;
+    return bytesToRead;
   }
 
   bool isExhausted() noexcept override { return offset >= totalLength; }
