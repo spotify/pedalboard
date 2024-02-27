@@ -51,6 +51,7 @@ inline void raise() {
 class PythonFileLike {
 public:
   PythonFileLike(py::object fileLike) : fileLike(fileLike) {}
+  virtual ~PythonFileLike() : {}
 
   virtual std::string getRepresentation() {
     py::gil_scoped_acquire acquire;

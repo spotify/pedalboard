@@ -59,6 +59,7 @@ std::optional<py::buffer> tryConvertingToBuffer(py::object bufferLike) {
 class PythonInputStream : public juce::InputStream, public PythonFileLike {
 public:
   PythonInputStream(py::object fileLike) : PythonFileLike(fileLike) {}
+  virtual ~PythonInputStream() {}
 
   bool isSeekable() noexcept override {
     py::gil_scoped_acquire acquire;
