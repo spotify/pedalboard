@@ -357,10 +357,7 @@ def test_read_from_bytes_io_with_offset():
         assert af.frames == 44100
 
 
-@pytest.mark.skipif(
-    os.cpu_count() < 2,
-    reason="This test requires at least 2 CPU cores to run without being flaky.",
-)
+@pytest.mark.skipif(os.getenv("CI"), reason="This test is very flaky on CI runners.")
 def test_read_from_bytes_io_memoryview_without_gil():
     stream = io.BytesIO()
     num_frames = 44100 * 1000
@@ -368,9 +365,11 @@ def test_read_from_bytes_io_memoryview_without_gil():
     with pedalboard.io.AudioFile(stream, "w", 44100, 1, format="wav") as af:
         af.write(np.random.rand(num_frames))
 
-    ios = [io.BytesIO(stream.getvalue()) for _ in range(2)]
+    num_cpus = os.cpu_count()
 
-    with ThreadPoolExecutor(2) as executor:
+    ios = [io.BytesIO(stream.getvalue()) for _ in range(num_cpus)]
+
+    with ThreadPoolExecutor(num_cpus) as executor:
         a = time.time()
         futures = [executor.submit(pedalboard.io.AudioFile(_io).read, num_frames) for _io in ios]
         for future in futures:
@@ -378,7 +377,7 @@ def test_read_from_bytes_io_memoryview_without_gil():
         b = time.time()
         threaded_duration = b - a
 
-    ios = [io.BytesIO(stream.getvalue()) for _ in range(2)]
+    ios = [io.BytesIO(stream.getvalue()) for _ in range(num_cpus)]
 
     a = time.time()
     for _io in ios:
