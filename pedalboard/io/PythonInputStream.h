@@ -60,7 +60,7 @@ class PythonInputStream : public juce::InputStream, public PythonFileLike {
 public:
   PythonInputStream(py::object fileLike) : PythonFileLike(fileLike) {}
 
-  virtual bool isSeekable() noexcept {
+  bool isSeekable() noexcept override {
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -77,7 +77,7 @@ public:
     }
   }
 
-  virtual juce::int64 getTotalLength() noexcept {
+  juce::int64 getTotalLength() noexcept override {
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -109,7 +109,7 @@ public:
     return totalLength;
   }
 
-  virtual int read(void *buffer, int bytesToRead) noexcept {
+  int read(void *buffer, int bytesToRead) noexcept override {
     // The buffer should never be null, and a negative size is probably a
     // sign that something is broken!
     jassert(buffer != nullptr && bytesToRead >= 0);
@@ -170,7 +170,7 @@ public:
     }
   }
 
-  virtual bool isExhausted() noexcept {
+  bool isExhausted() noexcept override {
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -191,7 +191,7 @@ public:
     }
   }
 
-  virtual juce::int64 getPosition() noexcept override {
+  juce::int64 getPosition() noexcept override {
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -208,7 +208,7 @@ public:
     }
   }
 
-  virtual bool setPosition(juce::int64 pos) noexcept override {
+  bool setPosition(juce::int64 pos) noexcept override {
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -260,13 +260,13 @@ public:
     }
   }
 
-  virtual std::string getRepresentation() override { return repr; }
+  std::string getRepresentation() override { return repr; }
 
-  virtual bool isSeekable() noexcept override { return true; }
+  bool isSeekable() noexcept override { return true; }
 
-  virtual juce::int64 getTotalLength() noexcept override { return totalLength; }
+  juce::int64 getTotalLength() noexcept override { return totalLength; }
 
-  virtual int read(void *buffer, int bytesToRead) noexcept override {
+  int read(void *buffer, int bytesToRead) noexcept override {
     int start = offset;
     int end = std::min(offset + bytesToRead, totalLength);
     std::memcpy(buffer, ((const char *)info.ptr) + start, end - start);
@@ -274,11 +274,11 @@ public:
     return end - start;
   }
 
-  virtual bool isExhausted() noexcept override { return offset >= totalLength; }
+  bool isExhausted() noexcept override { return offset >= totalLength; }
 
-  virtual juce::int64 getPosition() noexcept override { return offset; }
+  juce::int64 getPosition() noexcept override { return offset; }
 
-  virtual bool setPosition(juce::int64 pos) noexcept override {
+  bool setPosition(juce::int64 pos) noexcept override {
     if (pos >= 0 && pos <= totalLength) {
       offset = pos;
       return true;
