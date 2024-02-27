@@ -302,8 +302,7 @@ public:
     // If the file being read does not have enough content, it _should_ pad
     // the rest of the array with zeroes. Unfortunately, this does not seem to
     // be true in practice, so we pre-zero the array to be returned here:
-    std::memset((void *)outputPointer, 0,
-                numChannels * numSamplesToFill * sizeof(float));
+    std::fill_n(outputPointer, numChannels * numSamplesToFill, 0);
 
     long long numSamples = std::min(
         numSamplesToFill,
