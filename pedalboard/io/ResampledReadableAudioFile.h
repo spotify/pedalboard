@@ -100,7 +100,6 @@ public:
   ResamplingQuality getQuality() const { return resampler.getQuality(); }
 
   py::array_t<float> read(std::variant<double, long long> numSamplesVariant) {
-    py::gil_scoped_release release;
     long long numSamples = parseNumSamples(numSamplesVariant);
     if (numSamples == 0)
       throw std::domain_error(
@@ -109,8 +108,25 @@ public:
           "memory. Please pass a number of frames to read (available from "
           "the 'frames' attribute).");
 
-    const juce::ScopedLock scopedLock(objectLock);
+    py::gil_scoped_release release;
+    juce::AudioBuffer<float> resampledBuffer;
+    {
+      const juce::ScopedLock scopedLock(objectLock);
+      resampledBuffer = readInternal(numSamples);
+    }
+    py::gil_scoped_acquire acquire;
+    return copyJuceBufferIntoPyArray(resampledBuffer,
+                                     ChannelLayout::NotInterleaved, 0);
+  }
 
+  /**
+   * Read samples from the underlying audio file, resample them, and return a
+   * juce::AudioBuffer containing the result without holding the GIL.
+   *
+   * @param numSamples The number of samples to read.
+   * @return juce::AudioBuffer<float> The resulting audio.
+   */
+  juce::AudioBuffer<float> readInternal(long long numSamples) {
     long long samplesInResampledBuffer = 0;
     juce::AudioBuffer<float> resampledBuffer(audioFile->getNumChannels(),
                                              numSamples);
@@ -149,28 +165,56 @@ public:
                      audioFile->getSampleRateAsDouble()) /
                     resampler.getTargetSampleRate());
 
+    // Make a juce::AudioBuffer that contains contiguous memory,
+    // which we can pass to readInternal:
+    std::vector<float> contiguousSourceSampleBuffer;
+    std::vector<float *> contiguousSourceSampleBufferPointers =
+        std::vector<float *>(audioFile->getNumChannels());
+
     while (samplesInResampledBuffer < numSamples) {
+      // Cut or expand the contiguousSourceSampleBuffer to the required size:
+      contiguousSourceSampleBuffer.resize(
+          // Note: we need at least one element in this buffer or else we'll
+          // have no channel pointers to pass into the juce::AudioFile
+          // constructor!
+          std::max(1LL, audioFile->getNumChannels() * inputSamplesRequired));
+      std::fill_n(contiguousSourceSampleBuffer.begin(),
+                  contiguousSourceSampleBuffer.size(), 0);
+      for (int c = 0; c < audioFile->getNumChannels(); c++) {
+        contiguousSourceSampleBufferPointers[c] =
+            contiguousSourceSampleBuffer.data() + (c * inputSamplesRequired);
+      }
+
+      juce::AudioBuffer<float> sourceSamples = juce::AudioBuffer<float>(
+          contiguousSourceSampleBufferPointers.data(),
+          audioFile->getNumChannels(), inputSamplesRequired);
       std::optional<juce::AudioBuffer<float>> resamplerInput;
 
-      juce::AudioBuffer<float> sourceSamples;
       if (inputSamplesRequired > 0) {
-        {
-          py::gil_scoped_acquire gil;
-          sourceSamples =
-              copyPyArrayIntoJuceBuffer(audioFile->read(inputSamplesRequired),
-                                        {ChannelLayout::NotInterleaved});
-        }
+        // Read from the underlying audioFile into our contiguous buffer,
+        // which causes the sourceSamples AudioBuffer to be filled:
+        long long samplesRead = audioFile->readInternal(
+            audioFile->getNumChannels(), inputSamplesRequired,
+            contiguousSourceSampleBuffer.data());
 
+        // Resize the sourceSamples buffer to the number of samples read,
+        // without reallocating the memory underneath
+        // (still points at contiguousSourceSampleBuffer):
+        sourceSamples.setSize(audioFile->getNumChannels(), samplesRead,
+                              /* keepExistingContent */ true,
+                              /* clearExtraSpace */ false,
+                              /* avoidReallocating */ true);
+
+        // If the underlying source ran out of samples, tell the resampler that
+        // we're done by feeding in an empty optional rather than an empty
+        // buffer:
         if (sourceSamples.getNumSamples() == 0) {
           resamplerInput = {};
         } else {
-          resamplerInput =
-              std::optional<juce::AudioBuffer<float>>(sourceSamples);
+          resamplerInput = {sourceSamples};
         }
       } else {
-        sourceSamples =
-            juce::AudioBuffer<float>(audioFile->getNumChannels(), 0);
-        resamplerInput = std::optional<juce::AudioBuffer<float>>(sourceSamples);
+        resamplerInput = {sourceSamples};
       }
 
       // TODO: Provide an alternative interface to write to the output buffer
@@ -217,12 +261,12 @@ public:
       inputSamplesRequired = 1;
     }
     positionInTargetSampleRate += resampledBuffer.getNumSamples();
-    py::gil_scoped_acquire acquire;
-    return copyJuceBufferIntoPyArray(resampledBuffer,
-                                     ChannelLayout::NotInterleaved, 0);
+    return resampledBuffer;
   }
 
   void seek(long long targetPosition) {
+    py::gil_scoped_release release;
+    const juce::ScopedLock scopedLock(objectLock);
     long long positionToSeekToIncludingBuffers = targetPosition;
 
     long long targetPositionInSourceSampleRate =
@@ -245,14 +289,11 @@ public:
     positionInTargetSampleRate =
         (long long)(floatingPositionInTargetSampleRate);
 
-    {
-      py::gil_scoped_release release;
-      resampler.reset();
+    resampler.reset();
 
-      long long inputSamplesUsed =
-          resampler.advanceResamplerState(positionInTargetSampleRate);
-      targetPositionInSourceSampleRate = inputSamplesUsed;
-    }
+    long long inputSamplesUsed =
+        resampler.advanceResamplerState(positionInTargetSampleRate);
+    targetPositionInSourceSampleRate = inputSamplesUsed;
 
     audioFile->seek(std::max(0LL, targetPositionInSourceSampleRate));
 
@@ -262,7 +303,7 @@ public:
     for (long long i = positionInTargetSampleRate; i < targetPosition;
          i += chunkSize) {
       long long numSamples = std::min(chunkSize, targetPosition - i);
-      this->read(numSamples);
+      this->readInternal(numSamples);
     }
   }
 

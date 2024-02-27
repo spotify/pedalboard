@@ -270,96 +270,123 @@ public:
 
     {
       py::gil_scoped_release release;
-
-      // If the file being read does not have enough content, it _should_ pad
-      // the rest of the array with zeroes. Unfortunately, this does not seem to
-      // be true in practice, so we pre-zero the array to be returned here:
-      std::memset((void *)outputInfo.ptr, 0,
-                  numChannels * numSamples * sizeof(float));
-
-      float **channelPointers = (float **)alloca(numChannels * sizeof(float *));
-      for (long long c = 0; c < numChannels; c++) {
-        channelPointers[c] = ((float *)outputInfo.ptr) + (numSamples * c);
-      }
-
-      if (reader->usesFloatingPointData || reader->bitsPerSample == 32) {
-        auto readResult = reader->read(channelPointers, numChannels,
-                                       currentPosition, numSamples);
-        PythonException::raise();
-
-        juce::int64 samplesRead = numSamples;
-        if (juce::AudioFormatReaderWithPosition *positionAware =
-                dynamic_cast<juce::AudioFormatReaderWithPosition *>(
-                    reader.get())) {
-          samplesRead = positionAware->getCurrentPosition() - currentPosition;
-        }
-
-        bool hitEndOfFile =
-            (samplesRead + currentPosition) == reader->lengthInSamples;
-
-        // We read some data, but not as much as we asked for!
-        // This will only happen for lossy, header-optional formats
-        // like MP3.
-        if (samplesRead < numSamples || hitEndOfFile) {
-          lengthCorrection =
-              (samplesRead + currentPosition) - reader->lengthInSamples;
-        } else if (!readResult) {
-          throwReadError(currentPosition, numSamples, samplesRead);
-        }
-
-        numSamplesToKeep = samplesRead;
-      } else {
-        // If the audio is stored in an integral format, read it as integers
-        // and do the floating-point conversion ourselves to work around
-        // floating-point imprecision in JUCE when reading formats smaller than
-        // 32-bit (i.e.: 16-bit audio is off by about 0.003%)
-        auto readResult =
-            reader->readSamples((int **)channelPointers, numChannels, 0,
-                                currentPosition, numSamples);
-        PythonException::raise();
-        if (!readResult) {
-          throwReadError(currentPosition, numSamples);
-        }
-
-        // When converting 24-bit, 16-bit, or 8-bit data from int to float,
-        // the values provided by the above read() call are shifted left
-        // (such that the least significant bits are all zero)
-        // JUCE will then divide these values by 0x7FFFFFFF, even though
-        // the least significant bits are zero, effectively losing precision.
-        // Instead, here we set the scale factor appropriately.
-        int maxValueAsInt;
-        switch (reader->bitsPerSample) {
-        case 24:
-          maxValueAsInt = 0x7FFFFF00;
-          break;
-        case 16:
-          maxValueAsInt = 0x7FFF0000;
-          break;
-        case 8:
-          maxValueAsInt = 0x7F000000;
-          break;
-        default:
-          throw std::runtime_error("Not sure how to convert data from " +
-                                   std::to_string(reader->bitsPerSample) +
-                                   " bits per sample to floating point!");
-        }
-        float scaleFactor = 1.0f / static_cast<float>(maxValueAsInt);
-
-        for (long long c = 0; c < numChannels; c++) {
-          juce::FloatVectorOperations::convertFixedToFloat(
-              channelPointers[c], (const int *)channelPointers[c], scaleFactor,
-              static_cast<int>(numSamples));
-        }
-      }
+      numSamplesToKeep =
+          readInternal(numChannels, numSamples, (float *)outputInfo.ptr);
+      PythonException::raise();
     }
-
-    currentPosition += numSamplesToKeep;
 
     if (numSamplesToKeep < numSamples) {
       buffer.resize({(long long)numChannels, (long long)numSamplesToKeep});
     }
 
     return buffer;
+  }
+
+  /**
+   * Read the given number of frames (samples in each channel) from this audio
+   * file into the given output pointers. This method does not take or hold the
+   * GIL, as no Python methods (like the py::array_t constructor) are
+   * called directly (except for in the error case).
+   *
+   * @param numChannels The number of channels to read from the file
+   * @param numSamplesToFill The number of frames to read from the file
+   * @param outputPointer A pointer to the contiguous floating-point output
+   *                      array to write to of shape [numChannels,
+   * numSamplesToFill].
+   *
+   * @return the number of samples that were actually read from the file
+   */
+  long long readInternal(const long long numChannels,
+                         const long long numSamplesToFill,
+                         float *outputPointer) {
+    // If the file being read does not have enough content, it _should_ pad
+    // the rest of the array with zeroes. Unfortunately, this does not seem to
+    // be true in practice, so we pre-zero the array to be returned here:
+    std::fill_n(outputPointer, numChannels * numSamplesToFill, 0);
+
+    long long numSamples = std::min(
+        numSamplesToFill,
+        (reader->lengthInSamples + (lengthCorrection ? *lengthCorrection : 0)) -
+            currentPosition);
+
+    long long numSamplesToKeep = numSamples;
+
+    float **channelPointers = (float **)alloca(numChannels * sizeof(float *));
+    for (long long c = 0; c < numChannels; c++) {
+      channelPointers[c] = ((float *)outputPointer) + (numSamples * c);
+    }
+
+    if (reader->usesFloatingPointData || reader->bitsPerSample == 32) {
+      auto readResult = reader->read(channelPointers, numChannels,
+                                     currentPosition, numSamples);
+
+      juce::int64 samplesRead = numSamples;
+      if (juce::AudioFormatReaderWithPosition *positionAware =
+              dynamic_cast<juce::AudioFormatReaderWithPosition *>(
+                  reader.get())) {
+        samplesRead = positionAware->getCurrentPosition() - currentPosition;
+      }
+
+      bool hitEndOfFile =
+          (samplesRead + currentPosition) == reader->lengthInSamples;
+
+      // We read some data, but not as much as we asked for!
+      // This will only happen for lossy, header-optional formats
+      // like MP3.
+      if (samplesRead < numSamples || hitEndOfFile) {
+        lengthCorrection =
+            (samplesRead + currentPosition) - reader->lengthInSamples;
+      } else if (!readResult) {
+        PythonException::raise();
+        throwReadError(currentPosition, numSamples, samplesRead);
+      }
+      numSamplesToKeep = samplesRead;
+    } else {
+      // If the audio is stored in an integral format, read it as integers
+      // and do the floating-point conversion ourselves to work around
+      // floating-point imprecision in JUCE when reading formats smaller than
+      // 32-bit (i.e.: 16-bit audio is off by about 0.003%)
+      auto readResult =
+          reader->readSamples((int **)channelPointers, numChannels, 0,
+                              currentPosition, numSamplesToKeep);
+      if (!readResult) {
+        PythonException::raise();
+        throwReadError(currentPosition, numSamples);
+      }
+
+      // When converting 24-bit, 16-bit, or 8-bit data from int to float,
+      // the values provided by the above read() call are shifted left
+      // (such that the least significant bits are all zero)
+      // JUCE will then divide these values by 0x7FFFFFFF, even though
+      // the least significant bits are zero, effectively losing precision.
+      // Instead, here we set the scale factor appropriately.
+      int maxValueAsInt;
+      switch (reader->bitsPerSample) {
+      case 24:
+        maxValueAsInt = 0x7FFFFF00;
+        break;
+      case 16:
+        maxValueAsInt = 0x7FFF0000;
+        break;
+      case 8:
+        maxValueAsInt = 0x7F000000;
+        break;
+      default:
+        throw std::runtime_error("Not sure how to convert data from " +
+                                 std::to_string(reader->bitsPerSample) +
+                                 " bits per sample to floating point!");
+      }
+      float scaleFactor = 1.0f / static_cast<float>(maxValueAsInt);
+
+      for (long long c = 0; c < numChannels; c++) {
+        juce::FloatVectorOperations::convertFixedToFloat(
+            channelPointers[c], (const int *)channelPointers[c], scaleFactor,
+            static_cast<int>(numSamples));
+      }
+    }
+
+    currentPosition += numSamplesToKeep;
+    return numSamplesToKeep;
   }
 
   py::array readRaw(std::variant<double, long long> numSamplesVariant) {
@@ -618,7 +645,7 @@ private:
   std::unique_ptr<juce::AudioFormatReader> reader;
   juce::CriticalSection objectLock;
 
-  int currentPosition = 0;
+  long long currentPosition = 0;
 
   // Certain files (notably CBR MP3 files) can report the wrong number of
   // frames until the entire file is scanned. This field stores the delta
