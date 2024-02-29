@@ -1245,6 +1245,10 @@ public:
     return outputArray;
   }
 
+  void getState(juce::MemoryBlock &dest) const {
+    pluginInstance->getStateInformation(dest);
+  }
+
   std::vector<juce::AudioProcessorParameter *> getParameters() const {
     std::vector<juce::AudioProcessorParameter *> parameters;
     for (auto *parameter : pluginInstance->getParameters()) {
@@ -1590,6 +1594,14 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           },
           "The name of this plugin.")
       .def_property_readonly(
+          "state",
+          [](const ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            juce::MemoryBlock state;
+            plugin.getState(state);
+            return py::bytes((const char *)state.getData(), state.getSize());
+          },
+          "A binary blob containing the complete plugin state.")
+      .def_property_readonly(
           "_parameters",
           &ExternalPlugin<juce::PatchedVST3PluginFormat>::getParameters,
           py::return_value_policy::reference_internal)
@@ -1725,6 +1737,14 @@ see :class:`pedalboard.VST3Plugin`.)
             return plugin.getName().toStdString();
           },
           "The name of this plugin, as reported by the plugin itself.")
+      .def_property_readonly(
+          "state",
+          [](const ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            juce::MemoryBlock state;
+            plugin.getState(state);
+            return py::bytes((const char *)state.getData(), state.getSize());
+          },
+          "A binary blob containing the complete plugin state.")
       .def_property_readonly(
           "_parameters",
           &ExternalPlugin<juce::AudioUnitPluginFormat>::getParameters,
