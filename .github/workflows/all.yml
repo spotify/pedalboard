@@ -91,6 +91,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install wheel
           pip install -r test-requirements.txt
+          # TensorFlow is an optional dependency; if present, we'll run tests with it:
+          # There are no environment specifiers to select when TensorFlow binaries are available.
+          pip install tensorflow || true
       - name: Install JQ for coverage badge on Linux
         run: sudo apt-get install -y jq
         if: runner.os == 'Linux'
@@ -158,6 +161,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install wheel
           pip install -r test-requirements.txt
+          # TensorFlow is an optional dependency; if present, we'll run tests with it:
+          # There are no environment specifiers to select when TensorFlow binaries are available.
+          pip install tensorflow || true
       - name: Build pedalboard locally
         env:
           DEBUG: "0"
