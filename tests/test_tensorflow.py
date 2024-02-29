@@ -14,25 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import pytest
-import platform
 import numpy as np
+import pytest
+
 import pedalboard
 
 
-@pytest.mark.skipif(
-    sys.version_info.minor <= 6, reason="TensorFlow not supported on Python 3.6 anymore."
-)
-@pytest.mark.skipif(
-    sys.version_info.minor >= 10, reason="TensorFlow not supported on Python 3.10+ yet."
-)
-@pytest.mark.skipif(
-    (platform.processor() == "arm" and platform.system() == "Darwin"),
-    reason="TensorFlow not supported on M1 Macs yet.",
-)
 def test_can_be_called_in_tensorflow_data_pipeline():
-    import tensorflow as tf
+    try:
+        import tensorflow as tf
+    except ImportError:
+        pytest.skip("TensorFlow not installed.")
 
     sr = 48000
     plugins = pedalboard.Pedalboard([pedalboard.Gain(), pedalboard.Reverb()])
