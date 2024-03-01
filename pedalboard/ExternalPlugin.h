@@ -1249,6 +1249,10 @@ public:
     pluginInstance->getStateInformation(dest);
   }
 
+  void setState(const void *data, size_t size) {
+    pluginInstance->setStateInformation(data, size);
+  }
+
   std::vector<juce::AudioProcessorParameter *> getParameters() const {
     std::vector<juce::AudioProcessorParameter *> parameters;
     for (auto *parameter : pluginInstance->getParameters()) {
@@ -1570,6 +1574,14 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
            &ExternalPlugin<juce::PatchedVST3PluginFormat>::loadPresetData,
            "Load a VST3 preset file in .vstpreset format.",
            py::arg("preset_file_path"))
+      .def(
+          "set_state",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin,
+             const py::bytes &state) {
+            py::buffer_info info(py::buffer(state).request());
+            plugin.setState(info.ptr, static_cast<size_t>(info.size));
+          },
+          "Set the complete state of the plugin.", py::arg("state"))
       .def_static(
           "get_plugin_names_for_file",
           [](std::string filename) {
@@ -1709,6 +1721,14 @@ see :class:`pedalboard.VST3Plugin`.)
              ss << ">";
              return ss.str();
            })
+      .def(
+          "set_state",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin,
+             const py::bytes &state) {
+            py::buffer_info info(py::buffer(state).request());
+            plugin.setState(info.ptr, static_cast<size_t>(info.size));
+          },
+          "Set the complete state of the plugin.", py::arg("state"))
       .def_static(
           "get_plugin_names_for_file",
           [](std::string filename) {
