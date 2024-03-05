@@ -19,7 +19,7 @@ import random
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
-from functools import cache
+from functools import lru_cache
 from io import BytesIO
 from typing import Literal
 
@@ -38,7 +38,7 @@ class RandomError(Exception):
     pass
 
 
-@cache
+@lru_cache
 def big_buffer() -> np.ndarray:
     return np.random.rand(44_100 * 60 * 10)
 
