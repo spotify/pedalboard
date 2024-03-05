@@ -46,6 +46,7 @@ public:
   }
 
   virtual void flush() noexcept override {
+    ScopedDowngradeToReadLockWithGIL lock(objectLock);
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -73,6 +74,7 @@ public:
   }
 
   virtual bool write(const void *ptr, size_t numBytes) noexcept override {
+    ScopedDowngradeToReadLockWithGIL lock(objectLock);
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -114,6 +116,7 @@ public:
 
   virtual bool writeRepeatedByte(juce::uint8 byte,
                                  size_t numTimesToRepeat) noexcept override {
+    ScopedDowngradeToReadLockWithGIL lock(objectLock);
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
