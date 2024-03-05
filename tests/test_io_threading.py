@@ -21,7 +21,6 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
 from functools import lru_cache
 from io import BytesIO
-from typing import Literal
 
 import numpy as np
 import pytest
@@ -38,7 +37,7 @@ class RandomError(Exception):
     pass
 
 
-@lru_cache
+@lru_cache(maxsize=None)
 def big_buffer() -> np.ndarray:
     return np.random.rand(44_100 * 60 * 10)
 
@@ -83,7 +82,7 @@ def one_minute_buffer(allow_memoryview: bool, should_error: threading.Event) -> 
 def test_simultaneous_reads_from_the_same_file(
     num_workers: int,
     allow_memoryview: bool,
-    locking_scheme: Literal["lock", "no lock"],
+    locking_scheme: str,
     sample_rate: float,
     raise_exceptions: bool,
 ):
@@ -162,7 +161,7 @@ def test_simultaneous_reads_from_the_same_file(
 @pytest.mark.parametrize("raise_exceptions", [False, True])
 def test_simultaneous_writes_to_the_same_file(
     num_workers: int,
-    locking_scheme: Literal["lock", "no lock"],
+    locking_scheme: str,
     raise_exceptions: bool,
 ):
     """
