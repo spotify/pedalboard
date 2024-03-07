@@ -233,6 +233,10 @@ public:
       std::optional<std::variant<std::string, float>> qualityInput = {}) {
     pybind11::gil_scoped_release release;
 
+    // This is kind of silly, as nobody else has a reference
+    // to this object yet; but it prevents some juce assertions in debug builds:
+    juce::ScopedWriteLock writeLock(objectLock);
+
     if (!isInteger(writeSampleRate)) {
       throw py::type_error(
           "Opening an audio file for writing requires an integer sample rate.");
@@ -298,6 +302,7 @@ public:
       }
 
       unsafeOutputStream = pythonOutputStream.get();
+      pythonOutputStream->setObjectLock(&objectLock);
       outputStream = std::move(pythonOutputStream);
     } else {
       juce::File file(filename);
@@ -412,8 +417,25 @@ public:
       // - so we need to release it before possibly throwing an exception, or
       // the stream will leak.
       outputStream.release();
-      PythonException::raise();
+      try {
+        PythonException::raise();
+      } catch (const std::exception &e) {
+        // AudioFormatWriter objects may call .write() in their destructors,
+        // and we need to hold the ScopedWriteLock if they do, so we explicitly
+        // free the writer here instead of when WriteableAudioFile gets
+        // deallocated. (Note that because the object hasn't finished
+        // construction, its destructor will never be called directly.)
+        writer.reset();
+        throw;
+      }
     }
+  }
+
+  ~WriteableAudioFile() {
+    // We need to release the writer here, as it may call .write() in its
+    // destructor, and we need to hold the ScopedWriteLock if it does:
+    juce::ScopedWriteLock writeLock(objectLock);
+    writer.reset();
   }
 
   /**
@@ -448,7 +470,7 @@ public:
 
   template <typename SampleType>
   void write(py::array_t<SampleType, py::array::c_style> inputArray) {
-    const juce::ScopedLock scopedLock(objectLock);
+    const juce::ScopedReadLock scopedReadLock(objectLock);
 
     if (!writer)
       throw std::runtime_error("I/O operation on a closed file.");
@@ -537,8 +559,9 @@ public:
 
         bool writeSuccessful =
             write(channelPointers, numChannels, samplesToWrite);
-        PythonException::raise();
+
         if (!writeSuccessful) {
+          PythonException::raise();
           throw std::runtime_error("Unable to write data to audio file.");
         }
       }
@@ -554,8 +577,9 @@ public:
       }
 
       bool writeSuccessful = write(channelPointers, numChannels, numSamples);
-      PythonException::raise();
+
       if (!writeSuccessful) {
+        PythonException::raise();
         throw std::runtime_error("Unable to write data to audio file.");
       }
       break;
@@ -565,7 +589,17 @@ public:
           "Internal error: got unexpected channel layout.");
     }
 
-    framesWritten += numSamples;
+    {
+      ScopedTryWriteLock scopedTryWriteLock(objectLock);
+      if (!scopedTryWriteLock.isLocked()) {
+        throw std::runtime_error(
+            "Another thread is currently writing to this AudioFile. Note "
+            "that using multiple concurrent writers on the same AudioFile "
+            "object will produce nondeterministic results.");
+      }
+
+      framesWritten += numSamples;
+    }
   }
 
   template <typename TargetType, typename InputType,
@@ -639,6 +673,13 @@ public:
         if (writer->isFloatingPoint()) {
           return writeConvertingTo<float>(channels, numChannels, numSamples);
         } else {
+          ScopedTryWriteLock scopedTryWriteLock(objectLock);
+          if (!scopedTryWriteLock.isLocked()) {
+            throw std::runtime_error(
+                "Another thread is currently writing to this AudioFile. Note "
+                "that using multiple concurrent writers on the same AudioFile "
+                "object will produce nondeterministic results.");
+          }
           return writer->write(channels, numSamples);
         }
       } else {
@@ -649,9 +690,23 @@ public:
         // Just pass the floating point data into the writer as if it were
         // integer data. If the writer requires floating-point input data, this
         // works (and is documented!)
+        ScopedTryWriteLock scopedTryWriteLock(objectLock);
+        if (!scopedTryWriteLock.isLocked()) {
+          throw std::runtime_error(
+              "Another thread is currently writing to this AudioFile. Note "
+              "that using multiple concurrent writers on the same AudioFile "
+              "object will produce nondeterministic results.");
+        }
         return writer->write((const int **)channels, numSamples);
       } else {
         // Convert floating-point to fixed point, but let JUCE do that for us:
+        ScopedTryWriteLock scopedTryWriteLock(objectLock);
+        if (!scopedTryWriteLock.isLocked()) {
+          throw std::runtime_error(
+              "Another thread is currently writing to this AudioFile. Note "
+              "that using multiple concurrent writers on the same AudioFile "
+              "object will produce nondeterministic results.");
+        }
         return writer->writeFromFloatArrays(channels, numChannels, numSamples);
       }
     } else {
@@ -661,30 +716,52 @@ public:
   }
 
   void flush() {
+    const juce::ScopedReadLock scopedReadLock(objectLock);
     if (!writer)
       throw std::runtime_error("I/O operation on a closed file.");
-    const juce::ScopedLock scopedLock(objectLock);
-    pybind11::gil_scoped_release release;
 
-    if (!writer->flush()) {
+    bool flushSucceeded = false;
+    {
+      pybind11::gil_scoped_release release;
+
+      ScopedTryWriteLock scopedTryWriteLock(objectLock);
+      if (!scopedTryWriteLock.isLocked()) {
+        throw std::runtime_error(
+            "Another thread is currently writing to this AudioFile. Note "
+            "that using multiple concurrent writers on the same AudioFile "
+            "object will produce nondeterministic results.");
+      }
+      flushSucceeded = writer->flush();
+    }
+
+    if (!flushSucceeded) {
+      PythonException::raise();
       throw std::runtime_error(
           "Unable to flush audio file; is the underlying file seekable?");
     }
   }
 
   void close() {
+    const juce::ScopedReadLock scopedReadLock(objectLock);
     if (!writer)
       throw std::runtime_error("Cannot close closed file.");
-    const juce::ScopedLock scopedLock(objectLock);
+
+    ScopedTryWriteLock scopedTryWriteLock(objectLock);
+    if (!scopedTryWriteLock.isLocked()) {
+      throw std::runtime_error(
+          "Another thread is currently writing to this AudioFile; it cannot "
+          "be closed until the other thread completes its operation.");
+    }
     writer.reset();
   }
 
   bool isClosed() const {
-    const juce::ScopedLock scopedLock(objectLock);
+    const juce::ScopedReadLock scopedReadLock(objectLock);
     return !writer;
   }
 
   std::variant<double, long> getSampleRate() const {
+    const juce::ScopedReadLock scopedReadLock(objectLock);
     if (!writer)
       throw std::runtime_error("I/O operation on a closed file.");
 
@@ -699,6 +776,7 @@ public:
   }
 
   double getSampleRateAsDouble() const {
+    const juce::ScopedReadLock scopedReadLock(objectLock);
     if (!writer)
       throw std::runtime_error("I/O operation on a closed file.");
 
@@ -712,12 +790,14 @@ public:
   std::optional<std::string> getQuality() const { return quality; }
 
   long getNumChannels() const {
+    const juce::ScopedReadLock scopedReadLock(objectLock);
     if (!writer)
       throw std::runtime_error("I/O operation on a closed file.");
     return writer->getNumChannels();
   }
 
   std::string getFileDatatype() const {
+    const juce::ScopedReadLock scopedReadLock(objectLock);
     if (!writer)
       throw std::runtime_error("I/O operation on a closed file.");
 
@@ -780,7 +860,7 @@ private:
   std::optional<std::string> quality;
   std::unique_ptr<juce::AudioFormatWriter> writer;
   PythonOutputStream *unsafeOutputStream = nullptr;
-  juce::CriticalSection objectLock;
+  juce::ReadWriteLock objectLock;
   int framesWritten = 0;
 };
 

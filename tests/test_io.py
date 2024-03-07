@@ -428,7 +428,7 @@ def test_read_from_empty_stream_produces_helpful_error_message():
     assert "is empty" in str(exc_info.value)
 
 
-def test_file_like_exceptions_propagate():
+def test_file_like_exceptions_propagate_on_read():
     audio_filename = FILENAMES_AND_SAMPLERATES[0][0]
     stream = open(audio_filename, "rb")
     stream_read = stream.read
@@ -449,6 +449,27 @@ def test_file_like_exceptions_propagate():
             for _ in range(af.frames - 1):
                 af.read(1)
         assert "Some kinda error!" in str(e)
+
+
+def test_file_like_exceptions_propagate_on_write():
+    buf = io.BytesIO()
+    stream_write = buf.write
+
+    should_throw = [False]
+
+    def eventually_throw_exception(*args, **kwargs):
+        if should_throw[0]:
+            raise ValueError("Some kinda error!")
+        return stream_write(*args, **kwargs)
+
+    buf.write = eventually_throw_exception
+
+    with pedalboard.io.AudioFile(buf, "w", 44100, 1, format="wav") as af:
+        af.write(np.random.rand(44100))
+        should_throw[0] = True
+        with pytest.raises(ValueError, match=r"Some kinda error!"):
+            af.write(np.random.rand(44100))
+        should_throw[0] = False
 
 
 def test_file_like_must_be_seekable():
