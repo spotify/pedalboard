@@ -18,7 +18,6 @@
 import random
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import nullcontext
 from functools import lru_cache
 from io import BytesIO
 
@@ -27,6 +26,11 @@ import pytest
 
 from pedalboard import Resample
 from pedalboard.io import AudioFile
+
+try:
+    from contextlib import nullcontext
+except ImportError:
+    from contextlib import suppress as nullcontext
 
 # The number of iterations to run the test for with and
 # without a lock around each call to AudioFile's methods:
