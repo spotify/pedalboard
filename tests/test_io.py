@@ -835,6 +835,87 @@ def test_write_twice_overwrites(
 
 
 @pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
+@pytest.mark.parametrize(
+    "samplerate", [8000, 11025, 12000, 16000, 22050, 32000, 44100, 48000, 88200, 96000]
+)
+@pytest.mark.parametrize("num_channels", [1, 2, 3])
+@pytest.mark.parametrize("transposed", [False, True])
+@pytest.mark.parametrize("input_format", [np.float32, np.float64, np.int8, np.int16, np.int32])
+def test_write_matches_encode(
+    extension: str, samplerate: float, num_channels: int, transposed: bool, input_format
+):
+    if extension == ".mp3":
+        if samplerate not in {32000, 44100, 48000}:
+            return
+        if num_channels > 2:
+            return
+    original_audio = generate_sine_at(samplerate, num_channels=num_channels)
+
+    write_bit_depth = 16
+
+    # Not all formats support full 32-bit depth:
+    if extension in {".wav"} and np.issubdtype(input_format, np.signedinteger):
+        write_bit_depth = np.dtype(input_format).itemsize * 8
+
+    # Handle integer audio types by scaling the floating-point data to the full integer range:
+    if np.issubdtype(input_format, np.signedinteger):
+        _max = np.iinfo(input_format).max
+        audio = (original_audio * _max).astype(input_format)
+    else:
+        _max = 1.0
+        audio = original_audio.astype(input_format)
+
+    # Before writing, assert that the data we're about to write is what we expect:
+    tolerance = get_tolerance_for_format_and_bit_depth(".wav", input_format, "int16")
+    np.testing.assert_allclose(original_audio, audio.astype(np.float32) / _max, atol=tolerance)
+
+    num_samples = audio.shape[-1]
+
+    stream = io.BytesIO()
+    stream.name = f"my_file{extension}"
+
+    with pedalboard.io.WriteableAudioFile(
+        stream,
+        samplerate=samplerate,
+        num_channels=num_channels,
+        bit_depth=write_bit_depth,
+    ) as af:
+        if transposed:
+            af.write(audio.T)
+        else:
+            af.write(audio)
+
+    assert stream.tell() > 0
+    stream.seek(0)
+
+    encoded_output = pedalboard.io.AudioFile.encode(
+        audio,
+        samplerate,
+        extension,
+        num_channels,
+        bit_depth=write_bit_depth,
+    )
+
+    if extension != ".ogg":
+        assert encoded_output == stream.getvalue()
+    else:
+        # Ogg files contain some randomness when encoded, but should decode identically:
+        with pedalboard.io.AudioFile(
+            io.BytesIO(encoded_output)
+        ) as encoded_f, pedalboard.io.AudioFile(stream) as streamed_f:
+            assert encoded_f.samplerate == streamed_f.samplerate
+            assert encoded_f.num_channels == streamed_f.num_channels
+            assert encoded_f.frames == streamed_f.frames
+            assert encoded_f.file_dtype == streamed_f.file_dtype
+            np.testing.assert_allclose(
+                encoded_f.read(encoded_f.frames),
+                streamed_f.read(streamed_f.frames),
+                # Ogg files don't have 32-bit precision, and the encoding is not 100% deterministic:
+                atol=(1e-3 if input_format == np.int32 else 0),
+            )
+
+
+@pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
 @pytest.mark.parametrize("samplerate", [1234.5, 23.0000000001])
 def test_fractional_sample_rates(tmp_path: pathlib.Path, extension: str, samplerate):
     filename = str(tmp_path / f"test{extension}")

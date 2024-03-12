@@ -228,7 +228,7 @@ public:
 
   WriteableAudioFile(
       std::string filename,
-      std::unique_ptr<PythonOutputStream> pythonOutputStream,
+      std::unique_ptr<juce::OutputStream> providedOutputStream,
       double writeSampleRate, int numChannels = 1, int bitDepth = 16,
       std::optional<std::variant<std::string, float>> qualityInput = {}) {
     pybind11::gil_scoped_release release;
@@ -272,7 +272,8 @@ public:
     juce::AudioFormat *format = nullptr;
     std::string extension;
 
-    if (pythonOutputStream) {
+    if (PythonOutputStream *pythonOutputStream =
+            static_cast<PythonOutputStream *>(providedOutputStream.get())) {
       // Use the pythonOutputStream's filename if possible, falling back to the
       // provided filename string (which should contain an extension) if
       // necessary.
@@ -301,18 +302,22 @@ public:
         }
       }
 
-      unsafeOutputStream = pythonOutputStream.get();
+      unsafeOutputStream = pythonOutputStream;
       pythonOutputStream->setObjectLock(&objectLock);
-      outputStream = std::move(pythonOutputStream);
+      outputStream = std::move(providedOutputStream);
     } else {
-      juce::File file(filename);
-      extension = file.getFileExtension().toStdString();
+      if (providedOutputStream) {
+        outputStream = std::move(providedOutputStream);
+      } else {
+        juce::File file(filename);
+        extension = file.getFileExtension().toStdString();
 
-      outputStream = AutoDeleteFileOutputStream::createOutputStream(file);
-      if (!static_cast<AutoDeleteFileOutputStream *>(outputStream.get())
-               ->openedOk()) {
-        throw std::domain_error("Unable to open audio file for writing: " +
-                                filename);
+        outputStream = AutoDeleteFileOutputStream::createOutputStream(file);
+        if (!static_cast<AutoDeleteFileOutputStream *>(outputStream.get())
+                 ->openedOk()) {
+          throw std::domain_error("Unable to open audio file for writing: " +
+                                  filename);
+        }
       }
 
       format = formatManager.findFormatForFileExtension(extension);
