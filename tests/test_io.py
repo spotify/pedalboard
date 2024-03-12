@@ -869,8 +869,6 @@ def test_write_matches_encode(
     tolerance = get_tolerance_for_format_and_bit_depth(".wav", input_format, "int16")
     np.testing.assert_allclose(original_audio, audio.astype(np.float32) / _max, atol=tolerance)
 
-    num_samples = audio.shape[-1]
-
     stream = io.BytesIO()
     stream.name = f"my_file{extension}"
 
