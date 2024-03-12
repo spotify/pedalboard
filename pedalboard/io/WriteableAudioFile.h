@@ -350,10 +350,16 @@ public:
       quality = format->getQualityOptions()[qualityOptionIndex].toStdString();
     }
 
-    juce::StringPairArray emptyMetadata;
-    writer.reset(format->createWriterFor(outputStream.get(), writeSampleRate,
-                                         numChannels, bitDepth, emptyMetadata,
-                                         qualityOptionIndex));
+    {
+      PythonMemoryViewOutputStream::ScopedPreallocation preallocation(
+          getPythonOutputStream());
+
+      juce::StringPairArray emptyMetadata;
+      writer.reset(format->createWriterFor(outputStream.get(), writeSampleRate,
+                                           numChannels, bitDepth, emptyMetadata,
+                                           qualityOptionIndex));
+    }
+
     if (!writer) {
       PythonException::raise();
 
@@ -474,6 +480,9 @@ public:
 
     if (!writer)
       throw std::runtime_error("I/O operation on a closed file.");
+
+    PythonMemoryViewOutputStream::ScopedPreallocation preallocation(
+        getPythonOutputStream());
 
     py::buffer_info inputInfo = inputArray.request();
 
@@ -752,6 +761,7 @@ public:
           "Another thread is currently writing to this AudioFile; it cannot "
           "be closed until the other thread completes its operation.");
     }
+
     writer.reset();
   }
 
@@ -1004,6 +1014,7 @@ inline void init_writeable_audio_file(
           "write",
           [](WriteableAudioFile &file, py::array samples) {
             file.write(samples);
+            PythonException::raise();
           },
           py::arg("samples").noconvert(),
           "Encode an array of audio data and write "

@@ -241,7 +241,15 @@ inline void init_audio_file(
                     filelike.attr("__repr__")().cast<std::string>());
               }
 
-              auto stream = std::make_unique<PythonOutputStream>(filelike);
+              std::unique_ptr<PythonOutputStream> stream;
+
+              if (tryConvertingToBuffer(filelike)) {
+                stream =
+                    std::make_unique<PythonMemoryViewOutputStream>(filelike);
+              } else {
+                stream = std::make_unique<PythonOutputStream>(filelike);
+              }
+
               if (!format && !stream->getFilename()) {
                 throw py::type_error(
                     "Unable to infer audio file format for writing. Expected "

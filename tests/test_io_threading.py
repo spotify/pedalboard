@@ -244,3 +244,81 @@ def test_simultaneous_writes_to_the_same_file(
         for future in futures:
             future.exception()
         should_error.clear()
+
+
+def test_bytesio_writes_can_happen_without_gil():
+    """
+    If we pass in a BytesIO object that is large enough to contain
+    the entire output, we should be able to write to it without
+    taking the GIL at all:
+    """
+
+    buf = BytesIO()
+    # Resize the initial file to 1MB to avoid needing
+    # to take the GIL to reallocate:
+    #
+    # Note that we can't just do buf.truncate(),
+    # due to https://bugs.python.org/issue27261
+    buf_size = 1024 * 1024
+    buf.write(b"\x00" * buf_size)
+    buf.seek(0)
+    assert buf.tell() == 0
+    assert len(buf.getbuffer()) == buf_size
+
+    original_write = buf.write
+
+    writes = []
+
+    def write(data):
+        writes.append(data)
+        return original_write(data)
+
+    buf.write = write
+
+    random_audio = np.random.rand(44100)
+    with AudioFile(buf, "w", 44100, 1, format="wav") as af:
+        # Only consider calls to buf.write that happen after the file is already open:
+        writes.clear()
+        af.write(random_audio)
+        buf.write = original_write
+    assert buf.tell() < len(buf.getbuffer())
+    buf.truncate()
+    assert buf.tell() <= len(buf.getbuffer())
+    assert not writes, (
+        "Expected no GIL-locked writes to have happened after opening the "
+        f"file, but .write was called {len(writes):,} times."
+    )
+
+
+def test_bytesio_resizes_as_necessary():
+    """
+    If we pass in a BytesIO object that is _not_ large enough to
+    contain the entire output, we should be able to write to it
+    without taking the GIL until we need to resize the buffer.
+
+    At that point, the buffer should get resized to the nearest
+    power of two:
+    """
+
+    buf = BytesIO()
+    original_write = buf.write
+
+    writes = []
+
+    def write(data):
+        writes.append(data)
+        return original_write(data)
+
+    buf.write = write
+    random_audio = np.random.rand(44100)
+    with AudioFile(buf, "w", 44100, 1, format="wav") as af:
+        initial_bytes_written = buf.tell()
+        writes.clear()
+        af.write(random_audio)
+
+    assert buf.tell() <= len(
+        buf.getbuffer()
+    ), "Buffer should have been truncated as it was resized."
+
+    # Each write should double the size of the buffer (ignoring small writes at the end when closing the file)
+    assert [len(x) for x in writes][:4] == [16384 - initial_bytes_written, 16384, 32768, 65536]
