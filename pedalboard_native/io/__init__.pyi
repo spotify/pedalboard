@@ -100,6 +100,18 @@ class AudioFile:
        wav_buffer.getvalue()  # do something with the file-like object
 
 
+    Encoding audio as ``wav``, ``ogg``, ``mp3``, or ``flac`` as a :class:`bytes` buffer in one line::
+
+       sr = 44100
+       num_channels = 2
+       audio = np.random.rand(num_channels, sr)
+
+       wav_buffer = AudioFile.encode(audio, sr, num_channels, format="wav")
+       ogg_buffer = AudioFile.encode(audio, sr, num_channels, format="ogg")
+       mp3_buffer = AudioFile.encode(audio, sr, num_channels, format="mp3")
+       flac_buffer = AudioFile.encode(audio, sr, num_channels, format="flac")
+
+
     Writing to an audio file while also specifying quality options for the codec::
 
        with AudioFile(
@@ -164,6 +176,42 @@ class AudioFile:
         quality: typing.Optional[typing.Union[str, float]] = None,
         format: typing.Optional[str] = None,
     ) -> WriteableAudioFile: ...
+    @staticmethod
+    def encode(
+        samples: numpy.ndarray,
+        samplerate: float,
+        format: str,
+        num_channels: int = 1,
+        bit_depth: int = 16,
+        quality: typing.Optional[typing.Union[str, float]] = None,
+    ) -> bytes:
+        """
+        Encode an audio buffer to a Python :class:`bytes` object.
+
+        This function will encode an entire audio buffer at once and return a :class:`bytes`
+        object representing the bytes of the resulting audio file.
+
+        This function produces identical output to the following code::
+
+            buf = io.BytesIO()
+            with AudioFile(buf, "w", samplerate, num_channels, bit_depth, format, quality) as f:
+                f.write(samples)
+            result = buf.getvalue()
+
+        However, this function is much more efficient than the above code, as it writes
+        to an in-memory buffer in C++ and avoids interacting with Python at all during the
+        encoding process. This allows Python's Global Interpreter Lock (GIL) to be
+        released, which also makes this method much more performant in multi-threaded
+        programs.
+
+        .. warning::
+          This function will encode the entire audio buffer at once, and may consume a
+          large amount of memory if the input audio buffer is large.
+
+          To avoid running out of memory with arbitrary-length inputs, it is
+          recommended to stream the output into a file or file-like object by using
+          :class:`AudioFile` class in write (``"w"``) mode instead.
+        """
     pass
 
 class AudioStream:

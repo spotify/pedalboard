@@ -96,6 +96,18 @@ Writing encoded audio to a file-like object::
    wav_buffer.getvalue()  # do something with the file-like object
 
 
+Encoding audio as ``wav``, ``ogg``, ``mp3``, or ``flac`` as a :class:`bytes` buffer in one line::
+
+   sr = 44100
+   num_channels = 2
+   audio = np.random.rand(num_channels, sr)
+   
+   wav_buffer = AudioFile.encode(audio, sr, num_channels, format="wav")
+   ogg_buffer = AudioFile.encode(audio, sr, num_channels, format="ogg")
+   mp3_buffer = AudioFile.encode(audio, sr, num_channels, format="mp3")
+   flac_buffer = AudioFile.encode(audio, sr, num_channels, format="flac")
+
+
 Writing to an audio file while also specifying quality options for the codec::
 
    with AudioFile(
@@ -285,14 +297,13 @@ inline void init_audio_file(
           py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
           py::arg("quality") = py::none(),
           R"(
-Encode an audio buffer to a Python ``bytes`` object.
+Encode an audio buffer to a Python :class:`bytes` object.
 
-This function will encode an entire audio buffer at once and return a ``bytes``
+This function will encode an entire audio buffer at once and return a :class:`bytes`
 object representing the bytes of the resulting audio file.
 
-This function produces identical output to the following code:
+This function produces identical output to the following code::
 
-.. code-block:: python
     buf = io.BytesIO()
     with AudioFile(buf, "w", samplerate, num_channels, bit_depth, format, quality) as f:
         f.write(samples)
@@ -304,7 +315,7 @@ encoding process. This allows Python's Global Interpreter Lock (GIL) to be
 released, which also makes this method much more performant in multi-threaded
 programs.
 
-..warning::
+.. warning::
   This function will encode the entire audio buffer at once, and may consume a
   large amount of memory if the input audio buffer is large.
 
