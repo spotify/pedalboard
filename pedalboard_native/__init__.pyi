@@ -1181,6 +1181,10 @@ class AudioUnitPlugin(ExternalPlugin):
         buffer_size: int = 8192,
         reset: bool = True,
     ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]: ...
+    def set_state(self, state: bytes) -> None:
+        """
+        Set the complete state of the plugin.
+        """
     def show_editor(self, close_event: typing.Optional[threading.Event] = None) -> None:
         """
         Show the UI of this plugin as a native window.
@@ -1234,6 +1238,13 @@ class AudioUnitPlugin(ExternalPlugin):
         The name of this plugin, as reported by the plugin itself.
 
 
+        """
+    @property
+    def state(self) -> bytes:
+        """
+        A binary blob containing the complete plugin state.
+
+        :type: bytes
         """
     pass
 
@@ -1644,6 +1655,10 @@ class VST3Plugin(ExternalPlugin):
         buffer_size: int = 8192,
         reset: bool = True,
     ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]: ...
+    def set_state(self, state: bytes) -> None:
+        """
+        Set the complete state of the plugin.
+        """
     def show_editor(self, close_event: typing.Optional[threading.Event] = None) -> None:
         """
         Show the UI of this plugin as a native window.
@@ -1697,6 +1712,13 @@ class VST3Plugin(ExternalPlugin):
         The name of this plugin.
 
 
+        """
+    @property
+    def state(self) -> bytes:
+        """
+        A binary blob containing the complete plugin state.
+
+        :type: bytes
         """
     pass
 
