@@ -68,12 +68,15 @@ class ResampleWithLatency(pedalboard_native.Plugin):
     @property
     def quality(self) -> pedalboard_native.Resample.Quality:
         """ """
+
     @quality.setter
     def quality(self, arg1: pedalboard_native.Resample.Quality) -> None:
         pass
+
     @property
     def target_sample_rate(self) -> float:
         """ """
+
     @target_sample_rate.setter
     def target_sample_rate(self, arg1: float) -> None:
         pass

@@ -1301,12 +1301,12 @@ public:
   }
 
   ExternalPluginReloadType reloadType = ExternalPluginReloadType::Unknown;
+  juce::PluginDescription foundPluginDescription;
 
 private:
   constexpr static int ExternalLoadSampleRate = 44100,
                        ExternalLoadMaximumBlockSize = 8192;
   juce::String pathToPluginFile;
-  juce::PluginDescription foundPluginDescription;
   juce::AudioPluginFormatManager pluginFormatManager;
   std::unique_ptr<juce::AudioPluginInstance> pluginInstance;
 
@@ -1590,6 +1590,57 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           },
           "The name of this plugin.")
       .def_property_readonly(
+          "descriptive_name",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.foundPluginDescription.descriptiveName.toStdString();
+          },
+          "A more descriptive name for this plugin. This may be the same as "
+          "the 'name' field, but some plugins may provide an alternative "
+          "name.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "category",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.foundPluginDescription.category.toStdString();
+          },
+          "A category that this plugin falls into, such as \"Dynamics\", "
+          "\"Reverbs\", etc.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "manufacturer_name",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.foundPluginDescription.manufacturerName.toStdString();
+          },
+          "The name of the manufacturer of this plugin, as reported by the "
+          "plugin itself.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "version",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.foundPluginDescription.version.toStdString();
+          },
+          "The version string for this plugin, as reported by the plugin "
+          "itself.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "is_instrument",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.foundPluginDescription.isInstrument;
+          },
+          "True iff this plugin identifies itself as an instrument (generator, "
+          "synthesizer, etc) plugin.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "has_shared_container",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.foundPluginDescription.hasSharedContainer;
+          },
+          "True iff this plugin is part of a multi-plugin "
+          "container.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "identifier",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.foundPluginDescription.createIdentifierString()
+                .toStdString();
+          },
+          "A string that can be saved and used to uniquely identify this "
+          "plugin (and version) again.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
           "_parameters",
           &ExternalPlugin<juce::PatchedVST3PluginFormat>::getParameters,
           py::return_value_policy::reference_internal)
@@ -1725,6 +1776,63 @@ see :class:`pedalboard.VST3Plugin`.)
             return plugin.getName().toStdString();
           },
           "The name of this plugin, as reported by the plugin itself.")
+      .def_property_readonly(
+          "name",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.getName().toStdString();
+          },
+          "The name of this plugin.")
+      .def_property_readonly(
+          "descriptive_name",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.foundPluginDescription.descriptiveName.toStdString();
+          },
+          "A more descriptive name for this plugin. This may be the same as "
+          "the 'name' field, but some plugins may provide an alternative "
+          "name.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "category",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.foundPluginDescription.category.toStdString();
+          },
+          "A category that this plugin falls into, such as \"Dynamics\", "
+          "\"Reverbs\", etc.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "manufacturer_name",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.foundPluginDescription.manufacturerName.toStdString();
+          },
+          "The name of the manufacturer of this plugin, as reported by the "
+          "plugin itself.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "version",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.foundPluginDescription.version.toStdString();
+          },
+          "The version string for this plugin, as reported by the plugin "
+          "itself.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "is_instrument",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.foundPluginDescription.isInstrument;
+          },
+          "True iff this plugin identifies itself as an instrument (generator, "
+          "synthesizer, etc) plugin.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "has_shared_container",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.foundPluginDescription.hasSharedContainer;
+          },
+          "True iff this plugin is part of a multi-plugin "
+          "container.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "identifier",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.foundPluginDescription.createIdentifierString()
+                .toStdString();
+          },
+          "A string that can be saved and used to uniquely identify this "
+          "plugin (and version) again.\n\n*Introduced in v0.9.4.*")
       .def_property_readonly(
           "_parameters",
           &ExternalPlugin<juce::AudioUnitPluginFormat>::getParameters,
