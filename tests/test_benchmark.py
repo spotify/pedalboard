@@ -17,10 +17,9 @@
 
 import time
 
-import pytest
 import numpy as np
+import pytest
 
-import sox
 import pedalboard
 
 
@@ -44,6 +43,10 @@ class timer(object):
 
 @pytest.mark.skip
 def test_pysox_performance_difference():
+    try:
+        import sox
+    except ImportError:
+        pytest.skip("SoX is not installed")
     transformer = sox.Transformer()
     transformer.reverb()
 

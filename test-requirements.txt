@@ -13,7 +13,6 @@ click==8.0.4
 interrogate
 
 numpy
-sox
 google-cloud-storage
 tqdm
 psutil
