@@ -356,9 +356,19 @@ public:
     }
 
     juce::StringPairArray emptyMetadata;
-    writer.reset(format->createWriterFor(outputStream.get(), writeSampleRate,
-                                         numChannels, bitDepth, emptyMetadata,
-                                         qualityOptionIndex));
+    juce::AudioChannelSet channelSet(
+        juce::AudioChannelSet::namedChannelSet(numChannels));
+
+    if (format->isChannelLayoutSupported(channelSet)) {
+      writer.reset(format->createWriterFor(outputStream.get(), writeSampleRate,
+                                           channelSet, bitDepth, emptyMetadata,
+                                           qualityOptionIndex));
+    } else {
+      writer.reset(format->createWriterFor(outputStream.get(), writeSampleRate,
+                                           numChannels, bitDepth, emptyMetadata,
+                                           qualityOptionIndex));
+    }
+
     if (!writer) {
       PythonException::raise();
 
