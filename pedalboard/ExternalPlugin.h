@@ -631,6 +631,23 @@ public:
             presetFilePath);
       }
     }
+
+    void visitAudioUnitClient(
+        const juce::ExtensionsVisitor::AudioUnitClient &client) override {
+      juce::File presetFile(presetFilePath);
+      juce::MemoryBlock presetData;
+
+      if (!presetFile.loadFileAsData(presetData)) {
+        throw std::runtime_error("Failed to read preset file: " +
+                                 presetFilePath);
+      }
+
+      if (!client.setPreset(presetData)) {
+        throw std::runtime_error(
+            "Plugin returned an error when loading data from preset file: " +
+            presetFilePath);
+      }
+    }
   };
 
   void loadPresetData(std::string presetFilePath) {
@@ -1748,6 +1765,10 @@ see :class:`pedalboard.VST3Plugin`.)
              ss << ">";
              return ss.str();
            })
+      .def("load_preset",
+           &ExternalPlugin<juce::AudioUnitPluginFormat>::loadPresetData,
+           "Load a Audio Unit preset file in .aupreset format.",
+           py::arg("preset_file_path"))
       .def_static(
           "get_plugin_names_for_file",
           [](std::string filename) {
