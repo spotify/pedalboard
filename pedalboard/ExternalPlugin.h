@@ -471,7 +471,7 @@ public:
 };
 
 template <typename ExternalPluginType>
-class ExternalPlugin : public AbstractExternalPlugin {
+class ExternalPlugin : public AbstractExternalPlugin, juce::AudioPlayHead {
 public:
   ExternalPlugin(
       std::string &_pathToPluginFile,
@@ -599,6 +599,10 @@ public:
   ~ExternalPlugin() {
     {
       std::lock_guard<std::mutex> lock(EXTERNAL_PLUGIN_MUTEX);
+      if (pluginInstance) {
+        pluginInstance->setPlayHead(nullptr);
+      }
+
       pluginInstance.reset();
       NUM_ACTIVE_EXTERNAL_PLUGINS--;
 
@@ -664,6 +668,9 @@ public:
       {
         std::lock_guard<std::mutex> lock(EXTERNAL_PLUGIN_MUTEX);
         // Delete the plugin instance itself:
+        if (pluginInstance) {
+          pluginInstance->setPlayHead(nullptr);
+        }
         pluginInstance.reset();
         NUM_ACTIVE_EXTERNAL_PLUGINS--;
       }
@@ -683,6 +690,7 @@ public:
                                      loadError.toStdString());
       }
 
+      pluginInstance->setPlayHead(this);
       pluginInstance->enableAllBuses();
 
       auto mainInputBus = pluginInstance->getBus(true, 0);
@@ -692,6 +700,9 @@ public:
         auto exception = std::invalid_argument(
             "Plugin '" + pluginInstance->getName().toStdString() +
             "' does not produce audio output.");
+        if (pluginInstance) {
+          pluginInstance->setPlayHead(nullptr);
+        }
         pluginInstance.reset();
         throw exception;
       }
@@ -710,6 +721,7 @@ public:
                                          pathToPluginFile.toStdString() + ": " +
                                          loadError.toStdString());
           }
+          pluginInstance->setPlayHead(this);
         }
       }
 
@@ -881,7 +893,10 @@ public:
     juce::AudioBuffer<float> audioBuffer(numOutputChannels, bufferSize);
     audioBuffer.clear();
 
+    currentPositionInfo.isPlaying = true;
     pluginInstance->processBlock(audioBuffer, emptyNoteBuffer);
+    currentPositionInfo.isPlaying = false;
+    currentPositionInfo.timeInSamples += bufferSize;
     auto noiseFloor = audioBuffer.getMagnitude(0, bufferSize);
 
     audioBuffer.clear();
@@ -891,7 +906,10 @@ public:
     // the messages in a MidiBuffer get erased every time we call processBlock!
     {
       juce::MidiBuffer noteOnBuffer(noteOn);
+      currentPositionInfo.isPlaying = true;
       pluginInstance->processBlock(audioBuffer, noteOnBuffer);
+      currentPositionInfo.isPlaying = false;
+      currentPositionInfo.timeInSamples += bufferSize;
     }
 
     // Then keep pumping the message thread until we get some louder output:
@@ -914,8 +932,11 @@ public:
 
       audioBuffer.clear();
       {
+        currentPositionInfo.isPlaying = true;
         juce::MidiBuffer noteOnBuffer(noteOn);
         pluginInstance->processBlock(audioBuffer, noteOnBuffer);
+        currentPositionInfo.isPlaying = false;
+        currentPositionInfo.timeInSamples += bufferSize;
       }
 
       if (juce::Time::currentTimeMillis() >= endTime)
@@ -927,8 +948,12 @@ public:
     audioBuffer.clear();
     {
       juce::MidiBuffer allNotesOffBuffer(allNotesOff);
+      currentPositionInfo.isPlaying = true;
       pluginInstance->processBlock(audioBuffer, allNotesOffBuffer);
+      currentPositionInfo.isPlaying = false;
+      currentPositionInfo.timeInSamples += bufferSize;
     }
+    currentPositionInfo.timeInSamples = 0;
     pluginInstance->reset();
     pluginInstance->releaseResources();
 
@@ -1046,6 +1071,7 @@ public:
       // Force prepare() to be called again later by invalidating lastSpec:
       lastSpec.maximumBlockSize = 0;
       samplesProvided = 0;
+      currentPositionInfo.timeInSamples = 0;
     }
   }
 
@@ -1071,6 +1097,8 @@ public:
 
       pluginInstance->setNonRealtime(true);
       pluginInstance->prepareToPlay(spec.sampleRate, spec.maximumBlockSize);
+      currentPositionInfo.timeInSamples = 0;
+      currentPositionInfo.isPlaying = false;
 
       lastSpec = spec;
     }
@@ -1142,8 +1170,11 @@ public:
                                            channelPointers.size(),
                                            outputBlock.getNumSamples());
 
+      currentPositionInfo.isPlaying = true;
       pluginInstance->processBlock(audioBuffer, emptyMidiBuffer);
+      currentPositionInfo.isPlaying = false;
       samplesProvided += outputBlock.getNumSamples();
+      currentPositionInfo.timeInSamples += outputBlock.getNumSamples();
 
       // To compensate for any latency added by the plugin,
       // only tell Pedalboard to use the last _n_ samples.
@@ -1238,7 +1269,10 @@ public:
         juce::MidiBuffer midiChunk;
         midiChunk.addEvents(midiInputBuffer, i, chunkSampleCount, -i);
 
+        currentPositionInfo.isPlaying = true;
         pluginInstance->processBlock(audioChunk, midiChunk);
+        currentPositionInfo.isPlaying = false;
+        currentPositionInfo.timeInSamples += chunkSampleCount;
       }
     }
 
@@ -1303,12 +1337,18 @@ public:
   ExternalPluginReloadType reloadType = ExternalPluginReloadType::Unknown;
   juce::PluginDescription foundPluginDescription;
 
+  bool getCurrentPosition(CurrentPositionInfo &result) override {
+    result = currentPositionInfo;
+    return true;
+  }
+
 private:
   constexpr static int ExternalLoadSampleRate = 44100,
                        ExternalLoadMaximumBlockSize = 8192;
   juce::String pathToPluginFile;
   juce::AudioPluginFormatManager pluginFormatManager;
   std::unique_ptr<juce::AudioPluginInstance> pluginInstance;
+  juce::AudioPlayHead::CurrentPositionInfo currentPositionInfo;
 
   long samplesProvided = 0;
   float initializationTimeout = DEFAULT_INITIALIZATION_TIMEOUT_SECONDS;
