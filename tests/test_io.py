@@ -200,8 +200,12 @@ def test_basic_read(audio_filename: str, samplerate: float):
 
     af.close()
 
-    with pytest.raises(RuntimeError):
-        af.num_channels
+    # Should be able to read properties of the file even after it's been closed:
+    assert af.num_channels == 1
+    assert af.samplerate == samplerate
+    assert f"samplerate={int(af.samplerate)}" in repr(af)
+    assert f"num_channels={af.num_channels}" in repr(af)
+    assert "closed" in repr(af)
 
     with pytest.raises(RuntimeError):
         af.read(1)
@@ -218,6 +222,7 @@ def test_read_raw(audio_filename: str, samplerate: float):
 
 @pytest.mark.parametrize("audio_filename,samplerate", FILENAMES_AND_SAMPLERATES)
 def test_use_reader_as_context_manager(audio_filename: str, samplerate: float):
+    num_frames_when_open = None
     with pedalboard.io.AudioFile(audio_filename) as af:
         assert af.samplerate == samplerate
         assert af.num_channels == 1
@@ -225,6 +230,7 @@ def test_use_reader_as_context_manager(audio_filename: str, samplerate: float):
             assert af.frames == int(samplerate * EXPECTED_DURATION_SECONDS)
         else:
             assert af.frames >= int(samplerate * EXPECTED_DURATION_SECONDS)
+        num_frames_when_open = af.frames
 
         samples = af.read(int(samplerate * EXPECTED_DURATION_SECONDS))
         assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS))
@@ -245,10 +251,17 @@ def test_use_reader_as_context_manager(audio_filename: str, samplerate: float):
 
         assert f"samplerate={int(af.samplerate)}" in repr(af)
         assert f"num_channels={af.num_channels}" in repr(af)
+        assert "closed" not in repr(af)
 
-    with pytest.raises(RuntimeError):
-        af.num_channels
+    # Should be able to read properties of the file even after it's been closed:
+    assert af.num_channels == 1
+    assert af.samplerate == samplerate
+    assert af.frames == num_frames_when_open
+    assert f"samplerate={int(af.samplerate)}" in repr(af)
+    assert f"num_channels={af.num_channels}" in repr(af)
+    assert "closed" in repr(af)
 
+    # ... but reading from a closed file is still an error:
     with pytest.raises(RuntimeError):
         af.read(1)
 
@@ -279,6 +292,7 @@ def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
 
     af = pedalboard.io.AudioFile(stream)
 
+    num_frames_when_open = None
     with af:
         assert af.samplerate == samplerate
         assert af.num_channels == 1
@@ -286,6 +300,7 @@ def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
             assert af.frames == int(samplerate * EXPECTED_DURATION_SECONDS)
         else:
             assert af.frames >= int(samplerate * EXPECTED_DURATION_SECONDS)
+        num_frames_when_open = af.frames
 
         samples = af.read(int(samplerate * EXPECTED_DURATION_SECONDS))
         assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS))
@@ -307,9 +322,17 @@ def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
         assert f"samplerate={int(af.samplerate)}" in repr(af)
         assert f"num_channels={af.num_channels}" in repr(af)
         assert repr(stream) in repr(af)
+        assert "closed" not in repr(af)
 
-    with pytest.raises(RuntimeError):
-        af.num_channels
+    # Should be able to read properties of the file even after it's been closed:
+    assert af.num_channels == 1
+    assert af.samplerate == samplerate
+    assert af.frames == num_frames_when_open
+    assert f"samplerate={int(af.samplerate)}" in repr(af)
+    assert f"num_channels={af.num_channels}" in repr(af)
+    assert "closed" in repr(af)
+
+    # ... but reading from a closed file is still an error:
 
     with pytest.raises(RuntimeError):
         af.read(1)
