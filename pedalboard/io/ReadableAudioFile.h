@@ -84,6 +84,8 @@ public:
       throw std::domain_error("Failed to open audio file: file \"" + filename +
                               "\" does not seem to contain audio data in a "
                               "known or supported format.");
+
+    cacheMetadata();
   }
 
   ReadableAudioFile(std::unique_ptr<PythonInputStream> inputStream) {
@@ -169,51 +171,72 @@ public:
     }
 
     PythonException::raise();
+    cacheMetadata();
   }
 
-  std::variant<double, long> getSampleRate() const {
-    const juce::ScopedReadLock scopedLock(objectLock);
-    if (!reader)
-      throw std::runtime_error("I/O operation on a closed file.");
+  void cacheMetadata() {
+    sampleRate = reader->sampleRate;
+    numChannels = reader->numChannels;
+    numFrames = reader->lengthInSamples;
 
-    double integerPart;
-    double fractionalPart = std::modf(reader->sampleRate, &integerPart);
-
-    if (fractionalPart > 0) {
-      return reader->sampleRate;
+    if (reader->usesFloatingPointData) {
+      switch (reader->bitsPerSample) {
+      case 16: // OGG returns 16-bit int data, but internally stores floats
+      case 32:
+        fileDatatype = "float32";
+        break;
+      case 64:
+        fileDatatype = "float64";
+        break;
+      default:
+        fileDatatype = "unknown";
+        break;
+      }
     } else {
-      return (long)(reader->sampleRate);
+      switch (reader->bitsPerSample) {
+      case 8:
+        fileDatatype = "int8";
+        break;
+      case 16:
+        fileDatatype = "int16";
+        break;
+      case 24:
+        fileDatatype = "int24";
+        break;
+      case 32:
+        fileDatatype = "int32";
+        break;
+      case 64:
+        fileDatatype = "int64";
+        break;
+      default:
+        fileDatatype = "unknown";
+        break;
+      }
     }
   }
 
-  double getSampleRateAsDouble() const {
-    const juce::ScopedReadLock scopedLock(objectLock);
-    if (!reader)
-      throw std::runtime_error("I/O operation on a closed file.");
+  std::variant<double, long> getSampleRate() const {
+    double integerPart;
+    double fractionalPart = std::modf(sampleRate, &integerPart);
 
-    return reader->sampleRate;
+    if (fractionalPart > 0) {
+      return sampleRate;
+    } else {
+      return (long)(sampleRate);
+    }
   }
+
+  double getSampleRateAsDouble() const { return sampleRate; }
 
   long long getLengthInSamples() const {
     const juce::ScopedReadLock scopedLock(objectLock);
-    if (!reader)
-      throw std::runtime_error("I/O operation on a closed file.");
-    return reader->lengthInSamples + (lengthCorrection ? *lengthCorrection : 0);
+    return numFrames + (lengthCorrection ? *lengthCorrection : 0);
   }
 
-  double getDuration() const {
-    const juce::ScopedReadLock scopedLock(objectLock);
-    if (!reader)
-      throw std::runtime_error("I/O operation on a closed file.");
-    return getLengthInSamples() / reader->sampleRate;
-  }
+  double getDuration() const { return numFrames / getSampleRateAsDouble(); }
 
-  long getNumChannels() const {
-    const juce::ScopedReadLock scopedLock(objectLock);
-    if (!reader)
-      throw std::runtime_error("I/O operation on a closed file.");
-    return reader->numChannels;
-  }
+  long getNumChannels() const { return numChannels; }
 
   std::string getFileFormat() const {
     const juce::ScopedReadLock scopedLock(objectLock);
@@ -223,37 +246,7 @@ public:
     return reader->getFormatName().toStdString();
   }
 
-  std::string getFileDatatype() const {
-    if (!reader)
-      throw std::runtime_error("I/O operation on a closed file.");
-
-    if (reader->usesFloatingPointData) {
-      switch (reader->bitsPerSample) {
-      case 16: // OGG returns 16-bit int data, but internally stores floats
-      case 32:
-        return "float32";
-      case 64:
-        return "float64";
-      default:
-        return "unknown";
-      }
-    } else {
-      switch (reader->bitsPerSample) {
-      case 8:
-        return "int8";
-      case 16:
-        return "int16";
-      case 24:
-        return "int24";
-      case 32:
-        return "int32";
-      case 64:
-        return "int64";
-      default:
-        return "unknown";
-      }
-    }
-  }
+  std::string getFileDatatype() const { return fileDatatype; }
 
   py::array_t<float, py::array::c_style>
   read(std::variant<double, long long> numSamplesVariant) {
@@ -603,8 +596,6 @@ public:
   long long tell() const {
     py::gil_scoped_release release;
     const juce::ScopedReadLock scopedLock(objectLock);
-    if (!reader)
-      throw std::runtime_error("I/O operation on a closed file.");
     return currentPosition;
   }
 
@@ -732,6 +723,11 @@ private:
   std::string filename;
   std::unique_ptr<juce::AudioFormatReader> reader;
   juce::ReadWriteLock objectLock;
+
+  double sampleRate;
+  long numChannels;
+  long numFrames;
+  std::string fileDatatype;
 
   long long currentPosition = 0;
 
@@ -912,14 +908,15 @@ in which this may occur.)
                ss << " file_like=" << stream->getRepresentation();
              }
 
+             ss << " samplerate=" << file.getSampleRateAsDouble();
+             ss << " num_channels=" << file.getNumChannels();
+             ss << " frames=" << file.getLengthInSamples();
+             ss << " file_dtype=" << file.getFileDatatype();
+
              if (file.isClosed()) {
                ss << " closed";
-             } else {
-               ss << " samplerate=" << file.getSampleRateAsDouble();
-               ss << " num_channels=" << file.getNumChannels();
-               ss << " frames=" << file.getLengthInSamples();
-               ss << " file_dtype=" << file.getFileDatatype();
              }
+
              ss << " at " << &file;
              ss << ">";
              return ss.str();
