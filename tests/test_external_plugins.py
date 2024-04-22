@@ -932,7 +932,7 @@ try:
     sys.stdout.flush()
     plugin.show_editor()
 except KeyboardInterrupt:
-    pass
+    raise SystemExit(0)
 """,
         ]
         process = subprocess.Popen(
@@ -970,7 +970,11 @@ except KeyboardInterrupt:
                     f"Command {command!r} failed with {return_code}. Stdout was: {stdout!r}"
                 )
         finally:
-            process.kill()
+            try:
+                if process.poll() is not None:
+                    process.kill()
+            except Exception:
+                pass
     except RuntimeError:
         if (
             b"no visual display devices available" in stdout
