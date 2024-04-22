@@ -75,9 +75,9 @@ FLOAT_SUFFIXES_TO_IGNORE = ["x", "%", "*", ",", ".", "hz", "ms", "db", "sec", "d
 
 
 class _SuffixTrie:
-    def __init__(self, char: str | None):
+    def __init__(self, char: Optional[str]):
         self.char = char
-        self.children: Dict[str, "_SuffixTrie" | None] = {}
+        self.children: Dict[str, Optional["_SuffixTrie"]] = {}
         self.is_match = False
 
     def __repr__(self) -> str:
