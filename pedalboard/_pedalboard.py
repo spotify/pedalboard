@@ -70,9 +70,28 @@ class Pedalboard(Chain):
         )
 
 
-FLOAT_SUFFIXES_TO_IGNORE: Set[str] = set(
-    ["x", "%", "*", ",", ".", "hz", "ms", "sec", "seconds", "dB", "dBTP"]
-)
+# Stored in a trie to speed up these matches, as they happen millions of times in test:
+FLOAT_SUFFIXES_TO_IGNORE = ["x", "%", "*", ",", ".", "hz", "ms", "db", "sec", "dbtp", "seconds"]
+
+
+class _SuffixTrie:
+    def __init__(self, char: str | None):
+        self.char = char
+        self.children: Dict[str, "_SuffixTrie" | None] = {}
+        self.is_match = False
+
+    def __repr__(self) -> str:
+        return f"<_SuffixTrie {self.char} {self.is_match} {self.children}>"
+
+
+FLOAT_SUFFIX_TRIE = _SuffixTrie("")
+for suffix in FLOAT_SUFFIXES_TO_IGNORE:
+    node = FLOAT_SUFFIX_TRIE
+    for char in suffix[::-1]:
+        if char not in node.children:
+            node.children[char] = _SuffixTrie(char)
+        node = cast(_SuffixTrie, node.children[char])
+    node.is_match = True
 
 
 def strip_common_float_suffixes(
@@ -82,21 +101,29 @@ def strip_common_float_suffixes(
         return s
 
     s = s.strip()
+    s_lower = s.lower()
 
     # Handle certain plugins that report "Hz" and "kHz" suffixes:
-    if strip_si_prefixes:
-        if s.lower().endswith("khz") and len(s) > 3:
-            try:
-                s = str(float(s[:-3]) * 1000)
-            except ValueError:
-                pass
+    if strip_si_prefixes and s_lower.endswith("khz") and len(s) >= 3:
+        try:
+            return str(float(s[:-3]) * 1000)
+        except ValueError:
+            return s
 
-    for suffix in FLOAT_SUFFIXES_TO_IGNORE:
-        if suffix == "hz" and "khz" in s.lower():
-            continue
-        if s[-len(suffix) :].lower() == suffix.lower():
-            s = s[: -len(suffix)].strip()
-    return s
+    while True:
+        node = FLOAT_SUFFIX_TRIE
+        for i in reversed(range(len(s_lower))):
+            char = s_lower[i]
+            if char in node.children:
+                node = cast(_SuffixTrie, node.children[char])
+                if node.is_match:
+                    s = s[:i].strip()
+                    s_lower = s_lower[: len(s)]
+                    break
+            else:
+                return s
+        else:
+            return s
 
 
 def looks_like_float(s: Union[float, str]) -> bool:

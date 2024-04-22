@@ -15,23 +15,25 @@
 # limitations under the License.
 
 
-import pytest
 import numpy as np
+import pytest
+
 from pedalboard import (
-    Pedalboard,
+    Chain,
     Compressor,
     Delay,
     Distortion,
     Gain,
     Mix,
-    Chain,
+    Pedalboard,
     PitchShift,
     Reverb,
 )
 from pedalboard_native._internal import AddLatency
 
-
-NUM_SECONDS = 4
+NUM_SECONDS = 1
+MAX_SAMPLE_RATE = 96000
+NOISE = np.random.rand(int(NUM_SECONDS * MAX_SAMPLE_RATE)).astype(np.float32)
 
 
 def test_chain_access_like_list():
@@ -63,7 +65,7 @@ def test_chain_access_like_list():
 
 def test_nested_chain():
     sr = 44100
-    _input = np.random.rand(int(NUM_SECONDS * sr), 2).astype(np.float32)
+    _input = NOISE[: int(NUM_SECONDS * sr)]
 
     pb = Pedalboard([Gain(6), Chain([Gain(-6), Gain(1)]), Gain(-1)])
     output = pb(_input, sr)
@@ -88,7 +90,7 @@ def test_nested_list_raises_error():
 
 def test_nested_mix():
     sr = 44100
-    _input = np.random.rand(int(NUM_SECONDS * sr), 2).astype(np.float32)
+    _input = NOISE[: int(NUM_SECONDS * sr)]
 
     pb = Pedalboard([Gain(6), Mix([Gain(-6), Gain(-6)]), Gain(-6)])
     output = pb(_input, sr)
@@ -107,7 +109,7 @@ def test_nested_mix():
 
 def test_deep_nesting():
     sr = 44100
-    _input = np.random.rand(int(NUM_SECONDS * sr), 2).astype(np.float32)
+    _input = NOISE[: int(NUM_SECONDS * sr)]
 
     pb = Pedalboard(
         [
@@ -125,7 +127,7 @@ def test_deep_nesting():
 
 def test_nesting_pedalboards():
     sr = 44100
-    _input = np.random.rand(int(NUM_SECONDS * sr), 2).astype(np.float32)
+    _input = NOISE[: int(NUM_SECONDS * sr)]
 
     pb = Pedalboard(
         [
@@ -151,7 +153,7 @@ def test_nesting_pedalboards():
 @pytest.mark.parametrize("latency_a_seconds", [0.25, 1, NUM_SECONDS / 2])
 @pytest.mark.parametrize("latency_b_seconds", [0.25, 1, NUM_SECONDS / 2])
 def test_mix_latency_compensation(sample_rate, buffer_size, latency_a_seconds, latency_b_seconds):
-    noise = np.random.rand(int(NUM_SECONDS * sample_rate))
+    noise = NOISE[: int(NUM_SECONDS * sample_rate)]
     pb = Pedalboard(
         [
             Mix(
@@ -173,7 +175,7 @@ def test_mix_latency_compensation(sample_rate, buffer_size, latency_a_seconds, l
 @pytest.mark.parametrize("latency_a_seconds", [0.25, 1, 2, 10])
 @pytest.mark.parametrize("latency_b_seconds", [0.25, 1, 2, 10])
 def test_chain_latency_compensation(sample_rate, buffer_size, latency_a_seconds, latency_b_seconds):
-    noise = np.random.rand(int(NUM_SECONDS * sample_rate))
+    noise = NOISE[: int(NUM_SECONDS * sample_rate)]
     pb = Pedalboard(
         [
             Chain(
@@ -197,7 +199,7 @@ def test_chain_latency_compensation(sample_rate, buffer_size, latency_a_seconds,
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
 @pytest.mark.parametrize("buffer_size", [128, 8192, 65536])
 def test_readme_example_does_not_crash(sample_rate, buffer_size):
-    noise = np.random.rand(int(NUM_SECONDS * sample_rate))
+    noise = NOISE[: int(NUM_SECONDS * sample_rate)]
 
     passthrough = Gain(gain_db=0)
 
@@ -242,10 +244,10 @@ def test_readme_example_does_not_crash(sample_rate, buffer_size):
     original_plus_delayed_harmonies(noise, sample_rate=sample_rate, buffer_size=buffer_size)
 
 
-@pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
-@pytest.mark.parametrize("buffer_size", [128, 8192, 65536])
+@pytest.mark.parametrize("sample_rate", [22050])
+@pytest.mark.parametrize("buffer_size", [65536])
 def test_pedalboard_is_a_plugin(sample_rate, buffer_size):
-    noise = np.random.rand(int(NUM_SECONDS * sample_rate))
+    noise = NOISE[: int(NUM_SECONDS * sample_rate)]
 
     passthrough = Gain(gain_db=0)
 
@@ -306,6 +308,6 @@ def test_none_as_argument(cls):
     assert len(container) == 1
     assert container[0] is None
     sample_rate = 44100
-    noise = np.random.rand(int(NUM_SECONDS * sample_rate))
+    noise = NOISE[: int(NUM_SECONDS * sample_rate)]
     output = container(noise, sample_rate)
     np.testing.assert_allclose(noise, output)

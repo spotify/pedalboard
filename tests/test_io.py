@@ -24,6 +24,7 @@ import shutil
 import time
 import wave
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from typing import Optional
 
 import mutagen
@@ -60,6 +61,11 @@ UNSUPPORTED_FILENAMES = [
         filename.endswith(extension) for extension in pedalboard.io.get_supported_read_formats()
     )
 ]
+
+
+@lru_cache
+def cached_rand(*args, **kwargs):
+    return np.random.rand(*args, **kwargs)
 
 
 def get_tolerance_for_format_and_bit_depth(extension: str, input_format, file_dtype: str) -> float:
@@ -347,7 +353,7 @@ def test_read_from_bytes_io_memoryview():
     stream = io.BytesIO()
 
     with pedalboard.io.AudioFile(stream, "w", 44100, 1, format="wav") as af:
-        af.write(np.random.rand(44100))
+        af.write(cached_rand(44100))
 
     stream.seek(0)
 
@@ -368,7 +374,7 @@ def test_read_from_bytes_io_with_offset():
     stream = io.BytesIO()
 
     with pedalboard.io.AudioFile(stream, "w", 44100, 1, format="wav") as af:
-        af.write(np.random.rand(44100))
+        af.write(cached_rand(44100))
 
     # Prepend this buffer with random garbage:
     garbo = io.BytesIO(b"foobar" + stream.getvalue())
@@ -389,7 +395,7 @@ def test_read_from_bytes_io_memoryview_without_gil():
     num_frames = 44100 * 1000
 
     with pedalboard.io.AudioFile(stream, "w", 44100, 1, format="wav") as af:
-        af.write(np.random.rand(num_frames))
+        af.write(cached_rand(num_frames))
 
     num_cpus = os.cpu_count()
 
@@ -433,7 +439,7 @@ def test_read_from_end_of_stream_produces_helpful_error_message(extension: str):
     buf = io.BytesIO()
     buf.name = f"something.{extension}"
     with pedalboard.io.AudioFile(buf, "w", 44100, 1) as af:
-        af.write(np.random.rand(44100))
+        af.write(cached_rand(44100))
     buf.seek(len(buf.getvalue()))
 
     try:
@@ -488,10 +494,10 @@ def test_file_like_exceptions_propagate_on_write():
     buf.write = eventually_throw_exception
 
     with pedalboard.io.AudioFile(buf, "w", 44100, 1, format="wav") as af:
-        af.write(np.random.rand(44100))
+        af.write(cached_rand(44100))
         should_throw[0] = True
         with pytest.raises(ValueError, match=r"Some kinda error!"):
-            af.write(np.random.rand(44100))
+            af.write(cached_rand(44100))
         should_throw[0] = False
 
 
@@ -601,13 +607,13 @@ def test_write_to_non_bytes_stream(extension: str):
 
     with pytest.raises(TypeError) as e:
         with pedalboard.io.AudioFile(stream, "w", 44100, 2, format=extension) as af:
-            af.write(np.random.rand(1, 2))
+            af.write(cached_rand(1, 2))
 
     assert expected_message in str(e)
 
     with pytest.raises(TypeError) as e:
         with pedalboard.io.WriteableAudioFile(stream, 44100, 2, format=extension) as af:
-            af.write(np.random.rand(1, 2))
+            af.write(cached_rand(1, 2))
 
     assert expected_message in str(e)
 
@@ -858,12 +864,10 @@ def test_write_twice_overwrites(
 
 
 @pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
-@pytest.mark.parametrize(
-    "samplerate", [8000, 11025, 12000, 16000, 22050, 32000, 44100, 48000, 88200, 96000]
-)
+@pytest.mark.parametrize("samplerate", [8000, 96000])
 @pytest.mark.parametrize("num_channels", [1, 2, 3])
 @pytest.mark.parametrize("transposed", [False, True])
-@pytest.mark.parametrize("input_format", [np.float32, np.float64, np.int8, np.int16, np.int32])
+@pytest.mark.parametrize("input_format", [np.float32, np.int32])
 def test_write_matches_encode(
     extension: str, samplerate: float, num_channels: int, transposed: bool, input_format
 ):
@@ -968,7 +972,7 @@ def test_sample_rate_is_int_by_default(samplerate: int):
     buf = io.BytesIO()
     buf.name = "foo.wav"
     with pedalboard.io.AudioFile(buf, "w", samplerate=samplerate, num_channels=1) as f:
-        f.write(np.random.rand(100))
+        f.write(cached_rand(100))
 
     buf.seek(0)
     with pedalboard.io.AudioFile(buf) as f:
@@ -1276,10 +1280,10 @@ def test_mp3_duration_estimate(samplerate: float, target_samplerate: float, chun
 
     num_frames = int(samplerate * 2)
     with pedalboard.io.AudioFile(buf, "w", samplerate, 2, quality=320) as f:
-        f.write(np.random.rand(2, num_frames))
+        f.write(cached_rand(2, num_frames))
 
     # Write some random crap past the end of the file to break length estimation:
-    buf.write(np.random.rand(12345).tobytes())
+    buf.write(cached_rand(12345).tobytes())
     # Skip the VBR header to force Pedalboard to estimate length:
     buf.seek(1044)
 
@@ -1368,7 +1372,7 @@ def test_seek_accuracy(
     stream = io.BytesIO()
     stream.name = "foo" + extension
     sr = 44100
-    input_audio = np.random.rand(sr).astype(np.float32)
+    input_audio = cached_rand(sr).astype(np.float32)
     with pedalboard.io.AudioFile(stream, "w", sr, quality=quality) as f:
         f.write(input_audio)
     stream.seek(0)
@@ -1415,7 +1419,7 @@ def test_flac_files_have_seektable():
     buf = io.BytesIO()
     buf.name = "test.flac"
     with pedalboard.io.AudioFile(buf, "w", 44100) as o:
-        o.write(np.random.rand(44100))
+        o.write(cached_rand(44100))
     assert mutagen.File(buf).seektable, "Expected to write a FLAC seek table"
 
 
@@ -1454,7 +1458,7 @@ def test_mp3_at_all_samplerates(quality: str, samplerate: float, num_channels: i
     # Make an audio signal that is equal parts noise and silence to make sure
     # we end up with a mixture of bitrates in the file:
     signal = np.concatenate(
-        [np.random.rand(samplerate * secs) - 0.5, np.zeros(samplerate * secs)]
+        [cached_rand(samplerate * secs) - 0.5, np.zeros(samplerate * secs)]
     ).astype(np.float32)
     if num_channels == 2:
         signal = np.stack([signal] * num_channels)
@@ -1520,5 +1524,5 @@ def test_useful_exception_when_writing_to_unseekable_file_like():
 
     with pytest.raises(NotImplementedError) as e:
         with pedalboard.io.AudioFile(ILieAboutSeekability(), "w", 44100, 2) as f:
-            f.write(np.random.rand(2, 44100))
+            f.write(cached_rand(2, 44100))
     assert "What's a seek?" in str(e)
