@@ -937,9 +937,16 @@ except KeyboardInterrupt:
                 )
 
             # Send a KeyboardInterrupt into the process, which should kill the editor:
-            process.send_signal(
-                signal.CTRL_C_EVENT if hasattr(signal, "CTRL_C_EVENT") else signal.SIGINT
-            )
+            if hasattr(signal, "CTRL_C_EVENT"):
+                try:
+                    process.send_signal(signal.CTRL_C_EVENT)
+                    time.sleep(1)
+                except KeyboardInterrupt:
+                    # on Windows, sending a CTRL_C_EVENT raises a KeyboardInterrupt in both
+                    # the child process and the parent process! So here, we catch that and move on.
+                    pass
+            else:
+                process.send_signal(signal.SIGINT)
 
             return_code = process.wait(timeout=1)
             stdout = process.stdout.read()
