@@ -28,7 +28,6 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from glob import glob
 from pathlib import Path
-from random import sample
 from typing import Optional
 
 import mido
@@ -92,6 +91,18 @@ ONE_AVAILABLE_INSTRUMENT_PLUGIN = (
     if AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT
     else []
 )
+
+
+def sample(collection, number: int):
+    """
+    A tiny wrapper around random.sample() that supports empty collections
+    and collections that are smaller than the desired sample size.
+    """
+    if not collection:
+        return []
+    if len(collection) <= number:
+        return collection
+    return random.sample(collection, number)
 
 
 def is_container_plugin(filename: str):
@@ -926,7 +937,9 @@ except KeyboardInterrupt:
                 )
 
             # Send a KeyboardInterrupt into the process, which should kill the editor:
-            process.send_signal(signal.SIGINT)
+            process.send_signal(
+                signal.CTRL_C_EVENT if hasattr(signal, "CTRL_C_EVENT") else signal.SIGINT
+            )
 
             return_code = process.wait(timeout=1)
             stdout = process.stdout.read()
