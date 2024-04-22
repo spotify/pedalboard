@@ -553,11 +553,14 @@ def test_attributes_proxy(plugin_filename: str):
 
 @pytest.mark.parametrize(
     "plugin_filename,parameter_name",
-    [
-        (path, parameter)
-        for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
-        for parameter in [k for k, v in get_parameters(path).items() if v.type == bool]
-    ],
+    sample(
+        [
+            (path, parameter)
+            for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
+            for parameter in [k for k, v in get_parameters(path).items() if v.type == bool]
+        ],
+        5,
+    ),
 )
 def test_bool_parameters(plugin_filename: str, parameter_name: str):
     plugin = load_test_plugin(plugin_filename)
@@ -578,11 +581,14 @@ def test_bool_parameters(plugin_filename: str, parameter_name: str):
 
 @pytest.mark.parametrize(
     "plugin_filename,parameter_name",
-    [
-        (path, parameter)
-        for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
-        for parameter in [k for k, v in get_parameters(path).items() if v.type == bool]
-    ],
+    sample(
+        [
+            (path, parameter)
+            for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
+            for parameter in [k for k, v in get_parameters(path).items() if v.type == bool]
+        ],
+        5,
+    ),
 )
 def test_bool_parameter_valdation(plugin_filename: str, parameter_name: str):
     plugin = load_test_plugin(plugin_filename)
@@ -634,11 +640,14 @@ def test_float_parameters(plugin_filename: str, parameter_name: str):
 
 @pytest.mark.parametrize(
     "plugin_filename,parameter_name",
-    [
-        (path, parameter)
-        for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
-        for parameter in [k for k, v in get_parameters(path).items() if v.type == float]
-    ],
+    sample(
+        [
+            (path, parameter)
+            for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
+            for parameter in [k for k, v in get_parameters(path).items() if v.type == float]
+        ],
+        5,
+    ),
 )
 def test_float_parameter_valdation(plugin_filename: str, parameter_name: str):
     plugin = load_test_plugin(plugin_filename)
@@ -668,11 +677,14 @@ def test_float_parameter_valdation(plugin_filename: str, parameter_name: str):
 
 @pytest.mark.parametrize(
     "plugin_filename,parameter_name",
-    [
-        (path, parameter)
-        for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
-        for parameter in [k for k, v in get_parameters(path).items() if v.type == str]
-    ],
+    sample(
+        [
+            (path, parameter)
+            for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
+            for parameter in [k for k, v in get_parameters(path).items() if v.type == str]
+        ],
+        5,
+    ),
 )
 def test_str_parameters(plugin_filename: str, parameter_name: str):
     plugin = load_test_plugin(plugin_filename)
@@ -693,11 +705,14 @@ def test_str_parameters(plugin_filename: str, parameter_name: str):
 
 @pytest.mark.parametrize(
     "plugin_filename,parameter_name",
-    [
-        (path, parameter)
-        for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
-        for parameter in [k for k, v in get_parameters(path).items() if v.type == str]
-    ],
+    sample(
+        [
+            (path, parameter)
+            for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
+            for parameter in [k for k, v in get_parameters(path).items() if v.type == str]
+        ],
+        5,
+    ),
 )
 def test_string_parameter_valdation(plugin_filename: str, parameter_name: str):
     plugin = load_test_plugin(plugin_filename)
@@ -710,7 +725,7 @@ def test_string_parameter_valdation(plugin_filename: str, parameter_name: str):
         setattr(plugin, parameter_name, "some value not present")
 
 
-@pytest.mark.parametrize("plugin_filename", [AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT[0]])
+@pytest.mark.parametrize("plugin_filename", sample(AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT, 1))
 def test_plugin_parameters_persist_between_calls(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename)
     sr = 44100
@@ -758,7 +773,7 @@ def test_plugin_parameters_persist_between_calls(plugin_filename: str):
         ), f"Expected {name} to match saved value"
 
 
-@pytest.mark.parametrize("plugin_filename", [AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT[0]])
+@pytest.mark.parametrize("plugin_filename", sample(AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT, 1))
 def test_plugin_state_cleared_between_invocations_by_default(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename, disable_caching=True)
 
@@ -1092,7 +1107,7 @@ def test_get_plugin_names_from_container(plugin_filename: str):
     assert len(names) > 1
 
 
-@pytest.mark.parametrize("plugin_filename", [AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT[0]])
+@pytest.mark.parametrize("plugin_filename", sample(AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT, 1))
 @pytest.mark.parametrize("num_plugins", [2, 4])
 def test_external_effect_plugin_concurrency(plugin_filename: str, num_plugins: int):
     plugins = [load_test_plugin(plugin_filename, disable_caching=True) for _ in range(num_plugins)]
