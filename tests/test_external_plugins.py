@@ -83,6 +83,16 @@ AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT = (
     AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT + AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT
 )
 
+ONE_AVAILABLE_TEST_PLUGIN = (
+    [AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT[0]] if AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT else []
+)
+
+ONE_AVAILABLE_INSTRUMENT_PLUGIN = (
+    [AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT[0]]
+    if AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT
+    else []
+)
+
 
 def is_container_plugin(filename: str):
     for klass in pedalboard._AVAILABLE_PLUGIN_CLASSES:
@@ -335,7 +345,7 @@ def test_import_error_on_missing_path(loader):
         loader("./")
 
 
-@pytest.mark.parametrize("plugin_filename", [AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT[0]])
+@pytest.mark.parametrize("plugin_filename", ONE_AVAILABLE_INSTRUMENT_PLUGIN)
 @pytest.mark.parametrize("num_channels,sample_rate", [(2, 48000), (2, 44100), (2, 22050)])
 @pytest.mark.parametrize(
     "notes",
@@ -408,7 +418,7 @@ def test_effect_plugin_does_not_accept_notes(
         plugin(notes, 6.0, sample_rate, num_channels=num_channels)
 
 
-@pytest.mark.parametrize("plugin_filename", [AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT[0]])
+@pytest.mark.parametrize("plugin_filename", ONE_AVAILABLE_INSTRUMENT_PLUGIN)
 @pytest.mark.parametrize("num_channels,sample_rate", [(2, 48000), (2, 44100), (2, 22050)])
 def test_instrument_plugin_accepts_buffer_size(
     plugin_filename: str, num_channels: int, sample_rate: float
@@ -429,7 +439,7 @@ def test_instrument_plugin_accepts_buffer_size(
         np.testing.assert_allclose(a, b, atol=0.02)
 
 
-@pytest.mark.parametrize("plugin_filename", [AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT[0]])
+@pytest.mark.parametrize("plugin_filename", ONE_AVAILABLE_INSTRUMENT_PLUGIN)
 @pytest.mark.parametrize("num_channels,sample_rate", [(2, 48000), (2, 44100), (2, 22050)])
 def test_instrument_plugin_does_not_accept_audio(
     plugin_filename: str, num_channels: int, sample_rate: float
@@ -879,9 +889,10 @@ def test_external_plugin_latency_compensation(buffer_size: int, oversampling: in
     np.testing.assert_allclose(output, noise, atol=0.05)
 
 
-def test_show_editor():
+@pytest.mark.parametrize("plugin_filename", ONE_AVAILABLE_TEST_PLUGIN)
+def test_show_editor(plugin_filename: str):
     # Run this test in a subprocess, as otherwise we'd block this thread:
-    full_plugin_filename = find_plugin_path(AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT[0])
+    full_plugin_filename = find_plugin_path(plugin_filename)
     try:
         command = [
             psutil.Process(os.getpid()).exe(),
@@ -964,10 +975,11 @@ class Watchdog(threading.Thread):
             os._exit(1)
 
 
+@pytest.mark.parametrize("plugin_filename", ONE_AVAILABLE_TEST_PLUGIN)
 @pytest.mark.parametrize("timeout", [0.0, 0.25, 0.5])
-def test_show_editor_in_process(timeout: float):
+def test_show_editor_in_process(plugin_filename: str, timeout: float):
     # Run this test in this process:
-    full_plugin_filename = find_plugin_path(AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT[0])
+    full_plugin_filename = find_plugin_path(plugin_filename)
     try:
         cancel = threading.Event()
         with Watchdog():
@@ -987,12 +999,13 @@ def test_show_editor_in_process(timeout: float):
             raise
 
 
+@pytest.mark.parametrize("plugin_filename", ONE_AVAILABLE_TEST_PLUGIN)
 @pytest.mark.parametrize(
     "bad_input", [False, 1, {"foo": "bar"}, {"is_set": "False"}, threading.Event]
 )
-def test_show_editor_passed_something_else(bad_input):
+def test_show_editor_passed_something_else(plugin_filename: str, bad_input):
     # Run this test in this process:
-    full_plugin_filename = find_plugin_path(AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT[0])
+    full_plugin_filename = find_plugin_path(plugin_filename)
     plugin = pedalboard.load_plugin(full_plugin_filename)
 
     with pytest.raises((TypeError, RuntimeError)) as e:
@@ -1028,7 +1041,7 @@ def test_plugin_container_handling():
         assert plugin_name == plugin.name
 
 
-@pytest.mark.parametrize("plugin_filename", [AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT[0]])
+@pytest.mark.parametrize("plugin_filename", ONE_AVAILABLE_TEST_PLUGIN)
 def test_get_plugin_name_from_regular_plugin(plugin_filename: str):
     plugin_path = find_plugin_path(plugin_filename)
     if ".vst3" in plugin_filename:
