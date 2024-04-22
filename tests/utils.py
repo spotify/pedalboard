@@ -5,7 +5,7 @@ import numpy as np
 TEST_SINE_WAVE_CACHE = {}
 
 
-@lru_cache
+@lru_cache(maxsize=None)
 def generate_sine_at(
     sample_rate: float,
     fundamental_hz: float = 440.0,

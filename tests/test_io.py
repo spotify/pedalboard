@@ -63,7 +63,7 @@ UNSUPPORTED_FILENAMES = [
 ]
 
 
-@lru_cache
+@lru_cache(maxsize=None)
 def cached_rand(*args, **kwargs):
     return np.random.rand(*args, **kwargs)
 
