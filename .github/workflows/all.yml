@@ -65,8 +65,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - { os: macos-latest, python-version: "3.12", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: ubuntu-20.04, python-version: "3.12", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: macos-latest, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          - { os: ubuntu-20.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: ubuntu-20.04, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
     name: Build on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -105,12 +106,13 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
-          key: ${{ runner.os }}-ccache
+          key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_SLOPPINESS: "include_file_mtime"
+          CCACHE_DEBUG: 1
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: python setup.py develop
@@ -132,25 +134,25 @@ jobs:
     strategy:
       matrix:
         include:
-          - { os: macos-latest, python-version: "3.7", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: macos-latest, python-version: "3.8", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: macos-latest, python-version: "3.9", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: macos-latest, python-version: "3.10", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: macos-latest, python-version: "3.11", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: macos-latest, python-version: "3.12", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: ubuntu-20.04, python-version: "3.7", cc: "ccache gcc", cxx: "ccache g++" }
-          - { os: ubuntu-20.04, python-version: "3.8", cc: "ccache gcc", cxx: "ccache g++" }
-          - { os: ubuntu-20.04, python-version: "3.9", cc: "ccache gcc", cxx: "ccache g++" }
-          - { os: ubuntu-20.04, python-version: "3.10", cc: "ccache gcc", cxx: "ccache g++" }
-          - { os: ubuntu-20.04, python-version: "3.11", cc: "ccache gcc", cxx: "ccache g++" }
-          - { os: ubuntu-20.04, python-version: "3.12", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: macos-latest, python-version: "3.7", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          - { os: macos-latest, python-version: "3.8", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          - { os: macos-latest, python-version: "3.9", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          - { os: macos-latest, python-version: "3.10", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          - { os: macos-latest, python-version: "3.11", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          - { os: macos-latest, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          - { os: ubuntu-20.04, python-version: "3.7", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: ubuntu-20.04, python-version: "3.8", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: ubuntu-20.04, python-version: "3.9", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: ubuntu-20.04, python-version: "3.10", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: ubuntu-20.04, python-version: "3.11", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: ubuntu-20.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           # No ccache for Windows, as it doesn't work with MSVC
-          - { os: windows-latest, python-version: "3.7", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.8", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.9", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.10", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.11", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.12", cc: "msvc", cxx: "msvc" }
+          - { os: windows-latest, python-version: "3.7", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          - { os: windows-latest, python-version: "3.8", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          - { os: windows-latest, python-version: "3.9", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          - { os: windows-latest, python-version: "3.10", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          - { os: windows-latest, python-version: "3.11", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          - { os: windows-latest, python-version: "3.12", compiler: "msvc", cc: "msvc", cxx: "msvc" }
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -200,13 +202,14 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
-          key: ${{ runner.os }}-ccache
+          key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         run: python setup.py develop
         env:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_SLOPPINESS: "include_file_mtime"
+          CCACHE_DEBUG: 1
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
       - name: Install VSTs for testing
@@ -237,6 +240,7 @@ jobs:
 
   run-tests-with-address-sanitizer:
     runs-on: ${{ matrix.os }}
+    needs: [prime-build-caches]
     strategy:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
@@ -266,12 +270,19 @@ jobs:
           # TensorFlow is an optional dependency; if present, we'll run tests with it:
           # There are no environment specifiers to select when TensorFlow binaries are available.
           pip install tensorflow==2.13 || true
+      - name: Restore Cached ${{ runner.os }} Objects
+        id: cache-objects-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ runner.workspace }}/.ccache
+          key: ${{ runner.os }}-clang-ccache
       - name: Build pedalboard locally
         env:
           DEBUG: "0"
           USE_ASAN: "1"
-          CC: clang
-          CXX: clang++
+          CC: ccache clang
+          CXX: ccache clang++
         run: python setup.py develop
       - name: Run tests with ASan loaded
         # pytest can exit before all Python objects have been destroyed,
