@@ -915,6 +915,7 @@ def test_external_plugin_latency_compensation(buffer_size: int, oversampling: in
     np.testing.assert_allclose(output, noise, atol=0.05)
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Windows subprocess handling")
 @pytest.mark.parametrize("plugin_filename", ONE_AVAILABLE_TEST_PLUGIN)
 def test_show_editor(plugin_filename: str):
     # Run this test in a subprocess, as otherwise we'd block this thread:
@@ -940,12 +941,6 @@ except KeyboardInterrupt:
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            # On windows, prevent the CTRL_C_EVENT from applying to
-            # all processes in the group thus causing the whole PyTest
-            # run to fail:
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
-            if hasattr(signal, "CTRL_C_EVENT")
-            else 0,
         )
         try:
             stdout = process.stdout.read(2)  # Wait for the "OK" message to be printed.
@@ -958,12 +953,9 @@ except KeyboardInterrupt:
                 )
 
             # Send a KeyboardInterrupt into the process, which should kill the editor:
-            if hasattr(signal, "CTRL_C_EVENT"):
-                process.send_signal(signal.CTRL_C_EVENT)
-            else:
-                process.send_signal(signal.SIGINT)
+            process.send_signal(signal.SIGINT)
 
-            return_code = process.wait(timeout=4)
+            return_code = process.wait(timeout=1)
             stdout = process.stdout.read()
             if return_code != 0:
                 raise RuntimeError(
