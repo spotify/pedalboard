@@ -111,8 +111,8 @@ jobs:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_SLOPPINESS: "include_file_mtime"
-          CC: ccache clang
-          CXX: ccache clang++
+          CC: ccache $CC
+          CXX: ccache $CXX
         run: python setup.py develop
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
@@ -187,8 +187,8 @@ jobs:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_SLOPPINESS: "include_file_mtime"
-          CC: ccache clang
-          CXX: ccache clang++
+          CC: ccache $CC
+          CXX: ccache $CXX
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
