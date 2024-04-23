@@ -63,13 +63,9 @@ jobs:
     env:
       MINIMUM_COVERAGE_PERCENTAGE: 80
     strategy:
-      matrix:
-        python-version:
-          - '3.12'
-        os:
-          - ubuntu-20.04
-          # - windows-latest
-          # - macos-latest
+      include:
+        - { os: macos-latest, python-version: "3.12", cc: "ccache clang", cxx: "ccache clang++" }
+        - { os: ubuntu-20.04, python-version: "3.12", cc: "ccache gcc", cxx: "ccache g++" }
     name: Build on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -111,8 +107,8 @@ jobs:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_SLOPPINESS: "include_file_mtime"
-          CC: ccache gcc
-          CXX: ccache g++
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
         run: python setup.py develop
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
@@ -125,15 +121,31 @@ jobs:
   run-tests:
     runs-on: ${{ matrix.os }}
     continue-on-error: false
+    needs:
+      - prime-build-caches
     env:
       MINIMUM_COVERAGE_PERCENTAGE: 80
     strategy:
-      matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
-        os:
-         - ubuntu-20.04
-        #  - windows-latest
-        #  - macos-latest
+      include:
+        - { os: macos-latest, python-version: "3.7", cc: "ccache clang", cxx: "ccache clang++" }
+        - { os: macos-latest, python-version: "3.8", cc: "ccache clang", cxx: "ccache clang++" }
+        - { os: macos-latest, python-version: "3.9", cc: "ccache clang", cxx: "ccache clang++" }
+        - { os: macos-latest, python-version: "3.10", cc: "ccache clang", cxx: "ccache clang++" }
+        - { os: macos-latest, python-version: "3.11", cc: "ccache clang", cxx: "ccache clang++" }
+        - { os: macos-latest, python-version: "3.12", cc: "ccache clang", cxx: "ccache clang++" }
+        - { os: ubuntu-20.04, python-version: "3.7", cc: "ccache gcc", cxx: "ccache g++" }
+        - { os: ubuntu-20.04, python-version: "3.8", cc: "ccache gcc", cxx: "ccache g++" }
+        - { os: ubuntu-20.04, python-version: "3.9", cc: "ccache gcc", cxx: "ccache g++" }
+        - { os: ubuntu-20.04, python-version: "3.10", cc: "ccache gcc", cxx: "ccache g++" }
+        - { os: ubuntu-20.04, python-version: "3.11", cc: "ccache gcc", cxx: "ccache g++" }
+        - { os: ubuntu-20.04, python-version: "3.12", cc: "ccache gcc", cxx: "ccache g++" }
+        # No ccache for Windows, as it doesn't work with MSVC
+        - { os: windows-latest, python-version: "3.7", cc: "msvc", cxx: "msvc" }
+        - { os: windows-latest, python-version: "3.8", cc: "msvc", cxx: "msvc" }
+        - { os: windows-latest, python-version: "3.9", cc: "msvc", cxx: "msvc" }
+        - { os: windows-latest, python-version: "3.10", cc: "msvc", cxx: "msvc" }
+        - { os: windows-latest, python-version: "3.11", cc: "msvc", cxx: "msvc" }
+        - { os: windows-latest, python-version: "3.12", cc: "msvc", cxx: "msvc" }
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -187,8 +199,8 @@ jobs:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_SLOPPINESS: "include_file_mtime"
-          CC: ccache gcc
-          CXX: ccache g++
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
