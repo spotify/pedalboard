@@ -80,7 +80,13 @@ ALL_CPPFLAGS.extend(
         "-DJUCE_MODAL_LOOPS_PERMITTED=1",
     ]
 )
-ALL_INCLUDES.extend(["JUCE/modules/", "JUCE/modules/juce_audio_processors/format_types/VST3_SDK/"])
+ALL_INCLUDES.extend(
+    [
+        "vendors/pybind11/include/",
+        "JUCE/modules/",
+        "JUCE/modules/juce_audio_processors/format_types/VST3_SDK/",
+    ]
+)
 
 if "musllinux" in os.getenv("CIBW_BUILD", ""):
     # For Alpine/musllinux compatibility:
@@ -273,6 +279,15 @@ def patch_compile(original_compile):
             extra_postargs = [arg for arg in extra_postargs if "std=" not in arg]
             _cc_args = cc_args + ALL_CFLAGS
 
+        should_omit_python_header = any(x in src for x in ("JUCE", "/juce_overrides/"))
+
+        # Remove the Python header from most files; we only need it when compiling
+        # This speeds up compile times on CI as most of the objects don't need Python
+        # headers at all, and including -I/include/python3.x/Python.h prevents us from
+        # re-using the same object file for different Python versions.
+        if any("include/python3" in arg for arg in _cc_args) and should_omit_python_header:
+            _cc_args = [arg for arg in _cc_args if "include/python3" not in arg]
+
         return original_compile(obj, src, ext, _cc_args, extra_postargs, *args, **kwargs)
 
     return new_compile
@@ -304,6 +319,7 @@ pedalboard_cpp = Pybind11Extension(
     libraries=ALL_LIBRARIES,
     language="c++",
     cxx_std=17,
+    include_pybind11=False,
 )
 
 
