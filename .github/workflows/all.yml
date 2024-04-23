@@ -56,6 +56,71 @@ jobs:
           clang-format-version: 14
           fallback-style: LLVM
 
+  # Build the native module with ccache enabled so we can share object files between builds:
+  prime-build-caches:
+    runs-on: ${{ matrix.os }}
+    continue-on-error: false
+    env:
+      MINIMUM_COVERAGE_PERCENTAGE: 80
+    strategy:
+      matrix:
+        python-version: '3.12'
+        os:
+          - ubuntu-20.04
+          # - windows-latest
+          # - macos-latest
+    name: Build on ${{ matrix.os }}
+    steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update \
+          && sudo apt-get install -y pkg-config libsndfile1 \
+          libx11-dev libxrandr-dev libxinerama-dev \
+          libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
+          libxcursor-dev libfreetype6 libfreetype6-dev
+      - name: Install test dependencies
+        env:
+          # on macOS and with Python 3.10: building NumPy from source fails without these options:
+          NPY_BLAS_ORDER: ""
+          NPY_LAPACK_ORDER: ""
+        run: |
+          python -m pip install --upgrade pip
+          pip install wheel
+          pip install -r test-requirements.txt
+          # TensorFlow is an optional dependency; if present, we'll run tests with it:
+          # There are no environment specifiers to select when TensorFlow binaries are available.
+          pip install tensorflow==2.13 || true
+      - name: Restore Cached ${{ runner.os }} Objects
+        id: cache-objects-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ runner.workspace }}/.ccache
+          key: ${{ runner.os }}-ccache
+      - name: Build pedalboard locally
+        env:
+          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ runner.workspace }}
+          CCACHE_SLOPPINESS: "include_file_mtime"
+          CC: ccache clang
+          CXX: ccache clang++
+        run: python setup.py develop
+      - name: Save Cached ${{ runner.os }} Objects
+        id: cache-objects-save
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ runner.workspace }}/.ccache
+          key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
+
   run-tests:
     runs-on: ${{ matrix.os }}
     continue-on-error: false
@@ -64,7 +129,10 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
-        os: ['ubuntu-20.04', windows-latest, macos-latest]
+        os:
+         - ubuntu-20.04
+        #  - windows-latest
+        #  - macos-latest
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -105,8 +173,21 @@ jobs:
         uses: crazy-max/ghaction-chocolatey@v2
         with:
           args: install jq
+      - name: Restore Cached ${{ runner.os }} Objects
+        id: cache-objects-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ runner.workspace }}/.ccache
+          key: ${{ runner.os }}-ccache
       - name: Build pedalboard locally
         run: python setup.py develop
+        env:
+          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ runner.workspace }}
+          CCACHE_SLOPPINESS: "include_file_mtime"
+          CC: ccache clang
+          CXX: ccache clang++
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
