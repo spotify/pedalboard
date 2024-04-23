@@ -940,6 +940,12 @@ except KeyboardInterrupt:
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            # On windows, prevent the CTRL_C_EVENT from applying to
+            # all processes in the group thus causing the whole PyTest
+            # run to fail:
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+            if hasattr(signal, "CTRL_C_EVENT")
+            else 0,
         )
         try:
             stdout = process.stdout.read(2)  # Wait for the "OK" message to be printed.
@@ -953,13 +959,7 @@ except KeyboardInterrupt:
 
             # Send a KeyboardInterrupt into the process, which should kill the editor:
             if hasattr(signal, "CTRL_C_EVENT"):
-                try:
-                    process.send_signal(signal.CTRL_C_EVENT)
-                    time.sleep(1)
-                except KeyboardInterrupt:
-                    # on Windows, sending a CTRL_C_EVENT raises a KeyboardInterrupt in both
-                    # the child process and the parent process! So here, we catch that and move on.
-                    pass
+                process.send_signal(signal.CTRL_C_EVENT)
             else:
                 process.send_signal(signal.SIGINT)
 
