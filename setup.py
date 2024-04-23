@@ -15,13 +15,15 @@
 # limitations under the License.
 
 
+import logging
 import os
 import platform
-from subprocess import check_output
-from pybind11.setup_helpers import Pybind11Extension, build_ext
-from pathlib import Path
 from distutils.core import setup
 from distutils.unixccompiler import UnixCCompiler
+from pathlib import Path
+from subprocess import check_output
+
+from pybind11.setup_helpers import Pybind11Extension, build_ext
 
 DEBUG = bool(int(os.environ.get("DEBUG", 0)))
 
@@ -317,6 +319,8 @@ long_description = (this_directory / "README.md").read_text()
 version = {}
 version_file_contents = (this_directory / "pedalboard" / "version.py").read_text()
 exec(version_file_contents, version)
+
+logging.basicConfig(format="%(message)s")
 
 setup(
     name="pedalboard",

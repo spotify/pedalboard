@@ -115,7 +115,7 @@ jobs:
           CCACHE_DEBUG: 1
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-        run: python setup.py develop
+        run: python setup.py build -j 4
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
