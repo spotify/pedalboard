@@ -64,7 +64,8 @@ jobs:
       MINIMUM_COVERAGE_PERCENTAGE: 80
     strategy:
       matrix:
-        python-version: '3.12'
+        python-version:
+          - '3.12'
         os:
           - ubuntu-20.04
           # - windows-latest
