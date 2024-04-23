@@ -963,7 +963,7 @@ except KeyboardInterrupt:
             else:
                 process.send_signal(signal.SIGINT)
 
-            return_code = process.wait(timeout=1)
+            return_code = process.wait(timeout=4)
             stdout = process.stdout.read()
             if return_code != 0:
                 raise RuntimeError(
