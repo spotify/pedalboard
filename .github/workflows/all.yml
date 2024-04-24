@@ -92,6 +92,7 @@ jobs:
           mkdir ccache
           curl -L https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz | tar xvJf - -C ccache
           mv ccache/ccache*/ccache.1 /usr/local/bin/ccache
+          chmod +x /usr/local/bin/ccache
       - name: Install ccache on macOS
         if: runner.os == 'macOS'
         run: brew install ccache
@@ -183,6 +184,7 @@ jobs:
           mkdir ccache
           curl -L https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz | tar xvJf - -C ccache
           mv ccache/ccache*/ccache.1 /usr/local/bin/ccache
+          chmod +x /usr/local/bin/ccache
       - name: Install ccache on macOS
         if: runner.os == 'macOS'
         run: brew install ccache
@@ -291,6 +293,7 @@ jobs:
           mkdir ccache
           curl -L https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz | tar xvJf - -C ccache
           mv ccache/ccache*/ccache.1 /usr/local/bin/ccache
+          chmod +x /usr/local/bin/ccache
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
