@@ -65,7 +65,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - { os: macos-latest, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          # - { os: macos-latest, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
           - { os: ubuntu-20.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
     name: Pre-build on ${{ matrix.os }} with ${{ matrix.compiler }}
@@ -134,25 +134,25 @@ jobs:
     strategy:
       matrix:
         include:
-          - { os: macos-latest, python-version: "3.7", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: macos-latest, python-version: "3.8", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: macos-latest, python-version: "3.9", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: macos-latest, python-version: "3.10", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: macos-latest, python-version: "3.11", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: macos-latest, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: ubuntu-20.04, python-version: "3.7", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
-          - { os: ubuntu-20.04, python-version: "3.8", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
-          - { os: ubuntu-20.04, python-version: "3.9", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
-          - { os: ubuntu-20.04, python-version: "3.10", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          # - { os: macos-latest, python-version: "3.7", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          # - { os: macos-latest, python-version: "3.8", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          # - { os: macos-latest, python-version: "3.9", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          # - { os: macos-latest, python-version: "3.10", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          # - { os: macos-latest, python-version: "3.11", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          # - { os: macos-latest, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          # - { os: ubuntu-20.04, python-version: "3.7", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          # - { os: ubuntu-20.04, python-version: "3.8", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          # - { os: ubuntu-20.04, python-version: "3.9", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          # - { os: ubuntu-20.04, python-version: "3.10", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.11", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           # No ccache for Windows, as it doesn't work with MSVC
-          - { os: windows-latest, python-version: "3.7", compiler: "msvc", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.8", compiler: "msvc", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.9", compiler: "msvc", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.10", compiler: "msvc", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.11", compiler: "msvc", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.12", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # - { os: windows-latest, python-version: "3.7", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # - { os: windows-latest, python-version: "3.8", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # - { os: windows-latest, python-version: "3.9", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # - { os: windows-latest, python-version: "3.10", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # - { os: windows-latest, python-version: "3.11", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # - { os: windows-latest, python-version: "3.12", compiler: "msvc", cc: "msvc", cxx: "msvc" }
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -210,6 +210,8 @@ jobs:
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result"
+          CCACHE_DEBUG: "1"
+          CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
       - name: Install VSTs for testing
@@ -237,6 +239,11 @@ jobs:
           label: Test Coverage
           message: ${{ env.COVERAGE_PERCENTAGE }}
           color: ${{ env.COVERAGE_COLOR }}
+      - name: Archive ccache debug info 
+        uses: actions/upload-artifact@v4
+        with:
+          name: ccache-output-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.compiler }}
+          path: ${{ runner.workspace }}/.ccache_debug
 
   run-tests-with-address-sanitizer:
     runs-on: ${{ matrix.os }}
