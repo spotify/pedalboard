@@ -220,8 +220,6 @@ jobs:
           path: |
             ${{ runner.workspace }}/.ccache
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
-      - name: Ensure cache is primed
-        run: ls -lR ${{ runner.workspace }}/.ccache
       - name: Build pedalboard locally
         run: python setup.py develop
         env:
