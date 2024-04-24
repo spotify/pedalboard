@@ -110,7 +110,6 @@ jobs:
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
-          CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result"
           CC: ${{ matrix.cc }}
@@ -203,17 +202,20 @@ jobs:
           path: |
             ${{ runner.workspace }}/.ccache
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+      - name: Ensure cache is primed
+        run: ls -lR ${{ runner.workspace }}/.ccache
       - name: Build pedalboard locally
         run: python setup.py develop
         env:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
-          CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result"
           CCACHE_DEBUG: "1"
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
+      - name: Show ccache_debug info
+        run: ls -lR ${{ runner.workspace }}/.ccache_debug
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
@@ -243,7 +245,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ccache-output-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.compiler }}
-          path: ${{ runner.workspace }}/.ccache_debug
+          path: ${{ runner.workspace }}/.ccache_debug/
 
   run-tests-with-address-sanitizer:
     runs-on: ${{ matrix.os }}
