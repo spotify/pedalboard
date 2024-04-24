@@ -68,7 +68,7 @@ jobs:
           - { os: macos-latest, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
           - { os: ubuntu-20.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
-    name: Build on ${{ matrix.os }}
+    name: Pre-build on ${{ matrix.os }} with ${{ matrix.compiler }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
@@ -111,8 +111,8 @@ jobs:
         env:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ runner.workspace }}
-          CCACHE_SLOPPINESS: "include_file_mtime"
-          CCACHE_DEBUG: 1
+          CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
+          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: python setup.py build -j 4
@@ -208,8 +208,8 @@ jobs:
         env:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ runner.workspace }}
-          CCACHE_SLOPPINESS: "include_file_mtime"
-          CCACHE_DEBUG: 1
+          CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
+          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
       - name: Install VSTs for testing
