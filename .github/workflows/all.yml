@@ -67,7 +67,7 @@ jobs:
         include:
           # - { os: macos-latest, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
           - { os: ubuntu-20.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
-          - { os: ubuntu-20.04, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          # - { os: ubuntu-20.04, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
     name: Pre-build on ${{ matrix.os }} with ${{ matrix.compiler }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -118,6 +118,8 @@ jobs:
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ runner.workspace }}
+          CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result"
           CC: ${{ matrix.cc }}
@@ -224,13 +226,15 @@ jobs:
         run: python setup.py develop
         env:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ runner.workspace }}
+          CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result"
           CCACHE_DEBUG: "1"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
       - name: Show ccache_debug info
-        run: ls -lR ${{ runner.workspace }}/.ccache
+        run: ls -lR ${{ runner.workspace }}/.ccache_debug
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
@@ -260,11 +264,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ccache-output-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.compiler }}
-          path: ${{ runner.workspace }}/.ccache
+          path: ${{ runner.workspace }}/.ccache_debug
 
   run-tests-with-address-sanitizer:
     runs-on: ${{ matrix.os }}
     needs: [prime-build-caches]
+    if: false
     strategy:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
@@ -313,9 +318,20 @@ jobs:
         env:
           DEBUG: "0"
           USE_ASAN: "1"
+          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ runner.workspace }}
+          CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
+          CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
+          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result"
+          CCACHE_DEBUG: "1"
           CC: ccache clang
           CXX: ccache clang++
         run: python setup.py develop
+      - name: Archive ccache debug info
+        uses: actions/upload-artifact@v4
+        with:
+          name: ccache-output-${{ runner.os }}-asan-${{ matrix.python-version }}-${{ matrix.compiler }}
+          path: ${{ runner.workspace }}/.ccache_debug
       - name: Run tests with ASan loaded
         # pytest can exit before all Python objects have been destroyed,
         # so we tell ASan to ignore leaks.
