@@ -87,7 +87,7 @@ jobs:
           libxcursor-dev libfreetype6 libfreetype6-dev
       # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
       - name: Install ccache on Linux
-        if: runner.os == "Linux"
+        if: runner.os == 'Linux'
         run: |
           mkdir ccache
           curl -L https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz | tar xvzf - -C ccache
@@ -178,7 +178,7 @@ jobs:
           libxcursor-dev libfreetype6 libfreetype6-dev
       # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
       - name: Install ccache on Linux
-        if: runner.os == "Linux"
+        if: runner.os == 'Linux'
         run: |
           mkdir ccache
           curl -L https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz | tar xvzf - -C ccache
@@ -286,7 +286,7 @@ jobs:
           libxcursor-dev libfreetype6 libfreetype6-dev
       # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
       - name: Install ccache on Linux
-        if: runner.os == "Linux"
+        if: runner.os == 'Linux'
         run: |
           mkdir ccache
           curl -L https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz | tar xvzf - -C ccache
