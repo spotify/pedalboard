@@ -84,8 +84,15 @@ jobs:
           && sudo apt-get install -y pkg-config libsndfile1 \
           libx11-dev libxrandr-dev libxinerama-dev \
           libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
-          libxcursor-dev libfreetype6 libfreetype6-dev ccache
-      - name: Install macOS dependencies
+          libxcursor-dev libfreetype6 libfreetype6-dev
+      # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
+      - name: Install ccache on Linux
+        if: runner.os == "Linux"
+        run: |
+          mkdir ccache
+          curl -L https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz | tar xvzf - -C ccache
+          mv ccache/ccache*/ccache.1 /usr/local/bin/ccache
+      - name: Install ccache on macOS
         if: runner.os == 'macOS'
         run: brew install ccache
       - name: Install test dependencies
@@ -168,8 +175,15 @@ jobs:
           && sudo apt-get install -y pkg-config libsndfile1 \
           libx11-dev libxrandr-dev libxinerama-dev \
           libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
-          libxcursor-dev libfreetype6 libfreetype6-dev ccache
-      - name: Install macOS dependencies
+          libxcursor-dev libfreetype6 libfreetype6-dev
+      # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
+      - name: Install ccache on Linux
+        if: runner.os == "Linux"
+        run: |
+          mkdir ccache
+          curl -L https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz | tar xvzf - -C ccache
+          mv ccache/ccache*/ccache.1 /usr/local/bin/ccache
+      - name: Install ccache on macOS
         if: runner.os == 'macOS'
         run: brew install ccache
       - name: Install test dependencies
@@ -211,11 +225,10 @@ jobs:
           CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result"
           CCACHE_DEBUG: "1"
-          CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
       - name: Show ccache_debug info
-        run: ls -lR ${{ runner.workspace }}/.ccache_debug
+        run: ls -lR ${{ runner.workspace }}/.ccache
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
@@ -245,7 +258,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ccache-output-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.compiler }}
-          path: ${{ runner.workspace }}/.ccache_debug/
+          path: ${{ runner.workspace }}/.ccache
 
   run-tests-with-address-sanitizer:
     runs-on: ${{ matrix.os }}
@@ -270,7 +283,14 @@ jobs:
           && sudo apt-get install -y pkg-config libsndfile1 \
           libx11-dev libxrandr-dev libxinerama-dev \
           libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
-          libxcursor-dev libfreetype6 libfreetype6-dev ccache
+          libxcursor-dev libfreetype6 libfreetype6-dev
+      # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
+      - name: Install ccache on Linux
+        if: runner.os == "Linux"
+        run: |
+          mkdir ccache
+          curl -L https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz | tar xvzf - -C ccache
+          mv ccache/ccache*/ccache.1 /usr/local/bin/ccache
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
