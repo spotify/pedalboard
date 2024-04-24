@@ -74,7 +74,7 @@ ALL_CPPFLAGS.extend(
         "-DJUCE_DISABLE_JUCE_VERSION_PRINTING=1",
         "-DJUCE_WEB_BROWSER=0",
         "-DJUCE_USE_CURL=0",
-        "-DJUCE_USE_MP3AUDIOFORMAT=1",
+        "-DJUCE_USE_MP3AUDIOFORMAT=0",  # We've patched this out too
         "-DJUCE_USE_FLAC=0",  # We've patched this out
         # "-DJUCE_USE_FREETYPE=0",
         "-DJUCE_MODAL_LOOPS_PERMITTED=1",
@@ -279,7 +279,8 @@ def patch_compile(original_compile):
             extra_postargs = [arg for arg in extra_postargs if "std=" not in arg]
             _cc_args = cc_args + ALL_CFLAGS
 
-        should_omit_python_header = any(x in src for x in ("JUCE", "/juce_overrides/"))
+        # Code in JUCE or vendors should not even know we're using Python:
+        should_omit_python_header = any(x in src for x in ("JUCE", "/juce_overrides/", "/vendors/"))
 
         # Remove the Python header from most files; we only need it when compiling
         # This speeds up compile times on CI as most of the objects don't need Python
@@ -297,6 +298,13 @@ class BuildC_CxxExtensions(build_ext):
     """
     Add custom logic for injecting different arguments when compiling C vs C++ files.
     """
+
+    def initialize_options(self):
+        build_ext.initialize_options(self)
+        # If on CI, avoid breaking ccache by using a consistent
+        # output directory name regardless of Python version:
+        if os.getenv("CI"):
+            self.build_temp = "./build/temp"
 
     def build_extensions(self, *args, **kwargs):
         self.compiler._compile = patch_compile(self.compiler._compile)
