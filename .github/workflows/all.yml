@@ -231,8 +231,6 @@ jobs:
           CCACHE_DEBUG: "1"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-      - name: Show ccache_debug info
-        run: ls -lR ${{ runner.workspace }}/.ccache_debug
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
