@@ -11,7 +11,8 @@ def pytest_collection_modifyitems(session, config, items):
         return
     print(f"\n\nRunning tests for worker {test_worker_index + 1} of {num_test_workers}.")
     print(
-        f"This process will only run one out of every {num_test_workers:,} tests, offset by {test_worker_index}.\n"
+        f"This process will only run one out of every {num_test_workers:,}"
+        f" tests, offset by {test_worker_index}.\n"
     )
     for i, item in enumerate(list(items)):
         if (i + test_worker_index) % num_test_workers != 0:
