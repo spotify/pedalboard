@@ -120,7 +120,7 @@ jobs:
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-        run: python setup.py build -j 4
+        run: python setup.py develop
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -145,22 +145,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update \
-          && sudo apt-get install -y pkg-config libsndfile1 \
-          libx11-dev libxrandr-dev libxinerama-dev \
-          libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
-          libxcursor-dev libfreetype6 libfreetype6-dev
-      # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
-      - name: Install ccache on Linux
-        if: runner.os == 'Linux'
-        run: |
-          mkdir ccache
-          curl -L https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz | tar xvJf - -C ccache
-          mv ccache/ccache*/ccache /usr/local/bin/ccache
-          chmod +x /usr/local/bin/ccache
       - name: Install ccache on macOS
         if: runner.os == 'macOS'
         run: brew install ccache
@@ -173,9 +157,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install wheel
           pip install -r test-requirements.txt
-          # TensorFlow is an optional dependency; if present, we'll run tests with it:
-          # There are no environment specifiers to select when TensorFlow binaries are available.
-          pip install tensorflow==2.13 || true
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
         uses: actions/cache/restore@v4
@@ -190,9 +171,16 @@ jobs:
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
+          CCACHE_DEBUG: "1"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-        run: python setup.py build -j 4
+        run: python setup.py develop
+      - name: Ensure ccache worked
+        env:
+          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+        run: |
+          ccache --show-stats
+          ls -lashR ${{ runner.workspace }}/.ccache
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -200,6 +188,11 @@ jobs:
           path: |
             ${{ runner.workspace }}/.ccache
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
+      - name: Archive ccache debug info 
+        uses: actions/upload-artifact@v4
+        with:
+          name: ccache-output-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.compiler }}-prime
+          path: ${{ runner.workspace }}/.ccache_debug
 
   # Build the native module with ccache enabled so we can share object files between builds:
   prime-asan-build-caches:
@@ -265,7 +258,7 @@ jobs:
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-        run: python setup.py build -j 4
+        run: python setup.py develop
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -488,7 +481,6 @@ jobs:
   run-tests-with-address-sanitizer:
     runs-on: ${{ matrix.os }}
     needs: [prime-asan-build-caches]
-    if: false
     strategy:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
