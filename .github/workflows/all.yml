@@ -128,7 +128,6 @@ jobs:
         run: |
           ccache --show-stats --verbose
           cat ${{ runner.workspace }}/.ccache_log || true
-          ls -lashR ${{ runner.workspace }}/.ccache
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -201,7 +200,6 @@ jobs:
         run: |
           ccache --show-stats --verbose
           cat ${{ runner.workspace }}/.ccache_log || true
-          ls -lashR ${{ runner.workspace }}/.ccache
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -494,6 +492,13 @@ jobs:
           ARCHFLAGS: -arch x86_64
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
+      - name: Ensure ccache worked
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        env:
+          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+        run: |
+          ccache --show-stats --verbose
+          cat ${{ runner.workspace }}/.ccache_log || true
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
@@ -592,7 +597,6 @@ jobs:
         run: |
           ccache --show-stats --verbose
           cat ${{ runner.workspace }}/.ccache_log || true
-          ls -lashR ${{ runner.workspace }}/.ccache
       - name: Archive ccache debug info
         uses: actions/upload-artifact@v4
         with:
