@@ -277,6 +277,7 @@ jobs:
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
+          USE_ASAN: "1"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: python setup.py develop
@@ -353,7 +354,7 @@ jobs:
         run: ls -lashR ${{ runner.workspace }}
       # Without this, distutils will recompile the extension even though we already have the .so built:
       - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
-        run: find ${{ runner.workspace }}/pedalboard/build -name '*.so' -exec touch -c {} \;
+        run: find ${{ runner.workspace }}/pedalboard/build -name '*.so' -exec touch -c {} \; || true
       - name: Build pedalboard locally
         run: python setup.py develop
         env:
@@ -475,9 +476,7 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       # Without this, distutils will recompile the extension even though we already have the shared object built:
       - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
-        run: |
-          find ${{ runner.workspace }}/pedalboard/build -name '*.so' -exec touch -c {} \;
-          find ${{ runner.workspace }}/pedalboard/build -name '*.dylib' -exec touch -c {} \;
+        run: find ${{ runner.workspace }}/pedalboard/build -name '*.so' -exec touch -c {} \; || true
       - name: Build pedalboard locally
         run: python setup.py develop
         env:
@@ -585,6 +584,13 @@ jobs:
           CC: ccache clang
           CXX: ccache clang++
         run: python setup.py develop
+      - name: Ensure ccache worked
+        env:
+          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+        run: |
+          ccache --show-stats --verbose
+          cat ${{ runner.workspace }}/.ccache_log || true
+          ls -lashR ${{ runner.workspace }}/.ccache
       - name: Archive ccache debug info
         uses: actions/upload-artifact@v4
         with:
