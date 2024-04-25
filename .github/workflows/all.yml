@@ -111,7 +111,6 @@ jobs:
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
-          CCACHE_NOINODECACHE: "1" # Disable inode caching, as the cache will have different inodes
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: python setup.py develop
@@ -129,6 +128,7 @@ jobs:
           path: |
             ${{ runner.workspace }}/.ccache
             ${{ runner.workspace }}/pedalboard/**/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/temp/**/*juce*/*
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
       - name: Archive Cached ${{ runner.os }} Objects
         uses: actions/upload-artifact@v4
@@ -137,6 +137,7 @@ jobs:
           path: |
             ${{ runner.workspace }}/.ccache
             ${{ runner.workspace }}/pedalboard/**/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/temp/**/*juce*/*
 
   prime-macos-build-caches:
     runs-on: ${{ matrix.os }}
@@ -181,7 +182,6 @@ jobs:
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_DEBUG: "1"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
-          CCACHE_NOINODECACHE: "1" # Disable inode caching, as the cache will have different inodes
           # This build caching is only to speed up tests on CI, so we only care about x86_64 for now.
           # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
           # Fun fact: this is supported in Python itself! https://github.com/python/cpython/blob/893c9cc/Lib/_osx_support.py#L314-L328
@@ -203,6 +203,7 @@ jobs:
           path: |
             ${{ runner.workspace }}/.ccache
             ${{ runner.workspace }}/pedalboard/**/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/temp/**/*juce*/*
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
       - name: Archive ccache debug info 
         uses: actions/upload-artifact@v4
@@ -272,7 +273,6 @@ jobs:
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
-          CCACHE_NOINODECACHE: "1" # Disable inode caching, as the cache will have different inodes
           USE_ASAN: "1"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
@@ -292,6 +292,7 @@ jobs:
           path: |
             ${{ runner.workspace }}/.ccache
             ${{ runner.workspace }}/pedalboard/**/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/temp/**/*juce*/*
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
 
   # This initial job catches obvious failures faster by running tests in parallel on just Ubuntu.
@@ -353,6 +354,7 @@ jobs:
           path: |
             ${{ runner.workspace }}/.ccache
             ${{ runner.workspace }}/pedalboard/**/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/temp/**/*juce*/*
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Print Restored ${{ runner.os }} Objects
         run: ls -lashR ${{ runner.workspace }}
@@ -369,7 +371,6 @@ jobs:
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
-          CCACHE_NOINODECACHE: "1" # Disable inode caching, as the cache will have different inodes
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
       - name: Ensure ccache worked
@@ -479,6 +480,7 @@ jobs:
           path: |
             ${{ runner.workspace }}/.ccache
             ${{ runner.workspace }}/pedalboard/**/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/temp/**/*juce*/*
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       # Without this, distutils will recompile the extension even though we already have the shared object built:
       - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
@@ -494,7 +496,6 @@ jobs:
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
-          CCACHE_NOINODECACHE: "1" # Disable inode caching, as the cache will have different inodes
           # This build caching is only to speed up tests on CI, so we only care about x86_64 for now.
           # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
           # Fun fact: this is supported in Python itself! https://github.com/python/cpython/blob/893c9cc/Lib/_osx_support.py#L314-L328
@@ -587,6 +588,7 @@ jobs:
           path: |
             ${{ runner.workspace }}/.ccache
             ${{ runner.workspace }}/pedalboard/**/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/temp/**/*juce*/*
           key: ${{ runner.os }}-clang-ccache
       - name: Build pedalboard locally
         env:
@@ -598,7 +600,6 @@ jobs:
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
-          CCACHE_NOINODECACHE: "1" # Disable inode caching, as the cache will have different inodes
           CCACHE_DEBUG: "1"
           CC: ccache clang
           CXX: ccache clang++
