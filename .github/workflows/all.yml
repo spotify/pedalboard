@@ -110,7 +110,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/lib*
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
@@ -137,8 +137,15 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/lib*
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
+      - name: Archive Cached ${{ runner.os }} Objects
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.compiler }}
+          path: |
+            ${{ runner.workspace }}/.ccache
+            ${{ runner.workspace }}/pedalboard/**/build/lib*
 
   prime-macos-build-caches:
     runs-on: ${{ matrix.os }}
@@ -174,7 +181,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/lib*
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
@@ -204,7 +211,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/lib*
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
       - name: Archive ccache debug info 
         uses: actions/upload-artifact@v4
@@ -266,7 +273,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/lib*
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
@@ -284,7 +291,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/lib*
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
 
   # This initial job catches obvious failures faster by running tests in parallel on just Ubuntu.
@@ -345,7 +352,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/lib*
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         run: python setup.py develop
@@ -456,7 +463,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/lib*
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         run: python setup.py develop
@@ -546,7 +553,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
+            ${{ runner.workspace }}/pedalboard/**/build/lib*
           key: ${{ runner.os }}-clang-ccache
       - name: Build pedalboard locally
         env:
