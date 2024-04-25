@@ -305,7 +305,10 @@ def patch_compile(original_compile):
                     break
             else:
                 print("No -arch arm64 flags found.")
-            assert "arm64" not in " ".join(extra_postargs), "Found arm64 in extra_postargs!"
+            assert "arm64" not in " ".join(cc_args), f"Found arm64 in cc_args: {cc_args!r}"
+            assert "arm64" not in " ".join(
+                extra_postargs
+            ), f"Found arm64 in extra_postargs: {extra_postargs!r}"
 
         return original_compile(obj, src, ext, _cc_args, extra_postargs, *args, **kwargs)
 

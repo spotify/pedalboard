@@ -355,7 +355,7 @@ jobs:
             ${{ runner.workspace }}/pedalboard/**/build/lib*
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Print Restored ${{ runner.os }} Objects
-        run: ls -lashR ${{ runner.workspace }}/pedalboard/build
+        run: ls -lashR ${{ runner.workspace }}
       - name: Build pedalboard locally
         run: python setup.py develop
         env:
@@ -374,6 +374,7 @@ jobs:
           ccache --show-stats --verbose
           cat ${{ runner.workspace }}/.ccache_log
           ls -lashR ${{ runner.workspace }}/.ccache
+          ls -lashR ${{ runner.workspace }}
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
