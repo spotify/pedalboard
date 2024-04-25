@@ -289,6 +289,18 @@ def patch_compile(original_compile):
         if any("include/python3" in arg for arg in _cc_args) and should_omit_python_header:
             _cc_args = [arg for arg in _cc_args if "include/python3" not in arg]
 
+        # Allow limiting to just x86_64 on CI (ccache fix):
+        if os.getenv("CI") and os.getenv("ARCH") == "x86_64":
+            # Remove the -arch arm64 flag, whether it shows up as one or two arguments:
+            for i, (arg_a, arg_b) in enumerate(list(zip(_cc_args, _cc_args[1:]))):
+                if arg_a == "-arch" and arg_b == "arm64":
+                    del _cc_args[i]
+                    del _cc_args[i + 1]
+                    break
+                elif arg_a == "-arch arm64":
+                    del _cc_args[i]
+                    break
+
         return original_compile(obj, src, ext, _cc_args, extra_postargs, *args, **kwargs)
 
     return new_compile
