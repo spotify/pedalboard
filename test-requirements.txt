@@ -12,6 +12,7 @@ numpy
 google-cloud-storage
 tqdm
 psutil
+mypy
 
 # For MIDI support - only in test though!
 mido
