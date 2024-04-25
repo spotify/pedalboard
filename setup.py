@@ -17,7 +17,6 @@
 import logging
 import os
 import platform
-import sys
 from distutils.core import setup
 from distutils.unixccompiler import UnixCCompiler
 from pathlib import Path
@@ -288,27 +287,6 @@ def patch_compile(original_compile):
         # re-using the same object file for different Python versions.
         if any("include/python3" in arg for arg in _cc_args) and should_omit_python_header:
             _cc_args = [arg for arg in _cc_args if "include/python3" not in arg]
-
-        # Allow limiting to just x86_64 on CI (ccache fix):
-        if os.getenv("CI") and os.getenv("ARCH") == "x86_64":
-            # Remove the -arch arm64 flag, whether it shows up as one or two arguments:
-            sys.stderr.write("Removing -arch arm64 from args due to ARCH=x86_64...\n")
-            for i, (arg_a, arg_b) in enumerate(list(zip(extra_postargs, extra_postargs[1:]))):
-                if arg_a == "-arch" and arg_b == "arm64":
-                    sys.stderr.write(f"Found -arch arm64 at indices {i} and {i + 1}, removing.\n")
-                    del extra_postargs[i]
-                    del extra_postargs[i]
-                    break
-                elif arg_a == "-arch arm64":
-                    sys.stderr.write(f"Found '-arch arm64' at index {i}, removing.\n")
-                    del extra_postargs[i]
-                    break
-            else:
-                sys.stderr.write(f"No -arch arm64 flags found in: {extra_postargs!r} {cc_args!r}\n")
-            assert "arm64" not in " ".join(cc_args), f"Found arm64 in cc_args: {cc_args!r}"
-            assert "arm64" not in " ".join(
-                extra_postargs
-            ), f"Found arm64 in extra_postargs: {extra_postargs!r}"
 
         return original_compile(obj, src, ext, _cc_args, extra_postargs, *args, **kwargs)
 
