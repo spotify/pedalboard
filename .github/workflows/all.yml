@@ -111,6 +111,7 @@ jobs:
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
+          CCACHE_NOINODECACHE: "1" # Disable inode caching, as the cache will have different inodes
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: python setup.py develop
@@ -180,6 +181,7 @@ jobs:
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_DEBUG: "1"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
+          CCACHE_NOINODECACHE: "1" # Disable inode caching, as the cache will have different inodes
           # This build caching is only to speed up tests on CI, so we only care about x86_64 for now.
           # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
           # Fun fact: this is supported in Python itself! https://github.com/python/cpython/blob/893c9cc/Lib/_osx_support.py#L314-L328
@@ -270,6 +272,7 @@ jobs:
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
+          CCACHE_NOINODECACHE: "1" # Disable inode caching, as the cache will have different inodes
           USE_ASAN: "1"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
@@ -366,6 +369,7 @@ jobs:
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
+          CCACHE_NOINODECACHE: "1" # Disable inode caching, as the cache will have different inodes
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
       - name: Ensure ccache worked
@@ -490,6 +494,7 @@ jobs:
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
+          CCACHE_NOINODECACHE: "1" # Disable inode caching, as the cache will have different inodes
           # This build caching is only to speed up tests on CI, so we only care about x86_64 for now.
           # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
           # Fun fact: this is supported in Python itself! https://github.com/python/cpython/blob/893c9cc/Lib/_osx_support.py#L314-L328
@@ -593,6 +598,7 @@ jobs:
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
+          CCACHE_NOINODECACHE: "1" # Disable inode caching, as the cache will have different inodes
           CCACHE_DEBUG: "1"
           CC: ccache clang
           CXX: ccache clang++
