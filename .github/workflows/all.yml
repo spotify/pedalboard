@@ -110,6 +110,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
+            ${{ runner.workspace }}/build/lib
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
@@ -118,15 +119,25 @@ jobs:
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
+          CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
+          CCACHE_DEBUG: "1"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: python setup.py develop
+      - name: Ensure ccache worked
+        env:
+          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+        run: |
+          ccache --show-stats --verbose
+          cat ${{ runner.workspace }}/.ccache_log
+          ls -lashR ${{ runner.workspace }}/.ccache
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
         with:
           path: |
             ${{ runner.workspace }}/.ccache
+            ${{ runner.workspace }}/build/lib
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
 
   prime-macos-build-caches:
@@ -163,6 +174,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
+            ${{ runner.workspace }}/build/lib
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
@@ -172,6 +184,7 @@ jobs:
           CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_DEBUG: "1"
+          CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: python setup.py develop
@@ -179,7 +192,8 @@ jobs:
         env:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
         run: |
-          ccache --show-stats
+          ccache --show-stats --verbose
+          cat ${{ runner.workspace }}/.ccache_log
           ls -lashR ${{ runner.workspace }}/.ccache
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
@@ -187,6 +201,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
+            ${{ runner.workspace }}/build/lib
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
       - name: Archive ccache debug info 
         uses: actions/upload-artifact@v4
@@ -248,6 +263,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
+            ${{ runner.workspace }}/build/lib
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
@@ -265,6 +281,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
+            ${{ runner.workspace }}/build/lib
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
 
   # This initial job catches obvious failures faster by running tests in parallel on just Ubuntu.
@@ -325,6 +342,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
+            ${{ runner.workspace }}/build/lib
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         run: python setup.py develop
@@ -435,6 +453,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
+            ${{ runner.workspace }}/build/lib
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         run: python setup.py develop
@@ -524,6 +543,7 @@ jobs:
         with:
           path: |
             ${{ runner.workspace }}/.ccache
+            ${{ runner.workspace }}/build/lib
           key: ${{ runner.os }}-clang-ccache
       - name: Build pedalboard locally
         env:
