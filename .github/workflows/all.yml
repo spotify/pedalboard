@@ -354,6 +354,8 @@ jobs:
             ${{ runner.workspace }}/.ccache
             ${{ runner.workspace }}/pedalboard/**/build/lib*
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+      - name: Print Restored ${{ runner.os }} Objects
+        run: ls -lashR ${{ runner.workspace }}/pedalboard/build
       - name: Build pedalboard locally
         run: python setup.py develop
         env:
@@ -362,8 +364,16 @@ jobs:
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
+          CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
+      - name: Ensure ccache worked
+        env:
+          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+        run: |
+          ccache --show-stats --verbose
+          cat ${{ runner.workspace }}/.ccache_log
+          ls -lashR ${{ runner.workspace }}/.ccache
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
