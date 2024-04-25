@@ -269,10 +269,19 @@ jobs:
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
+          CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           USE_ASAN: "1"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: python setup.py develop
+      - name: Ensure ccache worked
+        env:
+          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+        run: |
+          ccache --show-stats --verbose
+          ccache --zero-stats
+          cat ${{ runner.workspace }}/.ccache_log || true
+          ls -lashR ${{ runner.workspace }}
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -479,6 +488,7 @@ jobs:
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
+          CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
           # This build caching is only to speed up tests on CI, so we only care about x86_64 for now.
           # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
@@ -582,6 +592,7 @@ jobs:
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
+          CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
           CC: ccache clang
           CXX: ccache clang++
