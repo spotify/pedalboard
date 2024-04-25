@@ -14,10 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import logging
 import os
 import platform
+import sys
 from distutils.core import setup
 from distutils.unixccompiler import UnixCCompiler
 from pathlib import Path
@@ -292,19 +292,19 @@ def patch_compile(original_compile):
         # Allow limiting to just x86_64 on CI (ccache fix):
         if os.getenv("CI") and os.getenv("ARCH") == "x86_64":
             # Remove the -arch arm64 flag, whether it shows up as one or two arguments:
-            print("Removing -arch arm64 from args due to ARCH=x86_64...")
+            sys.stderr.write("Removing -arch arm64 from args due to ARCH=x86_64...\n")
             for i, (arg_a, arg_b) in enumerate(list(zip(extra_postargs, extra_postargs[1:]))):
                 if arg_a == "-arch" and arg_b == "arm64":
-                    print(f"Found -arch arm64 at indices {i} and {i + 1}, removing.")
+                    sys.stderr.write(f"Found -arch arm64 at indices {i} and {i + 1}, removing.\n")
                     del extra_postargs[i]
                     del extra_postargs[i]
                     break
                 elif arg_a == "-arch arm64":
-                    print(f"Found '-arch arm64' at index {i}, removing.")
+                    sys.stderr.write(f"Found '-arch arm64' at index {i}, removing.\n")
                     del extra_postargs[i]
                     break
             else:
-                print("No -arch arm64 flags found.")
+                sys.stderr.write(f"No -arch arm64 flags found in: {extra_postargs!r} {cc_args!r}\n")
             assert "arm64" not in " ".join(cc_args), f"Found arm64 in cc_args: {cc_args!r}"
             assert "arm64" not in " ".join(
                 extra_postargs

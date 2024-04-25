@@ -108,9 +108,7 @@ jobs:
         id: cache-objects-restore
         uses: actions/cache/restore@v4
         with:
-          path: |
-            ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/**/build/lib*
+          path: ${{ runner.workspace }}/.ccache
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
@@ -179,9 +177,7 @@ jobs:
         id: cache-objects-restore
         uses: actions/cache/restore@v4
         with:
-          path: |
-            ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/**/build/lib*
+          path: ${{ runner.workspace }}/.ccache
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
@@ -271,9 +267,7 @@ jobs:
         id: cache-objects-restore
         uses: actions/cache/restore@v4
         with:
-          path: |
-            ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/**/build/lib*
+          path: ${{ runner.workspace }}/.ccache
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
@@ -356,6 +350,9 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Print Restored ${{ runner.os }} Objects
         run: ls -lashR ${{ runner.workspace }}
+      # Without this, distutils will recompile the extension even though we already have the .so built:
+      - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
+        run: touch ${{ runner.workspace }}/pedalboard/**/build/lib*/*.so
       - name: Build pedalboard locally
         run: python setup.py develop
         env:
@@ -476,6 +473,11 @@ jobs:
             ${{ runner.workspace }}/.ccache
             ${{ runner.workspace }}/pedalboard/**/build/lib*
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+      # Without this, distutils will recompile the extension even though we already have the shared object built:
+      - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
+        run: |
+          touch ${{ runner.workspace }}/pedalboard/**/build/lib*/*.so
+          touch ${{ runner.workspace }}/pedalboard/**/build/lib*/*.dylib
       - name: Build pedalboard locally
         run: python setup.py develop
         env:
