@@ -352,7 +352,7 @@ jobs:
         run: ls -lashR ${{ runner.workspace }}
       # Without this, distutils will recompile the extension even though we already have the .so built:
       - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
-        run: touch ${{ runner.workspace }}/pedalboard/**/build/lib*/*.so
+        run: find ${{ runner.workspace }}/pedalboard/build -name '*.so' -exec touch -c {} \;
       - name: Build pedalboard locally
         run: python setup.py develop
         env:
@@ -476,8 +476,8 @@ jobs:
       # Without this, distutils will recompile the extension even though we already have the shared object built:
       - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
         run: |
-          touch ${{ runner.workspace }}/pedalboard/**/build/lib*/*.so
-          touch ${{ runner.workspace }}/pedalboard/**/build/lib*/*.dylib
+          find ${{ runner.workspace }}/pedalboard/build -name '*.so' -exec touch -c {} \;
+          find ${{ runner.workspace }}/pedalboard/build -name '*.dylib' -exec touch -c {} \;
       - name: Build pedalboard locally
         run: python setup.py develop
         env:
