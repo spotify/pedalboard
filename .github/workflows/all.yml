@@ -57,16 +57,157 @@ jobs:
           fallback-style: LLVM
 
   # Build the native module with ccache enabled so we can share object files between builds:
-  prime-build-caches:
+  prime-ubuntu-build-caches:
     runs-on: ${{ matrix.os }}
     continue-on-error: false
-    env:
-      MINIMUM_COVERAGE_PERCENTAGE: 80
+    strategy:
+      matrix:
+        include:
+          - { os: ubuntu-20.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+    name: Pre-build on ${{ matrix.os }} with ${{ matrix.compiler }}
+    steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update \
+          && sudo apt-get install -y pkg-config libsndfile1 \
+          libx11-dev libxrandr-dev libxinerama-dev \
+          libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
+          libxcursor-dev libfreetype6 libfreetype6-dev
+      # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
+      - name: Install ccache on Linux
+        if: runner.os == 'Linux'
+        run: |
+          mkdir ccache
+          curl -L https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz | tar xvJf - -C ccache
+          mv ccache/ccache*/ccache /usr/local/bin/ccache
+          chmod +x /usr/local/bin/ccache
+      - name: Install ccache on macOS
+        if: runner.os == 'macOS'
+        run: brew install ccache
+      - name: Install test dependencies
+        env:
+          # on macOS and with Python 3.10: building NumPy from source fails without these options:
+          NPY_BLAS_ORDER: ""
+          NPY_LAPACK_ORDER: ""
+        run: |
+          python -m pip install --upgrade pip
+          pip install wheel
+          pip install -r test-requirements.txt
+          # TensorFlow is an optional dependency; if present, we'll run tests with it:
+          # There are no environment specifiers to select when TensorFlow binaries are available.
+          pip install tensorflow==2.13 || true
+      - name: Restore Cached ${{ runner.os }} Objects
+        id: cache-objects-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ runner.workspace }}/.ccache
+          key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+      - name: Build pedalboard locally
+        env:
+          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ runner.workspace }}
+          CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
+          CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
+          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: python setup.py build -j 4
+      - name: Save Cached ${{ runner.os }} Objects
+        id: cache-objects-save
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ runner.workspace }}/.ccache
+          key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
+
+  prime-macos-build-caches:
+    runs-on: ${{ matrix.os }}
+    continue-on-error: false
     strategy:
       matrix:
         include:
           - { os: macos-latest, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: ubuntu-20.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+    name: Pre-build on ${{ matrix.os }} with ${{ matrix.compiler }}
+    steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update \
+          && sudo apt-get install -y pkg-config libsndfile1 \
+          libx11-dev libxrandr-dev libxinerama-dev \
+          libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
+          libxcursor-dev libfreetype6 libfreetype6-dev
+      # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
+      - name: Install ccache on Linux
+        if: runner.os == 'Linux'
+        run: |
+          mkdir ccache
+          curl -L https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz | tar xvJf - -C ccache
+          mv ccache/ccache*/ccache /usr/local/bin/ccache
+          chmod +x /usr/local/bin/ccache
+      - name: Install ccache on macOS
+        if: runner.os == 'macOS'
+        run: brew install ccache
+      - name: Install test dependencies
+        env:
+          # on macOS and with Python 3.10: building NumPy from source fails without these options:
+          NPY_BLAS_ORDER: ""
+          NPY_LAPACK_ORDER: ""
+        run: |
+          python -m pip install --upgrade pip
+          pip install wheel
+          pip install -r test-requirements.txt
+          # TensorFlow is an optional dependency; if present, we'll run tests with it:
+          # There are no environment specifiers to select when TensorFlow binaries are available.
+          pip install tensorflow==2.13 || true
+      - name: Restore Cached ${{ runner.os }} Objects
+        id: cache-objects-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ runner.workspace }}/.ccache
+          key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+      - name: Build pedalboard locally
+        env:
+          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ runner.workspace }}
+          CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
+          CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
+          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: python setup.py build -j 4
+      - name: Save Cached ${{ runner.os }} Objects
+        id: cache-objects-save
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ runner.workspace }}/.ccache
+          key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
+
+  # Build the native module with ccache enabled so we can share object files between builds:
+  prime-asan-build-caches:
+    runs-on: ${{ matrix.os }}
+    continue-on-error: false
+    strategy:
+      matrix:
+        include:
           - { os: ubuntu-20.04, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
     name: Pre-build on ${{ matrix.os }} with ${{ matrix.compiler }}
     steps:
@@ -121,7 +262,7 @@ jobs:
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
-          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
+          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: python setup.py build -j 4
@@ -133,11 +274,93 @@ jobs:
             ${{ runner.workspace }}/.ccache
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
 
+  # This initial job catches obvious failures faster by running tests in parallel on just Ubuntu.
+  run-tests-in-parallel:
+    runs-on: ${{ matrix.os }}
+    continue-on-error: false
+    needs:
+      - prime-ubuntu-build-caches
+    strategy:
+      matrix:
+        os: ["ubuntu-20.04"]
+        python-version: ["3.12"]
+        compiler: ["gcc"]
+        cc: ["ccache gcc"]
+        cxx: ["ccache g++"]
+        runner_index: ["1", "2", "3", "4", "5", "6", "7", "8"]
+        runner_total: ["8"]
+    name: Test ${{ matrix.runner_index }} / ${{ matrix.runner_total }} with Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update \
+          && sudo apt-get install -y pkg-config libsndfile1 \
+          libx11-dev libxrandr-dev libxinerama-dev \
+          libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
+          libxcursor-dev libfreetype6 libfreetype6-dev
+      # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
+      - name: Install ccache on Linux
+        if: runner.os == 'Linux'
+        run: |
+          mkdir ccache
+          curl -L https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz | tar xvJf - -C ccache
+          mv ccache/ccache*/ccache /usr/local/bin/ccache
+          chmod +x /usr/local/bin/ccache
+      - name: Install test dependencies
+        env:
+          # on macOS and with Python 3.10: building NumPy from source fails without these options:
+          NPY_BLAS_ORDER: ""
+          NPY_LAPACK_ORDER: ""
+        run: |
+          python -m pip install --upgrade pip
+          pip install wheel
+          pip install -r test-requirements.txt
+          # TensorFlow is an optional dependency; if present, we'll run tests with it:
+          # There are no environment specifiers to select when TensorFlow binaries are available.
+          pip install tensorflow==2.13 || true
+      - name: Restore Cached ${{ runner.os }} Objects
+        id: cache-objects-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ runner.workspace }}/.ccache
+          key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+      - name: Build pedalboard locally
+        run: python setup.py develop
+        env:
+          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ runner.workspace }}
+          CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
+          CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
+          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+      - name: Install VSTs for testing
+        env:
+          GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
+          GCS_READER_SERVICE_ACCOUNT_KEY: ${{ secrets.GCS_READER_SERVICE_ACCOUNT_KEY }}
+        run: python ./tests/download_test_plugins.py
+      - name: Run tests
+        env:
+          TEST_WORKER_INDEX: ${{ matrix.runner_index }}
+          NUM_TEST_WORKERS: ${{ matrix.runner_total }}
+        run: pytest --maxfail=1 --durations=10
+
   run-tests:
     runs-on: ${{ matrix.os }}
     continue-on-error: false
     needs:
-      - prime-build-caches
+      - prime-ubuntu-build-caches
+      - prime-macos-build-caches
+      - run-tests-in-parallel
     env:
       MINIMUM_COVERAGE_PERCENTAGE: 80
     strategy:
@@ -227,7 +450,7 @@ jobs:
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
-          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
+          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_DEBUG: "1"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
@@ -264,7 +487,7 @@ jobs:
 
   run-tests-with-address-sanitizer:
     runs-on: ${{ matrix.os }}
-    needs: [prime-build-caches]
+    needs: [prime-asan-build-caches]
     if: false
     strategy:
       matrix:
@@ -318,7 +541,7 @@ jobs:
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
-          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
+          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_DEBUG: "1"
           CC: ccache clang
           CXX: ccache clang++
