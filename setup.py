@@ -292,14 +292,20 @@ def patch_compile(original_compile):
         # Allow limiting to just x86_64 on CI (ccache fix):
         if os.getenv("CI") and os.getenv("ARCH") == "x86_64":
             # Remove the -arch arm64 flag, whether it shows up as one or two arguments:
-            for i, (arg_a, arg_b) in enumerate(list(zip(_cc_args, _cc_args[1:]))):
+            print("Removing -arch arm64 from args due to ARCH=x86_64...")
+            for i, (arg_a, arg_b) in enumerate(list(zip(extra_postargs, extra_postargs[1:]))):
                 if arg_a == "-arch" and arg_b == "arm64":
-                    del _cc_args[i]
-                    del _cc_args[i + 1]
+                    print(f"Found -arch arm64 at indices {i} and {i + 1}, removing.")
+                    del extra_postargs[i]
+                    del extra_postargs[i]
                     break
                 elif arg_a == "-arch arm64":
-                    del _cc_args[i]
+                    print(f"Found '-arch arm64' at index {i}, removing.")
+                    del extra_postargs[i]
                     break
+            else:
+                print("No -arch arm64 flags found.")
+            assert "arm64" not in " ".join(extra_postargs), "Found arm64 in extra_postargs!"
 
         return original_compile(obj, src, ext, _cc_args, extra_postargs, *args, **kwargs)
 
