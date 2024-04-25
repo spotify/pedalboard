@@ -121,7 +121,7 @@ jobs:
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
-          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result"
+          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: python setup.py build -j 4
@@ -227,7 +227,7 @@ jobs:
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
-          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result"
+          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_DEBUG: "1"
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
@@ -318,7 +318,7 @@ jobs:
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "include_file_mtime include_file_ctime time_macros"
-          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result"
+          CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -Wno-unused-result -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_DEBUG: "1"
           CC: ccache clang
           CXX: ccache clang++
@@ -405,6 +405,7 @@ jobs:
         - { os: 'ubuntu-20.04', build: pp39-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: pp39-manylinux_aarch64 }
     name: Build wheel for ${{ matrix.build }}
+    needs: [ prime-build-caches ]
     steps:
       - uses: actions/checkout@v2
         with:
