@@ -405,7 +405,6 @@ jobs:
         - { os: 'ubuntu-20.04', build: pp39-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: pp39-manylinux_aarch64 }
     name: Build wheel for ${{ matrix.build }}
-    needs: [ prime-build-caches ]
     steps:
       - uses: actions/checkout@v2
         with:
