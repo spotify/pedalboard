@@ -110,6 +110,7 @@ jobs:
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_COMPILERCHECK: none
+          CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
@@ -176,6 +177,7 @@ jobs:
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_COMPILERCHECK: none
+          CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_DEBUG: "1"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
@@ -267,6 +269,7 @@ jobs:
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_COMPILERCHECK: none
+          CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           USE_ASAN: "1"
@@ -372,6 +375,7 @@ jobs:
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_COMPILERCHECK: none
+          CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
@@ -502,6 +506,7 @@ jobs:
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_COMPILERCHECK: none
+          CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
@@ -605,6 +610,7 @@ jobs:
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
           CCACHE_COMPILERCHECK: none
+          CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
