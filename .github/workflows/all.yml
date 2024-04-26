@@ -31,9 +31,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install ruff
       - name: Lint Python code
-        run: ruff check . --ignore=E203,F541 --exclude .git,dist,doc,build,vendors,'*.pyi' --line-length 100 
+        run: ruff check ${{ runner.workspace }}/pedalboard --ignore=E203,F541 --exclude .git,dist,doc,build,vendors,'*.pyi' --line-length 100 
       - name: Check Python formatting
-        run: ruff format --check . --exclude .git,dist,doc,build,JUCE,examples,vendors,'*.pyi' --diff --line-length 100
+        run: ruff format --check ${{ runner.workspace }}/pedalboard --exclude .git,dist,doc,build,JUCE,examples,vendors,'*.pyi' --diff --line-length 100
 
   lint-cpp:
     runs-on: 'ubuntu-20.04'
@@ -207,11 +207,6 @@ jobs:
             ${{ runner.workspace }}/pedalboard/**/build/lib*
             ${{ runner.workspace }}/pedalboard/**/build/temp/**/*juce*/*
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
-      - name: Archive ccache debug info 
-        uses: actions/upload-artifact@v4
-        with:
-          name: ccache-output-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.compiler }}-prime
-          path: ${{ runner.workspace }}/.ccache_debug
 
   # Build the native module with ccache enabled so we can share object files between builds:
   prime-asan-build-caches:
@@ -367,6 +362,7 @@ jobs:
         run: |
           find ${{ runner.workspace }}/pedalboard/build -name '*.so' -exec touch -c {} \; || true
           find ${{ runner.workspace }}/pedalboard/build -name '*.o' -exec touch -c {} \; || true
+          ls -lR ${{ runner.workspace }}/pedalboard
       - name: Build pedalboard locally
         run: python setup.py develop
         env:
@@ -494,6 +490,7 @@ jobs:
         run: |
           find ${{ runner.workspace }}/pedalboard/build -name '*.so' -exec touch -c {} \; || true
           find ${{ runner.workspace }}/pedalboard/build -name '*.o' -exec touch -c {} \; || true
+          ls -lR ${{ runner.workspace }}/pedalboard
       - name: Build pedalboard locally
         run: python setup.py develop
         env:
@@ -544,11 +541,6 @@ jobs:
           label: Test Coverage
           message: ${{ env.COVERAGE_PERCENTAGE }}
           color: ${{ env.COVERAGE_COLOR }}
-      - name: Archive ccache debug info 
-        uses: actions/upload-artifact@v4
-        with:
-          name: ccache-output-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.compiler }}
-          path: ${{ runner.workspace }}/.ccache_debug
 
   run-tests-with-address-sanitizer:
     runs-on: ${{ matrix.os }}
@@ -621,11 +613,6 @@ jobs:
           ccache --show-stats --verbose
           ccache --zero-stats
           cat ${{ runner.workspace }}/.ccache_log || true
-      - name: Archive ccache debug info
-        uses: actions/upload-artifact@v4
-        with:
-          name: ccache-output-${{ runner.os }}-asan-${{ matrix.python-version }}-${{ matrix.compiler }}
-          path: ${{ runner.workspace }}/.ccache_debug
       - name: Run tests with ASan loaded
         # pytest can exit before all Python objects have been destroyed,
         # so we tell ASan to ignore leaks.
