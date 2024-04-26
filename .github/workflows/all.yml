@@ -357,8 +357,8 @@ jobs:
       - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run: |
-          find ${{ runner.workspace }}/pedalboard/build -name '*.so' -exec touch -c {} \; || true
-          find ${{ runner.workspace }}/pedalboard/build -name '*.o' -exec touch -c {} \; || true
+          find ${{ runner.workspace }} -name '*.so' -exec touch {} \; || true
+          find ${{ runner.workspace }} -name '*.o' -exec touch {} \; || true
           ls -lR ${{ runner.workspace }}/pedalboard
       - name: Build pedalboard locally
         run: python setup.py develop
@@ -486,8 +486,8 @@ jobs:
       - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run: |
-          find ${{ runner.workspace }}/pedalboard/build -name '*.so' -exec touch -c {} \; || true
-          find ${{ runner.workspace }}/pedalboard/build -name '*.o' -exec touch -c {} \; || true
+          find ${{ runner.workspace }} -name '*.so' -exec touch {} \; || true
+          find ${{ runner.workspace }} -name '*.o' -exec touch {} \; || true
           ls -lR ${{ runner.workspace }}/pedalboard
       - name: Build pedalboard locally
         run: python setup.py develop
