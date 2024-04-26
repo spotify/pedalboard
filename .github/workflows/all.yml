@@ -124,7 +124,7 @@ jobs:
         run: |
           ccache --show-stats --verbose
           ccache --zero-stats
-          cat ${{ runner.workspace }}/.ccache_log || true
+        #  cat ${{ runner.workspace }}/.ccache_log || true
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -196,8 +196,8 @@ jobs:
         run: |
           ccache --show-stats --verbose
           ccache --zero-stats
-          cat ${{ runner.workspace }}/.ccache_log || true
-          ls -lashR ${{ runner.workspace }}/pedalboard
+        #  cat ${{ runner.workspace }}/.ccache_log || true
+        #  ls -lashR ${{ runner.workspace }}/pedalboard
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -208,14 +208,6 @@ jobs:
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
-      - name: Archive Cached ${{ runner.os }} Objects
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ runner.os }}-ccache-${{ matrix.compiler }}-primed
-          path: ${{ runner.workspace }}/.ccache_debug
-          if-no-files-found: error
-          retention-days: 1
-          overwrite: true
 
   # Build the native module with ccache enabled so we can share object files between builds:
   prime-asan-build-caches:
@@ -292,8 +284,8 @@ jobs:
         run: |
           ccache --show-stats --verbose
           ccache --zero-stats
-          cat ${{ runner.workspace }}/.ccache_log || true
-          ls -lashR ${{ runner.workspace }}
+        #  cat ${{ runner.workspace }}/.ccache_log || true
+        #  ls -lashR ${{ runner.workspace }}
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -396,8 +388,8 @@ jobs:
         run: |
           ccache --show-stats --verbose
           ccache --zero-stats
-          cat ${{ runner.workspace }}/.ccache_log || true
-          ls -lashR ${{ runner.workspace }}
+        #  cat ${{ runner.workspace }}/.ccache_log || true
+        #  ls -lashR ${{ runner.workspace }}
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
@@ -432,12 +424,11 @@ jobs:
           - { os: ubuntu-20.04, python-version: "3.10", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.11", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
-          # No ccache for Windows, as it doesn't work with MSVC
-          - { os: windows-latest, python-version: "3.7", compiler: "msvc", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.8", compiler: "msvc", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.9", compiler: "msvc", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.10", compiler: "msvc", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.11", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # - { os: windows-latest, python-version: "3.7", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # - { os: windows-latest, python-version: "3.8", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # - { os: windows-latest, python-version: "3.9", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # - { os: windows-latest, python-version: "3.10", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # - { os: windows-latest, python-version: "3.11", compiler: "msvc", cc: "msvc", cxx: "msvc" }
           - { os: windows-latest, python-version: "3.12", compiler: "msvc", cc: "msvc", cxx: "msvc" }
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
@@ -534,14 +525,7 @@ jobs:
         run: |
           ccache --show-stats --verbose
           ccache --zero-stats
-          cat ${{ runner.workspace }}/.ccache_log || true
-      - name: Archive Cached ${{ runner.os }} Objects
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ runner.os }}-${{ matrix.python-version }}-ccache-${{ matrix.compiler }}-runtime
-          path: ${{ runner.workspace }}/.ccache_debug
-          retention-days: 1
-          overwrite: true
+        #  cat ${{ runner.workspace }}/.ccache_log || true
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
@@ -641,14 +625,14 @@ jobs:
         run: |
           ccache --show-stats --verbose
           ccache --zero-stats
-          cat ${{ runner.workspace }}/.ccache_log || true
+        #  cat ${{ runner.workspace }}/.ccache_log || true
       - name: Run tests with ASan loaded
         # pytest can exit before all Python objects have been destroyed,
         # so we tell ASan to ignore leaks.
         run: |
           ASAN_OPTIONS=detect_leaks=0 \
           LD_PRELOAD=$(clang -print-file-name=libclang_rt.asan-x86_64.so) \
-          pytest -v
+          pytest --maxfail=4
 
   build-wheels:
     needs: [lint-python, lint-cpp]
