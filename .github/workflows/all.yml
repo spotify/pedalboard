@@ -180,6 +180,7 @@ jobs:
           CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_DEBUG: "1"
+          MACOSX_DEPLOYMENT_TARGET: 10.9
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           # This build caching is only to speed up tests on CI, so we only care about x86_64 for now.
           # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
@@ -518,6 +519,7 @@ jobs:
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
+          MACOSX_DEPLOYMENT_TARGET: 10.9
           # This build caching is only to speed up tests on CI, so we only care about x86_64 for now.
           # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
           # Fun fact: this is supported in Python itself! https://github.com/python/cpython/blob/893c9cc/Lib/_osx_support.py#L314-L328
