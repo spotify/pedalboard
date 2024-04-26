@@ -23,9 +23,10 @@ jobs:
     name: Lint Python
     steps:
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: actions/checkout@v4
       - name: Install Ruff
         run: |
           python -m pip install --upgrade pip
@@ -40,7 +41,7 @@ jobs:
     continue-on-error: true
     name: Lint C++
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         # Don't check out submodules, as the action below will look at ALL C++ code!
       - name: Check C++ Formatting
         uses: jidicula/clang-format-action@v4.4.1
@@ -59,10 +60,10 @@ jobs:
     name: Pre-build on ${{ matrix.os }} with ${{ matrix.compiler }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Install Linux dependencies
@@ -143,10 +144,10 @@ jobs:
     name: Pre-build on ${{ matrix.os }} with ${{ matrix.compiler }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Install ccache on macOS
@@ -214,10 +215,10 @@ jobs:
     name: Pre-build on ${{ matrix.os }} with ${{ matrix.compiler }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Install Linux dependencies
@@ -307,10 +308,10 @@ jobs:
     name: Test ${{ matrix.runner_index }} / ${{ matrix.runner_total }} with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Install Linux dependencies
@@ -424,10 +425,10 @@ jobs:
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Install Linux dependencies
@@ -550,10 +551,10 @@ jobs:
     name: Test with Python ${{ matrix.python-version }} + Address Sanitizer
     steps:
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Install Linux dependencies
@@ -690,11 +691,11 @@ jobs:
         - { os: 'ubuntu-20.04', build: pp39-manylinux_aarch64 }
     name: Build wheel for ${{ matrix.build }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       # Used to host cibuildwheel, so version doesn't really matter
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
       - name: Install cibuildwheel
