@@ -198,6 +198,7 @@ jobs:
           ccache --show-stats --verbose
           ccache --zero-stats
           cat ${{ runner.workspace }}/.ccache_log || true
+          ls -lashR ${{ runner.workspace }}/pedalboard
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
