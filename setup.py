@@ -14,14 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import logging
 import os
 import platform
-from subprocess import check_output
-from pybind11.setup_helpers import Pybind11Extension, build_ext
-from pathlib import Path
 from distutils.core import setup
 from distutils.unixccompiler import UnixCCompiler
+from pathlib import Path
+from subprocess import check_output
+
+from pybind11.setup_helpers import Pybind11Extension, build_ext
 
 DEBUG = bool(int(os.environ.get("DEBUG", 0)))
 
@@ -72,13 +73,19 @@ ALL_CPPFLAGS.extend(
         "-DJUCE_DISABLE_JUCE_VERSION_PRINTING=1",
         "-DJUCE_WEB_BROWSER=0",
         "-DJUCE_USE_CURL=0",
-        "-DJUCE_USE_MP3AUDIOFORMAT=1",
+        "-DJUCE_USE_MP3AUDIOFORMAT=0",  # We've patched this out too
         "-DJUCE_USE_FLAC=0",  # We've patched this out
         # "-DJUCE_USE_FREETYPE=0",
         "-DJUCE_MODAL_LOOPS_PERMITTED=1",
     ]
 )
-ALL_INCLUDES.extend(["JUCE/modules/", "JUCE/modules/juce_audio_processors/format_types/VST3_SDK/"])
+ALL_INCLUDES.extend(
+    [
+        "vendors/pybind11/include/",
+        "JUCE/modules/",
+        "JUCE/modules/juce_audio_processors/format_types/VST3_SDK/",
+    ]
+)
 
 if "musllinux" in os.getenv("CIBW_BUILD", ""):
     # For Alpine/musllinux compatibility:
@@ -130,7 +137,7 @@ ALL_INCLUDES += ["vendors/libgsm/inc"]
 if platform.system() == "Darwin":
     ALL_CPPFLAGS.append("-DMACOS=1")
     ALL_CPPFLAGS.append("-DHAVE_VDSP=1")
-    if not DEBUG:
+    if not DEBUG and not os.getenv("DISABLE_LTO"):
         ALL_CPPFLAGS.append("-flto=thin")
         ALL_LINK_ARGS.append("-flto=thin")
     ALL_LINK_ARGS.append("-fvisibility=hidden")
@@ -138,7 +145,7 @@ if platform.system() == "Darwin":
 elif platform.system() == "Linux":
     ALL_CPPFLAGS.append("-DLINUX=1")
     # We use GCC on Linux, which doesn't take a value for the -flto flag:
-    if not DEBUG:
+    if not DEBUG and not os.getenv("DISABLE_LTO"):
         ALL_CPPFLAGS.append("-flto")
         ALL_LINK_ARGS.append("-flto")
     ALL_LINK_ARGS.append("-fvisibility=hidden")
@@ -271,6 +278,16 @@ def patch_compile(original_compile):
             extra_postargs = [arg for arg in extra_postargs if "std=" not in arg]
             _cc_args = cc_args + ALL_CFLAGS
 
+        # Code in JUCE or vendors should not even know we're using Python:
+        should_omit_python_header = any(x in src for x in ("JUCE", "/juce_overrides/", "/vendors/"))
+
+        # Remove the Python header from most files; we only need it when compiling
+        # This speeds up compile times on CI as most of the objects don't need Python
+        # headers at all, and including -I/include/python3.x/Python.h prevents us from
+        # re-using the same object file for different Python versions.
+        if any("include/python3" in arg for arg in _cc_args) and should_omit_python_header:
+            _cc_args = [arg for arg in _cc_args if "include/python3" not in arg]
+
         return original_compile(obj, src, ext, _cc_args, extra_postargs, *args, **kwargs)
 
     return new_compile
@@ -280,6 +297,13 @@ class BuildC_CxxExtensions(build_ext):
     """
     Add custom logic for injecting different arguments when compiling C vs C++ files.
     """
+
+    def initialize_options(self):
+        build_ext.initialize_options(self)
+        # If on CI, avoid breaking ccache by using a consistent
+        # output directory name regardless of Python version:
+        if os.getenv("CI"):
+            self.build_temp = "./build/temp"
 
     def build_extensions(self, *args, **kwargs):
         self.compiler._compile = patch_compile(self.compiler._compile)
@@ -302,6 +326,7 @@ pedalboard_cpp = Pybind11Extension(
     libraries=ALL_LIBRARIES,
     language="c++",
     cxx_std=17,
+    include_pybind11=False,
 )
 
 
@@ -317,6 +342,8 @@ long_description = (this_directory / "README.md").read_text()
 version = {}
 version_file_contents = (this_directory / "pedalboard" / "version.py").read_text()
 exec(version_file_contents, version)
+
+logging.basicConfig(format="%(message)s")
 
 setup(
     name="pedalboard",

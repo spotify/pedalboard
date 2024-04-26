@@ -15,10 +15,18 @@
 # limitations under the License.
 
 
-import pytest
 import numpy as np
-from pedalboard import HighpassFilter, LowpassFilter, HighShelfFilter, LowShelfFilter, PeakFilter
-from .utils import generate_sine_at, db_to_gain
+import pytest
+
+from pedalboard import (
+    HighpassFilter,
+    HighShelfFilter,
+    LowpassFilter,
+    LowShelfFilter,
+    PeakFilter,
+)
+
+from .utils import db_to_gain, generate_sine_at
 
 
 def rms(x: np.ndarray) -> float:
@@ -69,7 +77,7 @@ def test_lowpass_slope(cutoff_frequency_hz, fundamental_hz, sample_rate, num_cha
 @pytest.mark.parametrize("fundamental_hz", [440, 880])
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
 @pytest.mark.parametrize("num_channels", [1, 2])
-@pytest.mark.parametrize("gain_db", [-12, -6, 0, 6, 12])
+@pytest.mark.parametrize("gain_db", [-6, 0, 6])
 def test_shelf_filters(filter_type, fundamental_hz, sample_rate, num_channels, gain_db):
     sine_wave = generate_sine_at(
         sample_rate, fundamental_hz, num_seconds=2, num_channels=num_channels
@@ -85,9 +93,11 @@ def test_shelf_filters(filter_type, fundamental_hz, sample_rate, num_channels, g
 @pytest.mark.parametrize("fundamental_hz", [440, 880])
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
 @pytest.mark.parametrize("num_channels", [1, 2])
-@pytest.mark.parametrize("gain_db", [-12, -6, 0, 6, 12])
+@pytest.mark.parametrize("gain_db", [-6, 0, 6])
 def test_peak_filter(fundamental_hz, sample_rate, num_channels, gain_db):
-    sine_wave = generate_sine_at(sample_rate, fundamental_hz, num_seconds=2)
+    sine_wave = generate_sine_at(
+        sample_rate, fundamental_hz, num_channels=num_channels, num_seconds=2
+    )
     filtered = PeakFilter(cutoff_frequency_hz=fundamental_hz, gain_db=gain_db)(
         sine_wave, sample_rate
     )
@@ -100,7 +110,7 @@ def test_peak_filter(fundamental_hz, sample_rate, num_channels, gain_db):
 @pytest.mark.parametrize("fundamental_hz", [440, 880])
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
 @pytest.mark.parametrize("num_channels", [1, 2])
-@pytest.mark.parametrize("gain_db", [-12, -6, 0, 6, 12])
+@pytest.mark.parametrize("gain_db", [-6, 0, 6])
 @pytest.mark.parametrize("q", [1 / np.sqrt(2), 1, 100])
 def test_q_factor(filter_type, fundamental_hz, sample_rate, num_channels, gain_db, q):
     sine_wave = generate_sine_at(

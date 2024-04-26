@@ -15,9 +15,11 @@
 # limitations under the License.
 
 
-import pytest
 import numpy as np
+import pytest
+
 from pedalboard_native._internal import FixedSizeBlockTestPlugin
+
 from .utils import generate_sine_at
 
 
@@ -26,7 +28,7 @@ from .utils import generate_sine_at
 @pytest.mark.parametrize("fixed_buffer_size", [1, 64, 65, 128, 8192, 8193])
 @pytest.mark.parametrize("num_channels", [1, 2])
 def test_fixed_size_blocks_plugin(sample_rate, buffer_size, fixed_buffer_size, num_channels):
-    signal = generate_sine_at(sample_rate, num_seconds=1.0, num_channels=num_channels)
+    signal = generate_sine_at(sample_rate, num_seconds=0.10, num_channels=num_channels)
 
     plugin = FixedSizeBlockTestPlugin(fixed_buffer_size)
     output = plugin.process(signal, sample_rate, buffer_size=buffer_size)

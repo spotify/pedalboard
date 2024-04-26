@@ -385,37 +385,45 @@ public:
       return;
     }
 
-    JUCE_AUTORELEASEPOOL {
-      StandalonePluginWindow window(processor);
-      window.show();
+    {
+      // Release the GIL to allow other Python threads to run in the
+      // background while we the UI is running:
+      py::gil_scoped_release release;
+      JUCE_AUTORELEASEPOOL {
+        StandalonePluginWindow window(processor);
+        window.show();
 
-      // Run in a tight loop so that we don't have to call ->stopDispatchLoop(),
-      // which causes the MessageManager to become unusable in the future.
-      // The window can be closed by sending a KeyboardInterrupt, closing
-      // the window in the UI, or setting the provided Event object.
-      while (window.isVisible()) {
-        bool errorThrown = PyErr_CheckSignals() != 0;
-        bool eventSet = optionalEvent != py::none() &&
-                        optionalEvent.attr("is_set")().cast<bool>();
+        // Run in a tight loop so that we don't have to call
+        // ->stopDispatchLoop(), which causes the MessageManager to become
+        // unusable in the future. The window can be closed by sending a
+        // KeyboardInterrupt, closing the window in the UI, or setting the
+        // provided Event object.
+        while (window.isVisible()) {
+          bool errorThrown = false;
+          bool eventSet = false;
 
-        if (errorThrown || eventSet) {
-          window.closeButtonPressed();
-          shouldThrowErrorAlreadySet = errorThrown;
-          break;
-        }
+          {
+            py::gil_scoped_acquire acquire;
 
-        {
-          // Release the GIL to allow other Python threads to run in the
-          // background while we the UI is running:
-          py::gil_scoped_release release;
+            errorThrown = PyErr_CheckSignals() != 0;
+            eventSet = optionalEvent != py::none() &&
+                       optionalEvent.attr("is_set")().cast<bool>();
+          }
+
+          if (errorThrown || eventSet) {
+            window.closeButtonPressed();
+            shouldThrowErrorAlreadySet = errorThrown;
+            break;
+          }
+
           juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
         }
       }
-    }
 
-    // Once the Autorelease pool has been drained, pump the dispatch loop one
-    // more time to process any window close events:
-    juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+      // Once the Autorelease pool has been drained, pump the dispatch loop one
+      // more time to process any window close events:
+      juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+    }
 
     if (shouldThrowErrorAlreadySet) {
       throw py::error_already_set();
@@ -1279,22 +1287,25 @@ public:
           "Pedalboard error and should be reported.");
     }
 
-    if (!juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()) {
-      throw std::runtime_error(
-          "Editor cannot be shown - no visual display devices available.");
-    }
-
-    if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
-      throw std::runtime_error(
-          "Plugin UI windows can only be shown from the main thread.");
-    }
-
     if (optionalEvent != py::none() && !py::hasattr(optionalEvent, "is_set")) {
       throw py::type_error(
           "Pedalboard expected a threading.Event object to be "
           "passed to show_editor, but the provided object (\"" +
           py::repr(optionalEvent).cast<std::string>() +
           "\") does not have an 'is_set' method.");
+    }
+
+    {
+      py::gil_scoped_release release;
+      if (!juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()) {
+        throw std::runtime_error(
+            "Editor cannot be shown - no visual display devices available.");
+      }
+
+      if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        throw std::runtime_error(
+            "Plugin UI windows can only be shown from the main thread.");
+      }
     }
 
     StandalonePluginWindow::openWindowAndWait(*pluginInstance, optionalEvent);
