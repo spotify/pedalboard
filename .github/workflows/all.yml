@@ -108,7 +108,7 @@ jobs:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
-          CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
+          CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros,locale,random_seed,system_headers"
           CCACHE_COMPILERCHECK: none
           CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
@@ -175,7 +175,7 @@ jobs:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
-          CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
+          CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros,locale,random_seed,system_headers"
           CCACHE_COMPILERCHECK: none
           CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
@@ -207,6 +207,14 @@ jobs:
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
+      - name: Archive Cached ${{ runner.os }} Objects
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ runner.os }}-ccache-${{ matrix.compiler }}-primed
+          path: ${{ runner.workspace }}/.ccache_debug
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
 
   # Build the native module with ccache enabled so we can share object files between builds:
   prime-asan-build-caches:
@@ -267,7 +275,7 @@ jobs:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
-          CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
+          CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros,locale,random_seed,system_headers"
           CCACHE_COMPILERCHECK: none
           CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
@@ -373,7 +381,7 @@ jobs:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
-          CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
+          CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros,locale,random_seed,system_headers"
           CCACHE_COMPILERCHECK: none
           CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
@@ -504,7 +512,7 @@ jobs:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
-          CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
+          CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros,locale,random_seed,system_headers"
           CCACHE_COMPILERCHECK: none
           CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
@@ -525,6 +533,14 @@ jobs:
           ccache --show-stats --verbose
           ccache --zero-stats
           cat ${{ runner.workspace }}/.ccache_log || true
+      - name: Archive Cached ${{ runner.os }} Objects
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ runner.os }}-${{ matrix.python-version }}-ccache-${{ matrix.compiler }}-runtime
+          path: ${{ runner.workspace }}/.ccache_debug
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
@@ -608,7 +624,7 @@ jobs:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ runner.workspace }}
           CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
-          CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros"
+          CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros,locale,random_seed,system_headers"
           CCACHE_COMPILERCHECK: none
           CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
