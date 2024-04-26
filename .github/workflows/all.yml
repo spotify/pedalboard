@@ -103,6 +103,9 @@ jobs:
         with:
           path: ${{ runner.workspace }}/.ccache
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+          # Shouldn't be necessary, but the master branch cache isn't being picked up:
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
@@ -170,6 +173,9 @@ jobs:
         with:
           path: ${{ runner.workspace }}/.ccache
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+          # Shouldn't be necessary, but the master branch cache isn't being picked up:
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
@@ -263,6 +269,9 @@ jobs:
         with:
           path: ${{ runner.workspace }}/.ccache
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+          # Shouldn't be necessary, but the master branch cache isn't being picked up:
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
@@ -359,6 +368,9 @@ jobs:
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+          # Shouldn't be necessary, but the master branch cache isn't being picked up:
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Print Restored ${{ runner.os }} Objects
         run: ls -lashR ${{ runner.workspace }}
       # Without this, distutils will recompile the extension even though we already have the .so built:
@@ -491,6 +503,9 @@ jobs:
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+          # Shouldn't be necessary, but the master branch cache isn't being picked up:
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.compiler }}-ccache
       # Without this, distutils will recompile the extension even though we already have the shared object built:
       - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
         if: runner.os == 'Linux' || runner.os == 'macOS'
@@ -602,6 +617,9 @@ jobs:
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
           key: ${{ runner.os }}-clang-ccache
+          # Shouldn't be necessary, but the master branch cache isn't being picked up:
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
           DEBUG: "0"
