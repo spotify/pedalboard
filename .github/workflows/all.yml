@@ -538,7 +538,6 @@ jobs:
         with:
           name: ${{ runner.os }}-${{ matrix.python-version }}-ccache-${{ matrix.compiler }}-runtime
           path: ${{ runner.workspace }}/.ccache_debug
-          if-no-files-found: error
           retention-days: 1
           overwrite: true
       - name: Install VSTs for testing
