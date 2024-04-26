@@ -99,7 +99,7 @@ jobs:
           pip install tensorflow==2.13 || true
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
-        uses: actions/cache/restore@v2
+        uses: actions/cache/restore@v3
         with:
           path: ${{ runner.workspace }}/.ccache
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
@@ -127,7 +127,7 @@ jobs:
         #  cat ${{ runner.workspace }}/.ccache_log || true
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
-        uses: actions/cache/save@v2
+        uses: actions/cache/save@v3
         with:
           path: |
             ${{ runner.workspace }}/.ccache
@@ -166,7 +166,7 @@ jobs:
           pip install -r test-requirements.txt
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
-        uses: actions/cache/restore@v2
+        uses: actions/cache/restore@v3
         with:
           path: ${{ runner.workspace }}/.ccache
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
@@ -200,7 +200,7 @@ jobs:
         #  ls -lashR ${{ runner.workspace }}/pedalboard
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
-        uses: actions/cache/save@v2
+        uses: actions/cache/save@v3
         with:
           path: |
             ${{ runner.workspace }}/.ccache
@@ -259,7 +259,7 @@ jobs:
           pip install tensorflow==2.13 || true
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
-        uses: actions/cache/restore@v2
+        uses: actions/cache/restore@v3
         with:
           path: ${{ runner.workspace }}/.ccache
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
@@ -288,7 +288,7 @@ jobs:
         #  ls -lashR ${{ runner.workspace }}
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
-        uses: actions/cache/save@v2
+        uses: actions/cache/save@v3
         with:
           path: |
             ${{ runner.workspace }}/.ccache
@@ -351,7 +351,7 @@ jobs:
           pip install tensorflow==2.13 || true
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
-        uses: actions/cache/restore@v2
+        uses: actions/cache/restore@v3
         with:
           path: |
             ${{ runner.workspace }}/.ccache
@@ -483,7 +483,7 @@ jobs:
           args: install jq
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
-        uses: actions/cache/restore@v2
+        uses: actions/cache/restore@v3
         with:
           path: |
             ${{ runner.workspace }}/.ccache
@@ -594,7 +594,7 @@ jobs:
           pip install tensorflow==2.13 || true
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
-        uses: actions/cache/restore@v2
+        uses: actions/cache/restore@v3
         with:
           path: |
             ${{ runner.workspace }}/.ccache
