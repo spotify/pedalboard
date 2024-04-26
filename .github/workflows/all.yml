@@ -99,13 +99,10 @@ jobs:
           pip install tensorflow==2.13 || true
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v2
         with:
           path: ${{ runner.workspace }}/.ccache
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
-          # Shouldn't be necessary, but the master branch cache isn't being picked up:
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
@@ -130,7 +127,7 @@ jobs:
         #  cat ${{ runner.workspace }}/.ccache_log || true
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v2
         with:
           path: |
             ${{ runner.workspace }}/.ccache
@@ -169,13 +166,10 @@ jobs:
           pip install -r test-requirements.txt
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v2
         with:
           path: ${{ runner.workspace }}/.ccache
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
-          # Shouldn't be necessary, but the master branch cache isn't being picked up:
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
@@ -206,7 +200,7 @@ jobs:
         #  ls -lashR ${{ runner.workspace }}/pedalboard
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v2
         with:
           path: |
             ${{ runner.workspace }}/.ccache
@@ -265,13 +259,10 @@ jobs:
           pip install tensorflow==2.13 || true
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v2
         with:
           path: ${{ runner.workspace }}/.ccache
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
-          # Shouldn't be necessary, but the master branch cache isn't being picked up:
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ runner.workspace }}/.ccache
@@ -297,7 +288,7 @@ jobs:
         #  ls -lashR ${{ runner.workspace }}
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v2
         with:
           path: |
             ${{ runner.workspace }}/.ccache
@@ -360,7 +351,7 @@ jobs:
           pip install tensorflow==2.13 || true
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v2
         with:
           path: |
             ${{ runner.workspace }}/.ccache
@@ -368,9 +359,6 @@ jobs:
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
-          # Shouldn't be necessary, but the master branch cache isn't being picked up:
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Print Restored ${{ runner.os }} Objects
         run: ls -lashR ${{ runner.workspace }}
       # Without this, distutils will recompile the extension even though we already have the .so built:
@@ -495,7 +483,7 @@ jobs:
           args: install jq
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v2
         with:
           path: |
             ${{ runner.workspace }}/.ccache
@@ -503,9 +491,6 @@ jobs:
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
-          # Shouldn't be necessary, but the master branch cache isn't being picked up:
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.compiler }}-ccache
       # Without this, distutils will recompile the extension even though we already have the shared object built:
       - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
         if: runner.os == 'Linux' || runner.os == 'macOS'
@@ -609,7 +594,7 @@ jobs:
           pip install tensorflow==2.13 || true
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v2
         with:
           path: |
             ${{ runner.workspace }}/.ccache
@@ -617,9 +602,6 @@ jobs:
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
           key: ${{ runner.os }}-clang-ccache
-          # Shouldn't be necessary, but the master branch cache isn't being picked up:
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
           DEBUG: "0"
