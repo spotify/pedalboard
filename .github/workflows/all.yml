@@ -101,7 +101,12 @@ jobs:
         id: cache-objects-restore
         uses: actions/cache/restore@v4
         with:
-          path: ${{ runner.workspace }}/.ccache
+          enableCrossOsArchive: true
+          path: |
+            ${{ runner.workspace }}/.ccache
+            ${{ runner.workspace }}/pedalboard/build/lib*
+            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
+            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
@@ -129,6 +134,7 @@ jobs:
         id: cache-objects-save
         uses: actions/cache/save@v4
         with:
+          enableCrossOsArchive: true
           path: |
             ${{ runner.workspace }}/.ccache
             ${{ runner.workspace }}/pedalboard/build/lib*
@@ -168,7 +174,12 @@ jobs:
         id: cache-objects-restore
         uses: actions/cache/restore@v4
         with:
-          path: ${{ runner.workspace }}/.ccache
+          enableCrossOsArchive: true
+          path: |
+            ${{ runner.workspace }}/.ccache
+            ${{ runner.workspace }}/pedalboard/build/lib*
+            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
+            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
@@ -202,6 +213,7 @@ jobs:
         id: cache-objects-save
         uses: actions/cache/save@v4
         with:
+          enableCrossOsArchive: true
           path: |
             ${{ runner.workspace }}/.ccache
             ${{ runner.workspace }}/pedalboard/build/lib*
@@ -261,7 +273,12 @@ jobs:
         id: cache-objects-restore
         uses: actions/cache/restore@v4
         with:
-          path: ${{ runner.workspace }}/.ccache
+          enableCrossOsArchive: true
+          path: |
+            ${{ runner.workspace }}/.ccache
+            ${{ runner.workspace }}/pedalboard/build/lib*
+            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
+            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
@@ -290,6 +307,7 @@ jobs:
         id: cache-objects-save
         uses: actions/cache/save@v4
         with:
+          enableCrossOsArchive: true
           path: |
             ${{ runner.workspace }}/.ccache
             ${{ runner.workspace }}/pedalboard/build/lib*
@@ -353,6 +371,7 @@ jobs:
         id: cache-objects-restore
         uses: actions/cache/restore@v4
         with:
+          enableCrossOsArchive: true
           path: |
             ${{ runner.workspace }}/.ccache
             ${{ runner.workspace }}/pedalboard/build/lib*
@@ -485,6 +504,7 @@ jobs:
         id: cache-objects-restore
         uses: actions/cache/restore@v4
         with:
+          enableCrossOsArchive: true
           path: |
             ${{ runner.workspace }}/.ccache
             ${{ runner.workspace }}/pedalboard/build/lib*
@@ -596,6 +616,7 @@ jobs:
         id: cache-objects-restore
         uses: actions/cache/restore@v4
         with:
+          enableCrossOsArchive: true
           path: |
             ${{ runner.workspace }}/.ccache
             ${{ runner.workspace }}/pedalboard/build/lib*
