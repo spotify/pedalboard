@@ -160,7 +160,7 @@ An example of how to programmatically close an editor window::
            close_window_event.set()
 
    thread = Thread(target=other_thread)
-   thread.run()
+   thread.start()
 
    # This will block until the other thread calls .set():
    plugin.show_editor(close_window_event)
