@@ -78,21 +78,24 @@ public:
                        targetSampleRate / sourceSampleRate) -
                           totalSamplesOutput);
 
-    // TODO: Don't copy the entire input buffer multiple times here!
+    int roundedExpectedResampledSamples =
+        (int)std::round(expectedResampledSamples);
+
+    // TODO: Dont copy the entire input buffer multiple times here!
     juce::AudioBuffer<SampleType> output(input.getNumChannels(),
-                                         (int)expectedResampledSamples);
+                                         roundedExpectedResampledSamples);
 
     for (size_t c = 0; c < input.getNumChannels(); c++) {
       if (input.getNumSamples() > 0) {
         long long inputSamplesConsumed = resamplers[c].process(
             resamplerRatio, input.getReadPointer(c), output.getWritePointer(c),
-            (int)expectedResampledSamples);
+            roundedExpectedResampledSamples);
 
         if (c == 0) {
           if (!isFlushing) {
             totalSamplesInput += inputSamplesConsumed;
           }
-          totalSamplesOutput += (int)expectedResampledSamples;
+          totalSamplesOutput += roundedExpectedResampledSamples;
         }
 
         if (!isFlushing) {
