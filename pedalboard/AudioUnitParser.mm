@@ -19,6 +19,7 @@
 
 #if JUCE_MAC
 #include <AudioToolbox/AudioUnitUtilities.h>
+#include <AVFoundation/AVFAudio.h>
 
 namespace Pedalboard {
 
@@ -82,24 +83,38 @@ getAudioUnitIdentifiersFromFile(const juce::String &filename) {
     return identifiers;
   }
 
-  // Use NSBundle to open and extract identifiers:
-  NSBundle *bundle =
-      [[NSBundle alloc] initWithPath:(NSString *)filename.toCFString()];
+  if (file.hasFileExtension(".appex")) {
+    AVAudioUnitComponentManager *manager = [AVAudioUnitComponentManager sharedAudioUnitComponentManager];
+    AudioComponentDescription desc = {0};
+    NSArray *audioComponents = [manager componentsMatchingDescription:desc];
+    NSString *filePathWithoutTrailingSlash = (NSString *)(filename.trimCharactersAtEnd("/") + "/").toCFString();
 
-  NSArray *audioComponents =
-      [bundle objectForInfoDictionaryKey:@"AudioComponents"];
-  for (NSDictionary *component in audioComponents) {
-    AudioComponentDescription desc;
-    desc.componentManufacturer = stringToOSType(
-        nsStringToJuce((NSString *)[component valueForKey:@"manufacturer"]));
-    desc.componentType = stringToOSType(
-        nsStringToJuce((NSString *)[component valueForKey:@"type"]));
-    desc.componentSubType = stringToOSType(
-        nsStringToJuce((NSString *)[component valueForKey:@"subtype"]));
-    identifiers.push_back(createPluginIdentifier(desc).toStdString());
+    for (AVAudioUnitComponent *component in audioComponents) {
+      if ([component.componentURL.absoluteString hasSuffix:filePathWithoutTrailingSlash]) {
+        identifiers.push_back(createPluginIdentifier(component.audioComponentDescription).toStdString());
+        break;
+      }
+    }
+  } else {
+    // Use NSBundle to open and extract identifiers:
+    NSBundle *bundle =
+        [[NSBundle alloc] initWithPath:(NSString *)filename.toCFString()];
+
+    NSArray *audioComponents =
+        [bundle objectForInfoDictionaryKey:@"AudioComponents"];
+    for (NSDictionary *component in audioComponents) {
+      AudioComponentDescription desc;
+      desc.componentManufacturer = stringToOSType(
+          nsStringToJuce((NSString *)[component valueForKey:@"manufacturer"]));
+      desc.componentType = stringToOSType(
+          nsStringToJuce((NSString *)[component valueForKey:@"type"]));
+      desc.componentSubType = stringToOSType(
+          nsStringToJuce((NSString *)[component valueForKey:@"subtype"]));
+      identifiers.push_back(createPluginIdentifier(desc).toStdString());
+    }
+
+    [bundle release];
   }
-
-  [bundle release];
 
   return identifiers;
 }

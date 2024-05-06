@@ -301,16 +301,18 @@ private:
 #endif
 
 static bool audioUnitIsInstalled(const juce::String audioUnitFilePath) {
-  return audioUnitFilePath.contains("/Library/Audio/Plug-Ins/Components/");
+  return !audioUnitFilePath.endsWith(".appex") &&
+         !audioUnitFilePath.endsWith(".appex/") &&
+         audioUnitFilePath.contains("/Library/Audio/Plug-Ins/Components/");
 }
 
 template <typename ExternalPluginType>
-static std::vector<std::string> getPluginNamesForFile(std::string filename) {
+static juce::OwnedArray<juce::PluginDescription>
+scanPluginDescriptions(std::string filename) {
   juce::MessageManager::getInstance();
-
   ExternalPluginType format;
-  juce::OwnedArray<juce::PluginDescription> typesFound;
 
+  juce::OwnedArray<juce::PluginDescription> typesFound;
   std::string errorMessage = "Unable to scan plugin " + filename +
                              ": unsupported plugin format or scan failure.";
 
@@ -320,7 +322,34 @@ static std::vector<std::string> getPluginNamesForFile(std::string filename) {
     auto identifiers = getAudioUnitIdentifiersFromFile(filename);
     // For each plugin in the identified bundle, scan using its AU identifier:
     for (int i = 0; i < identifiers.size(); i++) {
-      format.findAllTypesForFile(typesFound, identifiers[i]);
+      std::string identifier = identifiers[i];
+
+      juce::String pluginName, version, manufacturer;
+      AudioComponentDescription componentDesc;
+
+      bool needsAsyncInstantiation =
+          juce::String(filename).endsWith(".appex") ||
+          juce::String(filename).endsWith(".appex/");
+      if (needsAsyncInstantiation &&
+          juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        // We can't scan AUv3 plugins synchronously, so we have to pump the
+        // message thread and wait for the scan to complete on another thread.
+        bool done = false;
+        std::thread thread =
+            std::thread([&identifier, &typesFound, &format, &done]() {
+              format.findAllTypesForFile(typesFound, identifier);
+              done = true;
+            });
+
+        // Pump the message thread until the scan is complete:
+        while (!done) {
+          juce::MessageManager::getInstance()->runDispatchLoopUntil(1);
+        }
+
+        thread.join();
+      } else {
+        format.findAllTypesForFile(typesFound, identifiers[i]);
+      }
     }
 
     if (typesFound.isEmpty() && !audioUnitIsInstalled(filename)) {
@@ -336,6 +365,14 @@ static std::vector<std::string> getPluginNamesForFile(std::string filename) {
   if (typesFound.isEmpty()) {
     throw pybind11::import_error(errorMessage);
   }
+
+  return typesFound;
+}
+
+template <typename ExternalPluginType>
+static std::vector<std::string> getPluginNamesForFile(std::string filename) {
+  juce::OwnedArray<juce::PluginDescription> typesFound =
+      scanPluginDescriptions<ExternalPluginType>(filename);
 
   std::vector<std::string> pluginNames;
   for (int i = 0; i < typesFound.size(); i++) {
@@ -492,9 +529,6 @@ public:
     // Without this, we get an assert(false) from JUCE at runtime
     juce::MessageManager::getInstance();
 
-    juce::OwnedArray<juce::PluginDescription> typesFound;
-    ExternalPluginType format;
-
     pluginFormatManager.addDefaultFormats();
     pluginFormatManager.addFormat(new juce::PatchedVST3PluginFormat());
 
@@ -509,20 +543,9 @@ public:
                                    ": plugin file not found.");
     }
 
-#if JUCE_PLUGINHOST_AU && JUCE_MAC
-    if constexpr (std::is_same<ExternalPluginType,
-                               juce::AudioUnitPluginFormat>::value) {
-      auto identifiers = getAudioUnitIdentifiersFromFile(pluginFileStripped);
-      // For each plugin in the identified bundle, scan using its AU identifier:
-      for (int i = 0; i < identifiers.size(); i++) {
-        format.findAllTypesForFile(typesFound, identifiers[i]);
-      }
-    } else {
-      format.findAllTypesForFile(typesFound, pluginFileStripped);
-    }
-#else
-    format.findAllTypesForFile(typesFound, pluginFileStripped);
-#endif
+    juce::OwnedArray<juce::PluginDescription> typesFound =
+        scanPluginDescriptions<ExternalPluginType>(
+            pluginFileStripped.toStdString());
 
     if (!typesFound.isEmpty()) {
       if (typesFound.size() == 1) {
@@ -681,9 +704,9 @@ public:
     {
       std::lock_guard<std::mutex> lock(EXTERNAL_PLUGIN_MUTEX);
 
-      pluginInstance = pluginFormatManager.createPluginInstance(
-          foundPluginDescription, ExternalLoadSampleRate,
-          ExternalLoadMaximumBlockSize, loadError);
+      pluginInstance =
+          createPluginInstance(foundPluginDescription, ExternalLoadSampleRate,
+                               ExternalLoadMaximumBlockSize, loadError);
 
       if (!pluginInstance) {
         throw pybind11::import_error("Unable to load plugin " +
@@ -709,7 +732,7 @@ public:
         if (reloadType == ExternalPluginReloadType::PersistsAudioOnReset) {
           // Reload again, as we just passed audio into a plugin that
           // we know doesn't reset itself cleanly!
-          pluginInstance = pluginFormatManager.createPluginInstance(
+          pluginInstance = createPluginInstance(
               foundPluginDescription, ExternalLoadSampleRate,
               ExternalLoadMaximumBlockSize, loadError);
 
@@ -1315,6 +1338,34 @@ public:
   juce::PluginDescription foundPluginDescription;
 
 private:
+  std::unique_ptr<juce::AudioPluginInstance>
+  createPluginInstance(const juce::PluginDescription &foundPluginDescription,
+                       double rate, int blockSize, juce::String &loadError) {
+    std::unique_ptr<juce::AudioPluginInstance> instance;
+    instance = pluginFormatManager.createPluginInstance(
+        foundPluginDescription, rate, blockSize, loadError);
+    if (!instance && loadError.contains(
+                         "This plug-in cannot be instantiated synchronously")) {
+      bool done = false;
+      std::thread thread =
+          std::thread([this, &instance, &foundPluginDescription, &rate,
+                       &blockSize, &loadError, &done]() {
+            instance = pluginFormatManager.createPluginInstance(
+                foundPluginDescription, rate, blockSize, loadError);
+            done = true;
+          });
+
+      // Pump the message thread until the scan is complete:
+      while (!done) {
+        juce::MessageManager::getInstance()->runDispatchLoopUntil(1);
+      }
+
+      thread.join();
+    }
+
+    return instance;
+  }
+
   constexpr static int ExternalLoadSampleRate = 44100,
                        ExternalLoadMaximumBlockSize = 8192;
   juce::String pathToPluginFile;
