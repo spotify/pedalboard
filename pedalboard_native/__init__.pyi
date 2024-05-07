@@ -1034,6 +1034,8 @@ class AudioUnitPlugin(ExternalPlugin):
     *Support for instrument plugins introduced in v0.7.4.*
 
     *Support for running Audio Unit plugins on background threads introduced in v0.8.8.*
+
+    *Support for loading AUv3 plugins (``.appex`` bundles) introduced in v0.9.5.*
     """
 
     @typing.overload
@@ -1072,7 +1074,7 @@ class AudioUnitPlugin(ExternalPlugin):
     @staticmethod
     def get_plugin_names_for_file(filename: str) -> typing.List[str]:
         """
-        Return a list of plugin names contained within a given Audio Unit bundle (i.e.: a ``.component`` file). If the provided file cannot be scanned, an ``ImportError`` will be raised.
+        Return a list of plugin names contained within a given Audio Unit bundle (i.e.: a ``.component`` or ``.appex`` file). If the provided file cannot be scanned, an ``ImportError`` will be raised.
 
         Note that most Audio Units have a single plugin inside, but this method can be useful to determine if multiple plugins are present in one bundle, and if so, what their names are.
         """
@@ -1291,7 +1293,7 @@ class AudioUnitPlugin(ExternalPlugin):
                    close_window_event.set()
 
            thread = Thread(target=other_thread)
-           thread.run()
+           thread.start()
 
            # This will block until the other thread calls .set():
            plugin.show_editor(close_window_event)
@@ -1853,7 +1855,7 @@ class VST3Plugin(ExternalPlugin):
                    close_window_event.set()
 
            thread = Thread(target=other_thread)
-           thread.run()
+           thread.start()
 
            # This will block until the other thread calls .set():
            plugin.show_editor(close_window_event)

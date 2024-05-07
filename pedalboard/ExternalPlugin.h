@@ -1783,6 +1783,8 @@ see :class:`pedalboard.VST3Plugin`.)
 *Support for instrument plugins introduced in v0.7.4.*
 
 *Support for running Audio Unit plugins on background threads introduced in v0.8.8.*
+
+*Support for loading AUv3 plugins (``.appex`` bundles) introduced in v0.9.5.*
 )")
       .def(
           py::init([](std::string &pathToPluginFile, py::object parameterValues,
@@ -1817,12 +1819,11 @@ see :class:`pedalboard.VST3Plugin`.)
           },
           py::arg("filename"),
           "Return a list of plugin names contained within a given Audio Unit "
-          "bundle (i.e.: a ``.component`` file). If the provided file cannot "
-          "be "
-          "scanned, an ``ImportError`` will be raised.\n\nNote that most Audio "
-          "Units have a single plugin inside, but this method can be useful to "
-          "determine if multiple plugins are present in one bundle, and if so, "
-          "what their names are.")
+          "bundle (i.e.: a ``.component`` or ``.appex`` file). If the provided "
+          "file cannot be scanned, an ``ImportError`` will be raised.\n\nNote "
+          "that most Audio Units have a single plugin inside, but this method "
+          "can be useful to determine if multiple plugins are present in one "
+          "bundle, and if so, what their names are.")
       .def_property_readonly_static(
           "installed_plugins",
           [](py::object /* cls */) {
