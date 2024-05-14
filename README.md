@@ -26,7 +26,7 @@
    - Support for reading and writing AIFF, FLAC, MP3, OGG, and WAV files on all platforms with no dependencies
    - Additional support for reading AAC, AC3, WMA, and other formats depending on platform
    - Support for on-the-fly resampling of audio files and streams with `O(1)` memory usage
-   - Live audio effects via [`AudioStream`](https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream)
+   - Live audio effects via <a href="https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream"><code><span class="pre">AudioStream</span></code></a>
  - Built-in support for a number of basic audio transformations, including:
    - Guitar-style effects: `Chorus`, `Distortion`, `Phaser`, `Clipping`
    - Loudness and dynamic range effects: `Compressor`, `Gain`, `Limiter`
@@ -35,7 +35,7 @@
    - Pitch effects: `PitchShift`
    - Lossy compression: `GSMFullRateCompressor`, `MP3Compressor`
    - Quality reduction: `Resample`, `Bitcrush`
- - Supports VST3® instrument and effect plugins on macOS, Windows, and Linux ([`pedalboard.load_plugin`](https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.load_plugin))
+ - Supports VST3® instrument and effect plugins on macOS, Windows, and Linux (<a href="https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.load_plugin"><code><span class="pre">pedalboard.load_plugin</span></code></a>)
  - Supports instrument and effect Audio Units on macOS
  - Strong thread-safety, memory usage, and speed guarantees
    - Releases Python's Global Interpreter Lock (GIL) to allow use of multiple CPU cores
