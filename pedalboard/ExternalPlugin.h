@@ -1862,12 +1862,12 @@ see :class:`pedalboard.VST3Plugin`.)
           "The name of this plugin, as reported by the plugin itself.")
       .def_property(
           "state",
-          [](const ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+          [](const ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
             juce::MemoryBlock state;
             plugin.getState(state);
             return py::bytes((const char *)state.getData(), state.getSize());
           },
-          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin,
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin,
              const py::bytes &state) {
             py::buffer_info info(py::buffer(state).request());
             plugin.setState(info.ptr, static_cast<size_t>(info.size));
