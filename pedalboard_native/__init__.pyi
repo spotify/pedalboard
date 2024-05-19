@@ -1386,6 +1386,30 @@ class AudioUnitPlugin(ExternalPlugin):
         """
 
     @property
+    def raw_state(self) -> bytes:
+        """
+        A :py:class:`bytes` object representing the plugin's internal state.
+
+        For the Audio Unit format, this is usually a binary property list that can be decoded or encoded with the built-in :py:mod:`plistlib` package.
+
+        .. warning::
+            This property can be set to change the plugin's internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.
+
+
+        """
+
+    @raw_state.setter
+    def raw_state(self, arg1: bytes) -> None:
+        """
+        A :py:class:`bytes` object representing the plugin's internal state.
+
+        For the Audio Unit format, this is usually a binary property list that can be decoded or encoded with the built-in :py:mod:`plistlib` package.
+
+        .. warning::
+            This property can be set to change the plugin's internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.
+        """
+
+    @property
     def version(self) -> str:
         """
         The version string for this plugin, as reported by the plugin itself.
@@ -1412,8 +1436,8 @@ class PluginContainer(Plugin):
         Get a plugin by its index. Index may be negative. If the index is out of range, an IndexError will be thrown.
         """
 
-    def __init__(self, plugins: typing.List[Plugin]) -> None: ...
-    def __iter__(self) -> typing.Iterator: ...
+    def __init__(self, plugins: list[Plugin]) -> None: ...
+    def __iter__(self) -> typing.Iterator[Plugin]: ...
     def __len__(self) -> int:
         """
         Get the number of plugins in this container.
@@ -1945,6 +1969,30 @@ class VST3Plugin(ExternalPlugin):
         The name of this plugin.
 
 
+        """
+
+    @property
+    def raw_state(self) -> bytes:
+        """
+        A :py:class:`bytes` object representing the plugin's internal state.
+
+        For the VST3 format, this is usually an XML-encoded string prefixed with an 8-byte header and suffixed with a single null byte.
+
+        .. warning::
+            This property can be set to change the plugin's internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.
+
+
+        """
+
+    @raw_state.setter
+    def raw_state(self, arg1: bytes) -> None:
+        """
+        A :py:class:`bytes` object representing the plugin's internal state.
+
+        For the VST3 format, this is usually an XML-encoded string prefixed with an 8-byte header and suffixed with a single null byte.
+
+        .. warning::
+            This property can be set to change the plugin's internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.
         """
 
     @property

@@ -770,6 +770,8 @@ jobs:
           CIBW_PRERELEASE_PYTHONS: "1"
           # Use the minimum macOS deployment target that has C++17 support:
           MACOSX_DEPLOYMENT_TARGET: "10.13"
+          CIBW_MUSLLINUX_X86_64_IMAGE: quay.io/pypa/musllinux_1_1_x86_64:2024-04-29-07d05a0
+          CIBW_MUSLLINUX_AARCH64_IMAGE: quay.io/pypa/musllinux_1_1_aarch64:2024-04-29-07d05a0
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl

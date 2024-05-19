@@ -1276,6 +1276,14 @@ public:
     return outputArray;
   }
 
+  void getState(juce::MemoryBlock &dest) const {
+    pluginInstance->getStateInformation(dest);
+  }
+
+  void setState(const void *data, size_t size) {
+    pluginInstance->setStateInformation(data, size);
+  }
+
   std::vector<juce::AudioProcessorParameter *> getParameters() const {
     std::vector<juce::AudioProcessorParameter *> parameters;
     for (auto *parameter : pluginInstance->getParameters()) {
@@ -1651,6 +1659,26 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
             return plugin.getName().toStdString();
           },
           "The name of this plugin.")
+      .def_property(
+          "raw_state",
+          [](const ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            juce::MemoryBlock state;
+            plugin.getState(state);
+            return py::bytes((const char *)state.getData(), state.getSize());
+          },
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin,
+             const py::bytes &state) {
+            py::buffer_info info(py::buffer(state).request());
+            plugin.setState(info.ptr, static_cast<size_t>(info.size));
+          },
+          "A :py:class:`bytes` object representing the plugin's internal "
+          "state.\n\n"
+          "For the VST3 format, this is usually an XML-encoded string "
+          "prefixed with an 8-byte header and suffixed with a single null "
+          "byte.\n\n"
+          ".. warning::\n    This property can be set to change the "
+          "plugin's internal state, but providing invalid data may cause the "
+          "plugin to crash, taking the entire Python process down with it.")
       .def_property_readonly(
           "descriptive_name",
           [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
@@ -1839,6 +1867,26 @@ see :class:`pedalboard.VST3Plugin`.)
             return plugin.getName().toStdString();
           },
           "The name of this plugin, as reported by the plugin itself.")
+      .def_property(
+          "raw_state",
+          [](const ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            juce::MemoryBlock state;
+            plugin.getState(state);
+            return py::bytes((const char *)state.getData(), state.getSize());
+          },
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin,
+             const py::bytes &state) {
+            py::buffer_info info(py::buffer(state).request());
+            plugin.setState(info.ptr, static_cast<size_t>(info.size));
+          },
+          "A :py:class:`bytes` object representing the plugin's internal "
+          "state.\n\n"
+          "For the Audio Unit format, this is usually a binary property list "
+          "that can be decoded or encoded with the built-in :py:mod:`plistlib` "
+          "package.\n\n"
+          ".. warning::\n    This property can be set to change the "
+          "plugin's internal state, but providing invalid data may cause the "
+          "plugin to crash, taking the entire Python process down with it.")
       .def_property_readonly(
           "name",
           [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
