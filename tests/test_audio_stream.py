@@ -15,11 +15,11 @@
 # limitations under the License.
 
 
-import time
-import pytest
 import platform
-import pedalboard
 
+import pytest
+
+import pedalboard
 
 # Very silly: even just creating an AudioStream object that reads from an `iPhone Microphone``
 # will cause a locally-present iPhone to emit a sound. Running `pytest` on my laptop makes my
@@ -59,11 +59,9 @@ def test_create_stream(input_device_name: str, output_device_name: str):
 
         # Ensure that modifying a running stream does not crash:
         stream.plugins.append(pedalboard.Gain(gain_db=-120))
-        for _ in range(0, 100):
-            time.sleep(0.01)
+        for _ in range(0, 10):
             stream.plugins.append(pedalboard.Gain(gain_db=-120))
         for i in reversed(range(len(stream.plugins))):
-            time.sleep(0.01)
             del stream.plugins[i]
         assert stream.running
     assert not stream.running

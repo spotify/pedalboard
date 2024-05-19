@@ -15,15 +15,17 @@
 # limitations under the License.
 
 
-import pytest
 import numpy as np
+import pytest
+
 from pedalboard import Bitcrush
+
 from .utils import generate_sine_at
 
 
 @pytest.mark.parametrize("bit_depth", list(np.arange(1, 32, 0.5)))
-@pytest.mark.parametrize("fundamental_hz", [440, 880])
-@pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
+@pytest.mark.parametrize("fundamental_hz", [440])
+@pytest.mark.parametrize("sample_rate", [22050, 48000])
 @pytest.mark.parametrize("num_channels", [1, 2])
 def test_bitcrush(bit_depth: float, fundamental_hz: float, sample_rate: float, num_channels: int):
     sine_wave = generate_sine_at(

@@ -96,6 +96,18 @@ Writing encoded audio to a file-like object::
    wav_buffer.getvalue()  # do something with the file-like object
 
 
+Encoding audio as ``wav``, ``ogg``, ``mp3``, or ``flac`` as a :class:`bytes` buffer in one line::
+
+   sr = 44100
+   num_channels = 2
+   audio = np.random.rand(num_channels, sr)
+   
+   wav_buffer = AudioFile.encode(audio, sr, num_channels, format="wav")
+   ogg_buffer = AudioFile.encode(audio, sr, num_channels, format="ogg")
+   mp3_buffer = AudioFile.encode(audio, sr, num_channels, format="mp3")
+   flac_buffer = AudioFile.encode(audio, sr, num_channels, format="flac")
+
+
 Writing to an audio file while also specifying quality options for the codec::
 
    with AudioFile(
@@ -263,6 +275,53 @@ inline void init_audio_file(
           py::arg("cls"), py::arg("file_like"), py::arg("mode") = "w",
           py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
           py::arg("bit_depth") = 16, py::arg("quality") = py::none(),
-          py::arg("format") = py::none());
+          py::arg("format") = py::none())
+      .def_static(
+          "encode",
+          [](const py::array samples, double sampleRate, std::string format,
+             int numChannels, int bitDepth,
+             std::optional<std::variant<std::string, float>> quality) {
+            juce::MemoryBlock outputBlock;
+            auto audioFile = std::make_unique<WriteableAudioFile>(
+                format,
+                std::make_unique<juce::MemoryOutputStream>(outputBlock, false),
+                sampleRate, numChannels, bitDepth, quality);
+
+            audioFile->write(samples);
+            audioFile->close();
+
+            return py::bytes((const char *)outputBlock.getData(),
+                             outputBlock.getSize());
+          },
+          py::arg("samples"), py::arg("samplerate"), py::arg("format"),
+          py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
+          py::arg("quality") = py::none(),
+          R"(
+Encode an audio buffer to a Python :class:`bytes` object.
+
+This function will encode an entire audio buffer at once and return a :class:`bytes`
+object representing the bytes of the resulting audio file.
+
+This function produces identical output to the following code::
+
+    buf = io.BytesIO()
+    with AudioFile(buf, "w", samplerate, num_channels, bit_depth, format, quality) as f:
+        f.write(samples)
+    result = buf.getvalue()
+
+However, this function is much more efficient than the above code, as it writes
+to an in-memory buffer in C++ and avoids interacting with Python at all during the
+encoding process. This allows Python's Global Interpreter Lock (GIL) to be
+released, which also makes this method much more performant in multi-threaded
+programs.
+
+.. warning::
+  This function will encode the entire audio buffer at once, and may consume a
+  large amount of memory if the input audio buffer is large.
+
+  To avoid running out of memory with arbitrary-length inputs, it is
+  recommended to stream the output into a file or file-like object by using
+  :class:`AudioFile` class in write (``"w"``) mode instead.
+)");
 }
 } // namespace Pedalboard

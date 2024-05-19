@@ -62,6 +62,9 @@ class ReadableAudioFile
 public:
   ReadableAudioFile(std::string filename) : filename(filename) {
     registerPedalboardAudioFormats(formatManager, false);
+    // This is kind of silly, as nobody else has a reference
+    // to this object yet; but it prevents some juce assertions in debug builds:
+    juce::ScopedWriteLock writeLock(objectLock);
 
     juce::File file(filename);
 
@@ -81,10 +84,18 @@ public:
       throw std::domain_error("Failed to open audio file: file \"" + filename +
                               "\" does not seem to contain audio data in a "
                               "known or supported format.");
+
+    cacheMetadata();
   }
 
   ReadableAudioFile(std::unique_ptr<PythonInputStream> inputStream) {
     registerPedalboardAudioFormats(formatManager, false);
+
+    // This is kind of silly, as nobody else has a reference
+    // to this object yet; but it prevents some juce assertions in debug builds:
+    juce::ScopedWriteLock writeLock(objectLock);
+
+    inputStream->setObjectLock(&objectLock);
 
     if (!inputStream->isSeekable()) {
       PythonException::raise();
@@ -160,85 +171,82 @@ public:
     }
 
     PythonException::raise();
+    cacheMetadata();
   }
 
-  std::variant<double, long> getSampleRate() const {
-    if (!reader)
-      throw std::runtime_error("I/O operation on a closed file.");
+  void cacheMetadata() {
+    sampleRate = reader->sampleRate;
+    numChannels = reader->numChannels;
+    numFrames = reader->lengthInSamples;
 
-    double integerPart;
-    double fractionalPart = std::modf(reader->sampleRate, &integerPart);
-
-    if (fractionalPart > 0) {
-      return reader->sampleRate;
+    if (reader->usesFloatingPointData) {
+      switch (reader->bitsPerSample) {
+      case 16: // OGG returns 16-bit int data, but internally stores floats
+      case 32:
+        fileDatatype = "float32";
+        break;
+      case 64:
+        fileDatatype = "float64";
+        break;
+      default:
+        fileDatatype = "unknown";
+        break;
+      }
     } else {
-      return (long)(reader->sampleRate);
+      switch (reader->bitsPerSample) {
+      case 8:
+        fileDatatype = "int8";
+        break;
+      case 16:
+        fileDatatype = "int16";
+        break;
+      case 24:
+        fileDatatype = "int24";
+        break;
+      case 32:
+        fileDatatype = "int32";
+        break;
+      case 64:
+        fileDatatype = "int64";
+        break;
+      default:
+        fileDatatype = "unknown";
+        break;
+      }
     }
   }
 
-  double getSampleRateAsDouble() const {
-    if (!reader)
-      throw std::runtime_error("I/O operation on a closed file.");
+  std::variant<double, long> getSampleRate() const {
+    double integerPart;
+    double fractionalPart = std::modf(sampleRate, &integerPart);
 
-    return reader->sampleRate;
+    if (fractionalPart > 0) {
+      return sampleRate;
+    } else {
+      return (long)(sampleRate);
+    }
   }
+
+  double getSampleRateAsDouble() const { return sampleRate; }
 
   long long getLengthInSamples() const {
-    if (!reader)
-      throw std::runtime_error("I/O operation on a closed file.");
-    return reader->lengthInSamples + (lengthCorrection ? *lengthCorrection : 0);
+    const juce::ScopedReadLock scopedLock(objectLock);
+    return numFrames + (lengthCorrection ? *lengthCorrection : 0);
   }
 
-  double getDuration() const {
-    if (!reader)
-      throw std::runtime_error("I/O operation on a closed file.");
-    return getLengthInSamples() / reader->sampleRate;
-  }
+  double getDuration() const { return numFrames / getSampleRateAsDouble(); }
 
-  long getNumChannels() const {
-    if (!reader)
-      throw std::runtime_error("I/O operation on a closed file.");
-    return reader->numChannels;
-  }
+  long getNumChannels() const { return numChannels; }
 
   std::string getFileFormat() const {
+    const juce::ScopedReadLock scopedLock(objectLock);
     if (!reader)
       throw std::runtime_error("I/O operation on a closed file.");
 
     return reader->getFormatName().toStdString();
   }
 
-  std::string getFileDatatype() const {
-    if (!reader)
-      throw std::runtime_error("I/O operation on a closed file.");
-
-    if (reader->usesFloatingPointData) {
-      switch (reader->bitsPerSample) {
-      case 16: // OGG returns 16-bit int data, but internally stores floats
-      case 32:
-        return "float32";
-      case 64:
-        return "float64";
-      default:
-        return "unknown";
-      }
-    } else {
-      switch (reader->bitsPerSample) {
-      case 8:
-        return "int8";
-      case 16:
-        return "int16";
-      case 24:
-        return "int24";
-      case 32:
-        return "int32";
-      case 64:
-        return "int64";
-      default:
-        return "unknown";
-      }
-    }
-  }
+  std::string getFileDatatype() const { return fileDatatype; }
 
   py::array_t<float, py::array::c_style>
   read(std::variant<double, long long> numSamplesVariant) {
@@ -251,7 +259,9 @@ public:
           "pass a number of frames to read (available from the 'frames' "
           "attribute).");
 
-    const juce::ScopedLock scopedLock(objectLock);
+    std::optional<juce::ScopedReadLock> scopedLock =
+        std::optional<juce::ScopedReadLock>(objectLock);
+
     if (!reader)
       throw std::runtime_error("I/O operation on a closed file.");
 
@@ -261,6 +271,7 @@ public:
         std::min(numSamples, (reader->lengthInSamples +
                               (lengthCorrection ? *lengthCorrection : 0)) -
                                  currentPosition);
+
     py::array_t<float> buffer =
         py::array_t<float>({(long long)numChannels, (long long)numSamples});
 
@@ -272,9 +283,14 @@ public:
       py::gil_scoped_release release;
       numSamplesToKeep =
           readInternal(numChannels, numSamples, (float *)outputInfo.ptr);
-      PythonException::raise();
+
+      // After this point, we no longer need to hold the read lock as we don't
+      // interact with the reader object anymore. Releasing this early (before
+      // re-acquiring the GIL) helps avoid deadlocks:
+      scopedLock.reset();
     }
 
+    PythonException::raise();
     if (numSamplesToKeep < numSamples) {
       buffer.resize({(long long)numChannels, (long long)numSamplesToKeep});
     }
@@ -299,6 +315,16 @@ public:
   long long readInternal(const long long numChannels,
                          const long long numSamplesToFill,
                          float *outputPointer) {
+    // Note: We take a "write" lock here as calling readInternal will
+    // advance internal state:
+    ScopedTryWriteLock scopedTryWriteLock(objectLock);
+    if (!scopedTryWriteLock.isLocked()) {
+      throw std::runtime_error(
+          "Another thread is currently reading from this AudioFile. Note "
+          "that using multiple concurrent readers on the same AudioFile "
+          "object will produce nondeterministic results.");
+    }
+
     // If the file being read does not have enough content, it _should_ pad
     // the rest of the array with zeroes. Unfortunately, this does not seem to
     // be true in practice, so we pre-zero the array to be returned here:
@@ -398,7 +424,7 @@ public:
           "pass a number of frames to read (available from the 'frames' "
           "attribute).");
 
-    const juce::ScopedLock scopedLock(objectLock);
+    const juce::ScopedReadLock readLock(objectLock);
     if (!reader)
       throw std::runtime_error("I/O operation on a closed file.");
 
@@ -422,6 +448,7 @@ public:
 
   template <typename SampleType>
   py::array_t<SampleType> readInteger(long long numSamples) {
+    const juce::ScopedReadLock readLock(objectLock);
     if (reader->usesFloatingPointData) {
       throw std::runtime_error(
           "Can't call readInteger with a floating point file!");
@@ -455,10 +482,21 @@ public:
           channelPointers[c] = ((int *)outputInfo.ptr) + (numSamples * c);
         }
 
-        auto readResult = reader->readSamples(channelPointers, numChannels, 0,
-                                              currentPosition, numSamples);
-        PythonException::raise();
+        bool readResult = false;
+        {
+          ScopedTryWriteLock scopedTryWriteLock(objectLock);
+          if (!scopedTryWriteLock.isLocked()) {
+            throw std::runtime_error(
+                "Another thread is currently reading from this AudioFile. Note "
+                "that using multiple concurrent readers on the same AudioFile "
+                "object will produce nondeterministic results.");
+          }
+          readResult = reader->readSamples(channelPointers, numChannels, 0,
+                                           currentPosition, numSamples);
+        }
+
         if (!readResult) {
+          PythonException::raise();
           throwReadError(currentPosition, numSamples);
         }
       } else {
@@ -479,13 +517,23 @@ public:
             channelPointers[c] = intBuffers[c].data();
           }
 
-          auto readResult =
-              reader->readSamples(channelPointers, numChannels, 0,
-                                  currentPosition + startSample, samplesToRead);
+          bool readResult = false;
+          {
+            ScopedTryWriteLock scopedTryWriteLock(objectLock);
+            if (!scopedTryWriteLock.isLocked()) {
+              throw std::runtime_error(
+                  "Another thread is currently reading from this AudioFile. "
+                  "Note that using multiple concurrent readers on the same "
+                  "AudioFile object will produce nondeterministic results.");
+            }
 
-          PythonException::raise();
+            readResult = reader->readSamples(channelPointers, numChannels, 0,
+                                             currentPosition + startSample,
+                                             samplesToRead);
+          }
 
           if (!readResult) {
+            PythonException::raise();
             throw std::runtime_error("Failed to read from file.");
           }
 
@@ -502,12 +550,26 @@ public:
       }
     }
 
+    PythonException::raise();
+
+    ScopedTryWriteLock scopedTryWriteLock(objectLock);
+    if (!scopedTryWriteLock.isLocked()) {
+      throw std::runtime_error(
+          "Another thread is currently reading from this AudioFile. "
+          "Note that using multiple concurrent readers on the same "
+          "AudioFile object will produce nondeterministic results.");
+    }
     currentPosition += numSamples;
     return buffer;
   }
 
   void seek(long long targetPosition) {
-    const juce::ScopedLock scopedLock(objectLock);
+    py::gil_scoped_release release;
+    seekInternal(targetPosition);
+  }
+
+  void seekInternal(long long targetPosition) {
+    const juce::ScopedReadLock scopedReadLock(objectLock);
     if (!reader)
       throw std::runtime_error("I/O operation on a closed file.");
     if (targetPosition >
@@ -519,36 +581,53 @@ public:
           " frames).");
     if (targetPosition < 0)
       throw std::domain_error("Cannot seek before start of file.");
+
+    // Promote to a write lock as we're now modifying the object:
+    ScopedTryWriteLock scopedTryWriteLock(objectLock);
+    if (!scopedTryWriteLock.isLocked()) {
+      throw std::runtime_error(
+          "Another thread is currently reading from this AudioFile. Note that "
+          "using multiple concurrent readers on the same AudioFile object will "
+          "produce nondeterministic results.");
+    }
     currentPosition = targetPosition;
   }
 
   long long tell() const {
-    const juce::ScopedLock scopedLock(objectLock);
-    if (!reader)
-      throw std::runtime_error("I/O operation on a closed file.");
+    py::gil_scoped_release release;
+    const juce::ScopedReadLock scopedLock(objectLock);
     return currentPosition;
   }
 
   void close() {
-    const juce::ScopedLock scopedLock(objectLock);
+    ScopedTryWriteLock scopedTryWriteLock(objectLock);
+    if (!scopedTryWriteLock.isLocked()) {
+      throw std::runtime_error(
+          "Another thread is currently reading from this AudioFile; it cannot "
+          "be closed until the other thread completes its operation.");
+    }
+    // Note: This may deallocate a Python object, so must be called with the
+    // GIL held:
     reader.reset();
   }
 
   bool isClosed() const {
-    const juce::ScopedLock scopedLock(objectLock);
+    py::gil_scoped_release release;
+    const juce::ScopedReadLock scopedLock(objectLock);
     return !reader;
   }
 
   bool isSeekable() const {
-    const juce::ScopedLock scopedLock(objectLock);
+    py::gil_scoped_release release;
+    const juce::ScopedReadLock scopedLock(objectLock);
 
     // At the moment, ReadableAudioFile instances are always seekable, as
     // they're backed by files.
-    return !isClosed();
+    return reader != nullptr;
   }
 
   bool exactDurationKnown() const {
-    const juce::ScopedLock scopedLock(objectLock);
+    const juce::ScopedReadLock scopedLock(objectLock);
 
     if (juce::AudioFormatReaderWithPosition *approximateLengthReader =
             dynamic_cast<juce::AudioFormatReaderWithPosition *>(reader.get())) {
@@ -643,7 +722,12 @@ private:
   juce::AudioFormatManager formatManager;
   std::string filename;
   std::unique_ptr<juce::AudioFormatReader> reader;
-  juce::CriticalSection objectLock;
+  juce::ReadWriteLock objectLock;
+
+  double sampleRate;
+  long numChannels;
+  long numFrames;
+  std::string fileDatatype;
 
   long long currentPosition = 0;
 
@@ -824,14 +908,15 @@ in which this may occur.)
                ss << " file_like=" << stream->getRepresentation();
              }
 
+             ss << " samplerate=" << file.getSampleRateAsDouble();
+             ss << " num_channels=" << file.getNumChannels();
+             ss << " frames=" << file.getLengthInSamples();
+             ss << " file_dtype=" << file.getFileDatatype();
+
              if (file.isClosed()) {
                ss << " closed";
-             } else {
-               ss << " samplerate=" << file.getSampleRateAsDouble();
-               ss << " num_channels=" << file.getNumChannels();
-               ss << " frames=" << file.getLengthInSamples();
-               ss << " file_dtype=" << file.getFileDatatype();
              }
+
              ss << " at " << &file;
              ss << ">";
              return ss.str();

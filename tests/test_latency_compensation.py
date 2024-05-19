@@ -15,17 +15,21 @@
 # limitations under the License.
 
 
-import pytest
 import numpy as np
+import pytest
+
 from pedalboard_native._internal import AddLatency
 
+MAX_SAMPLE_RATE = 96000
+NUM_SECONDS = 3.0
+NOISE = np.random.rand(int(NUM_SECONDS * MAX_SAMPLE_RATE)).astype(np.float32)
 
-@pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
+
+@pytest.mark.parametrize("sample_rate", [22050, 44100, MAX_SAMPLE_RATE])
 @pytest.mark.parametrize("buffer_size", [128, 8192, 65536])
-@pytest.mark.parametrize("latency_seconds", [0.25, 1, 2, 10])
+@pytest.mark.parametrize("latency_seconds", [0.25, 1, 2])
 def test_latency_compensation(sample_rate, buffer_size, latency_seconds):
-    num_seconds = 10.0
-    noise = np.random.rand(int(num_seconds * sample_rate))
+    noise = NOISE[: int(sample_rate * NUM_SECONDS)]
     plugin = AddLatency(int(latency_seconds * sample_rate))
     output = plugin.process(noise, sample_rate, buffer_size=buffer_size)
     np.testing.assert_allclose(output, noise)

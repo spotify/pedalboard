@@ -61,24 +61,8 @@ public:
   PythonInputStream(py::object fileLike) : PythonFileLike(fileLike) {}
   virtual ~PythonInputStream() {}
 
-  bool isSeekable() noexcept override {
-    py::gil_scoped_acquire acquire;
-
-    if (PythonException::isPending())
-      return false;
-
-    try {
-      return fileLike.attr("seekable")().cast<bool>();
-    } catch (py::error_already_set e) {
-      e.restore();
-      return false;
-    } catch (const py::builtin_exception &e) {
-      e.set_error();
-      return false;
-    }
-  }
-
   juce::int64 getTotalLength() noexcept override {
+    ScopedDowngradeToReadLockWithGIL lock(objectLock);
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -114,11 +98,12 @@ public:
     // The buffer should never be null, and a negative size is probably a
     // sign that something is broken!
     jassert(buffer != nullptr && bytesToRead >= 0);
+    ScopedDowngradeToReadLockWithGIL lock(objectLock);
 
+    py::gil_scoped_acquire acquire;
     if (PythonException::isPending())
       return 0;
 
-    py::gil_scoped_acquire acquire;
     try {
       auto readResult = fileLike.attr("read")(bytesToRead);
 
@@ -172,6 +157,10 @@ public:
   }
 
   bool isExhausted() noexcept override {
+    // Read this up front to avoid releasing the object lock recursively:
+    juce::int64 totalLength = getTotalLength();
+
+    ScopedDowngradeToReadLockWithGIL lock(objectLock);
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -182,7 +171,7 @@ public:
         return true;
       }
 
-      return fileLike.attr("tell")().cast<juce::int64>() == getTotalLength();
+      return fileLike.attr("tell")().cast<juce::int64>() == totalLength;
     } catch (py::error_already_set e) {
       e.restore();
       return true;
@@ -193,6 +182,7 @@ public:
   }
 
   juce::int64 getPosition() noexcept override {
+    ScopedDowngradeToReadLockWithGIL lock(objectLock);
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -210,6 +200,7 @@ public:
   }
 
   bool setPosition(juce::int64 pos) noexcept override {
+    ScopedDowngradeToReadLockWithGIL lock(objectLock);
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())

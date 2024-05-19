@@ -46,7 +46,63 @@ inline void raise() {
 }; // namespace PythonException
 
 /**
+ * A tiny helper class that downgrades a write lock
+ * to a read lock for the given scope. If we can't
+ * regain the write lock on the provided object,
+ * the GIL will be released in a busy loop until
+ * the write lock becomes available to us.
+ */
+class ScopedDowngradeToReadLockWithGIL {
+public:
+  ScopedDowngradeToReadLockWithGIL(juce::ReadWriteLock *lock) : lock(lock) {
+    if (lock) {
+      lock->enterRead();
+      lock->exitWrite();
+    }
+  }
+
+  ~ScopedDowngradeToReadLockWithGIL() {
+    if (lock) {
+      while (!lock->tryEnterWrite()) {
+        // If we have the GIL, release it briefly to avoid deadlocks:
+        if (PyGILState_Check() == true) {
+          py::gil_scoped_release release;
+        }
+      }
+
+      lock->exitRead();
+    }
+  }
+
+private:
+  juce::ReadWriteLock *lock;
+};
+
+/** Cribbed from Juce 7: */
+class ScopedTryWriteLock {
+public:
+  ScopedTryWriteLock(juce::ReadWriteLock &lockIn) noexcept
+      : lock(lockIn), lockWasSuccessful(lock.tryEnterWrite()) {}
+
+  ~ScopedTryWriteLock() noexcept {
+    if (lockWasSuccessful)
+      lock.exitWrite();
+  }
+
+  bool isLocked() const noexcept { return lockWasSuccessful; }
+
+  bool retryLock() noexcept { return lockWasSuccessful = lock.tryEnterWrite(); }
+
+private:
+  juce::ReadWriteLock &lock;
+  bool lockWasSuccessful;
+};
+
+/**
  * A base class for file-like Python object wrappers.
+ *
+ * Note that the objectLock passed in will be unlocked before
+ * the GIL is reacquired to avoid deadlocks.
  */
 class PythonFileLike {
 public:
@@ -54,6 +110,7 @@ public:
   virtual ~PythonFileLike() {}
 
   virtual std::string getRepresentation() {
+    ScopedDowngradeToReadLockWithGIL lock(objectLock);
     py::gil_scoped_acquire acquire;
     if (PythonException::isPending())
       return "<__repr__ failed>";
@@ -64,6 +121,7 @@ public:
     // Some Python file-like objects expose a ".name" property.
     // If this object has that property, return its value;
     // otherwise return an empty optional.
+    ScopedDowngradeToReadLockWithGIL lock(objectLock);
     py::gil_scoped_acquire acquire;
 
     if (!PythonException::isPending() && py::hasattr(fileLike, "name")) {
@@ -74,6 +132,7 @@ public:
   }
 
   virtual bool isSeekable() noexcept {
+    ScopedDowngradeToReadLockWithGIL lock(objectLock);
     py::gil_scoped_acquire acquire;
 
     if (!PythonException::isPending()) {
@@ -90,6 +149,7 @@ public:
   }
 
   virtual juce::int64 getPosition() noexcept {
+    ScopedDowngradeToReadLockWithGIL lock(objectLock);
     py::gil_scoped_acquire acquire;
 
     if (!PythonException::isPending()) {
@@ -106,6 +166,7 @@ public:
   }
 
   virtual bool setPosition(juce::int64 pos) noexcept {
+    ScopedDowngradeToReadLockWithGIL lock(objectLock);
     py::gil_scoped_acquire acquire;
 
     if (!PythonException::isPending()) {
@@ -124,7 +185,10 @@ public:
 
   py::object getFileLikeObject() { return fileLike; }
 
+  void setObjectLock(juce::ReadWriteLock *lock) { objectLock = lock; }
+
 protected:
   py::object fileLike;
+  juce::ReadWriteLock *objectLock = nullptr;
 };
 }; // namespace Pedalboard

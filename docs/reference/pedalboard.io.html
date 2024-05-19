@@ -6,7 +6,7 @@
 <meta property="og:title" content="The pedalboard.io API" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://spotify.github.io/pedalboard/reference/pedalboard.io.html" />
-<meta property="og:site_name" content="Pedalboard v0.9.1 Documentation" />
+<meta property="og:site_name" content="Pedalboard v0.9.5 Documentation" />
 <meta property="og:description" content="This module provides classes and functions for reading and writing audio files or streams. pedalboard.io allows for reading and writing to audio files just like working with other types of files in..." />
 <meta property="og:image" content="https://repository-images.githubusercontent.com/383471193/0f79b949-9b91-4436-bfc4-05d30ef384cc" />
 <meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
@@ -14,7 +14,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Examples" href="../examples.html" /><link rel="prev" title="The pedalboard API" href="pedalboard.html" />
 
     <link rel="shortcut icon" href="../_static/favicon.ico"/><meta name="generator" content="sphinx-5.3.0, furo 2022.09.29"/>
-        <title>The pedalboard.io API - Pedalboard v0.9.1 Documentation</title>
+        <title>The pedalboard.io API - Pedalboard v0.9.5 Documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=d81277517bee4d6b0349d71bb2661d4890b5617c" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
@@ -132,7 +132,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">Pedalboard v0.9.1 Documentation</div></a>
+      <a href="../index.html"><div class="brand">Pedalboard v0.9.5 Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -158,7 +158,7 @@
     <img class="sidebar-logo" src="../_static/pedalboard_logo_small.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">Pedalboard v0.9.1 Documentation</span>
+  <span class="sidebar-brand-text">Pedalboard v0.9.5 Documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
@@ -304,6 +304,17 @@ A <a class="reference external" href="https://docs.python.org/3/library/stdtypes
 <span class="n">wav_buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>  <span class="c1"># do something with the file-like object</span>
 </pre></div>
 </div>
+<p>Encoding audio as <code class="docutils literal notranslate"><span class="pre">wav</span></code>, <code class="docutils literal notranslate"><span class="pre">ogg</span></code>, <code class="docutils literal notranslate"><span class="pre">mp3</span></code>, or <code class="docutils literal notranslate"><span class="pre">flac</span></code> as a <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code></a> buffer in one line:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sr</span> <span class="o">=</span> <span class="mi">44100</span>
+<span class="n">num_channels</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">audio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">num_channels</span><span class="p">,</span> <span class="n">sr</span><span class="p">)</span>
+
+<span class="n">wav_buffer</span> <span class="o">=</span> <span class="n">AudioFile</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">num_channels</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;wav&quot;</span><span class="p">)</span>
+<span class="n">ogg_buffer</span> <span class="o">=</span> <span class="n">AudioFile</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">num_channels</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;ogg&quot;</span><span class="p">)</span>
+<span class="n">mp3_buffer</span> <span class="o">=</span> <span class="n">AudioFile</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">num_channels</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;mp3&quot;</span><span class="p">)</span>
+<span class="n">flac_buffer</span> <span class="o">=</span> <span class="n">AudioFile</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">num_channels</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;flac&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
 <p>Writing to an audio file while also specifying quality options for the codec:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span>
     <span class="s2">&quot;white_noise.mp3&quot;</span><span class="p">,</span>
@@ -330,6 +341,34 @@ A <a class="reference external" href="https://docs.python.org/3/library/stdtypes
 in write (“w”) mode, a <a class="reference internal" href="#pedalboard.io.WriteableAudioFile" title="pedalboard.io.WriteableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">WriteableAudioFile</span></code></a> will be returned. See
 those classes below for documentation.</p>
 </div>
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.AudioFile.encode">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">samplerate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bit_depth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quality</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.12)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.12)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#pedalboard.io.AudioFile.encode" title="Permalink to this definition">#</a></dt>
+<dd><p>Encode an audio buffer to a Python <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code></a> object.</p>
+<p>This function will encode an entire audio buffer at once and return a <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code></a>
+object representing the bytes of the resulting audio file.</p>
+<p>This function produces identical output to the following code:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">buf</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">,</span> <span class="n">num_channels</span><span class="p">,</span> <span class="n">bit_depth</span><span class="p">,</span> <span class="nb">format</span><span class="p">,</span> <span class="n">quality</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>However, this function is much more efficient than the above code, as it writes
+to an in-memory buffer in C++ and avoids interacting with Python at all during the
+encoding process. This allows Python’s Global Interpreter Lock (GIL) to be
+released, which also makes this method much more performant in multi-threaded
+programs.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This function will encode the entire audio buffer at once, and may consume a
+large amount of memory if the input audio buffer is large.</p>
+<p>To avoid running out of memory with arbitrary-length inputs, it is
+recommended to stream the output into a file or file-like object by using
+<a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> class in write (<code class="docutils literal notranslate"><span class="pre">&quot;w&quot;</span></code>) mode instead.</p>
+</div>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -1049,7 +1088,10 @@ second argument.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">The <code class="docutils literal notranslate"><span class="pre">pedalboard.io</span></code> API</a><ul>
-<li><a class="reference internal" href="#pedalboard.io.AudioFile"><code class="docutils literal notranslate"><span class="pre">AudioFile</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioFile"><code class="docutils literal notranslate"><span class="pre">AudioFile</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.io.AudioFile.encode"><code class="docutils literal notranslate"><span class="pre">AudioFile.encode()</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#pedalboard.io.AudioStream"><code class="docutils literal notranslate"><span class="pre">AudioStream</span></code></a><ul>
 <li><a class="reference internal" href="#pedalboard.io.AudioStream.__enter__"><code class="docutils literal notranslate"><span class="pre">AudioStream.__enter__()</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.io.AudioStream.__exit__"><code class="docutils literal notranslate"><span class="pre">AudioStream.__exit__()</span></code></a></li>

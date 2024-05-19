@@ -1,6 +1,7 @@
 """This module provides classes and functions for generating and adding effects to audio. Most classes in this module are subclasses of ``Plugin``, each of which allows applying effects to an audio buffer or stream.
 
 For audio I/O classes (i.e.: reading and writing audio files), see ``pedalboard.io``."""
+
 from __future__ import annotations
 import pedalboard_native
 
@@ -82,6 +83,7 @@ class Plugin:
         """
         Run an audio buffer through this plugin. Alias for :py:meth:`process`.
         """
+
     def process(
         self,
         input_array: numpy.ndarray,
@@ -119,10 +121,12 @@ class Plugin:
 
 
         """
+
     def reset(self) -> None:
         """
         Clear any internal state stored by this plugin (e.g.: reverb tails, delay lines, LFO state, etc). The values of plugin parameters will remain unchanged.
         """
+
     @property
     def is_effect(self) -> bool:
         """
@@ -132,6 +136,7 @@ class Plugin:
 
 
         """
+
     @property
     def is_instrument(self) -> bool:
         """
@@ -159,6 +164,7 @@ class Bitcrush(Plugin):
 
 
         """
+
     @bit_depth.setter
     def bit_depth(self, arg1: float) -> None:
         """
@@ -187,27 +193,35 @@ class Chorus(Plugin):
     @property
     def centre_delay_ms(self) -> float:
         """ """
+
     @centre_delay_ms.setter
     def centre_delay_ms(self, arg1: float) -> None:
         pass
+
     @property
     def depth(self) -> float:
         """ """
+
     @depth.setter
     def depth(self, arg1: float) -> None:
         pass
+
     @property
     def feedback(self) -> float:
         """ """
+
     @feedback.setter
     def feedback(self, arg1: float) -> None:
         pass
+
     @property
     def mix(self) -> float:
         """ """
+
     @mix.setter
     def mix(self, arg1: float) -> None:
         pass
+
     @property
     def rate_hz(self) -> float:
         """
@@ -215,6 +229,7 @@ class Chorus(Plugin):
 
 
         """
+
     @rate_hz.setter
     def rate_hz(self, arg1: float) -> None:
         """
@@ -232,6 +247,7 @@ class Clipping(Plugin):
     @property
     def threshold_db(self) -> float:
         """ """
+
     @threshold_db.setter
     def threshold_db(self, arg1: float) -> None:
         pass
@@ -255,24 +271,31 @@ class Compressor(Plugin):
     @property
     def attack_ms(self) -> float:
         """ """
+
     @attack_ms.setter
     def attack_ms(self, arg1: float) -> None:
         pass
+
     @property
     def ratio(self) -> float:
         """ """
+
     @ratio.setter
     def ratio(self, arg1: float) -> None:
         pass
+
     @property
     def release_ms(self) -> float:
         """ """
+
     @release_ms.setter
     def release_ms(self, arg1: float) -> None:
         pass
+
     @property
     def threshold_db(self) -> float:
         """ """
+
     @threshold_db.setter
     def threshold_db(self, arg1: float) -> None:
         pass
@@ -288,9 +311,11 @@ class Convolution(Plugin):
     @property
     def impulse_response_filename(self) -> str:
         """ """
+
     @property
     def mix(self) -> float:
         """ """
+
     @mix.setter
     def mix(self, arg1: float) -> None:
         pass
@@ -308,18 +333,23 @@ class Delay(Plugin):
     @property
     def delay_seconds(self) -> float:
         """ """
+
     @delay_seconds.setter
     def delay_seconds(self, arg1: float) -> None:
         pass
+
     @property
     def feedback(self) -> float:
         """ """
+
     @feedback.setter
     def feedback(self, arg1: float) -> None:
         pass
+
     @property
     def mix(self) -> float:
         """ """
+
     @mix.setter
     def mix(self, arg1: float) -> None:
         pass
@@ -337,6 +367,7 @@ class Distortion(Plugin):
     @property
     def drive_db(self) -> float:
         """ """
+
     @drive_db.setter
     def drive_db(self, arg1: float) -> None:
         pass
@@ -362,6 +393,7 @@ class ExternalPlugin(Plugin):
 
         Run an audio or MIDI buffer through this plugin, returning audio. Alias for :py:meth:`process`.
         """
+
     @typing.overload
     def __call__(
         self,
@@ -550,6 +582,7 @@ class ExternalPlugin(Plugin):
         *Support for instrument plugins introduced in v0.7.4.*
 
         """
+
     @typing.overload
     def process(
         self,
@@ -572,6 +605,7 @@ class Gain(Plugin):
     @property
     def gain_db(self) -> float:
         """ """
+
     @gain_db.setter
     def gain_db(self, arg1: float) -> None:
         pass
@@ -594,6 +628,7 @@ class HighpassFilter(Plugin):
     @property
     def cutoff_frequency_hz(self) -> float:
         """ """
+
     @cutoff_frequency_hz.setter
     def cutoff_frequency_hz(self, arg1: float) -> None:
         pass
@@ -611,18 +646,23 @@ class HighShelfFilter(IIRFilter, Plugin):
     @property
     def cutoff_frequency_hz(self) -> float:
         """ """
+
     @cutoff_frequency_hz.setter
     def cutoff_frequency_hz(self, arg1: float) -> None:
         pass
+
     @property
     def gain_db(self) -> float:
         """ """
+
     @gain_db.setter
     def gain_db(self, arg1: float) -> None:
         pass
+
     @property
     def q(self) -> float:
         """ """
+
     @q.setter
     def q(self, arg1: float) -> None:
         pass
@@ -674,6 +714,7 @@ class LadderFilter(Plugin):
         """
         A band-pass filter with 24 dB of attenuation per octave on both sides of the cutoff frequency.
         """
+
     def __init__(
         self,
         mode: LadderFilter.Mode = Mode.LPF12,
@@ -685,24 +726,31 @@ class LadderFilter(Plugin):
     @property
     def cutoff_hz(self) -> float:
         """ """
+
     @cutoff_hz.setter
     def cutoff_hz(self, arg1: float) -> None:
         pass
+
     @property
     def drive(self) -> float:
         """ """
+
     @drive.setter
     def drive(self, arg1: float) -> None:
         pass
+
     @property
     def mode(self) -> LadderFilter.Mode:
         """ """
+
     @mode.setter
     def mode(self, arg1: LadderFilter.Mode) -> None:
         pass
+
     @property
     def resonance(self) -> float:
         """ """
+
     @resonance.setter
     def resonance(self, arg1: float) -> None:
         pass
@@ -724,12 +772,15 @@ class Limiter(Plugin):
     @property
     def release_ms(self) -> float:
         """ """
+
     @release_ms.setter
     def release_ms(self, arg1: float) -> None:
         pass
+
     @property
     def threshold_db(self) -> float:
         """ """
+
     @threshold_db.setter
     def threshold_db(self, arg1: float) -> None:
         pass
@@ -747,18 +798,23 @@ class LowShelfFilter(IIRFilter, Plugin):
     @property
     def cutoff_frequency_hz(self) -> float:
         """ """
+
     @cutoff_frequency_hz.setter
     def cutoff_frequency_hz(self, arg1: float) -> None:
         pass
+
     @property
     def gain_db(self) -> float:
         """ """
+
     @gain_db.setter
     def gain_db(self, arg1: float) -> None:
         pass
+
     @property
     def q(self) -> float:
         """ """
+
     @q.setter
     def q(self, arg1: float) -> None:
         pass
@@ -774,6 +830,7 @@ class LowpassFilter(Plugin):
     @property
     def cutoff_frequency_hz(self) -> float:
         """ """
+
     @cutoff_frequency_hz.setter
     def cutoff_frequency_hz(self, arg1: float) -> None:
         pass
@@ -793,6 +850,7 @@ class MP3Compressor(Plugin):
     @property
     def vbr_quality(self) -> float:
         """ """
+
     @vbr_quality.setter
     def vbr_quality(self, arg1: float) -> None:
         pass
@@ -814,24 +872,31 @@ class NoiseGate(Plugin):
     @property
     def attack_ms(self) -> float:
         """ """
+
     @attack_ms.setter
     def attack_ms(self, arg1: float) -> None:
         pass
+
     @property
     def ratio(self) -> float:
         """ """
+
     @ratio.setter
     def ratio(self, arg1: float) -> None:
         pass
+
     @property
     def release_ms(self) -> float:
         """ """
+
     @release_ms.setter
     def release_ms(self, arg1: float) -> None:
         pass
+
     @property
     def threshold_db(self) -> float:
         """ """
+
     @threshold_db.setter
     def threshold_db(self, arg1: float) -> None:
         pass
@@ -849,18 +914,23 @@ class PeakFilter(IIRFilter, Plugin):
     @property
     def cutoff_frequency_hz(self) -> float:
         """ """
+
     @cutoff_frequency_hz.setter
     def cutoff_frequency_hz(self, arg1: float) -> None:
         pass
+
     @property
     def gain_db(self) -> float:
         """ """
+
     @gain_db.setter
     def gain_db(self, arg1: float) -> None:
         pass
+
     @property
     def q(self) -> float:
         """ """
+
     @q.setter
     def q(self, arg1: float) -> None:
         pass
@@ -883,30 +953,39 @@ class Phaser(Plugin):
     @property
     def centre_frequency_hz(self) -> float:
         """ """
+
     @centre_frequency_hz.setter
     def centre_frequency_hz(self, arg1: float) -> None:
         pass
+
     @property
     def depth(self) -> float:
         """ """
+
     @depth.setter
     def depth(self, arg1: float) -> None:
         pass
+
     @property
     def feedback(self) -> float:
         """ """
+
     @feedback.setter
     def feedback(self, arg1: float) -> None:
         pass
+
     @property
     def mix(self) -> float:
         """ """
+
     @mix.setter
     def mix(self, arg1: float) -> None:
         pass
+
     @property
     def rate_hz(self) -> float:
         """ """
+
     @rate_hz.setter
     def rate_hz(self, arg1: float) -> None:
         pass
@@ -924,6 +1003,7 @@ class PitchShift(Plugin):
     @property
     def semitones(self) -> float:
         """ """
+
     @semitones.setter
     def semitones(self, arg1: float) -> None:
         pass
@@ -954,6 +1034,8 @@ class AudioUnitPlugin(ExternalPlugin):
     *Support for instrument plugins introduced in v0.7.4.*
 
     *Support for running Audio Unit plugins on background threads introduced in v0.8.8.*
+
+    *Support for loading AUv3 plugins (``.appex`` bundles) introduced in v0.9.5.*
     """
 
     @typing.overload
@@ -969,6 +1051,7 @@ class AudioUnitPlugin(ExternalPlugin):
 
         Run an audio or MIDI buffer through this plugin, returning audio. Alias for :py:meth:`process`.
         """
+
     @typing.overload
     def __call__(
         self,
@@ -991,10 +1074,11 @@ class AudioUnitPlugin(ExternalPlugin):
     @staticmethod
     def get_plugin_names_for_file(filename: str) -> typing.List[str]:
         """
-        Return a list of plugin names contained within a given Audio Unit bundle (i.e.: a ``.component`` file). If the provided file cannot be scanned, an ``ImportError`` will be raised.
+        Return a list of plugin names contained within a given Audio Unit bundle (i.e.: a ``.component`` or ``.appex`` file). If the provided file cannot be scanned, an ``ImportError`` will be raised.
 
         Note that most Audio Units have a single plugin inside, but this method can be useful to determine if multiple plugins are present in one bundle, and if so, what their names are.
         """
+
     @typing.overload
     def process(
         self,
@@ -1171,6 +1255,7 @@ class AudioUnitPlugin(ExternalPlugin):
         *Support for instrument plugins introduced in v0.7.4.*
 
         """
+
     @typing.overload
     def process(
         self,
@@ -1181,10 +1266,6 @@ class AudioUnitPlugin(ExternalPlugin):
         buffer_size: int = 8192,
         reset: bool = True,
     ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]: ...
-    def set_state(self, state: bytes) -> None:
-        """
-        Set the complete state of the plugin.
-        """
     def show_editor(self, close_event: typing.Optional[threading.Event] = None) -> None:
         """
         Show the UI of this plugin as a native window.
@@ -1212,14 +1293,16 @@ class AudioUnitPlugin(ExternalPlugin):
                    close_window_event.set()
 
            thread = Thread(target=other_thread)
-           thread.run()
+           thread.start()
 
            # This will block until the other thread calls .set():
            plugin.show_editor(close_window_event)
         """
+
     @property
     def _parameters(self) -> typing.List[_AudioProcessorParameter]:
         """ """
+
     @property
     def _reload_type(self) -> ExternalPluginReloadType:
         """
@@ -1227,24 +1310,103 @@ class AudioUnitPlugin(ExternalPlugin):
 
 
         """
+
     @_reload_type.setter
     def _reload_type(self, arg0: ExternalPluginReloadType) -> None:
         """
         The behavior that this plugin exhibits when .reset() is called. This is an internal attribute which gets set on plugin instantiation and should only be accessed for debugging and testing.
         """
+
+    @property
+    def category(self) -> str:
+        """
+        A category that this plugin falls into, such as "Dynamics", "Reverbs", etc.
+
+        *Introduced in v0.9.4.*
+
+
+        """
+
+    @property
+    def descriptive_name(self) -> str:
+        """
+        A more descriptive name for this plugin. This may be the same as the 'name' field, but some plugins may provide an alternative name.
+
+        *Introduced in v0.9.4.*
+
+
+        """
+
+    @property
+    def has_shared_container(self) -> bool:
+        """
+        True iff this plugin is part of a multi-plugin container.
+
+        *Introduced in v0.9.4.*
+
+
+        """
+
+    @property
+    def identifier(self) -> str:
+        """
+        A string that can be saved and used to uniquely identify this plugin (and version) again.
+
+        *Introduced in v0.9.4.*
+
+
+        """
+
+    @property
+    def is_instrument(self) -> bool:
+        """
+        True iff this plugin identifies itself as an instrument (generator, synthesizer, etc) plugin.
+
+        *Introduced in v0.9.4.*
+
+
+        """
+
+    @property
+    def manufacturer_name(self) -> str:
+        """
+        The name of the manufacturer of this plugin, as reported by the plugin itself.
+
+        *Introduced in v0.9.4.*
+
+
+        """
+
     @property
     def name(self) -> str:
         """
-        The name of this plugin, as reported by the plugin itself.
+        The name of this plugin.
 
 
         """
+
     @property
     def state(self) -> bytes:
         """
-        A binary blob containing the complete plugin state.
+        A :py:class:`bytes` object containing the complete plugin state.
 
-        :type: bytes
+
+        """
+
+    @state.setter
+    def state(self, arg1: bytes) -> None:
+        """
+        A :py:class:`bytes` object containing the complete plugin state.
+        """
+
+    @property
+    def version(self) -> str:
+        """
+        The version string for this plugin, as reported by the plugin itself.
+
+        *Introduced in v0.9.4.*
+
+
         """
     pass
 
@@ -1258,28 +1420,34 @@ class PluginContainer(Plugin):
         """
         Delete a plugin by its index. Index may be negative. If the index is out of range, an IndexError will be thrown.
         """
+
     def __getitem__(self, index: int) -> Plugin:
         """
         Get a plugin by its index. Index may be negative. If the index is out of range, an IndexError will be thrown.
         """
-    def __init__(self, plugins: typing.List[Plugin]) -> None: ...
-    def __iter__(self) -> typing.Iterator: ...
+
+    def __init__(self, plugins: list[Plugin]) -> None: ...
+    def __iter__(self) -> typing.Iterator[Plugin]: ...
     def __len__(self) -> int:
         """
         Get the number of plugins in this container.
         """
+
     def __setitem__(self, index: int, plugin: Plugin) -> None:
         """
         Replace a plugin at the specified index. Index may be negative. If the index is out of range, an IndexError will be thrown.
         """
+
     def append(self, plugin: Plugin) -> None:
         """
         Append a plugin to the end of this container.
         """
+
     def insert(self, index: int, plugin: Plugin) -> None:
         """
         Insert a plugin at the specified index.
         """
+
     def remove(self, plugin: Plugin) -> None:
         """
         Remove a plugin by its value.
@@ -1316,6 +1484,7 @@ class Resample(Plugin):
         """
         The highest quality and slowest resampling method, with no audible artifacts.
         """
+
     def __init__(
         self, target_sample_rate: float = 8000.0, quality: Quality = Quality.WindowedSinc
     ) -> None: ...
@@ -1327,11 +1496,13 @@ class Resample(Plugin):
 
 
         """
+
     @quality.setter
     def quality(self, arg1: Resample.Quality) -> None:
         """
         The resampling algorithm used to resample the audio.
         """
+
     @property
     def target_sample_rate(self) -> float:
         """
@@ -1339,6 +1510,7 @@ class Resample(Plugin):
 
 
         """
+
     @target_sample_rate.setter
     def target_sample_rate(self, arg1: float) -> None:
         """
@@ -1369,36 +1541,47 @@ class Reverb(Plugin):
     @property
     def damping(self) -> float:
         """ """
+
     @damping.setter
     def damping(self, arg1: float) -> None:
         pass
+
     @property
     def dry_level(self) -> float:
         """ """
+
     @dry_level.setter
     def dry_level(self, arg1: float) -> None:
         pass
+
     @property
     def freeze_mode(self) -> float:
         """ """
+
     @freeze_mode.setter
     def freeze_mode(self, arg1: float) -> None:
         pass
+
     @property
     def room_size(self) -> float:
         """ """
+
     @room_size.setter
     def room_size(self, arg1: float) -> None:
         pass
+
     @property
     def wet_level(self) -> float:
         """ """
+
     @wet_level.setter
     def wet_level(self, arg1: float) -> None:
         pass
+
     @property
     def width(self) -> float:
         """ """
+
     @width.setter
     def width(self, arg1: float) -> None:
         pass
@@ -1441,6 +1624,7 @@ class VST3Plugin(ExternalPlugin):
 
         Run an audio or MIDI buffer through this plugin, returning audio. Alias for :py:meth:`process`.
         """
+
     @typing.overload
     def __call__(
         self,
@@ -1465,10 +1649,12 @@ class VST3Plugin(ExternalPlugin):
         """
         Return a list of plugin names contained within a given VST3 plugin (i.e.: a ".vst3"). If the provided file cannot be scanned, an ImportError will be raised.
         """
+
     def load_preset(self, preset_file_path: str) -> None:
         """
         Load a VST3 preset file in .vstpreset format.
         """
+
     @typing.overload
     def process(
         self,
@@ -1645,6 +1831,7 @@ class VST3Plugin(ExternalPlugin):
         *Support for instrument plugins introduced in v0.7.4.*
 
         """
+
     @typing.overload
     def process(
         self,
@@ -1655,10 +1842,6 @@ class VST3Plugin(ExternalPlugin):
         buffer_size: int = 8192,
         reset: bool = True,
     ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]: ...
-    def set_state(self, state: bytes) -> None:
-        """
-        Set the complete state of the plugin.
-        """
     def show_editor(self, close_event: typing.Optional[threading.Event] = None) -> None:
         """
         Show the UI of this plugin as a native window.
@@ -1686,14 +1869,16 @@ class VST3Plugin(ExternalPlugin):
                    close_window_event.set()
 
            thread = Thread(target=other_thread)
-           thread.run()
+           thread.start()
 
            # This will block until the other thread calls .set():
            plugin.show_editor(close_window_event)
         """
+
     @property
     def _parameters(self) -> typing.List[_AudioProcessorParameter]:
         """ """
+
     @property
     def _reload_type(self) -> ExternalPluginReloadType:
         """
@@ -1701,11 +1886,73 @@ class VST3Plugin(ExternalPlugin):
 
 
         """
+
     @_reload_type.setter
     def _reload_type(self, arg0: ExternalPluginReloadType) -> None:
         """
         The behavior that this plugin exhibits when .reset() is called. This is an internal attribute which gets set on plugin instantiation and should only be accessed for debugging and testing.
         """
+
+    @property
+    def category(self) -> str:
+        """
+        A category that this plugin falls into, such as "Dynamics", "Reverbs", etc.
+
+        *Introduced in v0.9.4.*
+
+
+        """
+
+    @property
+    def descriptive_name(self) -> str:
+        """
+        A more descriptive name for this plugin. This may be the same as the 'name' field, but some plugins may provide an alternative name.
+
+        *Introduced in v0.9.4.*
+
+
+        """
+
+    @property
+    def has_shared_container(self) -> bool:
+        """
+        True iff this plugin is part of a multi-plugin container.
+
+        *Introduced in v0.9.4.*
+
+
+        """
+
+    @property
+    def identifier(self) -> str:
+        """
+        A string that can be saved and used to uniquely identify this plugin (and version) again.
+
+        *Introduced in v0.9.4.*
+
+
+        """
+
+    @property
+    def is_instrument(self) -> bool:
+        """
+        True iff this plugin identifies itself as an instrument (generator, synthesizer, etc) plugin.
+
+        *Introduced in v0.9.4.*
+
+
+        """
+
+    @property
+    def manufacturer_name(self) -> str:
+        """
+        The name of the manufacturer of this plugin, as reported by the plugin itself.
+
+        *Introduced in v0.9.4.*
+
+
+        """
+
     @property
     def name(self) -> str:
         """
@@ -1713,12 +1960,29 @@ class VST3Plugin(ExternalPlugin):
 
 
         """
+
     @property
     def state(self) -> bytes:
         """
-        A binary blob containing the complete plugin state.
+        A :py:class:`bytes` object containing the complete plugin state.
 
-        :type: bytes
+
+        """
+
+    @state.setter
+    def state(self, arg1: bytes) -> None:
+        """
+        A :py:class:`bytes` object containing the complete plugin state.
+        """
+
+    @property
+    def version(self) -> str:
+        """
+        The version string for this plugin, as reported by the plugin itself.
+
+        *Introduced in v0.9.4.*
+
+
         """
     pass
 
@@ -1732,14 +1996,17 @@ class _AudioProcessorParameter:
         """
         Returns the name to display for this parameter, which is made to fit within the given string length
         """
+
     def get_raw_value_for_text(self, string_value: str) -> float:
         """
         Returns the raw value of the supplied text. Plugins may handle errors however they see fit, but will likely not raise exceptions.
         """
+
     def get_text_for_raw_value(self, raw_value: float, maximum_string_length: int = 512) -> str:
         """
         Returns a textual version of the supplied normalised parameter value.
         """
+
     @property
     def default_raw_value(self) -> float:
         """
@@ -1747,6 +2014,7 @@ class _AudioProcessorParameter:
 
 
         """
+
     @property
     def index(self) -> int:
         """
@@ -1754,6 +2022,7 @@ class _AudioProcessorParameter:
 
 
         """
+
     @property
     def is_automatable(self) -> bool:
         """
@@ -1761,6 +2030,7 @@ class _AudioProcessorParameter:
 
 
         """
+
     @property
     def is_boolean(self) -> bool:
         """
@@ -1768,6 +2038,7 @@ class _AudioProcessorParameter:
 
 
         """
+
     @property
     def is_discrete(self) -> bool:
         """
@@ -1775,6 +2046,7 @@ class _AudioProcessorParameter:
 
 
         """
+
     @property
     def is_meta_parameter(self) -> bool:
         """
@@ -1782,6 +2054,7 @@ class _AudioProcessorParameter:
 
 
         """
+
     @property
     def is_orientation_inverted(self) -> bool:
         """
@@ -1789,6 +2062,7 @@ class _AudioProcessorParameter:
 
 
         """
+
     @property
     def label(self) -> str:
         """
@@ -1796,6 +2070,7 @@ class _AudioProcessorParameter:
 
 
         """
+
     @property
     def name(self) -> str:
         """
@@ -1803,6 +2078,7 @@ class _AudioProcessorParameter:
 
 
         """
+
     @property
     def num_steps(self) -> int:
         """
@@ -1810,6 +2086,7 @@ class _AudioProcessorParameter:
 
 
         """
+
     @property
     def raw_value(self) -> float:
         """
@@ -1817,11 +2094,13 @@ class _AudioProcessorParameter:
 
 
         """
+
     @raw_value.setter
     def raw_value(self, arg1: float) -> None:
         """
         The internal value of this parameter. Convention is that this parameter should be between 0 and 1.0. This may or may not correspond with the value shown to the user.
         """
+
     @property
     def string_value(self) -> str:
         """
@@ -1865,6 +2144,7 @@ class GSMFullRateCompressor(Plugin):
     @property
     def quality(self) -> Resample.Quality:
         """ """
+
     @quality.setter
     def quality(self, arg1: Resample.Quality) -> None:
         pass

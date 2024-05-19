@@ -1,6 +1,7 @@
 """This module provides classes and functions for reading and writing audio files or streams.
 
 *Introduced in v0.5.1.*"""
+
 from __future__ import annotations
 import pedalboard_native.io
 
@@ -100,6 +101,18 @@ class AudioFile:
        wav_buffer.getvalue()  # do something with the file-like object
 
 
+    Encoding audio as ``wav``, ``ogg``, ``mp3``, or ``flac`` as a :class:`bytes` buffer in one line::
+
+       sr = 44100
+       num_channels = 2
+       audio = np.random.rand(num_channels, sr)
+
+       wav_buffer = AudioFile.encode(audio, sr, num_channels, format="wav")
+       ogg_buffer = AudioFile.encode(audio, sr, num_channels, format="ogg")
+       mp3_buffer = AudioFile.encode(audio, sr, num_channels, format="mp3")
+       flac_buffer = AudioFile.encode(audio, sr, num_channels, format="flac")
+
+
     Writing to an audio file while also specifying quality options for the codec::
 
        with AudioFile(
@@ -136,6 +149,7 @@ class AudioFile:
 
         Open a file-like object for reading. The provided object must have ``read``, ``seek``, ``tell``, and ``seekable`` methods, and must return binary data (i.e.: ``open(..., "w")`` or ``io.BytesIO``, etc.).
         """
+
     @classmethod
     @typing.overload
     def __new__(
@@ -164,6 +178,42 @@ class AudioFile:
         quality: typing.Optional[typing.Union[str, float]] = None,
         format: typing.Optional[str] = None,
     ) -> WriteableAudioFile: ...
+    @staticmethod
+    def encode(
+        samples: numpy.ndarray,
+        samplerate: float,
+        format: str,
+        num_channels: int = 1,
+        bit_depth: int = 16,
+        quality: typing.Optional[typing.Union[str, float]] = None,
+    ) -> bytes:
+        """
+        Encode an audio buffer to a Python :class:`bytes` object.
+
+        This function will encode an entire audio buffer at once and return a :class:`bytes`
+        object representing the bytes of the resulting audio file.
+
+        This function produces identical output to the following code::
+
+            buf = io.BytesIO()
+            with AudioFile(buf, "w", samplerate, num_channels, bit_depth, format, quality) as f:
+                f.write(samples)
+            result = buf.getvalue()
+
+        However, this function is much more efficient than the above code, as it writes
+        to an in-memory buffer in C++ and avoids interacting with Python at all during the
+        encoding process. This allows Python's Global Interpreter Lock (GIL) to be
+        released, which also makes this method much more performant in multi-threaded
+        programs.
+
+        .. warning::
+          This function will encode the entire audio buffer at once, and may consume a
+          large amount of memory if the input audio buffer is large.
+
+          To avoid running out of memory with arbitrary-length inputs, it is
+          recommended to stream the output into a file or file-like object by using
+          :class:`AudioFile` class in write (``"w"``) mode instead.
+        """
     pass
 
 class AudioStream:
@@ -226,10 +276,12 @@ class AudioStream:
         """
         Use this :class:`AudioStream` as a context manager. Entering the context manager will immediately start the audio stream, sending audio through to the output device.
         """
+
     def __exit__(self, arg0: object, arg1: object, arg2: object) -> None:
         """
         Exit the context manager, ending the audio stream. Once called, the audio stream will be stopped (i.e.: :py:attr:`running` will be :py:const:`False`).
         """
+
     def __init__(
         self,
         input_device_name: str,
@@ -244,6 +296,7 @@ class AudioStream:
         """
         Start streaming audio from input to output, passing the audio stream  through the :py:attr:`plugins` on this AudioStream object. This call will block the current thread until a :py:exc:`KeyboardInterrupt` (``Ctrl-C``) is received.
         """
+
     @property
     def plugins(self) -> pedalboard_native.utils.Chain:
         """
@@ -251,11 +304,13 @@ class AudioStream:
 
 
         """
+
     @plugins.setter
     def plugins(self, arg1: pedalboard_native.utils.Chain) -> None:
         """
         The Pedalboard object that this AudioStream will use to process audio.
         """
+
     @property
     def running(self) -> bool:
         """
@@ -301,10 +356,12 @@ class ReadableAudioFile(AudioFile):
         """
         Use this :class:`ReadableAudioFile` as a context manager, automatically closing the file and releasing resources when the context manager exits.
         """
+
     def __exit__(self, arg0: object, arg1: object, arg2: object) -> None:
         """
         Stop using this :class:`ReadableAudioFile` as a context manager, close the file, release its resources.
         """
+
     @typing.overload
     def __init__(self, filename: str) -> None: ...
     @typing.overload
@@ -320,6 +377,7 @@ class ReadableAudioFile(AudioFile):
         """
         Close this file, rendering this object unusable.
         """
+
     def read(
         self, num_frames: typing.Union[float, int] = 0
     ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
@@ -349,6 +407,7 @@ class ReadableAudioFile(AudioFile):
             provided number of frames contains a fractional part (i.e.: ``1.01`` instead of ``1.00``) then
             an exception will be thrown, as a fractional number of samples cannot be returned.
         """
+
     def read_raw(self, num_frames: typing.Union[float, int] = 0) -> numpy.ndarray:
         """
         Read the given number of frames (samples in each channel) from this audio file at its current position.
@@ -374,6 +433,7 @@ class ReadableAudioFile(AudioFile):
             provided number of frames contains a fractional part (i.e.: ``1.01`` instead of ``1.00``) then
             an exception will be thrown, as a fractional number of samples cannot be returned.
         """
+
     def resampled_to(
         self,
         target_sample_rate: float,
@@ -386,18 +446,22 @@ class ReadableAudioFile(AudioFile):
 
         *Introduced in v0.6.0.*
         """
+
     def seek(self, position: int) -> None:
         """
         Seek this file to the provided location in frames. Future reads will start from this position.
         """
+
     def seekable(self) -> bool:
         """
         Returns True if this file is currently open and calls to seek() will work.
         """
+
     def tell(self) -> int:
         """
         Return the current position of the read pointer in this audio file, in frames. This value will increase as :meth:`read` is called, and may decrease if :meth:`seek` is called.
         """
+
     @property
     def closed(self) -> bool:
         """
@@ -405,6 +469,7 @@ class ReadableAudioFile(AudioFile):
 
 
         """
+
     @property
     def duration(self) -> float:
         """
@@ -418,6 +483,7 @@ class ReadableAudioFile(AudioFile):
 
 
         """
+
     @property
     def exact_duration_known(self) -> bool:
         """
@@ -440,6 +506,7 @@ class ReadableAudioFile(AudioFile):
 
 
         """
+
     @property
     def file_dtype(self) -> str:
         """
@@ -449,6 +516,7 @@ class ReadableAudioFile(AudioFile):
 
 
         """
+
     @property
     def frames(self) -> int:
         """
@@ -494,6 +562,7 @@ class ReadableAudioFile(AudioFile):
 
 
         """
+
     @property
     def name(self) -> typing.Optional[str]:
         """
@@ -503,6 +572,7 @@ class ReadableAudioFile(AudioFile):
 
 
         """
+
     @property
     def num_channels(self) -> int:
         """
@@ -510,6 +580,7 @@ class ReadableAudioFile(AudioFile):
 
 
         """
+
     @property
     def samplerate(self) -> typing.Union[float, int]:
         """
@@ -553,10 +624,12 @@ class ResampledReadableAudioFile(AudioFile):
         """
         Use this :class:`ResampledReadableAudioFile` as a context manager, automatically closing the file and releasing resources when the context manager exits.
         """
+
     def __exit__(self, arg0: object, arg1: object, arg2: object) -> None:
         """
         Stop using this :class:`ResampledReadableAudioFile` as a context manager, close the file, release its resources.
         """
+
     def __init__(
         self,
         audio_file: ReadableAudioFile,
@@ -575,6 +648,7 @@ class ResampledReadableAudioFile(AudioFile):
         """
         Close this file, rendering this object unusable. Note that the :class:`ReadableAudioFile` instance that is wrapped by this object will not be closed, and will remain usable.
         """
+
     def read(
         self, num_frames: typing.Union[float, int] = 0
     ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
@@ -606,6 +680,7 @@ class ResampledReadableAudioFile(AudioFile):
             provided number of frames contains a fractional part (i.e.: ``1.01`` instead of ``1.00``) then
             an exception will be thrown, as a fractional number of samples cannot be returned.
         """
+
     def seek(self, position: int) -> None:
         """
         Seek this file to the provided location in frames at the target sample rate. Future reads will start from this position.
@@ -613,14 +688,17 @@ class ResampledReadableAudioFile(AudioFile):
         .. note::
             Prior to version 0.7.3, this method operated in linear time with respect to the seek position (i.e.: the file was seeked to its beginning and pushed through the resampler) to ensure that the resampled audio output was sample-accurate. This was optimized in version 0.7.3 to operate in effectively constant time while retaining sample-accuracy.
         """
+
     def seekable(self) -> bool:
         """
         Returns True if this file is currently open and calls to seek() will work.
         """
+
     def tell(self) -> int:
         """
         Return the current position of the read pointer in this audio file, in frames at the target sample rate. This value will increase as :meth:`read` is called, and may decrease if :meth:`seek` is called.
         """
+
     @property
     def closed(self) -> bool:
         """
@@ -628,6 +706,7 @@ class ResampledReadableAudioFile(AudioFile):
 
 
         """
+
     @property
     def duration(self) -> float:
         """
@@ -638,6 +717,7 @@ class ResampledReadableAudioFile(AudioFile):
 
 
         """
+
     @property
     def exact_duration_known(self) -> bool:
         """
@@ -660,6 +740,7 @@ class ResampledReadableAudioFile(AudioFile):
 
 
         """
+
     @property
     def file_dtype(self) -> str:
         """
@@ -669,6 +750,7 @@ class ResampledReadableAudioFile(AudioFile):
 
 
         """
+
     @property
     def frames(self) -> int:
         """
@@ -683,6 +765,7 @@ class ResampledReadableAudioFile(AudioFile):
 
 
         """
+
     @property
     def name(self) -> typing.Optional[str]:
         """
@@ -692,6 +775,7 @@ class ResampledReadableAudioFile(AudioFile):
 
 
         """
+
     @property
     def num_channels(self) -> int:
         """
@@ -699,6 +783,7 @@ class ResampledReadableAudioFile(AudioFile):
 
 
         """
+
     @property
     def resampling_quality(self) -> pedalboard_native.Resample.Quality:
         """
@@ -706,6 +791,7 @@ class ResampledReadableAudioFile(AudioFile):
 
 
         """
+
     @property
     def samplerate(self) -> typing.Union[float, int]:
         """
@@ -734,6 +820,7 @@ class StreamResampler:
         """
         Create a new StreamResampler, capable of resampling a potentially-unbounded audio stream with a constant amount of memory. The source sample rate, target sample rate, quality, or number of channels cannot be changed once the resampler is instantiated.
         """
+
     def __repr__(self) -> str: ...
     def process(
         self, input: typing.Optional[numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]] = None
@@ -741,10 +828,12 @@ class StreamResampler:
         """
         Resample a 32-bit floating-point audio buffer. The returned buffer may be smaller than the provided buffer depending on the quality method used. Call :meth:`process()` without any arguments to flush the internal buffers and return all remaining audio.
         """
+
     def reset(self) -> None:
         """
         Used to reset the internal state of this resampler. Call this method when resampling a new audio stream to prevent audio from leaking between streams.
         """
+
     @property
     def input_latency(self) -> float:
         """
@@ -752,6 +841,7 @@ class StreamResampler:
 
 
         """
+
     @property
     def num_channels(self) -> int:
         """
@@ -759,6 +849,7 @@ class StreamResampler:
 
 
         """
+
     @property
     def quality(self) -> pedalboard_native.Resample.Quality:
         """
@@ -766,6 +857,7 @@ class StreamResampler:
 
 
         """
+
     @property
     def source_sample_rate(self) -> float:
         """
@@ -773,6 +865,7 @@ class StreamResampler:
 
 
         """
+
     @property
     def target_sample_rate(self) -> float:
         """
@@ -875,20 +968,24 @@ class WriteableAudioFile(AudioFile):
         """
         Close this file, flushing its contents to disk and rendering this object unusable for further writing.
         """
+
     def flush(self) -> None:
         """
         Attempt to flush this audio file's contents to disk. Not all formats support flushing, so this may throw a RuntimeError. (If this happens, closing the file will reliably force a flush to occur.)
         """
+
     def tell(self) -> int:
         """
         Return the current position of the write pointer in this audio file, in frames at the target sample rate. This value will increase as :meth:`write` is called, and will never decrease.
         """
+
     def write(self, samples: numpy.ndarray) -> None:
         """
         Encode an array of audio data and write it to this file. The number of channels in the array must match the number of channels used to open the file. The array may contain audio in any shape. If the file's bit depth or format does not match the provided data type, the audio will be automatically converted.
 
         Arrays of type int8, int16, int32, float32, and float64 are supported. If an array of an unsupported ``dtype`` is provided, a ``TypeError`` will be raised.
         """
+
     @property
     def closed(self) -> bool:
         """
@@ -896,6 +993,7 @@ class WriteableAudioFile(AudioFile):
 
 
         """
+
     @property
     def file_dtype(self) -> str:
         """
@@ -903,6 +1001,7 @@ class WriteableAudioFile(AudioFile):
 
 
         """
+
     @property
     def frames(self) -> int:
         """
@@ -910,6 +1009,7 @@ class WriteableAudioFile(AudioFile):
 
 
         """
+
     @property
     def num_channels(self) -> int:
         """
@@ -917,6 +1017,7 @@ class WriteableAudioFile(AudioFile):
 
 
         """
+
     @property
     def quality(self) -> typing.Optional[str]:
         """
@@ -926,6 +1027,7 @@ class WriteableAudioFile(AudioFile):
 
 
         """
+
     @property
     def samplerate(self) -> typing.Union[float, int]:
         """

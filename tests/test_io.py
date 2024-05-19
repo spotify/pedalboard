@@ -24,6 +24,7 @@ import shutil
 import time
 import wave
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from typing import Optional
 
 import mutagen
@@ -60,6 +61,11 @@ UNSUPPORTED_FILENAMES = [
         filename.endswith(extension) for extension in pedalboard.io.get_supported_read_formats()
     )
 ]
+
+
+@lru_cache(maxsize=None)
+def cached_rand(*args, **kwargs):
+    return np.random.rand(*args, **kwargs)
 
 
 def get_tolerance_for_format_and_bit_depth(extension: str, input_format, file_dtype: str) -> float:
@@ -200,8 +206,12 @@ def test_basic_read(audio_filename: str, samplerate: float):
 
     af.close()
 
-    with pytest.raises(RuntimeError):
-        af.num_channels
+    # Should be able to read properties of the file even after it's been closed:
+    assert af.num_channels == 1
+    assert af.samplerate == samplerate
+    assert f"samplerate={int(af.samplerate)}" in repr(af)
+    assert f"num_channels={af.num_channels}" in repr(af)
+    assert "closed" in repr(af)
 
     with pytest.raises(RuntimeError):
         af.read(1)
@@ -218,6 +228,7 @@ def test_read_raw(audio_filename: str, samplerate: float):
 
 @pytest.mark.parametrize("audio_filename,samplerate", FILENAMES_AND_SAMPLERATES)
 def test_use_reader_as_context_manager(audio_filename: str, samplerate: float):
+    num_frames_when_open = None
     with pedalboard.io.AudioFile(audio_filename) as af:
         assert af.samplerate == samplerate
         assert af.num_channels == 1
@@ -225,6 +236,7 @@ def test_use_reader_as_context_manager(audio_filename: str, samplerate: float):
             assert af.frames == int(samplerate * EXPECTED_DURATION_SECONDS)
         else:
             assert af.frames >= int(samplerate * EXPECTED_DURATION_SECONDS)
+        num_frames_when_open = af.frames
 
         samples = af.read(int(samplerate * EXPECTED_DURATION_SECONDS))
         assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS))
@@ -245,10 +257,17 @@ def test_use_reader_as_context_manager(audio_filename: str, samplerate: float):
 
         assert f"samplerate={int(af.samplerate)}" in repr(af)
         assert f"num_channels={af.num_channels}" in repr(af)
+        assert "closed" not in repr(af)
 
-    with pytest.raises(RuntimeError):
-        af.num_channels
+    # Should be able to read properties of the file even after it's been closed:
+    assert af.num_channels == 1
+    assert af.samplerate == samplerate
+    assert af.frames == num_frames_when_open
+    assert f"samplerate={int(af.samplerate)}" in repr(af)
+    assert f"num_channels={af.num_channels}" in repr(af)
+    assert "closed" in repr(af)
 
+    # ... but reading from a closed file is still an error:
     with pytest.raises(RuntimeError):
         af.read(1)
 
@@ -279,6 +298,7 @@ def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
 
     af = pedalboard.io.AudioFile(stream)
 
+    num_frames_when_open = None
     with af:
         assert af.samplerate == samplerate
         assert af.num_channels == 1
@@ -286,6 +306,7 @@ def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
             assert af.frames == int(samplerate * EXPECTED_DURATION_SECONDS)
         else:
             assert af.frames >= int(samplerate * EXPECTED_DURATION_SECONDS)
+        num_frames_when_open = af.frames
 
         samples = af.read(int(samplerate * EXPECTED_DURATION_SECONDS))
         assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS))
@@ -307,9 +328,17 @@ def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
         assert f"samplerate={int(af.samplerate)}" in repr(af)
         assert f"num_channels={af.num_channels}" in repr(af)
         assert repr(stream) in repr(af)
+        assert "closed" not in repr(af)
 
-    with pytest.raises(RuntimeError):
-        af.num_channels
+    # Should be able to read properties of the file even after it's been closed:
+    assert af.num_channels == 1
+    assert af.samplerate == samplerate
+    assert af.frames == num_frames_when_open
+    assert f"samplerate={int(af.samplerate)}" in repr(af)
+    assert f"num_channels={af.num_channels}" in repr(af)
+    assert "closed" in repr(af)
+
+    # ... but reading from a closed file is still an error:
 
     with pytest.raises(RuntimeError):
         af.read(1)
@@ -324,7 +353,7 @@ def test_read_from_bytes_io_memoryview():
     stream = io.BytesIO()
 
     with pedalboard.io.AudioFile(stream, "w", 44100, 1, format="wav") as af:
-        af.write(np.random.rand(44100))
+        af.write(cached_rand(44100))
 
     stream.seek(0)
 
@@ -345,7 +374,7 @@ def test_read_from_bytes_io_with_offset():
     stream = io.BytesIO()
 
     with pedalboard.io.AudioFile(stream, "w", 44100, 1, format="wav") as af:
-        af.write(np.random.rand(44100))
+        af.write(cached_rand(44100))
 
     # Prepend this buffer with random garbage:
     garbo = io.BytesIO(b"foobar" + stream.getvalue())
@@ -366,7 +395,7 @@ def test_read_from_bytes_io_memoryview_without_gil():
     num_frames = 44100 * 1000
 
     with pedalboard.io.AudioFile(stream, "w", 44100, 1, format="wav") as af:
-        af.write(np.random.rand(num_frames))
+        af.write(cached_rand(num_frames))
 
     num_cpus = os.cpu_count()
 
@@ -410,7 +439,7 @@ def test_read_from_end_of_stream_produces_helpful_error_message(extension: str):
     buf = io.BytesIO()
     buf.name = f"something.{extension}"
     with pedalboard.io.AudioFile(buf, "w", 44100, 1) as af:
-        af.write(np.random.rand(44100))
+        af.write(cached_rand(44100))
     buf.seek(len(buf.getvalue()))
 
     try:
@@ -428,7 +457,7 @@ def test_read_from_empty_stream_produces_helpful_error_message():
     assert "is empty" in str(exc_info.value)
 
 
-def test_file_like_exceptions_propagate():
+def test_file_like_exceptions_propagate_on_read():
     audio_filename = FILENAMES_AND_SAMPLERATES[0][0]
     stream = open(audio_filename, "rb")
     stream_read = stream.read
@@ -449,6 +478,27 @@ def test_file_like_exceptions_propagate():
             for _ in range(af.frames - 1):
                 af.read(1)
         assert "Some kinda error!" in str(e)
+
+
+def test_file_like_exceptions_propagate_on_write():
+    buf = io.BytesIO()
+    stream_write = buf.write
+
+    should_throw = [False]
+
+    def eventually_throw_exception(*args, **kwargs):
+        if should_throw[0]:
+            raise ValueError("Some kinda error!")
+        return stream_write(*args, **kwargs)
+
+    buf.write = eventually_throw_exception
+
+    with pedalboard.io.AudioFile(buf, "w", 44100, 1, format="wav") as af:
+        af.write(cached_rand(44100))
+        should_throw[0] = True
+        with pytest.raises(ValueError, match=r"Some kinda error!"):
+            af.write(cached_rand(44100))
+        should_throw[0] = False
 
 
 def test_file_like_must_be_seekable():
@@ -557,13 +607,13 @@ def test_write_to_non_bytes_stream(extension: str):
 
     with pytest.raises(TypeError) as e:
         with pedalboard.io.AudioFile(stream, "w", 44100, 2, format=extension) as af:
-            af.write(np.random.rand(1, 2))
+            af.write(cached_rand(1, 2))
 
     assert expected_message in str(e)
 
     with pytest.raises(TypeError) as e:
         with pedalboard.io.WriteableAudioFile(stream, 44100, 2, format=extension) as af:
-            af.write(np.random.rand(1, 2))
+            af.write(cached_rand(1, 2))
 
     assert expected_message in str(e)
 
@@ -814,6 +864,83 @@ def test_write_twice_overwrites(
 
 
 @pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
+@pytest.mark.parametrize("samplerate", [8000, 96000])
+@pytest.mark.parametrize("num_channels", [1, 2, 3])
+@pytest.mark.parametrize("transposed", [False, True])
+@pytest.mark.parametrize("input_format", [np.float32, np.int32])
+def test_write_matches_encode(
+    extension: str, samplerate: float, num_channels: int, transposed: bool, input_format
+):
+    if extension == ".mp3":
+        if samplerate not in {32000, 44100, 48000}:
+            return
+        if num_channels > 2:
+            return
+    original_audio = generate_sine_at(samplerate, num_channels=num_channels)
+
+    write_bit_depth = 16
+
+    # Not all formats support full 32-bit depth:
+    if extension in {".wav"} and np.issubdtype(input_format, np.signedinteger):
+        write_bit_depth = np.dtype(input_format).itemsize * 8
+
+    # Handle integer audio types by scaling the floating-point data to the full integer range:
+    if np.issubdtype(input_format, np.signedinteger):
+        _max = np.iinfo(input_format).max
+        audio = (original_audio * _max).astype(input_format)
+    else:
+        _max = 1.0
+        audio = original_audio.astype(input_format)
+
+    # Before writing, assert that the data we're about to write is what we expect:
+    tolerance = get_tolerance_for_format_and_bit_depth(".wav", input_format, "int16")
+    np.testing.assert_allclose(original_audio, audio.astype(np.float32) / _max, atol=tolerance)
+
+    stream = io.BytesIO()
+    stream.name = f"my_file{extension}"
+
+    with pedalboard.io.WriteableAudioFile(
+        stream,
+        samplerate=samplerate,
+        num_channels=num_channels,
+        bit_depth=write_bit_depth,
+    ) as af:
+        if transposed:
+            af.write(audio.T)
+        else:
+            af.write(audio)
+
+    assert stream.tell() > 0
+    stream.seek(0)
+
+    encoded_output = pedalboard.io.AudioFile.encode(
+        audio,
+        samplerate,
+        extension,
+        num_channels,
+        bit_depth=write_bit_depth,
+    )
+
+    if extension != ".ogg":
+        assert encoded_output == stream.getvalue()
+    else:
+        # Ogg files contain some randomness when encoded, but should decode identically:
+        with pedalboard.io.AudioFile(
+            io.BytesIO(encoded_output)
+        ) as encoded_f, pedalboard.io.AudioFile(stream) as streamed_f:
+            assert encoded_f.samplerate == streamed_f.samplerate
+            assert encoded_f.num_channels == streamed_f.num_channels
+            assert encoded_f.frames == streamed_f.frames
+            assert encoded_f.file_dtype == streamed_f.file_dtype
+            np.testing.assert_allclose(
+                encoded_f.read(encoded_f.frames),
+                streamed_f.read(streamed_f.frames),
+                # Ogg files don't have 32-bit precision, and the encoding is not 100% deterministic:
+                atol=(1e-3 if input_format == np.int32 else 0),
+            )
+
+
+@pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
 @pytest.mark.parametrize("samplerate", [1234.5, 23.0000000001])
 def test_fractional_sample_rates(tmp_path: pathlib.Path, extension: str, samplerate):
     filename = str(tmp_path / f"test{extension}")
@@ -845,7 +972,7 @@ def test_sample_rate_is_int_by_default(samplerate: int):
     buf = io.BytesIO()
     buf.name = "foo.wav"
     with pedalboard.io.AudioFile(buf, "w", samplerate=samplerate, num_channels=1) as f:
-        f.write(np.random.rand(100))
+        f.write(cached_rand(100))
 
     buf.seek(0)
     with pedalboard.io.AudioFile(buf) as f:
@@ -1153,10 +1280,10 @@ def test_mp3_duration_estimate(samplerate: float, target_samplerate: float, chun
 
     num_frames = int(samplerate * 2)
     with pedalboard.io.AudioFile(buf, "w", samplerate, 2, quality=320) as f:
-        f.write(np.random.rand(2, num_frames))
+        f.write(cached_rand(2, num_frames))
 
     # Write some random crap past the end of the file to break length estimation:
-    buf.write(np.random.rand(12345).tobytes())
+    buf.write(cached_rand(12345).tobytes())
     # Skip the VBR header to force Pedalboard to estimate length:
     buf.seek(1044)
 
@@ -1245,7 +1372,7 @@ def test_seek_accuracy(
     stream = io.BytesIO()
     stream.name = "foo" + extension
     sr = 44100
-    input_audio = np.random.rand(sr).astype(np.float32)
+    input_audio = cached_rand(sr).astype(np.float32)
     with pedalboard.io.AudioFile(stream, "w", sr, quality=quality) as f:
         f.write(input_audio)
     stream.seek(0)
@@ -1292,7 +1419,7 @@ def test_flac_files_have_seektable():
     buf = io.BytesIO()
     buf.name = "test.flac"
     with pedalboard.io.AudioFile(buf, "w", 44100) as o:
-        o.write(np.random.rand(44100))
+        o.write(cached_rand(44100))
     assert mutagen.File(buf).seektable, "Expected to write a FLAC seek table"
 
 
@@ -1331,7 +1458,7 @@ def test_mp3_at_all_samplerates(quality: str, samplerate: float, num_channels: i
     # Make an audio signal that is equal parts noise and silence to make sure
     # we end up with a mixture of bitrates in the file:
     signal = np.concatenate(
-        [np.random.rand(samplerate * secs) - 0.5, np.zeros(samplerate * secs)]
+        [cached_rand(samplerate * secs) - 0.5, np.zeros(samplerate * secs)]
     ).astype(np.float32)
     if num_channels == 2:
         signal = np.stack([signal] * num_channels)
@@ -1397,5 +1524,5 @@ def test_useful_exception_when_writing_to_unseekable_file_like():
 
     with pytest.raises(NotImplementedError) as e:
         with pedalboard.io.AudioFile(ILieAboutSeekability(), "w", 44100, 2) as f:
-            f.write(np.random.rand(2, 44100))
+            f.write(cached_rand(2, 44100))
     assert "What's a seek?" in str(e)

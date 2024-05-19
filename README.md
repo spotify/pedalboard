@@ -26,7 +26,7 @@
    - Support for reading and writing AIFF, FLAC, MP3, OGG, and WAV files on all platforms with no dependencies
    - Additional support for reading AAC, AC3, WMA, and other formats depending on platform
    - Support for on-the-fly resampling of audio files and streams with `O(1)` memory usage
-   - Live audio effects via [`AudioStream`](https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream)
+   - Live audio effects via <a href="https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream"><code class="docutils literal"><span class="pre">AudioStream</span></code></a>
  - Built-in support for a number of basic audio transformations, including:
    - Guitar-style effects: `Chorus`, `Distortion`, `Phaser`, `Clipping`
    - Loudness and dynamic range effects: `Compressor`, `Gain`, `Limiter`
@@ -35,7 +35,7 @@
    - Pitch effects: `PitchShift`
    - Lossy compression: `GSMFullRateCompressor`, `MP3Compressor`
    - Quality reduction: `Resample`, `Bitcrush`
- - Supports VST3® instrument and effect plugins on macOS, Windows, and Linux ([`pedalboard.load_plugin`](https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.load_plugin))
+ - Supports VST3® instrument and effect plugins on macOS, Windows, and Linux (<a href="https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.load_plugin"><code class="docutils literal"><span class="pre">pedalboard.load_plugin</span></code></a>)
  - Supports instrument and effect Audio Units on macOS
  - Strong thread-safety, memory usage, and speed guarantees
    - Releases Python's Global Interpreter Lock (GIL) to allow use of multiple CPU cores
@@ -74,7 +74,7 @@ If you are new to Python, follow [INSTALLATION.md](https://github.com/spotify/pe
 
 ## Examples
 
-> **Note**: If you'd rather watch a video instead of reading examples or documentation, **watch [_Working with Audio in Python (feat. Pedalboard)_ on YouTube](https://www.youtube.com/watch?v=NYhkqXpFAlg)**.
+> **Note**: If you'd rather watch a video instead of reading examples or documentation, <strong>watch <a href="https://www.youtube.com/watch?v=NYhkqXpFAlg" target="_blank"><em>Working with Audio in Python (feat. Pedalboard)</em> on YouTube</a></strong>.
 
 ### Quick start
 
@@ -104,8 +104,8 @@ with AudioFile('some-file.wav') as f:
 
 > **Note**: For more information about how to process audio through
 > Pedalboard plugins, including how the `reset` parameter works,
-> see [the documentation for `pedalboard.Plugin.process`](
-> https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.Plugin.process).
+> see <a href="https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.Plugin.process">
+> the documentation for <code class="docutils literal"><span class="pre">pedalboard.Plugin.process</span></code></a>.
 
 ### Making a guitar-style pedalboard
 
@@ -226,7 +226,8 @@ board = Pedalboard([
 ### Running Pedalboard on Live Audio
 
 On macOS or Windows, Pedalboard supports streaming live audio through
-[an `AudioStream` object](https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream),
+<a href="https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream">
+an <code class="docutils literal"><span class="pre">AudioStream</span></code> object</a>,
 allowing for real-time manipulation of audio by adding effects in Python.
 
 ```python
@@ -304,7 +305,7 @@ To cite via BibTeX:
 ```
 
 ## License
-`pedalboard` is Copyright 2021-2023 Spotify AB.
+`pedalboard` is Copyright 2021-2024 Spotify AB.
 
 `pedalboard` is licensed under the [GNU General Public License v3](https://www.gnu.org/licenses/gpl-3.0.en.html). `pedalboard` includes a number of libraries that are statically compiled, and which carry the following licenses:
 

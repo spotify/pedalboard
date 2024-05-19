@@ -61,6 +61,9 @@ public:
                   audioFile->getNumChannels(), quality) {}
 
   std::variant<double, long> getSampleRate() const {
+    py::gil_scoped_release release;
+    const juce::ScopedReadLock scopedReadLock(objectLock);
+
     double integerPart;
     double fractionalPart =
         std::modf(resampler.getTargetSampleRate(), &integerPart);
@@ -73,13 +76,20 @@ public:
   }
 
   double getSampleRateAsDouble() const {
+    py::gil_scoped_release release;
+    const juce::ScopedReadLock scopedReadLock(objectLock);
     return resampler.getTargetSampleRate();
   }
 
   long getLengthInSamples() const {
-    double length = (((double)audioFile->getLengthInSamples() *
-                      resampler.getTargetSampleRate()) /
-                     audioFile->getSampleRateAsDouble());
+    double underlyingLengthInSamples = (double)audioFile->getLengthInSamples();
+    double underlyingSampleRate = audioFile->getSampleRateAsDouble();
+
+    py::gil_scoped_release release;
+    const juce::ScopedReadLock scopedReadLock(objectLock);
+    double length =
+        ((underlyingLengthInSamples * resampler.getTargetSampleRate()) /
+         underlyingSampleRate);
     if (resampler.getOutputLatency() > 0) {
       length -= (std::round(resampler.getOutputLatency()) -
                  resampler.getOutputLatency());
@@ -87,17 +97,36 @@ public:
     return (long)length;
   }
 
-  double getDuration() const { return audioFile->getDuration(); }
+  double getDuration() const {
+    // No need for a ScopedReadLock here, as audioFile is const:
+    return audioFile->getDuration();
+  }
 
-  long getNumChannels() const { return audioFile->getNumChannels(); }
+  long getNumChannels() const {
+    // No need for a ScopedReadLock here, as audioFile is const:
+    return audioFile->getNumChannels();
+  }
 
-  bool exactDurationKnown() const { return audioFile->exactDurationKnown(); }
+  bool exactDurationKnown() const {
+    // No need for a ScopedReadLock here, as audioFile is const:
+    return audioFile->exactDurationKnown();
+  }
 
-  std::string getFileFormat() const { return audioFile->getFileFormat(); }
+  std::string getFileFormat() const {
+    // No need for a ScopedReadLock here, as audioFile is const:
+    return audioFile->getFileFormat();
+  }
 
-  std::string getFileDatatype() const { return audioFile->getFileDatatype(); }
+  std::string getFileDatatype() const {
+    // No need for a ScopedReadLock here, as audioFile is const:
+    return audioFile->getFileDatatype();
+  }
 
-  ResamplingQuality getQuality() const { return resampler.getQuality(); }
+  ResamplingQuality getQuality() const {
+    py::gil_scoped_release release;
+    const juce::ScopedReadLock scopedReadLock(objectLock);
+    return resampler.getQuality();
+  }
 
   py::array_t<float> read(std::variant<double, long long> numSamplesVariant) {
     long long numSamples = parseNumSamples(numSamplesVariant);
@@ -108,13 +137,13 @@ public:
           "memory. Please pass a number of frames to read (available from "
           "the 'frames' attribute).");
 
-    py::gil_scoped_release release;
     juce::AudioBuffer<float> resampledBuffer;
     {
-      const juce::ScopedLock scopedLock(objectLock);
+      py::gil_scoped_release release;
       resampledBuffer = readInternal(numSamples);
     }
-    py::gil_scoped_acquire acquire;
+
+    PythonException::raise();
     return copyJuceBufferIntoPyArray(resampledBuffer,
                                      ChannelLayout::NotInterleaved, 0);
   }
@@ -127,6 +156,16 @@ public:
    * @return juce::AudioBuffer<float> The resulting audio.
    */
   juce::AudioBuffer<float> readInternal(long long numSamples) {
+    // Note: We take a "write" lock here as calling readInternal will
+    // advance internal state:
+    ScopedTryWriteLock scopedTryWriteLock(objectLock);
+    if (!scopedTryWriteLock.isLocked()) {
+      throw std::runtime_error(
+          "Another thread is currently reading from this AudioFile. Note "
+          "that using multiple concurrent readers on the same AudioFile "
+          "object will produce nondeterministic results.");
+    }
+
     long long samplesInResampledBuffer = 0;
     juce::AudioBuffer<float> resampledBuffer(audioFile->getNumChannels(),
                                              numSamples);
@@ -266,63 +305,97 @@ public:
 
   void seek(long long targetPosition) {
     py::gil_scoped_release release;
-    const juce::ScopedLock scopedLock(objectLock);
-    long long positionToSeekToIncludingBuffers = targetPosition;
+    {
+      ScopedTryWriteLock scopedTryWriteLock(objectLock);
+      if (!scopedTryWriteLock.isLocked()) {
+        throw std::runtime_error(
+            "Another thread is currently reading from this AudioFile. Note "
+            "that using multiple concurrent readers on the same AudioFile "
+            "object will produce nondeterministic results.");
+      }
+      long long positionToSeekToIncludingBuffers = targetPosition;
 
-    long long targetPositionInSourceSampleRate =
-        std::max(0LL, (long long)(((double)positionToSeekToIncludingBuffers *
-                                   resampler.getSourceSampleRate()) /
-                                  resampler.getTargetSampleRate()));
+      long long targetPositionInSourceSampleRate =
+          std::max(0LL, (long long)(((double)positionToSeekToIncludingBuffers *
+                                     resampler.getSourceSampleRate()) /
+                                    resampler.getTargetSampleRate()));
 
-    targetPositionInSourceSampleRate -=
-        inputBufferSizeFor(resampler.getQuality());
+      targetPositionInSourceSampleRate -=
+          inputBufferSizeFor(resampler.getQuality());
 
-    long long maximumOverflow = (long long)std::ceil(
-        resampler.getSourceSampleRate() / resampler.getTargetSampleRate());
-    targetPositionInSourceSampleRate -= std::max(0LL, maximumOverflow);
+      long long maximumOverflow = (long long)std::ceil(
+          resampler.getSourceSampleRate() / resampler.getTargetSampleRate());
+      targetPositionInSourceSampleRate -= std::max(0LL, maximumOverflow);
 
-    double floatingPositionInTargetSampleRate =
-        std::max(0.0, ((double)targetPositionInSourceSampleRate *
-                       resampler.getTargetSampleRate()) /
-                          resampler.getSourceSampleRate());
+      double floatingPositionInTargetSampleRate =
+          std::max(0.0, ((double)targetPositionInSourceSampleRate *
+                         resampler.getTargetSampleRate()) /
+                            resampler.getSourceSampleRate());
 
-    positionInTargetSampleRate =
-        (long long)(floatingPositionInTargetSampleRate);
+      positionInTargetSampleRate =
+          (long long)(floatingPositionInTargetSampleRate);
 
-    resampler.reset();
+      resampler.reset();
 
-    long long inputSamplesUsed =
-        resampler.advanceResamplerState(positionInTargetSampleRate);
-    targetPositionInSourceSampleRate = inputSamplesUsed;
+      long long inputSamplesUsed =
+          resampler.advanceResamplerState(positionInTargetSampleRate);
+      targetPositionInSourceSampleRate = inputSamplesUsed;
 
-    audioFile->seek(std::max(0LL, targetPositionInSourceSampleRate));
+      audioFile->seekInternal(std::max(0LL, targetPositionInSourceSampleRate));
 
-    outputBuffer.setSize(0, 0);
+      outputBuffer.setSize(0, 0);
 
-    const long long chunkSize = 1024 * 1024;
-    for (long long i = positionInTargetSampleRate; i < targetPosition;
-         i += chunkSize) {
-      long long numSamples = std::min(chunkSize, targetPosition - i);
-      this->readInternal(numSamples);
+      const long long chunkSize = 1024 * 1024;
+      for (long long i = positionInTargetSampleRate; i < targetPosition;
+           i += chunkSize) {
+        long long numSamples = std::min(chunkSize, targetPosition - i);
+        this->readInternal(numSamples);
+      }
     }
+
+    PythonException::raise();
   }
 
-  long long tell() const { return positionInTargetSampleRate; }
+  long long tell() const {
+    py::gil_scoped_release release;
+    const juce::ScopedReadLock scopedReadLock(objectLock);
+    return positionInTargetSampleRate;
+  }
 
   void close() {
-    const juce::ScopedLock scopedLock(objectLock);
+    py::gil_scoped_release release;
+    ScopedTryWriteLock scopedTryWriteLock(objectLock);
+    if (!scopedTryWriteLock.isLocked()) {
+      throw std::runtime_error(
+          "Another thread is currently reading from this AudioFile; it cannot "
+          "be closed until the other thread completes its operation.");
+    }
     _isClosed = true;
   }
 
-  bool isClosed() const { return audioFile->isClosed() || _isClosed; }
+  bool isClosed() const {
+    // No need for a ScopedReadLock here, as audioFile is const:
+    if (audioFile->isClosed())
+      return true;
 
-  bool isSeekable() const { return audioFile->isSeekable(); }
+    // ...but we do need a read lock here:
+    py::gil_scoped_release release;
+    const juce::ScopedReadLock scopedReadLock(objectLock);
+    return _isClosed;
+  }
+
+  bool isSeekable() const {
+    // No need for a ScopedReadLock here, as audioFile is const:
+    return audioFile->isSeekable();
+  }
 
   std::optional<std::string> getFilename() const {
+    // No need for a ScopedReadLock here, as audioFile is const:
     return audioFile->getFilename();
   }
 
   PythonInputStream *getPythonInputStream() const {
+    // No need for a ScopedReadLock here, as audioFile is const:
     return audioFile->getPythonInputStream();
   }
 
@@ -340,11 +413,11 @@ public:
   }
 
 private:
-  std::shared_ptr<ReadableAudioFile> audioFile;
+  const std::shared_ptr<ReadableAudioFile> audioFile;
   StreamResampler<float> resampler;
   juce::AudioBuffer<float> outputBuffer;
   long long positionInTargetSampleRate = 0;
-  juce::CriticalSection objectLock;
+  juce::ReadWriteLock objectLock;
   bool _isClosed = false;
 };
 

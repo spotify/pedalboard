@@ -160,7 +160,7 @@ An example of how to programmatically close an editor window::
            close_window_event.set()
 
    thread = Thread(target=other_thread)
-   thread.run()
+   thread.start()
 
    # This will block until the other thread calls .set():
    plugin.show_editor(close_window_event)
@@ -301,16 +301,18 @@ private:
 #endif
 
 static bool audioUnitIsInstalled(const juce::String audioUnitFilePath) {
-  return audioUnitFilePath.contains("/Library/Audio/Plug-Ins/Components/");
+  return !audioUnitFilePath.endsWith(".appex") &&
+         !audioUnitFilePath.endsWith(".appex/") &&
+         audioUnitFilePath.contains("/Library/Audio/Plug-Ins/Components/");
 }
 
 template <typename ExternalPluginType>
-static std::vector<std::string> getPluginNamesForFile(std::string filename) {
+static juce::OwnedArray<juce::PluginDescription>
+scanPluginDescriptions(std::string filename) {
   juce::MessageManager::getInstance();
-
   ExternalPluginType format;
-  juce::OwnedArray<juce::PluginDescription> typesFound;
 
+  juce::OwnedArray<juce::PluginDescription> typesFound;
   std::string errorMessage = "Unable to scan plugin " + filename +
                              ": unsupported plugin format or scan failure.";
 
@@ -320,7 +322,34 @@ static std::vector<std::string> getPluginNamesForFile(std::string filename) {
     auto identifiers = getAudioUnitIdentifiersFromFile(filename);
     // For each plugin in the identified bundle, scan using its AU identifier:
     for (int i = 0; i < identifiers.size(); i++) {
-      format.findAllTypesForFile(typesFound, identifiers[i]);
+      std::string identifier = identifiers[i];
+
+      juce::String pluginName, version, manufacturer;
+      AudioComponentDescription componentDesc;
+
+      bool needsAsyncInstantiation =
+          juce::String(filename).endsWith(".appex") ||
+          juce::String(filename).endsWith(".appex/");
+      if (needsAsyncInstantiation &&
+          juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        // We can't scan AUv3 plugins synchronously, so we have to pump the
+        // message thread and wait for the scan to complete on another thread.
+        bool done = false;
+        std::thread thread =
+            std::thread([&identifier, &typesFound, &format, &done]() {
+              format.findAllTypesForFile(typesFound, identifier);
+              done = true;
+            });
+
+        // Pump the message thread until the scan is complete:
+        while (!done) {
+          juce::MessageManager::getInstance()->runDispatchLoopUntil(1);
+        }
+
+        thread.join();
+      } else {
+        format.findAllTypesForFile(typesFound, identifiers[i]);
+      }
     }
 
     if (typesFound.isEmpty() && !audioUnitIsInstalled(filename)) {
@@ -336,6 +365,14 @@ static std::vector<std::string> getPluginNamesForFile(std::string filename) {
   if (typesFound.isEmpty()) {
     throw pybind11::import_error(errorMessage);
   }
+
+  return typesFound;
+}
+
+template <typename ExternalPluginType>
+static std::vector<std::string> getPluginNamesForFile(std::string filename) {
+  juce::OwnedArray<juce::PluginDescription> typesFound =
+      scanPluginDescriptions<ExternalPluginType>(filename);
 
   std::vector<std::string> pluginNames;
   for (int i = 0; i < typesFound.size(); i++) {
@@ -385,37 +422,45 @@ public:
       return;
     }
 
-    JUCE_AUTORELEASEPOOL {
-      StandalonePluginWindow window(processor);
-      window.show();
+    {
+      // Release the GIL to allow other Python threads to run in the
+      // background while we the UI is running:
+      py::gil_scoped_release release;
+      JUCE_AUTORELEASEPOOL {
+        StandalonePluginWindow window(processor);
+        window.show();
 
-      // Run in a tight loop so that we don't have to call ->stopDispatchLoop(),
-      // which causes the MessageManager to become unusable in the future.
-      // The window can be closed by sending a KeyboardInterrupt, closing
-      // the window in the UI, or setting the provided Event object.
-      while (window.isVisible()) {
-        bool errorThrown = PyErr_CheckSignals() != 0;
-        bool eventSet = optionalEvent != py::none() &&
-                        optionalEvent.attr("is_set")().cast<bool>();
+        // Run in a tight loop so that we don't have to call
+        // ->stopDispatchLoop(), which causes the MessageManager to become
+        // unusable in the future. The window can be closed by sending a
+        // KeyboardInterrupt, closing the window in the UI, or setting the
+        // provided Event object.
+        while (window.isVisible()) {
+          bool errorThrown = false;
+          bool eventSet = false;
 
-        if (errorThrown || eventSet) {
-          window.closeButtonPressed();
-          shouldThrowErrorAlreadySet = errorThrown;
-          break;
-        }
+          {
+            py::gil_scoped_acquire acquire;
 
-        {
-          // Release the GIL to allow other Python threads to run in the
-          // background while we the UI is running:
-          py::gil_scoped_release release;
+            errorThrown = PyErr_CheckSignals() != 0;
+            eventSet = optionalEvent != py::none() &&
+                       optionalEvent.attr("is_set")().cast<bool>();
+          }
+
+          if (errorThrown || eventSet) {
+            window.closeButtonPressed();
+            shouldThrowErrorAlreadySet = errorThrown;
+            break;
+          }
+
           juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
         }
       }
-    }
 
-    // Once the Autorelease pool has been drained, pump the dispatch loop one
-    // more time to process any window close events:
-    juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+      // Once the Autorelease pool has been drained, pump the dispatch loop one
+      // more time to process any window close events:
+      juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+    }
 
     if (shouldThrowErrorAlreadySet) {
       throw py::error_already_set();
@@ -484,9 +529,6 @@ public:
     // Without this, we get an assert(false) from JUCE at runtime
     juce::MessageManager::getInstance();
 
-    juce::OwnedArray<juce::PluginDescription> typesFound;
-    ExternalPluginType format;
-
     pluginFormatManager.addDefaultFormats();
     pluginFormatManager.addFormat(new juce::PatchedVST3PluginFormat());
 
@@ -501,20 +543,9 @@ public:
                                    ": plugin file not found.");
     }
 
-#if JUCE_PLUGINHOST_AU && JUCE_MAC
-    if constexpr (std::is_same<ExternalPluginType,
-                               juce::AudioUnitPluginFormat>::value) {
-      auto identifiers = getAudioUnitIdentifiersFromFile(pluginFileStripped);
-      // For each plugin in the identified bundle, scan using its AU identifier:
-      for (int i = 0; i < identifiers.size(); i++) {
-        format.findAllTypesForFile(typesFound, identifiers[i]);
-      }
-    } else {
-      format.findAllTypesForFile(typesFound, pluginFileStripped);
-    }
-#else
-    format.findAllTypesForFile(typesFound, pluginFileStripped);
-#endif
+    juce::OwnedArray<juce::PluginDescription> typesFound =
+        scanPluginDescriptions<ExternalPluginType>(
+            pluginFileStripped.toStdString());
 
     if (!typesFound.isEmpty()) {
       if (typesFound.size() == 1) {
@@ -673,9 +704,9 @@ public:
     {
       std::lock_guard<std::mutex> lock(EXTERNAL_PLUGIN_MUTEX);
 
-      pluginInstance = pluginFormatManager.createPluginInstance(
-          foundPluginDescription, ExternalLoadSampleRate,
-          ExternalLoadMaximumBlockSize, loadError);
+      pluginInstance =
+          createPluginInstance(foundPluginDescription, ExternalLoadSampleRate,
+                               ExternalLoadMaximumBlockSize, loadError);
 
       if (!pluginInstance) {
         throw pybind11::import_error("Unable to load plugin " +
@@ -701,7 +732,7 @@ public:
         if (reloadType == ExternalPluginReloadType::PersistsAudioOnReset) {
           // Reload again, as we just passed audio into a plugin that
           // we know doesn't reset itself cleanly!
-          pluginInstance = pluginFormatManager.createPluginInstance(
+          pluginInstance = createPluginInstance(
               foundPluginDescription, ExternalLoadSampleRate,
               ExternalLoadMaximumBlockSize, loadError);
 
@@ -1287,16 +1318,6 @@ public:
           "Pedalboard error and should be reported.");
     }
 
-    if (!juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()) {
-      throw std::runtime_error(
-          "Editor cannot be shown - no visual display devices available.");
-    }
-
-    if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
-      throw std::runtime_error(
-          "Plugin UI windows can only be shown from the main thread.");
-    }
-
     if (optionalEvent != py::none() && !py::hasattr(optionalEvent, "is_set")) {
       throw py::type_error(
           "Pedalboard expected a threading.Event object to be "
@@ -1305,16 +1326,57 @@ public:
           "\") does not have an 'is_set' method.");
     }
 
+    {
+      py::gil_scoped_release release;
+      if (!juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()) {
+        throw std::runtime_error(
+            "Editor cannot be shown - no visual display devices available.");
+      }
+
+      if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        throw std::runtime_error(
+            "Plugin UI windows can only be shown from the main thread.");
+      }
+    }
+
     StandalonePluginWindow::openWindowAndWait(*pluginInstance, optionalEvent);
   }
 
   ExternalPluginReloadType reloadType = ExternalPluginReloadType::Unknown;
+  juce::PluginDescription foundPluginDescription;
 
 private:
+  std::unique_ptr<juce::AudioPluginInstance>
+  createPluginInstance(const juce::PluginDescription &foundPluginDescription,
+                       double rate, int blockSize, juce::String &loadError) {
+    std::unique_ptr<juce::AudioPluginInstance> instance;
+    instance = pluginFormatManager.createPluginInstance(
+        foundPluginDescription, rate, blockSize, loadError);
+    if (!instance && loadError.contains(
+                         "This plug-in cannot be instantiated synchronously")) {
+      bool done = false;
+      std::thread thread =
+          std::thread([this, &instance, &foundPluginDescription, &rate,
+                       &blockSize, &loadError, &done]() {
+            instance = pluginFormatManager.createPluginInstance(
+                foundPluginDescription, rate, blockSize, loadError);
+            done = true;
+          });
+
+      // Pump the message thread until the scan is complete:
+      while (!done) {
+        juce::MessageManager::getInstance()->runDispatchLoopUntil(1);
+      }
+
+      thread.join();
+    }
+
+    return instance;
+  }
+
   constexpr static int ExternalLoadSampleRate = 44100,
                        ExternalLoadMaximumBlockSize = 8192;
   juce::String pathToPluginFile;
-  juce::PluginDescription foundPluginDescription;
   juce::AudioPluginFormatManager pluginFormatManager;
   std::unique_ptr<juce::AudioPluginInstance> pluginInstance;
 
@@ -1574,14 +1636,6 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
            &ExternalPlugin<juce::PatchedVST3PluginFormat>::loadPresetData,
            "Load a VST3 preset file in .vstpreset format.",
            py::arg("preset_file_path"))
-      .def(
-          "set_state",
-          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin,
-             const py::bytes &state) {
-            py::buffer_info info(py::buffer(state).request());
-            plugin.setState(info.ptr, static_cast<size_t>(info.size));
-          },
-          "Set the complete state of the plugin.", py::arg("state"))
       .def_static(
           "get_plugin_names_for_file",
           [](std::string filename) {
@@ -1605,14 +1659,70 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
             return plugin.getName().toStdString();
           },
           "The name of this plugin.")
-      .def_property_readonly(
+      .def_property(
           "state",
           [](const ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             juce::MemoryBlock state;
             plugin.getState(state);
             return py::bytes((const char *)state.getData(), state.getSize());
           },
-          "A binary blob containing the complete plugin state.")
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin,
+             const py::bytes &state) {
+            py::buffer_info info(py::buffer(state).request());
+            plugin.setState(info.ptr, static_cast<size_t>(info.size));
+          },
+          "A :py:class:`bytes` object containing the complete plugin state.")
+      .def_property_readonly(
+          "descriptive_name",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.foundPluginDescription.descriptiveName.toStdString();
+          },
+          "A more descriptive name for this plugin. This may be the same as "
+          "the 'name' field, but some plugins may provide an alternative "
+          "name.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "category",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.foundPluginDescription.category.toStdString();
+          },
+          "A category that this plugin falls into, such as \"Dynamics\", "
+          "\"Reverbs\", etc.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "manufacturer_name",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.foundPluginDescription.manufacturerName.toStdString();
+          },
+          "The name of the manufacturer of this plugin, as reported by the "
+          "plugin itself.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "version",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.foundPluginDescription.version.toStdString();
+          },
+          "The version string for this plugin, as reported by the plugin "
+          "itself.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "is_instrument",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.foundPluginDescription.isInstrument;
+          },
+          "True iff this plugin identifies itself as an instrument (generator, "
+          "synthesizer, etc) plugin.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "has_shared_container",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.foundPluginDescription.hasSharedContainer;
+          },
+          "True iff this plugin is part of a multi-plugin "
+          "container.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "identifier",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.foundPluginDescription.createIdentifierString()
+                .toStdString();
+          },
+          "A string that can be saved and used to uniquely identify this "
+          "plugin (and version) again.\n\n*Introduced in v0.9.4.*")
       .def_property_readonly(
           "_parameters",
           &ExternalPlugin<juce::PatchedVST3PluginFormat>::getParameters,
@@ -1694,6 +1804,8 @@ see :class:`pedalboard.VST3Plugin`.)
 *Support for instrument plugins introduced in v0.7.4.*
 
 *Support for running Audio Unit plugins on background threads introduced in v0.8.8.*
+
+*Support for loading AUv3 plugins (``.appex`` bundles) introduced in v0.9.5.*
 )")
       .def(
           py::init([](std::string &pathToPluginFile, py::object parameterValues,
@@ -1721,14 +1833,6 @@ see :class:`pedalboard.VST3Plugin`.)
              ss << ">";
              return ss.str();
            })
-      .def(
-          "set_state",
-          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin,
-             const py::bytes &state) {
-            py::buffer_info info(py::buffer(state).request());
-            plugin.setState(info.ptr, static_cast<size_t>(info.size));
-          },
-          "Set the complete state of the plugin.", py::arg("state"))
       .def_static(
           "get_plugin_names_for_file",
           [](std::string filename) {
@@ -1736,12 +1840,11 @@ see :class:`pedalboard.VST3Plugin`.)
           },
           py::arg("filename"),
           "Return a list of plugin names contained within a given Audio Unit "
-          "bundle (i.e.: a ``.component`` file). If the provided file cannot "
-          "be "
-          "scanned, an ``ImportError`` will be raised.\n\nNote that most Audio "
-          "Units have a single plugin inside, but this method can be useful to "
-          "determine if multiple plugins are present in one bundle, and if so, "
-          "what their names are.")
+          "bundle (i.e.: a ``.component`` or ``.appex`` file). If the provided "
+          "file cannot be scanned, an ``ImportError`` will be raised.\n\nNote "
+          "that most Audio Units have a single plugin inside, but this method "
+          "can be useful to determine if multiple plugins are present in one "
+          "bundle, and if so, what their names are.")
       .def_property_readonly_static(
           "installed_plugins",
           [](py::object /* cls */) {
@@ -1757,14 +1860,76 @@ see :class:`pedalboard.VST3Plugin`.)
             return plugin.getName().toStdString();
           },
           "The name of this plugin, as reported by the plugin itself.")
-      .def_property_readonly(
+      .def_property(
           "state",
-          [](const ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+          [](const ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             juce::MemoryBlock state;
             plugin.getState(state);
             return py::bytes((const char *)state.getData(), state.getSize());
           },
-          "A binary blob containing the complete plugin state.")
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin,
+             const py::bytes &state) {
+            py::buffer_info info(py::buffer(state).request());
+            plugin.setState(info.ptr, static_cast<size_t>(info.size));
+          },
+          "A :py:class:`bytes` object containing the complete plugin state.")
+      .def_property_readonly(
+          "name",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.getName().toStdString();
+          },
+          "The name of this plugin.")
+      .def_property_readonly(
+          "descriptive_name",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.foundPluginDescription.descriptiveName.toStdString();
+          },
+          "A more descriptive name for this plugin. This may be the same as "
+          "the 'name' field, but some plugins may provide an alternative "
+          "name.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "category",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.foundPluginDescription.category.toStdString();
+          },
+          "A category that this plugin falls into, such as \"Dynamics\", "
+          "\"Reverbs\", etc.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "manufacturer_name",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.foundPluginDescription.manufacturerName.toStdString();
+          },
+          "The name of the manufacturer of this plugin, as reported by the "
+          "plugin itself.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "version",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.foundPluginDescription.version.toStdString();
+          },
+          "The version string for this plugin, as reported by the plugin "
+          "itself.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "is_instrument",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.foundPluginDescription.isInstrument;
+          },
+          "True iff this plugin identifies itself as an instrument (generator, "
+          "synthesizer, etc) plugin.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "has_shared_container",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.foundPluginDescription.hasSharedContainer;
+          },
+          "True iff this plugin is part of a multi-plugin "
+          "container.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "identifier",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.foundPluginDescription.createIdentifierString()
+                .toStdString();
+          },
+          "A string that can be saved and used to uniquely identify this "
+          "plugin (and version) again.\n\n*Introduced in v0.9.4.*")
       .def_property_readonly(
           "_parameters",
           &ExternalPlugin<juce::AudioUnitPluginFormat>::getParameters,

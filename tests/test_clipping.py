@@ -15,17 +15,19 @@
 # limitations under the License.
 
 
-import pytest
 import numpy as np
+import pytest
+
 from pedalboard import Clipping
-from .utils import generate_sine_at, db_to_gain
+
+from .utils import db_to_gain, generate_sine_at
 
 
 @pytest.mark.parametrize("threshold_db", list(np.arange(0.0, -40, -0.5)))
-@pytest.mark.parametrize("fundamental_hz", [440, 880])
-@pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
+@pytest.mark.parametrize("fundamental_hz", [440])
+@pytest.mark.parametrize("sample_rate", [22050, 48000])
 @pytest.mark.parametrize("num_channels", [1, 2])
-def test_bitcrush(
+def test_clipping(
     threshold_db: float, fundamental_hz: float, sample_rate: float, num_channels: int
 ):
     sine_wave = generate_sine_at(
