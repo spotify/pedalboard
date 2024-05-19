@@ -777,10 +777,10 @@ def test_plugin_parameters_persist_between_calls(plugin_filename: str):
 def test_get_and_set_plugin_state(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename, disable_caching=True)
 
-    state = plugin.state
+    state = plugin.raw_state
     assert state
-    plugin.state = state
-    assert plugin.state == state
+    plugin.raw_state = state
+    assert plugin.raw_state == state
 
 
 @pytest.mark.parametrize("plugin_filename", sample(AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT, 1))

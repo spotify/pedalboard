@@ -738,9 +738,14 @@ on a provided <a class="reference external" href="https://docs.python.org/3/libr
 </dd></dl>
 
 <dl class="py property">
-<dt class="sig sig-object py" id="pedalboard.AudioUnitPlugin.state">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">state</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.12)"><span class="pre">bytes</span></a></em><a class="headerlink" href="#pedalboard.AudioUnitPlugin.state" title="Permalink to this definition">#</a></dt>
-<dd><p>A <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code></a> object containing the complete plugin state.</p>
+<dt class="sig sig-object py" id="pedalboard.AudioUnitPlugin.raw_state">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">raw_state</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.12)"><span class="pre">bytes</span></a></em><a class="headerlink" href="#pedalboard.AudioUnitPlugin.raw_state" title="Permalink to this definition">#</a></dt>
+<dd><p>A <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code></a> object representing the plugin’s internal state.</p>
+<p>For the Audio Unit format, this is usually a binary property list that can be decoded or encoded with the built-in <a class="reference external" href="https://docs.python.org/3/library/plistlib.html#module-plistlib" title="(in Python v3.12)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">plistlib</span></code></a> package.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This property can be set to change the plugin’s internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.</p>
+</div>
 </dd></dl>
 
 <dl class="py property">
@@ -2827,9 +2832,14 @@ on a provided <a class="reference external" href="https://docs.python.org/3/libr
 </dd></dl>
 
 <dl class="py property">
-<dt class="sig sig-object py" id="pedalboard.VST3Plugin.state">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">state</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.12)"><span class="pre">bytes</span></a></em><a class="headerlink" href="#pedalboard.VST3Plugin.state" title="Permalink to this definition">#</a></dt>
-<dd><p>A <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code></a> object containing the complete plugin state.</p>
+<dt class="sig sig-object py" id="pedalboard.VST3Plugin.raw_state">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">raw_state</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.12)"><span class="pre">bytes</span></a></em><a class="headerlink" href="#pedalboard.VST3Plugin.raw_state" title="Permalink to this definition">#</a></dt>
+<dd><p>A <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code></a> object representing the plugin’s internal state.</p>
+<p>For the VST3 format, this is usually an XML-encoded string prefixed with an 8-byte header and suffixed with a single null byte.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This property can be set to change the plugin’s internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.</p>
+</div>
 </dd></dl>
 
 <dl class="py property">
@@ -2990,7 +3000,7 @@ the audio stream.</p>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.is_instrument"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.is_instrument</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.manufacturer_name"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.manufacturer_name</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.name"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.name</span></code></a></li>
-<li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.state"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.state</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.raw_state"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.raw_state</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.version"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.version</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.is_effect"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.is_effect</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.reset"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.reset()</span></code></a></li>
@@ -3265,7 +3275,7 @@ the audio stream.</p>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.is_instrument"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.is_instrument</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.manufacturer_name"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.manufacturer_name</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.name"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.name</span></code></a></li>
-<li><a class="reference internal" href="#pedalboard.VST3Plugin.state"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.state</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.VST3Plugin.raw_state"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.raw_state</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.version"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.version</span></code></a></li>
 </ul>
 </li>

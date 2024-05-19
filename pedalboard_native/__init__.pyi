@@ -1386,17 +1386,27 @@ class AudioUnitPlugin(ExternalPlugin):
         """
 
     @property
-    def state(self) -> bytes:
+    def raw_state(self) -> bytes:
         """
-        A :py:class:`bytes` object containing the complete plugin state.
+        A :py:class:`bytes` object representing the plugin's internal state.
+
+        For the Audio Unit format, this is usually a binary property list that can be decoded or encoded with the built-in :py:mod:`plistlib` package.
+
+        .. warning::
+            This property can be set to change the plugin's internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.
 
 
         """
 
-    @state.setter
-    def state(self, arg1: bytes) -> None:
+    @raw_state.setter
+    def raw_state(self, arg1: bytes) -> None:
         """
-        A :py:class:`bytes` object containing the complete plugin state.
+        A :py:class:`bytes` object representing the plugin's internal state.
+
+        For the Audio Unit format, this is usually a binary property list that can be decoded or encoded with the built-in :py:mod:`plistlib` package.
+
+        .. warning::
+            This property can be set to change the plugin's internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.
         """
 
     @property
@@ -1962,17 +1972,27 @@ class VST3Plugin(ExternalPlugin):
         """
 
     @property
-    def state(self) -> bytes:
+    def raw_state(self) -> bytes:
         """
-        A :py:class:`bytes` object containing the complete plugin state.
+        A :py:class:`bytes` object representing the plugin's internal state.
+
+        For the VST3 format, this is usually an XML-encoded string prefixed with an 8-byte header and suffixed with a single null byte.
+
+        .. warning::
+            This property can be set to change the plugin's internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.
 
 
         """
 
-    @state.setter
-    def state(self, arg1: bytes) -> None:
+    @raw_state.setter
+    def raw_state(self, arg1: bytes) -> None:
         """
-        A :py:class:`bytes` object containing the complete plugin state.
+        A :py:class:`bytes` object representing the plugin's internal state.
+
+        For the VST3 format, this is usually an XML-encoded string prefixed with an 8-byte header and suffixed with a single null byte.
+
+        .. warning::
+            This property can be set to change the plugin's internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.
         """
 
     @property
