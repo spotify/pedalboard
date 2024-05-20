@@ -6,15 +6,15 @@
 <meta property="og:title" content="Examples" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://spotify.github.io/pedalboard/examples.html" />
-<meta property="og:site_name" content="Pedalboard v0.9.4 Documentation" />
-<meta property="og:description" content="Note: If you’d rather watch a video instead of reading examples or documentation,** watch*Working with Audio in Python (feat. Pedalboard)* on YouTube**. Quick start: Note: For more information abou..." />
+<meta property="og:site_name" content="Pedalboard v0.9.6 Documentation" />
+<meta property="og:description" content="Note: If you’d rather watch a video instead of reading examples or documentation,. Quick start: Note: For more information about how to process audio through Pedalboard plugins, including how the r..." />
 <meta property="og:image" content="https://repository-images.githubusercontent.com/383471193/0f79b949-9b91-4436-bfc4-05d30ef384cc" />
 <meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
-<meta name="description" content="Note: If you’d rather watch a video instead of reading examples or documentation,** watch*Working with Audio in Python (feat. Pedalboard)* on YouTube**. Quick start: Note: For more information abou..." />
+<meta name="description" content="Note: If you’d rather watch a video instead of reading examples or documentation,. Quick start: Note: For more information about how to process audio through Pedalboard plugins, including how the r..." />
 <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Frequently Asked Questions" href="faq.html" /><link rel="prev" title="The pedalboard.io API" href="reference/pedalboard.io.html" />
 
     <link rel="shortcut icon" href="_static/favicon.ico"/><meta name="generator" content="sphinx-5.3.0, furo 2022.09.29"/>
-        <title>Examples - Pedalboard v0.9.4 Documentation</title>
+        <title>Examples - Pedalboard v0.9.6 Documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?digest=d81277517bee4d6b0349d71bb2661d4890b5617c" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css" />
@@ -132,7 +132,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">Pedalboard v0.9.4 Documentation</div></a>
+      <a href="index.html"><div class="brand">Pedalboard v0.9.6 Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -158,7 +158,7 @@
     <img class="sidebar-logo" src="_static/pedalboard_logo_small.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">Pedalboard v0.9.4 Documentation</span>
+  <span class="sidebar-brand-text">Pedalboard v0.9.6 Documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
@@ -214,7 +214,7 @@
           <section id="examples">
 <h1>Examples<a class="headerlink" href="#examples" title="Permalink to this heading">#</a></h1>
 <blockquote>
-<div><p><strong>Note</strong>: If you’d rather watch a video instead of reading examples or documentation, <a href="#id1"><span class="problematic" id="id2">**</span></a>watch <a class="reference external" href="https://www.youtube.com/watch?v=NYhkqXpFAlg">*Working with Audio in Python (feat. Pedalboard)* on YouTube</a><a href="#id3"><span class="problematic" id="id4">**</span></a>.</p>
+<div><p><strong>Note</strong>: If you’d rather watch a video instead of reading examples or documentation, <span class="raw-html-m2r"><strong>watch <a href="https://www.youtube.com/watch?v=NYhkqXpFAlg" target="_blank"><em>Working with Audio in Python (feat. Pedalboard)</em> on YouTube</a></strong></span>.</p>
 </div></blockquote>
 <section id="quick-start">
 <h2>Quick start<a class="headerlink" href="#quick-start" title="Permalink to this heading">#</a></h2>
@@ -244,7 +244,8 @@
 <blockquote>
 <div><p><strong>Note</strong>: For more information about how to process audio through
 Pedalboard plugins, including how the <code class="docutils literal notranslate"><span class="pre">reset</span></code> parameter works,
-see <cite>the documentation for ``pedalboard.Plugin.process`</cite> &lt;<a class="reference external" href="https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.Plugin.process">https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.Plugin.process</a>&gt;`_.</p>
+see <span class="raw-html-m2r"><a href="https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.Plugin.process">
+the documentation for <code class="docutils literal"><span class="pre">pedalboard.Plugin.process</span></code></a></span>.</p>
 </div></blockquote>
 </section>
 <section id="making-a-guitar-style-pedalboard">
@@ -365,7 +366,8 @@ as much as you like:</p>
 <section id="running-pedalboard-on-live-audio">
 <h2>Running Pedalboard on Live Audio<a class="headerlink" href="#running-pedalboard-on-live-audio" title="Permalink to this heading">#</a></h2>
 <p>On macOS or Windows, Pedalboard supports streaming live audio through
-<cite>an ``AudioStream`</cite> object &lt;<a class="reference external" href="https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream">https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream</a>&gt;`_,
+<span class="raw-html-m2r"><a href="https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream">
+an <code class="docutils literal"><span class="pre">AudioStream</span></code> object</a></span>,
 allowing for real-time manipulation of audio by adding effects in Python.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pedalboard</span> <span class="kn">import</span> <span class="n">Pedalboard</span><span class="p">,</span> <span class="n">Chorus</span><span class="p">,</span> <span class="n">Compressor</span><span class="p">,</span> <span class="n">Delay</span><span class="p">,</span> <span class="n">Gain</span><span class="p">,</span> <span class="n">Reverb</span><span class="p">,</span> <span class="n">Phaser</span>
 <span class="kn">from</span> <span class="nn">pedalboard.io</span> <span class="kn">import</span> <span class="n">AudioStream</span>
