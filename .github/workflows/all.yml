@@ -697,6 +697,7 @@ jobs:
         - { os: windows-latest, build: cp311-win_amd64 }
         - { os: windows-latest, build: cp312-win_amd64 }
         - { os: windows-latest, build: cp313-win_amd64 }
+        - { os: windows-latest, build: cp313t-win_amd64 }
         - { os: windows-latest, build: pp37-win_amd64 }
         - { os: windows-latest, build: pp38-win_amd64 }
         - { os: windows-latest, build: pp39-win_amd64 }
@@ -728,6 +729,10 @@ jobs:
         - { os: 'ubuntu-20.04', build: cp313-manylinux_aarch64 }
         - { os: 'ubuntu-20.04', build: cp313-musllinux_x86_64 }
         - { os: 'ubuntu-20.04', build: cp313-musllinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp313t-manylinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp313t-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp313t-musllinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp313t-musllinux_aarch64 }
         - { os: 'ubuntu-20.04', build: pp37-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: pp37-manylinux_aarch64 }
         - { os: 'ubuntu-20.04', build: pp38-manylinux_x86_64 }
