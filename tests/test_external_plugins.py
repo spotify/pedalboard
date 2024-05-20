@@ -212,11 +212,21 @@ atexit.register(delete_installed_plugins)
 if os.environ.get("ENABLE_TESTING_WITH_LOCAL_PLUGINS", False):
     for plugin_class in pedalboard._AVAILABLE_PLUGIN_CLASSES:
         for plugin_path in plugin_class.installed_plugins:
+            if os.environ.get("LOCAL_PLUGIN_NAMES", "").lower() not in plugin_path.lower():
+                continue
+            if any(
+                x in plugin_path.lower()
+                for x in os.environ.get("NOT_LOCAL_PLUGIN_NAMES", "").lower().split(",")
+            ):
+                continue
             try:
                 load_test_plugin(plugin_path)
                 AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT.append(plugin_path)
             except Exception as e:
                 print(f"Tried to load {plugin_path} for local testing, but failed with: {e}")
+                import traceback
+
+                traceback.print_exception(e)
 
             # Even if the plugin failed to load, add it to
             # the list of known container plugins if necessary:

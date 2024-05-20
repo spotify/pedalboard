@@ -1204,6 +1204,12 @@ public:
       currentPositionInfo.isPlaying = true;
       pluginInstance->processBlock(audioBuffer, emptyMidiBuffer);
       currentPositionInfo.isPlaying = false;
+
+      // Pump the processBlock callback to tell the VST that we've stopped
+      // playing:
+      juce::AudioBuffer<float> emptyBuffer(channelPointers.size(), 0);
+      pluginInstance->processBlock(emptyBuffer, emptyMidiBuffer);
+
       samplesProvided += outputBlock.getNumSamples();
       currentPositionInfo.timeInSamples += outputBlock.getNumSamples();
 
