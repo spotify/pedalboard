@@ -1205,13 +1205,13 @@ public:
       pluginInstance->processBlock(audioBuffer, emptyMidiBuffer);
       currentPositionInfo.isPlaying = false;
 
+      samplesProvided += outputBlock.getNumSamples();
+      currentPositionInfo.timeInSamples += outputBlock.getNumSamples();
+
       // Pump the processBlock callback to tell the VST that we've stopped
       // playing:
       juce::AudioBuffer<float> emptyBuffer(channelPointers.size(), 0);
       pluginInstance->processBlock(emptyBuffer, emptyMidiBuffer);
-
-      samplesProvided += outputBlock.getNumSamples();
-      currentPositionInfo.timeInSamples += outputBlock.getNumSamples();
 
       // To compensate for any latency added by the plugin,
       // only tell Pedalboard to use the last _n_ samples.
@@ -1288,6 +1288,11 @@ public:
       std::memset((void *)outputArrayPointer, 0,
                   sizeof(float) * numChannels * outputSampleCount);
 
+      juce::AudioBuffer<float> emptyBuffer(channelPointers.size(), 0);
+      juce::MidiBuffer emptyMidiBuffer;
+
+      currentPositionInfo.isPlaying = true;
+
       for (unsigned long i = 0; i < outputSampleCount; i += bufferSize) {
         unsigned long chunkSampleCount =
             std::min((unsigned long)bufferSize, outputSampleCount - i);
@@ -1305,12 +1310,14 @@ public:
 
         juce::MidiBuffer midiChunk;
         midiChunk.addEvents(midiInputBuffer, i, chunkSampleCount, -i);
-
-        currentPositionInfo.isPlaying = true;
         pluginInstance->processBlock(audioChunk, midiChunk);
-        currentPositionInfo.isPlaying = false;
         currentPositionInfo.timeInSamples += chunkSampleCount;
       }
+
+      currentPositionInfo.isPlaying = false;
+      // Pump the processBlock callback to tell the VST that we've stopped
+      // playing:
+      pluginInstance->processBlock(emptyBuffer, emptyMidiBuffer);
     }
 
     return outputArray;
