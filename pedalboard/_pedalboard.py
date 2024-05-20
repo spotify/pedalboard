@@ -608,6 +608,8 @@ def normalize_python_parameter_name(name: str) -> str:
         c if (c.isalpha() or c.isnumeric()) and c.isprintable() and ord(c) < 128 else "_"
         for c in name
     ]
+    if not name_chars:  # Unhandled/Weird param name
+        return ""
     # Remove any double-underscores:
     name_chars = [a for a, b in zip(name_chars, name_chars[1:]) if a != b or b != "_"] + [
         name_chars[-1]

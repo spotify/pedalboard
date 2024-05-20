@@ -898,6 +898,8 @@ def test_wrapped_bool_requires_bool():
         ("B♭", "b_flat"),
         ("Azimuth (º)", "azimuth"),
         ("Normal String", "normal_string"),
+        ("", ""),
+        ("Δ", ""),
     ],
 )
 def test_parameter_name_normalization(_input: str, expected: str):
