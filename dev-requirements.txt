@@ -3,6 +3,7 @@
 -r test-requirements.txt
 -r docs-requirements.txt
 bumpversion==0.5.3
+clang-format==14
 ipython
 ipdb
 pip>=20
