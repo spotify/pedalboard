@@ -32,7 +32,7 @@ namespace Pedalboard {
 template <typename T, typename SampleType = float>
 class ForceMono : public Plugin {
 public:
-  virtual ~ForceMono() {};
+  virtual ~ForceMono(){};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {
     juce::dsp::ProcessSpec newSpec = spec;
@@ -88,7 +88,7 @@ private:
  */
 class ExpectsMono : public AddLatency {
 public:
-  virtual ~ExpectsMono() {};
+  virtual ~ExpectsMono(){};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {
     if (spec.numChannels != 1) {

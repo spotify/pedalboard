@@ -47,7 +47,7 @@ namespace Pedalboard {
  */
 template <typename DSPType> class JucePlugin : public Plugin {
 public:
-  virtual ~JucePlugin() {};
+  virtual ~JucePlugin(){};
 
   void prepare(const juce::dsp::ProcessSpec &spec) override {
     if (lastSpec.sampleRate != spec.sampleRate ||

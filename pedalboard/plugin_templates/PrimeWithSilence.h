@@ -34,7 +34,7 @@ class PrimeWithSilence
     : public JucePlugin<juce::dsp::DelayLine<
           SampleType, juce::dsp::DelayLineInterpolationTypes::None>> {
 public:
-  virtual ~PrimeWithSilence() {};
+  virtual ~PrimeWithSilence(){};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {
     JucePlugin<juce::dsp::DelayLine<
@@ -93,7 +93,7 @@ private:
  */
 class ExpectsToBePrimed : public AddLatency {
 public:
-  virtual ~ExpectsToBePrimed() {};
+  virtual ~ExpectsToBePrimed(){};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {
     getDSP().setMaximumDelayInSamples(10);

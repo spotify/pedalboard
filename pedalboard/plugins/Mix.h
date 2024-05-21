@@ -32,7 +32,7 @@ public:
   Mix(std::vector<std::shared_ptr<Plugin>> plugins)
       : PluginContainer(plugins), pluginBuffers(plugins.size()),
         samplesAvailablePerPlugin(plugins.size()) {}
-  virtual ~Mix() {};
+  virtual ~Mix(){};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {
     for (auto plugin : plugins) {

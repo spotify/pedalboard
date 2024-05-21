@@ -29,7 +29,7 @@ namespace Pedalboard {
 class AddLatency : public JucePlugin<juce::dsp::DelayLine<
                        float, juce::dsp::DelayLineInterpolationTypes::None>> {
 public:
-  virtual ~AddLatency() {};
+  virtual ~AddLatency(){};
 
   virtual void reset() override {
     getDSP().reset();
