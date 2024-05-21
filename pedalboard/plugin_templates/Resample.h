@@ -156,7 +156,7 @@ private:
  */
 template <typename SampleType> class Passthrough : public Plugin {
 public:
-  virtual ~Passthrough(){};
+  virtual ~Passthrough() {};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {}
 
@@ -178,7 +178,7 @@ template <typename T = Passthrough<float>, typename SampleType = float,
           int DefaultSampleRate = 8000>
 class Resample : public Plugin {
 public:
-  virtual ~Resample(){};
+  virtual ~Resample() {};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {
     bool specChanged = lastSpec.sampleRate != spec.sampleRate ||

@@ -27,7 +27,7 @@ namespace Pedalboard {
  */
 class RubberbandPlugin : public Plugin {
 public:
-  virtual ~RubberbandPlugin(){};
+  virtual ~RubberbandPlugin() {};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) override {
     bool specChanged = lastSpec.sampleRate != spec.sampleRate ||

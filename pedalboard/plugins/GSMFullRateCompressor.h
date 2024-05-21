@@ -55,7 +55,7 @@ private:
 
 class GSMFullRateCompressorInternal : public Plugin {
 public:
-  virtual ~GSMFullRateCompressorInternal(){};
+  virtual ~GSMFullRateCompressorInternal() {};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) override {
     bool specChanged = lastSpec.sampleRate != spec.sampleRate ||

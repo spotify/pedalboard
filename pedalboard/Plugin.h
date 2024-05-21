@@ -28,7 +28,7 @@ namespace Pedalboard {
  */
 class Plugin {
 public:
-  virtual ~Plugin(){};
+  virtual ~Plugin() {};
 
   /**
    * Prepare the data structures that will be necessary for this plugin to

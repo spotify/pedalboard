@@ -28,8 +28,8 @@ static const inline int MAXIMUM_MP3_FRAME_SIZE = 7200;
 namespace Pedalboard {
 class LameMP3AudioFormat : public juce::AudioFormat {
 public:
-  LameMP3AudioFormat() : juce::AudioFormat("MP3", ".mp3"){};
-  ~LameMP3AudioFormat(){};
+  LameMP3AudioFormat() : juce::AudioFormat("MP3", ".mp3") {};
+  ~LameMP3AudioFormat() {};
 
   juce::Array<int> getPossibleSampleRates() { return {32000, 44100, 48000}; }
   juce::Array<int> getPossibleBitDepths() { return {16}; }

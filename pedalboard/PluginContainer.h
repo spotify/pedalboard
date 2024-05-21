@@ -54,7 +54,7 @@ public:
     plugins = _plugins;
   }
 
-  virtual ~PluginContainer(){};
+  virtual ~PluginContainer() {};
 
   std::vector<std::shared_ptr<Plugin>> &getPlugins() { return plugins; }
 

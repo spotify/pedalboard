@@ -31,7 +31,7 @@ class Chain : public PluginContainer {
 public:
   Chain(std::vector<std::shared_ptr<Plugin>> plugins)
       : PluginContainer(plugins) {}
-  virtual ~Chain(){};
+  virtual ~Chain() {};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {
     for (auto plugin : plugins) {

@@ -34,7 +34,7 @@ template <typename T, unsigned int DefaultBlockSize = 0,
           typename SampleType = float>
 class FixedBlockSize : public Plugin {
 public:
-  virtual ~FixedBlockSize(){};
+  virtual ~FixedBlockSize() {};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {
     if (lastSpec.sampleRate != spec.sampleRate ||
@@ -259,7 +259,7 @@ private:
  */
 class ExpectsFixedBlockSize : public AddLatency {
 public:
-  virtual ~ExpectsFixedBlockSize(){};
+  virtual ~ExpectsFixedBlockSize() {};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {
     if (spec.maximumBlockSize != expectedBlockSize) {

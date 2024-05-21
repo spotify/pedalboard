@@ -152,7 +152,7 @@ private:
 
 class MP3Compressor : public Plugin {
 public:
-  virtual ~MP3Compressor(){};
+  virtual ~MP3Compressor() {};
 
   void setVBRQuality(float newLevel) {
     if (newLevel < 0 || newLevel > 10) {
