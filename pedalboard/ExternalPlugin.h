@@ -1288,7 +1288,7 @@ public:
       std::memset((void *)outputArrayPointer, 0,
                   sizeof(float) * numChannels * outputSampleCount);
 
-      juce::AudioBuffer<float> emptyBuffer(channelPointers.size(), 0);
+      juce::AudioBuffer<float> emptyBuffer(numChannels, 0);
       juce::MidiBuffer emptyMidiBuffer;
 
       currentPositionInfo.isPlaying = true;
