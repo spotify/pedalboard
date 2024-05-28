@@ -35,7 +35,8 @@ static const size_t STUDY_BLOCK_SAMPLE_SIZE = 2048;
  */
 static juce::AudioBuffer<float>
 timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
-            double stretchFactor, double pitchShiftInSemitones,
+            std::variant<double, std::vector<double>> stretchFactor,
+            std::variant<double, std::vector<double>> pitchShiftInSemitones,
             bool highQuality, std::string transientMode,
             std::string transientDetector, bool retainPhaseContinuity,
             std::optional<bool> useLongFFTWindow, bool useTimeDomainSmoothing,
@@ -100,27 +101,97 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
   }
 
   SuppressOutput suppress_cerr(std::cerr);
+  double initialStretchFactor = 1;
+  double initialPitchShiftInSemitones = 0;
+  size_t expectedNumberOfOutputSamples = 0;
+  if (auto *constantStretchFactor = std::get_if<double>(&stretchFactor)) {
+    if (*constantStretchFactor == 0)
+      throw std::domain_error(
+          "stretch_factor must be greater than 0.0x, but was passed " +
+          std::to_string(*constantStretchFactor) + "x.");
+
+    initialStretchFactor = *constantStretchFactor;
+    expectedNumberOfOutputSamples =
+        (((double)input.getNumSamples()) / *constantStretchFactor);
+  } else if (auto *variableStretchFactor =
+                 std::get_if<std::vector<double>>(&stretchFactor)) {
+    for (int i = 0; i < variableStretchFactor->size(); i++) {
+      if (variableStretchFactor->data()[i] == 0)
+        throw std::domain_error(
+            "stretch_factor must be greater than 0.0x, but element at index " +
+            std::to_string(i) + " was " +
+            std::to_string(variableStretchFactor->data()[i]) + "x.");
+    }
+    expectedNumberOfOutputSamples =
+        (((double)input.getNumSamples()) /
+         *std::min_element(variableStretchFactor->begin(),
+                           variableStretchFactor->end()));
+
+    if (variableStretchFactor->size() != input.getNumSamples())
+      throw std::domain_error(
+          "stretch_factor must be the same length as the input audio "
+          "buffer, but was passed an array of length " +
+          std::to_string(variableStretchFactor->size()) + " instead of " +
+          std::to_string(input.getNumSamples()) + " samples.");
+
+    options |= RubberBandStretcher::OptionProcessRealTime;
+  }
+
+  if (auto *constantPitchShiftInSemitones =
+          std::get_if<double>(&pitchShiftInSemitones)) {
+    if (*constantPitchShiftInSemitones < -MAX_SEMITONES_TO_PITCH_SHIFT ||
+        *constantPitchShiftInSemitones > MAX_SEMITONES_TO_PITCH_SHIFT)
+      throw std::domain_error(
+          "pitch_shift_in_semitones must be between -" +
+          std::to_string(MAX_SEMITONES_TO_PITCH_SHIFT) + " and +" +
+          std::to_string(MAX_SEMITONES_TO_PITCH_SHIFT) +
+          " semitones, but was passed " +
+          std::to_string(*constantPitchShiftInSemitones) + " semitones.");
+    initialPitchShiftInSemitones = *constantPitchShiftInSemitones;
+  } else if (auto *variablePitchShift =
+                 std::get_if<std::vector<double>>(&pitchShiftInSemitones)) {
+    for (int i = 0; i < variablePitchShift->size(); i++) {
+      if (variablePitchShift->data()[i] < -MAX_SEMITONES_TO_PITCH_SHIFT ||
+          variablePitchShift->data()[i] > MAX_SEMITONES_TO_PITCH_SHIFT)
+        throw std::domain_error(
+            "pitch_shift_in_semitones must be between -" +
+            std::to_string(MAX_SEMITONES_TO_PITCH_SHIFT) + " and +" +
+            std::to_string(MAX_SEMITONES_TO_PITCH_SHIFT) +
+            " semitones, but element at index " + std::to_string(i) + " was " +
+            std::to_string(variablePitchShift->data()[i]) + " semitones.");
+    }
+
+    if (variablePitchShift->size() != input.getNumSamples())
+      throw std::domain_error(
+          "pitch_shift_in_semitones must be the same length as the input audio "
+          "buffer, but was passed an array of length " +
+          std::to_string(variablePitchShift->size()) + " instead of " +
+          std::to_string(input.getNumSamples()) + " samples.");
+    options |= RubberBandStretcher::OptionProcessRealTime;
+  }
+
   RubberBandStretcher rubberBandStretcher(
-      sampleRate, input.getNumChannels(), options, 1.0 / stretchFactor,
-      pow(2.0, (pitchShiftInSemitones / 12.0)));
-  rubberBandStretcher.setMaxProcessSize(input.getNumSamples());
+      sampleRate, input.getNumChannels(), options, 1.0 / initialStretchFactor,
+      pow(2.0, (initialPitchShiftInSemitones / 12.0)));
+
   rubberBandStretcher.setExpectedInputDuration(input.getNumSamples());
 
   const float **inputChannelPointers =
       (const float **)alloca(sizeof(float *) * input.getNumChannels());
 
-  for (size_t i = 0; i < input.getNumSamples(); i += STUDY_BLOCK_SAMPLE_SIZE) {
-    size_t numSamples =
-        std::min(input.getNumSamples() - i, (size_t)STUDY_BLOCK_SAMPLE_SIZE);
-    for (int c = 0; c < input.getNumChannels(); c++) {
-      inputChannelPointers[c] = input.getReadPointer(c, i);
+  if (!(options & RubberBandStretcher::OptionProcessRealTime)) {
+    for (size_t i = 0; i < input.getNumSamples(); i += STUDY_BLOCK_SAMPLE_SIZE) {
+      size_t numSamples =
+          std::min(input.getNumSamples() - i, (size_t)STUDY_BLOCK_SAMPLE_SIZE);
+      for (int c = 0; c < input.getNumChannels(); c++) {
+        inputChannelPointers[c] = input.getReadPointer(c, i);
+      }
+      bool isLast = i + numSamples >= input.getNumSamples();
+      rubberBandStretcher.study(inputChannelPointers, numSamples, isLast);
     }
-    bool isLast = i + numSamples >= input.getNumSamples();
-    rubberBandStretcher.study(inputChannelPointers, numSamples, isLast);
+    rubberBandStretcher.setMaxProcessSize(input.getNumSamples());
   }
 
-  size_t expectedNumberOfOutputSamples =
-      (((double)input.getNumSamples()) / stretchFactor);
   juce::AudioBuffer<float> output(input.getNumChannels(),
                                   expectedNumberOfOutputSamples);
 
@@ -131,6 +202,13 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
                  /* avoidReallocating */ true);
 
   size_t blockSize = rubberBandStretcher.getProcessSizeLimit();
+  if (options & RubberBandStretcher::OptionProcessRealTime) {
+    // Process a small number of samples at a time in real-time
+    // mode to allow for variable stretch factors and pitch shifts.
+    // TODO: Make this configurable!
+    blockSize = 16;
+  }
+
   float **outputChannelPointers =
       (float **)alloca(sizeof(float *) * output.getNumChannels());
 
@@ -143,6 +221,19 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
 
       for (int c = 0; c < input.getNumChannels(); c++) {
         inputChannelPointers[c] = input.getReadPointer(c, i);
+      }
+
+      if (options & RubberBandStretcher::OptionProcessRealTime) {
+        if (auto *variableStretchFactor =
+                std::get_if<std::vector<double>>(&stretchFactor)) {
+          rubberBandStretcher.setTimeRatio(variableStretchFactor->data()[i]);
+        }
+
+        if (auto *variablePitchShift =
+                std::get_if<std::vector<double>>(&pitchShiftInSemitones)) {
+          double scale = pow(2.0, (variablePitchShift->data()[i] / 12.0));
+          rubberBandStretcher.setPitchScale(scale);
+        }
       }
 
       rubberBandStretcher.process(inputChannelPointers, chunkSize, isLastCall);
@@ -174,35 +265,63 @@ inline void init_time_stretch(py::module &m) {
   m.def(
       "time_stretch",
       [](py::array_t<float, py::array::c_style> input, double sampleRate,
-         double stretchFactor, double pitchShiftInSemitones, bool highQuality,
-         std::string transientMode, std::string transientDetector,
-         bool retainPhaseContinuity, std::optional<bool> useLongFFTWindow,
-         bool useTimeDomainSmoothing, bool preserveFormants) {
-        if (stretchFactor == 0)
-          throw std::domain_error(
-              "stretch_factor must be greater than 0.0x, but was passed " +
-              std::to_string(stretchFactor) + "x.");
+         std::variant<double, py::array_t<double, py::array::c_style>>
+             stretchFactor,
+         std::variant<double, py::array_t<double, py::array::c_style>>
+             pitchShiftInSemitones,
+         bool highQuality, std::string transientMode,
+         std::string transientDetector, bool retainPhaseContinuity,
+         std::optional<bool> useLongFFTWindow, bool useTimeDomainSmoothing,
+         bool preserveFormants) {
+        // Convert from Python arrays to std::vector<double> or double:
+        std::variant<double, std::vector<double>> cppStretchFactor;
+        if (auto *variableStretchFactor =
+                std::get_if<py::array_t<double, py::array::c_style>>(
+                    &stretchFactor)) {
+          py::buffer_info inputInfo = variableStretchFactor->request();
+          if (inputInfo.ndim != 1) {
+            throw std::domain_error(
+                "stretch_factor must be a one-dimensional array of "
+                "double-precision floating point numbers, but a " +
+                std::to_string(inputInfo.ndim) +
+                "-dimensional array was provided.");
+          }
+          cppStretchFactor = std::vector<double>(
+              static_cast<double *>(inputInfo.ptr),
+              static_cast<double *>(inputInfo.ptr) + inputInfo.size);
+        } else {
+          cppStretchFactor = std::get<double>(stretchFactor);
+        }
 
-        if (pitchShiftInSemitones < -MAX_SEMITONES_TO_PITCH_SHIFT ||
-            pitchShiftInSemitones > MAX_SEMITONES_TO_PITCH_SHIFT)
-          throw std::domain_error(
-              "pitch_shift_in_semitones must be between -" +
-              std::to_string(MAX_SEMITONES_TO_PITCH_SHIFT) + " and +" +
-              std::to_string(MAX_SEMITONES_TO_PITCH_SHIFT) +
-              " semitones, but was passed " +
-              std::to_string(pitchShiftInSemitones) + " semitones.");
+        std::variant<double, std::vector<double>> cppPitchShift;
+        if (auto *variablePitchShift =
+                std::get_if<py::array_t<double, py::array::c_style>>(
+                    &pitchShiftInSemitones)) {
+          py::buffer_info inputInfo = variablePitchShift->request();
+          if (inputInfo.ndim != 1) {
+            throw std::domain_error(
+                "stretch_factor must be a one-dimensional array of "
+                "double-precision floating point numbers, but a " +
+                std::to_string(inputInfo.ndim) +
+                "-dimensional array was provided.");
+          }
+          cppPitchShift = std::vector<double>(
+              static_cast<double *>(inputInfo.ptr),
+              static_cast<double *>(inputInfo.ptr) + inputInfo.size);
+        } else {
+          cppPitchShift = std::get<double>(pitchShiftInSemitones);
+        }
 
         juce::AudioBuffer<float> inputBuffer =
             convertPyArrayIntoJuceBuffer(input, detectChannelLayout(input));
-
         juce::AudioBuffer<float> output;
         {
           py::gil_scoped_release release;
-          output = timeStretch(inputBuffer, sampleRate, stretchFactor,
-                               pitchShiftInSemitones, highQuality,
-                               transientMode, transientDetector,
-                               retainPhaseContinuity, useLongFFTWindow,
-                               useTimeDomainSmoothing, preserveFormants);
+          output = timeStretch(inputBuffer, sampleRate, cppStretchFactor,
+                               cppPitchShift, highQuality, transientMode,
+                               transientDetector, retainPhaseContinuity,
+                               useLongFFTWindow, useTimeDomainSmoothing,
+                               preserveFormants);
         }
 
         return copyJuceBufferIntoPyArray(output, detectChannelLayout(input), 0);
@@ -218,6 +337,12 @@ This function allows for changing the pitch of the audio during the time stretch
 operation. The ``stretch_factor`` and ``pitch_shift_in_semitones`` arguments are
 independent and do not affect each other (i.e.: you can change one, the other, or both
 without worrying about how they interact).
+
+Both ``stretch_factor`` and ``pitch_shift_in_semitones`` can be either floating-point
+numbers or NumPy arrays of double-precision floating point numbers. If NumPy arrays
+are provided, the length of the array must match the number of samples in the input
+audio buffer, allowing dynamic transitions of the stretch factor and pitch shift over\
+the length of the buffer.
 
 The additional arguments provided to this function allow for more fine-grained control
 over the behavior of the time stretcher:
@@ -254,6 +379,12 @@ over the behavior of the time stretcher:
     This is a function, not a :py:class:`Plugin` instance, and cannot be
     used in :py:class:`Pedalboard` objects, as it changes the duration of
     the audio stream.
+
+
+.. info::
+    The ability to pass a NumPy array for ``stretch_factor`` and
+    ``pitch_shift_in_semitones`` was added in Pedalboard v0.9.7.
+
 )",
       py::arg("input_audio"), py::arg("samplerate"),
       py::arg("stretch_factor") = 1.0,
