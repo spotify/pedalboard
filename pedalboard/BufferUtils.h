@@ -29,16 +29,34 @@ enum class ChannelLayout {
 
 template <typename T>
 ChannelLayout
-detectChannelLayout(const py::array_t<T, py::array::c_style> inputArray) {
+detectChannelLayout(const py::array_t<T, py::array::c_style> inputArray,
+                    std::optional<int> channelCountHint = {}) {
   py::buffer_info inputInfo = inputArray.request();
 
   if (inputInfo.ndim == 1) {
     return ChannelLayout::NotInterleaved;
   } else if (inputInfo.ndim == 2) {
+    if (channelCountHint) {
+      if (inputInfo.shape[0] == inputInfo.shape[1] && inputInfo.shape[0] > 1) {
+        throw std::runtime_error(
+            "Unable to determine channel layout from shape!");
+      } else if (inputInfo.shape[0] == *channelCountHint) {
+        return ChannelLayout::NotInterleaved;
+      } else if (inputInfo.shape[1] == *channelCountHint) {
+        return ChannelLayout::Interleaved;
+      } else {
+        throw std::runtime_error(
+            "Unable to determine channel layout from shape!");
+      }
+    }
+
     // Try to auto-detect the channel layout from the shape
     if (inputInfo.shape[1] < inputInfo.shape[0]) {
       return ChannelLayout::Interleaved;
     } else if (inputInfo.shape[0] < inputInfo.shape[1]) {
+      return ChannelLayout::NotInterleaved;
+    } else if (inputInfo.shape[0] == 1 || inputInfo.shape[1] == 1) {
+      // Do we only have one sample? Then the layout doesn't matter:
       return ChannelLayout::NotInterleaved;
     } else {
       throw std::runtime_error(

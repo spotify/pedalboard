@@ -484,7 +484,17 @@ public:
 
     unsigned int numChannels = 0;
     unsigned int numSamples = 0;
-    ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
+
+    if (lastChannelLayout) {
+      try {
+        lastChannelLayout = detectChannelLayout(inputArray, {getNumChannels()});
+      } catch (...) {
+        // Use the last cached layout.
+      }
+    } else {
+      // We have no cached layout; detect it now and raise if necessary:
+      lastChannelLayout = detectChannelLayout(inputArray, {getNumChannels()});
+    }
 
     // Release the GIL when we do the writing, after we
     // already have a reference to the input array:
@@ -494,24 +504,15 @@ public:
       numSamples = inputInfo.shape[0];
       numChannels = 1;
     } else if (inputInfo.ndim == 2) {
-      // Try to auto-detect the channel layout from the shape
-      if (inputInfo.shape[0] == getNumChannels() &&
-          inputInfo.shape[1] == getNumChannels()) {
-        throw std::runtime_error(
-            "Unable to determine shape of audio input! Both dimensions have "
-            "the same shape. Expected " +
-            std::to_string(getNumChannels()) +
-            "-channel audio, with one dimension larger than the other.");
-      } else if (inputInfo.shape[1] == getNumChannels()) {
+      switch (*lastChannelLayout) {
+      case ChannelLayout::Interleaved:
         numSamples = inputInfo.shape[0];
         numChannels = inputInfo.shape[1];
-      } else if (inputInfo.shape[0] == getNumChannels()) {
+        break;
+      case ChannelLayout::NotInterleaved:
         numSamples = inputInfo.shape[1];
         numChannels = inputInfo.shape[0];
-      } else {
-        throw std::runtime_error(
-            "Unable to determine shape of audio input! Expected " +
-            std::to_string(getNumChannels()) + "-channel audio.");
+        break;
       }
     } else {
       throw std::runtime_error(
@@ -534,7 +535,7 @@ public:
     // differently. This loop is duplicated here to move the if statement
     // outside of the tight loop, as we don't need to re-check that the input
     // channel is still the same on every iteration of the loop.
-    switch (inputChannelLayout) {
+    switch (*lastChannelLayout) {
     case ChannelLayout::Interleaved: {
       std::vector<std::vector<SampleType>> deinterleaveBuffers;
 
@@ -867,6 +868,7 @@ private:
   PythonOutputStream *unsafeOutputStream = nullptr;
   juce::ReadWriteLock objectLock;
   int framesWritten = 0;
+  std::optional<ChannelLayout> lastChannelLayout = {};
 };
 
 inline py::class_<WriteableAudioFile, AudioFile,
