@@ -39,14 +39,18 @@ detectChannelLayout(const py::array_t<T, py::array::c_style> inputArray,
     if (channelCountHint) {
       if (inputInfo.shape[0] == inputInfo.shape[1] && inputInfo.shape[0] > 1) {
         throw std::runtime_error(
-            "Unable to determine channel layout from shape!");
+            "Unable to determine channel layout from shape: (" +
+            std::to_string(inputInfo.shape[0]) + ", " +
+            std::to_string(inputInfo.shape[1]) + ").");
       } else if (inputInfo.shape[0] == *channelCountHint) {
         return ChannelLayout::NotInterleaved;
       } else if (inputInfo.shape[1] == *channelCountHint) {
         return ChannelLayout::Interleaved;
       } else {
         throw std::runtime_error(
-            "Unable to determine channel layout from shape!");
+            "Unable to determine channel layout from shape: (" +
+            std::to_string(inputInfo.shape[0]) + ", " +
+            std::to_string(inputInfo.shape[1]) + ").");
       }
     }
 
@@ -60,7 +64,9 @@ detectChannelLayout(const py::array_t<T, py::array::c_style> inputArray,
       return ChannelLayout::NotInterleaved;
     } else {
       throw std::runtime_error(
-          "Unable to determine channel layout from shape!");
+          "Unable to determine channel layout from shape: (" +
+          std::to_string(inputInfo.shape[0]) + ", " +
+          std::to_string(inputInfo.shape[1]) + ").");
     }
   } else {
     throw std::runtime_error("Number of input dimensions must be 1 or 2 (got " +

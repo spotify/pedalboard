@@ -493,7 +493,15 @@ public:
       }
     } else {
       // We have no cached layout; detect it now and raise if necessary:
-      lastChannelLayout = detectChannelLayout(inputArray, {getNumChannels()});
+      try {
+        lastChannelLayout = detectChannelLayout(inputArray, {getNumChannels()});
+      } catch (const std::exception &e) {
+        throw std::runtime_error(
+            std::string(e.what()) +
+            " Provide a non-square array first to allow Pedalboard to "
+            "determine which dimension corresponds with the number of channels "
+            "and which dimension corresponds with the number of samples.");
+      }
     }
 
     // Release the GIL when we do the writing, after we
@@ -1021,7 +1029,42 @@ inline void init_writeable_audio_file(
           "converted.\n\n"
           "Arrays of type int8, int16, int32, float32, and float64 are "
           "supported. If an array of an unsupported ``dtype`` is provided, a "
-          "``TypeError`` will be raised.")
+          "``TypeError`` will be raised.\n\n"
+          ".. warning::\n    If an array of shape ``(num_channels, "
+          "num_channels)`` is passed to this method before any other audio "
+          "data is provided, an exception will be thrown, as the method will "
+          "not be able to infer which dimension of the input corresponds to "
+          "the number of channels and which dimension corresponds to the "
+          "number of samples.\n\n    To avoid this, first call this method "
+          "with an array where the number of samples does not match the "
+          "number of channels.\n\n    The channel layout from the most "
+          "recently "
+          "provided input will be cached on the :py:class:`WritableAudioFile` "
+          "object and will be used if necessary to disambiguate the array "
+          "layout:\n\n"
+          "    .. code-block:: python\n\n"
+          "        with AudioFile(\"my_file.mp3\", \"w\", 44100, "
+          "num_channels=2) as f:\n"
+          "            # This will throw an exception:\n"
+          "            f.write(np.zeros((2, 2)))  \n"
+          "            # But this will work:\n"
+          "            f.write(np.zeros((2, 1)))\n"
+          "            # And now `f` expects an input shape of (num_channels, "
+          "num_samples), so this works:\n"
+          "            f.write(np.zeros((2, 2)))  \n"
+          "\n"
+          "        # Also an option: pass (0, num_channels) or (num_channels, "
+          "0) first\n"
+          "        # to hint that the input will be in that shape "
+          "without writing anything:\n"
+          "        with AudioFile(\"my_file.mp3\", \"w\", 44100, "
+          "num_channels=2) as f:\n"
+          "            # Pass a hint, but write nothing:\n"
+          "            f.write(np.zeros((2, 0)))  \n"
+          "            # And now `f` expects an input shape of (num_channels, "
+          "num_samples), so this works:\n"
+          "            f.write(np.zeros((2, 2)))  \n"
+          "\n")
       .def("flush", &WriteableAudioFile::flush,
            "Attempt to flush this audio file's contents to disk. Not all "
            "formats support flushing, so this may throw a RuntimeError. (If "

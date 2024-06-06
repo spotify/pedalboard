@@ -984,6 +984,31 @@ class WriteableAudioFile(AudioFile):
         Encode an array of audio data and write it to this file. The number of channels in the array must match the number of channels used to open the file. The array may contain audio in any shape. If the file's bit depth or format does not match the provided data type, the audio will be automatically converted.
 
         Arrays of type int8, int16, int32, float32, and float64 are supported. If an array of an unsupported ``dtype`` is provided, a ``TypeError`` will be raised.
+
+        .. warning::
+            If an array of shape ``(num_channels, num_channels)`` is passed to this method before any other audio data is provided, an exception will be thrown, as the method will not be able to infer which dimension of the input corresponds to the number of channels and which dimension corresponds to the number of samples.
+
+            To avoid this, first call this method with an array where the number of samples does not match the number of channels.
+
+            The channel layout from the most recently provided input will be cached on the :py:class:`WritableAudioFile` object and will be used if necessary to disambiguate the array layout:
+
+            .. code-block:: python
+
+                with AudioFile("my_file.mp3", "w", 44100, num_channels=2) as f:
+                    # This will throw an exception:
+                    f.write(np.zeros((2, 2)))
+                    # But this will work:
+                    f.write(np.zeros((2, 1)))
+                    # And now `f` expects an input shape of (num_channels, num_samples), so this works:
+                    f.write(np.zeros((2, 2)))
+
+                # Also an option: pass (0, num_channels) or (num_channels, 0) first
+                # to hint that the input will be in that shape without writing anything:
+                with AudioFile("my_file.mp3", "w", 44100, num_channels=2) as f:
+                    # Pass a hint, but write nothing:
+                    f.write(np.zeros((2, 0)))
+                    # And now `f` expects an input shape of (num_channels, num_samples), so this works:
+                    f.write(np.zeros((2, 2)))
         """
 
     @property

@@ -1526,3 +1526,50 @@ def test_useful_exception_when_writing_to_unseekable_file_like():
         with pedalboard.io.AudioFile(ILieAboutSeekability(), "w", 44100, 2) as f:
             f.write(cached_rand(2, 44100))
     assert "What's a seek?" in str(e)
+
+
+def test_write_differently_shaped_empty_buffers():
+    buf = io.BytesIO()
+    with pedalboard.io.AudioFile(buf, "w", 44100, 1, format="wav") as f:
+        f.write(np.zeros((0, 1), dtype=np.float32))
+        f.write(np.zeros((1, 0), dtype=np.float32))
+        f.write(np.zeros((0,), dtype=np.float32))
+        assert f.tell() == 0
+
+
+def test_write_one_by_one_buffer():
+    buf = io.BytesIO()
+    with pedalboard.io.AudioFile(buf, "w", 44100, 1, format="wav") as f:
+        # Writing a single sample at a time should work:
+        f.write(np.zeros((1, 1), dtype=np.float32))
+        # Writing that same sample as a flat 1D array should work too:
+        f.write(np.zeros((1,), dtype=np.float32))
+
+
+def test_write_two_by_two_buffer():
+    buf = io.BytesIO()
+    with pedalboard.io.AudioFile(buf, "w", 44100, 2, format="wav") as f:
+        # Writing a 2x2 buffer should not work right off the bat, as we
+        # can't tell which dimension is channels and which dimension is
+        # samples:
+        with pytest.raises(RuntimeError) as e:
+            f.write(np.zeros((2, 2), dtype=np.float32))
+        assert "Provide a non-square array first" in str(e)
+
+        # ...but if we write a non-square buffer, it should work:
+        f.write(np.zeros((2, 1), dtype=np.float32))
+        # ...and now square buffers are interpreted as having the same channel layout:
+        f.write(np.zeros((2, 2), dtype=np.float32))
+
+        assert f.tell() == 3
+
+
+def test_write_two_by_two_buffer_with_hint():
+    buf = io.BytesIO()
+    with pedalboard.io.AudioFile(buf, "w", 44100, 2, format="wav") as f:
+        # ...if we pass an empty array of the right shape, that shape hint should be saved:
+        f.write(np.zeros((2, 0), dtype=np.float32))
+        # ...and now square buffers are interpreted as having the same channel layout:
+        f.write(np.zeros((2, 2), dtype=np.float32))
+
+        assert f.tell() == 2
