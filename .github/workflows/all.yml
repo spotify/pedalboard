@@ -44,7 +44,7 @@ jobs:
       - uses: actions/checkout@v4
         # Don't check out submodules, as the action below will look at ALL C++ code!
       - name: Check C++ Formatting
-        uses: jidicula/clang-format-action@v4.4.1
+        uses: jidicula/clang-format-action@v4.13.0
         with:
           clang-format-version: 14
           fallback-style: LLVM
