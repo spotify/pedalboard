@@ -981,6 +981,29 @@ second argument.</p>
 <span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.write" title="Permalink to this definition">#</a></dt>
 <dd><p>Encode an array of audio data and write it to this file. The number of channels in the array must match the number of channels used to open the file. The array may contain audio in any shape. If the file’s bit depth or format does not match the provided data type, the audio will be automatically converted.</p>
 <p>Arrays of type int8, int16, int32, float32, and float64 are supported. If an array of an unsupported <code class="docutils literal notranslate"><span class="pre">dtype</span></code> is provided, a <code class="docutils literal notranslate"><span class="pre">TypeError</span></code> will be raised.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If an array of shape <code class="docutils literal notranslate"><span class="pre">(num_channels,</span> <span class="pre">num_channels)</span></code> is passed to this method before any other audio data is provided, an exception will be thrown, as the method will not be able to infer which dimension of the input corresponds to the number of channels and which dimension corresponds to the number of samples.</p>
+<p>To avoid this, first call this method with an array where the number of samples does not match the number of channels.</p>
+<p>The channel layout from the most recently provided input will be cached on the <code class="xref py py-class docutils literal notranslate"><span class="pre">WritableAudioFile</span></code> object and will be used if necessary to disambiguate the array layout:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;my_file.mp3&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="mi">44100</span><span class="p">,</span> <span class="n">num_channels</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="c1"># This will throw an exception:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+    <span class="c1"># But this will work:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+    <span class="c1"># And now `f` expects an input shape of (num_channels, num_samples), so this works:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+
+<span class="c1"># Also an option: pass (0, num_channels) or (num_channels, 0) first</span>
+<span class="c1"># to hint that the input will be in that shape without writing anything:</span>
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;my_file.mp3&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="mi">44100</span><span class="p">,</span> <span class="n">num_channels</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="c1"># Pass a hint, but write nothing:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
+    <span class="c1"># And now `f` expects an input shape of (num_channels, num_samples), so this works:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+</pre></div>
+</div>
+</div>
 </dd></dl>
 
 <dl class="py property">

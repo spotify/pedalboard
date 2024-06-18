@@ -484,7 +484,25 @@ public:
 
     unsigned int numChannels = 0;
     unsigned int numSamples = 0;
-    ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
+
+    if (lastChannelLayout) {
+      try {
+        lastChannelLayout = detectChannelLayout(inputArray, {getNumChannels()});
+      } catch (...) {
+        // Use the last cached layout.
+      }
+    } else {
+      // We have no cached layout; detect it now and raise if necessary:
+      try {
+        lastChannelLayout = detectChannelLayout(inputArray, {getNumChannels()});
+      } catch (const std::exception &e) {
+        throw std::runtime_error(
+            std::string(e.what()) +
+            " Provide a non-square array first to allow Pedalboard to "
+            "determine which dimension corresponds with the number of channels "
+            "and which dimension corresponds with the number of samples.");
+      }
+    }
 
     // Release the GIL when we do the writing, after we
     // already have a reference to the input array:
@@ -494,24 +512,15 @@ public:
       numSamples = inputInfo.shape[0];
       numChannels = 1;
     } else if (inputInfo.ndim == 2) {
-      // Try to auto-detect the channel layout from the shape
-      if (inputInfo.shape[0] == getNumChannels() &&
-          inputInfo.shape[1] == getNumChannels()) {
-        throw std::runtime_error(
-            "Unable to determine shape of audio input! Both dimensions have "
-            "the same shape. Expected " +
-            std::to_string(getNumChannels()) +
-            "-channel audio, with one dimension larger than the other.");
-      } else if (inputInfo.shape[1] == getNumChannels()) {
+      switch (*lastChannelLayout) {
+      case ChannelLayout::Interleaved:
         numSamples = inputInfo.shape[0];
         numChannels = inputInfo.shape[1];
-      } else if (inputInfo.shape[0] == getNumChannels()) {
+        break;
+      case ChannelLayout::NotInterleaved:
         numSamples = inputInfo.shape[1];
         numChannels = inputInfo.shape[0];
-      } else {
-        throw std::runtime_error(
-            "Unable to determine shape of audio input! Expected " +
-            std::to_string(getNumChannels()) + "-channel audio.");
+        break;
       }
     } else {
       throw std::runtime_error(
@@ -534,7 +543,7 @@ public:
     // differently. This loop is duplicated here to move the if statement
     // outside of the tight loop, as we don't need to re-check that the input
     // channel is still the same on every iteration of the loop.
-    switch (inputChannelLayout) {
+    switch (*lastChannelLayout) {
     case ChannelLayout::Interleaved: {
       std::vector<std::vector<SampleType>> deinterleaveBuffers;
 
@@ -867,6 +876,7 @@ private:
   PythonOutputStream *unsafeOutputStream = nullptr;
   juce::ReadWriteLock objectLock;
   int framesWritten = 0;
+  std::optional<ChannelLayout> lastChannelLayout = {};
 };
 
 inline py::class_<WriteableAudioFile, AudioFile,
@@ -1019,7 +1029,42 @@ inline void init_writeable_audio_file(
           "converted.\n\n"
           "Arrays of type int8, int16, int32, float32, and float64 are "
           "supported. If an array of an unsupported ``dtype`` is provided, a "
-          "``TypeError`` will be raised.")
+          "``TypeError`` will be raised.\n\n"
+          ".. warning::\n    If an array of shape ``(num_channels, "
+          "num_channels)`` is passed to this method before any other audio "
+          "data is provided, an exception will be thrown, as the method will "
+          "not be able to infer which dimension of the input corresponds to "
+          "the number of channels and which dimension corresponds to the "
+          "number of samples.\n\n    To avoid this, first call this method "
+          "with an array where the number of samples does not match the "
+          "number of channels.\n\n    The channel layout from the most "
+          "recently "
+          "provided input will be cached on the :py:class:`WritableAudioFile` "
+          "object and will be used if necessary to disambiguate the array "
+          "layout:\n\n"
+          "    .. code-block:: python\n\n"
+          "        with AudioFile(\"my_file.mp3\", \"w\", 44100, "
+          "num_channels=2) as f:\n"
+          "            # This will throw an exception:\n"
+          "            f.write(np.zeros((2, 2)))  \n"
+          "            # But this will work:\n"
+          "            f.write(np.zeros((2, 1)))\n"
+          "            # And now `f` expects an input shape of (num_channels, "
+          "num_samples), so this works:\n"
+          "            f.write(np.zeros((2, 2)))  \n"
+          "\n"
+          "        # Also an option: pass (0, num_channels) or (num_channels, "
+          "0) first\n"
+          "        # to hint that the input will be in that shape "
+          "without writing anything:\n"
+          "        with AudioFile(\"my_file.mp3\", \"w\", 44100, "
+          "num_channels=2) as f:\n"
+          "            # Pass a hint, but write nothing:\n"
+          "            f.write(np.zeros((2, 0)))  \n"
+          "            # And now `f` expects an input shape of (num_channels, "
+          "num_samples), so this works:\n"
+          "            f.write(np.zeros((2, 2)))  \n"
+          "\n")
       .def("flush", &WriteableAudioFile::flush,
            "Attempt to flush this audio file's contents to disk. Not all "
            "formats support flushing, so this may throw a RuntimeError. (If "
