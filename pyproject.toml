@@ -3,6 +3,8 @@ requires = [
     "setuptools>=59.6.0",
     "wheel>=0.36.2",
     "pybind11>=2.12",
+    # Building with NumPy 2 allows backwards compatibility with NumPy 1:
+    "numpy>=2",
 ]
 
 build-backend = "setuptools.build_meta"
