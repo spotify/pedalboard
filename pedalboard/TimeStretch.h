@@ -23,6 +23,7 @@ using namespace RubberBand;
 namespace Pedalboard {
 
 static const int MAX_SEMITONES_TO_PITCH_SHIFT = 72;
+static const size_t STUDY_BLOCK_SAMPLE_SIZE = 2048;
 
 /*
  * A wrapper around Rubber Band that allows calling it independently of a plugin
@@ -105,8 +106,18 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
   rubberBandStretcher.setMaxProcessSize(input.getNumSamples());
   rubberBandStretcher.setExpectedInputDuration(input.getNumSamples());
 
-  rubberBandStretcher.study(input.getArrayOfReadPointers(),
-                            input.getNumSamples(), true);
+  const float **inputChannelPointers =
+      (const float **)alloca(sizeof(float *) * input.getNumChannels());
+
+  for (size_t i = 0; i < input.getNumSamples(); i += STUDY_BLOCK_SAMPLE_SIZE) {
+    size_t numSamples =
+        std::min(input.getNumSamples() - i, (size_t)STUDY_BLOCK_SAMPLE_SIZE);
+    for (int c = 0; c < input.getNumChannels(); c++) {
+      inputChannelPointers[c] = input.getReadPointer(c, i);
+    }
+    bool isLast = i + numSamples >= input.getNumSamples();
+    rubberBandStretcher.study(inputChannelPointers, numSamples, isLast);
+  }
 
   size_t expectedNumberOfOutputSamples =
       (((double)input.getNumSamples()) / stretchFactor);
@@ -120,8 +131,6 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
                  /* avoidReallocating */ true);
 
   size_t blockSize = rubberBandStretcher.getProcessSizeLimit();
-  const float **inputChannelPointers =
-      (const float **)alloca(sizeof(float *) * input.getNumChannels());
   float **outputChannelPointers =
       (float **)alloca(sizeof(float *) * output.getNumChannels());
 
