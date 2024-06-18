@@ -15,8 +15,9 @@
 # limitations under the License.
 
 
-import pytest
 import numpy as np
+import pytest
+
 from pedalboard import time_stretch
 
 
@@ -104,3 +105,10 @@ def test_time_stretch_long_passthrough(
         high_quality=high_quality,
     )
     np.testing.assert_allclose(output[0], sine_wave, atol=0.25)
+
+
+def test_time_stretch_does_not_segfault():
+    # https://github.com/spotify/pedalboard/issues/340
+    sr = 44100
+    x = np.random.default_rng().uniform(size=sr * 10).astype(np.float32)
+    time_stretch(x, sr, high_quality=False, use_time_domain_smoothing=True)
