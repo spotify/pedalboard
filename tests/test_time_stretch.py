@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 #
-# Copyright 2023 Spotify AB
+# Copyright 2024 Spotify AB
 #
 # Licensed under the GNU Public License, Version 3.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -112,3 +112,63 @@ def test_time_stretch_does_not_segfault():
     sr = 44100
     x = np.random.default_rng().uniform(size=sr * 10).astype(np.float32)
     time_stretch(x, sr, high_quality=False, use_time_domain_smoothing=True)
+
+
+@pytest.mark.parametrize("semitones_start", [-1, 0, 1])
+@pytest.mark.parametrize("semitones_end", [-1, 0, 1])
+@pytest.mark.parametrize("stretch_factor_start", [0.75, 1, 1.25])
+@pytest.mark.parametrize("stretch_factor_end", [0.75, 1, 1.25])
+def test_time_stretch_with_array(
+    semitones_start, semitones_end, stretch_factor_start, stretch_factor_end
+):
+    sample_rate = 44100
+    fundamental_hz = 440
+    num_seconds = 1.0
+    samples = np.arange(num_seconds * sample_rate)
+    sine_wave = np.sin(2 * np.pi * fundamental_hz * samples / sample_rate).astype(np.float32)
+
+    output = time_stretch(
+        sine_wave,
+        sample_rate,
+        stretch_factor=np.linspace(stretch_factor_start, stretch_factor_end, sine_wave.shape[0]),
+        pitch_shift_in_semitones=np.linspace(semitones_start, semitones_end, sine_wave.shape[0]),
+    )
+
+    assert np.all(np.isfinite(output))
+
+
+def test_time_stretch_mismatched_buffer_length_and_stretch_factors():
+    with pytest.raises(ValueError):
+        time_stretch(
+            np.zeros((1, 10), dtype=np.float32), 44100, stretch_factor=np.linspace(0.1, 1.0, 11)
+        )
+
+
+def test_time_stretch_mismatched_buffer_length_and_pitch_shift():
+    with pytest.raises(ValueError) as e:
+        time_stretch(
+            np.zeros((1, 10), dtype=np.float32),
+            44100,
+            pitch_shift_in_semitones=np.linspace(0.1, 1.0, 11),
+        )
+    assert "buffer" in str(e)
+
+
+def test_time_stretch_variable_stretch_factor_out_of_range():
+    with pytest.raises(ValueError) as e:
+        time_stretch(
+            np.zeros((1, 10), dtype=np.float32),
+            44100,
+            stretch_factor=np.zeros((10,), dtype=np.float32),
+        )
+    assert "element at index 0 was 0" in str(e)
+
+
+def test_time_stretch_variable_pitch_shift_out_of_range():
+    with pytest.raises(ValueError) as e:
+        time_stretch(
+            np.zeros((1, 10), dtype=np.float32),
+            44100,
+            pitch_shift_in_semitones=np.ones((10,), dtype=np.float32) * 73,
+        )
+    assert "element at index 0 was 73" in str(e)
