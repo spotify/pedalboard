@@ -57,8 +57,12 @@ class Mix(pedalboard_native.PluginContainer, pedalboard_native.Plugin):
 def time_stretch(
     input_audio: numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]],
     samplerate: float,
-    stretch_factor: float = 1.0,
-    pitch_shift_in_semitones: float = 0.0,
+    stretch_factor: typing.Union[
+        float, numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]
+    ] = 1.0,
+    pitch_shift_in_semitones: typing.Union[
+        float, numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]
+    ] = 0.0,
     high_quality: bool = True,
     transient_mode: str = "crisp",
     transient_detector: str = "compound",
@@ -78,6 +82,20 @@ def time_stretch(
     operation. The ``stretch_factor`` and ``pitch_shift_in_semitones`` arguments are
     independent and do not affect each other (i.e.: you can change one, the other, or both
     without worrying about how they interact).
+
+    Both ``stretch_factor`` and ``pitch_shift_in_semitones`` can be either floating-point
+    numbers or NumPy arrays of double-precision floating point numbers. Providing a NumPy
+    array allows the stretch factor and/or pitch shift to vary over the length of the
+    output audio.
+
+    .. note::
+        If a NumPy array is provided for ``stretch_factor`` or ``pitch_shift_in_semitones``:
+          - The length of each array must be the same as the length of the input audio.
+          - More frequent changes in the stretch factor or pitch shift will result in
+            slower processing, as the audio will be processed in smaller chunks.
+          - Changes to the ``stretch_factor`` or ``pitch_shift_in_semitones`` more frequent
+            than once every 1,024 samples (23 milliseconds at 44.1kHz) will not have any
+            effect.
 
     The additional arguments provided to this function allow for more fine-grained control
     over the behavior of the time stretcher:
@@ -114,4 +132,9 @@ def time_stretch(
         This is a function, not a :py:class:`Plugin` instance, and cannot be
         used in :py:class:`Pedalboard` objects, as it changes the duration of
         the audio stream.
+
+
+    .. note::
+        The ability to pass a NumPy array for ``stretch_factor`` and
+        ``pitch_shift_in_semitones`` was added in Pedalboard v0.9.8.
     """

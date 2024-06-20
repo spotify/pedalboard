@@ -24,6 +24,56 @@ namespace Pedalboard {
 
 static const int MAX_SEMITONES_TO_PITCH_SHIFT = 72;
 static const size_t STUDY_BLOCK_SAMPLE_SIZE = 2048;
+// This is the minimum number of samples to process in a single
+// block for efficiency. It's assumed that changing pitch or stretch factor more
+// frequently than this number of samples is not useful.
+// TODO: is it though?
+static const size_t MINIMUM_BLOCK_SIZE = 1024;
+
+/**
+ * @brief Given a vector of doubles representing the value of a parameter over
+ * time and a current chunk size, return the size of the next chunk to process.
+ * Discontinuities in the parameter are used to determine how big each chunk can
+ * be; if a parameter changes in a stair-step fashion, each chunk can be as wide
+ * as each stair step to maximize efficiency. If a parameter changes
+ * continuously, the chunk size is bounded by MINIMUM_BLOCK_SIZE and
+ * maximumBlockSize.
+ *
+ * @param chunkSize
+ * @param currentOffset
+ * @param variableParameter
+ * @param maximumBlockSize
+ * @return size_t
+ */
+size_t chooseChunkSize(size_t chunkSize, size_t currentOffset,
+                       std::vector<double> &variableParameter,
+                       size_t maximumBlockSize) {
+  size_t size = variableParameter.size();
+  size_t distanceToNextChange = size - currentOffset;
+  if (currentOffset >= size) {
+    throw std::domain_error("chooseChunkSize called with currentOffset >= "
+                            "variableParameter.size(). This is an internal "
+                            "Pedalboard logic error and should be reported.");
+  }
+
+  double *values = variableParameter.data();
+  double startValue = values[currentOffset];
+  for (size_t i = currentOffset; i < size; i++) {
+    if (values[i] != startValue) {
+      distanceToNextChange = i - currentOffset;
+      break;
+    }
+  }
+
+  if (distanceToNextChange < chunkSize) {
+    // Only make the chunk size smaller (as other chained calls may have altered
+    // it already).
+    return std::max(MINIMUM_BLOCK_SIZE,
+                    std::min(maximumBlockSize, distanceToNextChange));
+  } else {
+    return chunkSize;
+  }
+}
 
 /*
  * A wrapper around Rubber Band that allows calling it independently of a plugin
@@ -104,6 +154,7 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
   double initialStretchFactor = 1;
   double initialPitchShiftInSemitones = 0;
   size_t expectedNumberOfOutputSamples = 0;
+
   if (auto *constantStretchFactor = std::get_if<double>(&stretchFactor)) {
     if (*constantStretchFactor == 0)
       throw std::domain_error(
@@ -122,6 +173,7 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
             std::to_string(i) + " was " +
             std::to_string(variableStretchFactor->data()[i]) + "x.");
     }
+
     expectedNumberOfOutputSamples =
         (((double)input.getNumSamples()) /
          *std::min_element(variableStretchFactor->begin(),
@@ -180,7 +232,8 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
       (const float **)alloca(sizeof(float *) * input.getNumChannels());
 
   if (!(options & RubberBandStretcher::OptionProcessRealTime)) {
-    for (size_t i = 0; i < input.getNumSamples(); i += STUDY_BLOCK_SAMPLE_SIZE) {
+    for (size_t i = 0; i < input.getNumSamples();
+         i += STUDY_BLOCK_SAMPLE_SIZE) {
       size_t numSamples =
           std::min(input.getNumSamples() - i, (size_t)STUDY_BLOCK_SAMPLE_SIZE);
       for (int c = 0; c < input.getNumChannels(); c++) {
@@ -201,23 +254,17 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
                  /* keepExistingContent */ false, /* clearExtraSpace */ false,
                  /* avoidReallocating */ true);
 
-  size_t blockSize = rubberBandStretcher.getProcessSizeLimit();
-  if (options & RubberBandStretcher::OptionProcessRealTime) {
-    // Process a small number of samples at a time in real-time
-    // mode to allow for variable stretch factors and pitch shifts.
-    // TODO: Make this configurable!
-    blockSize = 16;
-  }
+  size_t maximumBlockSize = rubberBandStretcher.getProcessSizeLimit();
 
   float **outputChannelPointers =
       (float **)alloca(sizeof(float *) * output.getNumChannels());
 
+  // An optimization; if we know the pitch and/or stretch factor is constant
+  // for a certain amount of time,
   for (size_t i = 0;
-       rubberBandStretcher.available() > 0 || i < input.getNumSamples();
-       i += blockSize) {
+       rubberBandStretcher.available() > 0 || i < input.getNumSamples();) {
     if (i < input.getNumSamples()) {
-      size_t chunkSize = std::min(blockSize, input.getNumSamples() - i);
-      bool isLastCall = i + blockSize >= input.getNumSamples();
+      size_t chunkSize = std::min(maximumBlockSize, input.getNumSamples() - i);
 
       for (int c = 0; c < input.getNumChannels(); c++) {
         inputChannelPointers[c] = input.getReadPointer(c, i);
@@ -226,17 +273,25 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
       if (options & RubberBandStretcher::OptionProcessRealTime) {
         if (auto *variableStretchFactor =
                 std::get_if<std::vector<double>>(&stretchFactor)) {
-          rubberBandStretcher.setTimeRatio(variableStretchFactor->data()[i]);
+          chunkSize = chooseChunkSize(chunkSize, i, *variableStretchFactor,
+                                      maximumBlockSize);
+          rubberBandStretcher.setTimeRatio(1.0 /
+                                           variableStretchFactor->data()[i]);
         }
 
         if (auto *variablePitchShift =
                 std::get_if<std::vector<double>>(&pitchShiftInSemitones)) {
+          chunkSize = chooseChunkSize(chunkSize, i, *variablePitchShift,
+                                      maximumBlockSize);
           double scale = pow(2.0, (variablePitchShift->data()[i] / 12.0));
           rubberBandStretcher.setPitchScale(scale);
         }
       }
 
+      chunkSize = std::min(chunkSize, input.getNumSamples() - i);
+      bool isLastCall = i + chunkSize >= input.getNumSamples();
       rubberBandStretcher.process(inputChannelPointers, chunkSize, isLastCall);
+      i += chunkSize;
     }
 
     if (rubberBandStretcher.available() > 0) {
@@ -339,10 +394,18 @@ independent and do not affect each other (i.e.: you can change one, the other, o
 without worrying about how they interact).
 
 Both ``stretch_factor`` and ``pitch_shift_in_semitones`` can be either floating-point
-numbers or NumPy arrays of double-precision floating point numbers. If NumPy arrays
-are provided, the length of the array must match the number of samples in the input
-audio buffer, allowing dynamic transitions of the stretch factor and pitch shift over\
-the length of the buffer.
+numbers or NumPy arrays of double-precision floating point numbers. Providing a NumPy
+array allows the stretch factor and/or pitch shift to vary over the length of the
+output audio.
+
+.. note::
+    If a NumPy array is provided for ``stretch_factor`` or ``pitch_shift_in_semitones``:
+      - The length of each array must be the same as the length of the input audio.
+      - More frequent changes in the stretch factor or pitch shift will result in
+        slower processing, as the audio will be processed in smaller chunks.
+      - Changes to the ``stretch_factor`` or ``pitch_shift_in_semitones`` more frequent
+        than once every 1,024 samples (23 milliseconds at 44.1kHz) will not have any
+        effect.
 
 The additional arguments provided to this function allow for more fine-grained control
 over the behavior of the time stretcher:
@@ -381,9 +444,9 @@ over the behavior of the time stretcher:
     the audio stream.
 
 
-.. info::
+.. note::
     The ability to pass a NumPy array for ``stretch_factor`` and
-    ``pitch_shift_in_semitones`` was added in Pedalboard v0.9.7.
+    ``pitch_shift_in_semitones`` was added in Pedalboard v0.9.8.
 
 )",
       py::arg("input_audio"), py::arg("samplerate"),
