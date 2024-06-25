@@ -121,10 +121,17 @@ or buffer, set ``reset`` to ``False``.
         // type inference.
         return nullptr;
       }))
-      .def("reset", &Plugin::reset,
-           "Clear any internal state stored by this plugin (e.g.: reverb "
-           "tails, delay lines, LFO state, etc). The values of plugin "
-           "parameters will remain unchanged. ")
+      .def(
+          "reset",
+          [](std::shared_ptr<Plugin> self) {
+            self->reset();
+            // Only reset the last channel layout if the user explicitly calls
+            // reset from the Python side:
+            self->resetLastChannelLayout();
+          },
+          "Clear any internal state stored by this plugin (e.g.: reverb "
+          "tails, delay lines, LFO state, etc). The values of plugin "
+          "parameters will remain unchanged. ")
       .def(
           "process",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,

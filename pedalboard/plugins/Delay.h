@@ -58,7 +58,11 @@ public:
     this->getDSP().setDelay((int)(delaySeconds * spec.sampleRate));
   }
 
-  virtual void reset() override { this->getDSP().reset(); }
+  virtual void reset() override {
+    JucePlugin<juce::dsp::DelayLine<
+        SampleType, juce::dsp::DelayLineInterpolationTypes::None>>::reset();
+    this->getDSP().reset();
+  }
 
   virtual int process(
       const juce::dsp::ProcessContextReplacing<SampleType> &context) override {
