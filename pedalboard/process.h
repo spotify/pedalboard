@@ -175,6 +175,8 @@ processFloat32(const py::array_t<float, py::array::c_style> inputArray,
       copyPyArrayIntoJuceBuffer(inputArray, {inputChannelLayout});
 
   if (ioBuffer.getNumChannels() == 0) {
+    unsigned int numChannels = 0;
+    unsigned int numSamples = ioBuffer.getNumSamples();
     // We have no channels to process; just return an empty output array with
     // the same shape. Passing zero channels into JUCE breaks some assumptions
     // all over the place.
@@ -182,10 +184,10 @@ processFloat32(const py::array_t<float, py::array::c_style> inputArray,
     if (inputArray.request().ndim == 2) {
       switch (inputChannelLayout) {
       case ChannelLayout::Interleaved:
-        outputArray = py::array_t<float>({ioBuffer.getNumSamples(), 0});
+        outputArray = py::array_t<float>({numSamples, numChannels});
         break;
       case ChannelLayout::NotInterleaved:
-        outputArray = py::array_t<float>({0, ioBuffer.getNumSamples()});
+        outputArray = py::array_t<float>({numChannels, numSamples});
         break;
       default:
         throw std::runtime_error(
