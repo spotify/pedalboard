@@ -663,7 +663,6 @@ jobs:
     strategy:
       matrix:
         include:
-        - { os: macos-12, build: cp36-macosx_x86_64 }
         - { os: macos-12, build: cp37-macosx_x86_64 }
         - { os: macos-12, build: cp38-macosx_x86_64 }
         - { os: macos-12, build: cp39-macosx_x86_64 }
@@ -683,7 +682,6 @@ jobs:
         - { os: macos-12, build: pp37-macosx_x86_64 }
         - { os: macos-12, build: pp38-macosx_x86_64 }
         - { os: macos-12, build: pp39-macosx_x86_64 }
-        - { os: windows-latest, build: cp36-win_amd64 }
         - { os: windows-latest, build: cp37-win_amd64 }
         - { os: windows-latest, build: cp38-win_amd64 }
         - { os: windows-latest, build: cp39-win_amd64 }
@@ -693,8 +691,6 @@ jobs:
         - { os: windows-latest, build: pp37-win_amd64 }
         - { os: windows-latest, build: pp38-win_amd64 }
         - { os: windows-latest, build: pp39-win_amd64 }
-        - { os: 'ubuntu-20.04', build: cp36-manylinux_x86_64 }
-        - { os: 'ubuntu-20.04', build: cp36-manylinux_aarch64 }
         - { os: 'ubuntu-20.04', build: cp37-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: cp37-manylinux_aarch64 }
         - { os: 'ubuntu-20.04', build: cp38-manylinux_x86_64 }

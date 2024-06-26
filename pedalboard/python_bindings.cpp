@@ -72,7 +72,7 @@ namespace py = pybind11;
 
 using namespace Pedalboard;
 
-PYBIND11_MODULE(pedalboard_native, m) {
+PYBIND11_MODULE(pedalboard_native, m, py::mod_gil_not_used()) {
   m.doc() =
       ("This module provides classes and functions for generating and adding "
        "effects to audio. Most classes in this module are subclasses of "
