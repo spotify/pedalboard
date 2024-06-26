@@ -437,18 +437,21 @@ jobs:
           - { os: macos-13, python-version: "3.10", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
           - { os: macos-13, python-version: "3.11", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
           - { os: macos-13, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          # - { os: macos-13, python-version: "3.13.0-beta.1", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
           - { os: ubuntu-20.04, python-version: "3.7", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.8", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.9", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.10", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.11", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: ubuntu-20.04, python-version: "3.13.0-beta.1", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           # - { os: windows-latest, python-version: "3.7", compiler: "msvc", cc: "msvc", cxx: "msvc" }
           # - { os: windows-latest, python-version: "3.8", compiler: "msvc", cc: "msvc", cxx: "msvc" }
           # - { os: windows-latest, python-version: "3.9", compiler: "msvc", cc: "msvc", cxx: "msvc" }
           # - { os: windows-latest, python-version: "3.10", compiler: "msvc", cc: "msvc", cxx: "msvc" }
           # - { os: windows-latest, python-version: "3.11", compiler: "msvc", cc: "msvc", cxx: "msvc" }
           - { os: windows-latest, python-version: "3.12", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # - { os: windows-latest, python-version: "3.13.0-beta.1", compiler: "msvc", cc: "msvc", cxx: "msvc" }
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -669,16 +672,19 @@ jobs:
         - { os: macos-12, build: cp310-macosx_x86_64 }
         - { os: macos-12, build: cp311-macosx_x86_64 }
         - { os: macos-12, build: cp312-macosx_x86_64 }
+        - { os: macos-12, build: cp313-macosx_x86_64 }
         - { os: macos-12, build: cp38-macosx_universal2 }
         - { os: macos-12, build: cp39-macosx_universal2 }
         - { os: macos-12, build: cp310-macosx_universal2 }
         - { os: macos-12, build: cp311-macosx_universal2 }
         - { os: macos-12, build: cp312-macosx_universal2 }
+        - { os: macos-12, build: cp313-macosx_universal2 }
         - { os: macos-12, build: cp38-macosx_arm64 }
         - { os: macos-12, build: cp39-macosx_arm64 }
         - { os: macos-12, build: cp310-macosx_arm64 }
         - { os: macos-12, build: cp311-macosx_arm64 }
         - { os: macos-12, build: cp312-macosx_arm64 }
+        - { os: macos-12, build: cp313-macosx_arm64 }
         - { os: macos-12, build: pp37-macosx_x86_64 }
         - { os: macos-12, build: pp38-macosx_x86_64 }
         - { os: macos-12, build: pp39-macosx_x86_64 }
@@ -688,6 +694,8 @@ jobs:
         - { os: windows-latest, build: cp310-win_amd64 }
         - { os: windows-latest, build: cp311-win_amd64 }
         - { os: windows-latest, build: cp312-win_amd64 }
+        - { os: windows-latest, build: cp313-win_amd64 }
+        - { os: windows-latest, build: cp313t-win_amd64 }
         - { os: windows-latest, build: pp37-win_amd64 }
         - { os: windows-latest, build: pp38-win_amd64 }
         - { os: windows-latest, build: pp39-win_amd64 }
@@ -713,6 +721,14 @@ jobs:
         - { os: 'ubuntu-20.04', build: cp312-manylinux_aarch64 }
         - { os: 'ubuntu-20.04', build: cp312-musllinux_x86_64 }
         - { os: 'ubuntu-20.04', build: cp312-musllinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp313-manylinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp313-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp313-musllinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp313-musllinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp313t-manylinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp313t-manylinux_aarch64 }
+        - { os: 'ubuntu-20.04', build: cp313t-musllinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp313t-musllinux_aarch64 }
         - { os: 'ubuntu-20.04', build: pp37-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: pp37-manylinux_aarch64 }
         - { os: 'ubuntu-20.04', build: pp38-manylinux_x86_64 }
@@ -752,6 +768,7 @@ jobs:
           # The musllinux containers on aarch64 take 6+ hours to test.
           # Also testing any pypy versions fails, as TensorFlow isn't pypy compatible.
           CIBW_TEST_SKIP: "*manylinux* *musllinux_aarch* *pp* *-macosx_universal2:arm64"
+          CIBW_PRERELEASE_PYTHONS: "1"
           # Use the minimum macOS deployment target that has C++17 support:
           MACOSX_DEPLOYMENT_TARGET: "10.13"
           CIBW_MUSLLINUX_X86_64_IMAGE: quay.io/pypa/musllinux_1_1_x86_64:2024-04-29-07d05a0
