@@ -1,0 +1,104 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Basic Interface (FFTW 3.3.10)</title>
+
+<meta name="description" content="Basic Interface (FFTW 3.3.10)">
+<meta name="keywords" content="Basic Interface (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="FFTW-Reference.html" rel="up" title="FFTW Reference">
+<link href="Complex-DFTs.html" rel="next" title="Complex DFTs">
+<link href="Using-Plans.html" rel="prev" title="Using Plans">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Basic-Interface"></span><div class="header">
+<p>
+Next: <a href="Advanced-Interface.html" accesskey="n" rel="next">Advanced Interface</a>, Previous: <a href="Using-Plans.html" accesskey="p" rel="prev">Using Plans</a>, Up: <a href="FFTW-Reference.html" accesskey="u" rel="up">FFTW Reference</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Basic-Interface-1"></span><h3 class="section">4.3 Basic Interface</h3>
+<span id="index-basic-interface-2"></span>
+
+<p>Recall that the FFTW API is divided into three parts<a id="DOCF6" href="#FOOT6"><sup>6</sup></a>: the <em>basic interface</em>
+computes a single transform of contiguous data, the <em>advanced
+interface</em> computes transforms of multiple or strided arrays, and the
+<em>guru interface</em> supports the most general data layouts,
+multiplicities, and strides.  This section describes the basic
+interface, which we expect to satisfy the needs of most users.
+</p>
+<table class="menu" border="0" cellspacing="0">
+<tr><td align="left" valign="top">&bull; <a href="Complex-DFTs.html" accesskey="1">Complex DFTs</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Planner-Flags.html" accesskey="2">Planner Flags</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Real_002ddata-DFTs.html" accesskey="3">Real-data DFTs</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Real_002ddata-DFT-Array-Format.html" accesskey="4">Real-data DFT Array Format</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Real_002dto_002dReal-Transforms.html" accesskey="5">Real-to-Real Transforms</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Real_002dto_002dReal-Transform-Kinds.html" accesskey="6">Real-to-Real Transform Kinds</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+</table>
+
+<div class="footnote">
+<hr>
+<h4 class="footnotes-heading">Footnotes</h4>
+
+<h5><a id="FOOT6" href="#DOCF6">(6)</a></h3>
+<p><i>Gallia est
+omnis divisa in partes tres</i> (Julius Caesar).</p>
+</div>
+
+
+
+</body>
+</html>

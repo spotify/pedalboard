@@ -1,0 +1,181 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Using Plans (FFTW 3.3.10)</title>
+
+<meta name="description" content="Using Plans (FFTW 3.3.10)">
+<meta name="keywords" content="Using Plans (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="FFTW-Reference.html" rel="up" title="FFTW Reference">
+<link href="Basic-Interface.html" rel="next" title="Basic Interface">
+<link href="Memory-Allocation.html" rel="prev" title="Memory Allocation">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Using-Plans"></span><div class="header">
+<p>
+Next: <a href="Basic-Interface.html" accesskey="n" rel="next">Basic Interface</a>, Previous: <a href="Data-Types-and-Files.html" accesskey="p" rel="prev">Data Types and Files</a>, Up: <a href="FFTW-Reference.html" accesskey="u" rel="up">FFTW Reference</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Using-Plans-1"></span><h3 class="section">4.2 Using Plans</h3>
+
+<p>Plans for all transform types in FFTW are stored as type
+<code>fftw_plan</code> (an opaque pointer type), and are created by one of the
+various planning routines described in the following sections.
+<span id="index-fftw_005fplan-1"></span>
+An <code>fftw_plan</code> contains all information necessary to compute the
+transform, including the pointers to the input and output arrays.
+</p>
+<div class="example">
+<pre class="example">void fftw_execute(const fftw_plan plan);
+</pre></div>
+<span id="index-fftw_005fexecute-1"></span>
+
+<p>This executes the <code>plan</code>, to compute the corresponding transform on
+the arrays for which it was planned (which must still exist).  The plan
+is not modified, and <code>fftw_execute</code> can be called as many times as
+desired.
+</p>
+<p>To apply a given plan to a different array, you can use the new-array execute
+interface.  See <a href="New_002darray-Execute-Functions.html">New-array Execute Functions</a>.
+</p>
+<p><code>fftw_execute</code> (and equivalents) is the only function in FFTW
+guaranteed to be thread-safe; see <a href="Thread-safety.html">Thread safety</a>.
+</p>
+<p>This function:
+</p><div class="example">
+<pre class="example">void fftw_destroy_plan(fftw_plan plan);
+</pre></div>
+<span id="index-fftw_005fdestroy_005fplan-1"></span>
+<p>deallocates the <code>plan</code> and all its associated data.
+</p>
+<p>FFTW&rsquo;s planner saves some other persistent data, such as the
+accumulated wisdom and a list of algorithms available in the current
+configuration.  If you want to deallocate all of that and reset FFTW
+to the pristine state it was in when you started your program, you can
+call:
+</p>
+<div class="example">
+<pre class="example">void fftw_cleanup(void);
+</pre></div>
+<span id="index-fftw_005fcleanup"></span>
+
+<p>After calling <code>fftw_cleanup</code>, all existing plans become undefined,
+and you should not attempt to execute them nor to destroy them.  You can
+however create and execute/destroy new plans, in which case FFTW starts
+accumulating wisdom information again.
+</p>
+<p><code>fftw_cleanup</code> does not deallocate your plans, however.  To prevent
+memory leaks, you must still call <code>fftw_destroy_plan</code> before
+executing <code>fftw_cleanup</code>.
+</p>
+<p>Occasionally, it may useful to know FFTW&rsquo;s internal &ldquo;cost&rdquo; metric
+that it uses to compare plans to one another; this cost is
+proportional to an execution time of the plan, in undocumented units,
+if the plan was created with the <code>FFTW_MEASURE</code> or other
+timing-based options, or alternatively is a heuristic cost function
+for <code>FFTW_ESTIMATE</code> plans.  (The cost values of measured and
+estimated plans are not comparable, being in different units.  Also,
+costs from different FFTW versions or the same version compiled
+differently may not be in the same units.  Plans created from wisdom
+have a cost of 0 since no timing measurement is performed for them.
+Finally, certain problems for which only one top-level algorithm was
+possible may have required no measurements of the cost of the whole
+plan, in which case <code>fftw_cost</code> will also return 0.)  The cost
+metric for a given plan is returned by:
+</p>
+<div class="example">
+<pre class="example">double fftw_cost(const fftw_plan plan);
+</pre></div>
+<span id="index-fftw_005fcost"></span>
+
+<p>The following two routines are provided purely for academic purposes
+(that is, for entertainment).
+</p>
+<div class="example">
+<pre class="example">void fftw_flops(const fftw_plan plan, 
+                double *add, double *mul, double *fma);
+</pre></div>
+<span id="index-fftw_005fflops"></span>
+
+<p>Given a <code>plan</code>, set <code>add</code>, <code>mul</code>, and <code>fma</code> to an
+exact count of the number of floating-point additions, multiplications,
+and fused multiply-add operations involved in the plan&rsquo;s execution.  The
+total number of floating-point operations (flops) is <code>add + mul +
+2*fma</code>, or <code>add + mul + fma</code> if the hardware supports fused
+multiply-add instructions (although the number of FMA operations is only
+approximate because of compiler voodoo).  (The number of operations
+should be an integer, but we use <code>double</code> to avoid overflowing
+<code>int</code> for large transforms; the arguments are of type <code>double</code>
+even for single and long-double precision versions of FFTW.)
+</p>
+<div class="example">
+<pre class="example">void fftw_fprint_plan(const fftw_plan plan, FILE *output_file);
+void fftw_print_plan(const fftw_plan plan);
+char *fftw_sprint_plan(const fftw_plan plan);
+</pre></div>
+<span id="index-fftw_005ffprint_005fplan"></span>
+<span id="index-fftw_005fprint_005fplan"></span>
+
+<p>This outputs a &ldquo;nerd-readable&rdquo; representation of the <code>plan</code> to
+the given file, to <code>stdout</code>, or two a newly allocated
+NUL-terminated string (which the caller is responsible for deallocating
+with <code>free</code>), respectively.
+</p>
+<hr>
+<div class="header">
+<p>
+Next: <a href="Basic-Interface.html" accesskey="n" rel="next">Basic Interface</a>, Previous: <a href="Data-Types-and-Files.html" accesskey="p" rel="prev">Data Types and Files</a>, Up: <a href="FFTW-Reference.html" accesskey="u" rel="up">FFTW Reference</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Transposed distributions (FFTW 3.3.10)</title>
+
+<meta name="description" content="Transposed distributions (FFTW 3.3.10)">
+<meta name="keywords" content="Transposed distributions (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="MPI-Data-Distribution.html" rel="up" title="MPI Data Distribution">
+<link href="One_002ddimensional-distributions.html" rel="next" title="One-dimensional distributions">
+<link href="Load-balancing.html" rel="prev" title="Load balancing">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Transposed-distributions"></span><div class="header">
+<p>
+Next: <a href="One_002ddimensional-distributions.html" accesskey="n" rel="next">One-dimensional distributions</a>, Previous: <a href="Load-balancing.html" accesskey="p" rel="prev">Load balancing</a>, Up: <a href="MPI-Data-Distribution.html" accesskey="u" rel="up">MPI Data Distribution</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Transposed-distributions-1"></span><h4 class="subsection">6.4.3 Transposed distributions</h4>
+
+<p>Internally, FFTW&rsquo;s MPI transform algorithms work by first computing
+transforms of the data local to each process, then by globally
+<em>transposing</em> the data in some fashion to redistribute the data
+among the processes, transforming the new data local to each process,
+and transposing back.  For example, a two-dimensional <code>n0</code> by
+<code>n1</code> array, distributed across the <code>n0</code> dimension, is
+transformd by: (i) transforming the <code>n1</code> dimension, which are
+local to each process; (ii) transposing to an <code>n1</code> by <code>n0</code>
+array, distributed across the <code>n1</code> dimension; (iii) transforming
+the <code>n0</code> dimension, which is now local to each process; (iv)
+transposing back.
+<span id="index-transpose"></span>
+</p>
+
+<p>However, in many applications it is acceptable to compute a
+multidimensional DFT whose results are produced in transposed order
+(e.g., <code>n1</code> by <code>n0</code> in two dimensions).  This provides a
+significant performance advantage, because it means that the final
+transposition step can be omitted.  FFTW supports this optimization,
+which you specify by passing the flag <code>FFTW_MPI_TRANSPOSED_OUT</code>
+to the planner routines.  To compute the inverse transform of
+transposed output, you specify <code>FFTW_MPI_TRANSPOSED_IN</code> to tell
+it that the input is transposed.  In this section, we explain how to
+interpret the output format of such a transform.
+<span id="index-FFTW_005fMPI_005fTRANSPOSED_005fOUT"></span>
+<span id="index-FFTW_005fMPI_005fTRANSPOSED_005fIN"></span>
+</p>
+
+<p>Suppose you have are transforming multi-dimensional data with (at
+least two) dimensions n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;n<sub>d-1</sub>
+.  As always, it is distributed along
+the first dimension n<sub>0</sub>
+.  Now, if we compute its DFT with the
+<code>FFTW_MPI_TRANSPOSED_OUT</code> flag, the resulting output data are stored
+with the first <em>two</em> dimensions transposed: n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&hellip;&times;&nbsp;n<sub>d-1</sub>
+,
+distributed along the n<sub>1</sub>
+ dimension.  Conversely, if we take the
+n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&hellip;&times;&nbsp;n<sub>d-1</sub>
+ data and transform it with the
+<code>FFTW_MPI_TRANSPOSED_IN</code> flag, then the format goes back to the
+original n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;n<sub>d-1</sub>
+ array.
+</p>
+<p>There are two ways to find the portion of the transposed array that
+resides on the current process.  First, you can simply call the
+appropriate &lsquo;<samp>local_size</samp>&rsquo; function, passing n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&hellip;&times;&nbsp;n<sub>d-1</sub>
+ (the
+transposed dimensions).  This would mean calling the &lsquo;<samp>local_size</samp>&rsquo;
+function twice, once for the transposed and once for the
+non-transposed dimensions.  Alternatively, you can call one of the
+&lsquo;<samp>local_size_transposed</samp>&rsquo; functions, which returns both the
+non-transposed and transposed data distribution from a single call.
+For example, for a 3d transform with transposed output (or input), you
+might call:
+</p>
+<div class="example">
+<pre class="example">ptrdiff_t fftw_mpi_local_size_3d_transposed(
+                ptrdiff_t n0, ptrdiff_t n1, ptrdiff_t n2, MPI_Comm comm,
+                ptrdiff_t *local_n0, ptrdiff_t *local_0_start,
+                ptrdiff_t *local_n1, ptrdiff_t *local_1_start);
+</pre></div>
+<span id="index-fftw_005fmpi_005flocal_005fsize_005f3d_005ftransposed"></span>
+
+<p>Here, <code>local_n0</code> and <code>local_0_start</code> give the size and
+starting index of the <code>n0</code> dimension for the
+<em>non</em>-transposed data, as in the previous sections.  For
+<em>transposed</em> data (e.g. the output for
+<code>FFTW_MPI_TRANSPOSED_OUT</code>), <code>local_n1</code> and
+<code>local_1_start</code> give the size and starting index of the <code>n1</code>
+dimension, which is the first dimension of the transposed data
+(<code>n1</code> by <code>n0</code> by <code>n2</code>).
+</p>
+<p>(Note that <code>FFTW_MPI_TRANSPOSED_IN</code> is completely equivalent to
+performing <code>FFTW_MPI_TRANSPOSED_OUT</code> and passing the first two
+dimensions to the planner in reverse order, or vice versa.  If you
+pass <em>both</em> the <code>FFTW_MPI_TRANSPOSED_IN</code> and
+<code>FFTW_MPI_TRANSPOSED_OUT</code> flags, it is equivalent to swapping the
+first two dimensions passed to the planner and passing <em>neither</em>
+flag.)
+</p>
+<hr>
+<div class="header">
+<p>
+Next: <a href="One_002ddimensional-distributions.html" accesskey="n" rel="next">One-dimensional distributions</a>, Previous: <a href="Load-balancing.html" accesskey="p" rel="prev">Load balancing</a>, Up: <a href="MPI-Data-Distribution.html" accesskey="u" rel="up">MPI Data Distribution</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

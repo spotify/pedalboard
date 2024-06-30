@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Real-to-Real Transform Kinds (FFTW 3.3.10)</title>
+
+<meta name="description" content="Real-to-Real Transform Kinds (FFTW 3.3.10)">
+<meta name="keywords" content="Real-to-Real Transform Kinds (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Basic-Interface.html" rel="up" title="Basic Interface">
+<link href="Advanced-Interface.html" rel="next" title="Advanced Interface">
+<link href="Real_002dto_002dReal-Transforms.html" rel="prev" title="Real-to-Real Transforms">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Real_002dto_002dReal-Transform-Kinds"></span><div class="header">
+<p>
+Previous: <a href="Real_002dto_002dReal-Transforms.html" accesskey="p" rel="prev">Real-to-Real Transforms</a>, Up: <a href="Basic-Interface.html" accesskey="u" rel="up">Basic Interface</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Real_002dto_002dReal-Transform-Kinds-1"></span><h4 class="subsection">4.3.6 Real-to-Real Transform Kinds</h4>
+<span id="index-kind-_0028r2r_0029-1"></span>
+
+<p>FFTW currently supports 11 different r2r transform kinds, specified by
+one of the constants below.  For the precise definitions of these
+transforms, see <a href="What-FFTW-Really-Computes.html">What FFTW Really Computes</a>.  For a more colloquial
+introduction to these transform kinds, see <a href="More-DFTs-of-Real-Data.html">More DFTs of Real Data</a>.
+</p>
+<p>For dimension of size <code>n</code>, there is a corresponding &ldquo;logical&rdquo;
+dimension <code>N</code> that determines the normalization (and the optimal
+factorization); the formula for <code>N</code> is given for each kind below.
+Also, with each transform kind is listed its corrsponding inverse
+transform.  FFTW computes unnormalized transforms: a transform followed
+by its inverse will result in the original data multiplied by <code>N</code>
+(or the product of the <code>N</code>&rsquo;s for each dimension, in
+multi-dimensions).
+<span id="index-normalization-7"></span>
+</p>
+<ul>
+<li> <span id="index-FFTW_005fR2HC-1"></span>
+<code>FFTW_R2HC</code> computes a real-input DFT with output in
+&ldquo;halfcomplex&rdquo; format, i.e. real and imaginary parts for a transform of
+size <code>n</code> stored as:
+<p align=center>
+r<sub>0</sub>, r<sub>1</sub>, r<sub>2</sub>, ..., r<sub>n/2</sub>, i<sub>(n+1)/2-1</sub>, ..., i<sub>2</sub>, i<sub>1</sub>
+</p>
+(Logical <code>N=n</code>, inverse is <code>FFTW_HC2R</code>.)
+
+</li><li> <span id="index-FFTW_005fHC2R-1"></span>
+<code>FFTW_HC2R</code> computes the reverse of <code>FFTW_R2HC</code>, above.
+(Logical <code>N=n</code>, inverse is <code>FFTW_R2HC</code>.)
+
+</li><li> <span id="index-FFTW_005fDHT-1"></span>
+<code>FFTW_DHT</code> computes a discrete Hartley transform.
+(Logical <code>N=n</code>, inverse is <code>FFTW_DHT</code>.)
+<span id="index-discrete-Hartley-transform-1"></span>
+
+</li><li> <span id="index-FFTW_005fREDFT00-2"></span>
+<code>FFTW_REDFT00</code> computes an REDFT00 transform, i.e. a DCT-I.
+(Logical <code>N=2*(n-1)</code>, inverse is <code>FFTW_REDFT00</code>.)
+<span id="index-discrete-cosine-transform-1"></span>
+<span id="index-DCT-1"></span>
+
+</li><li> <span id="index-FFTW_005fREDFT10-1"></span>
+<code>FFTW_REDFT10</code> computes an REDFT10 transform, i.e. a DCT-II (sometimes called &ldquo;the&rdquo; DCT).
+(Logical <code>N=2*n</code>, inverse is <code>FFTW_REDFT01</code>.)
+
+</li><li> <span id="index-FFTW_005fREDFT01-1"></span>
+<code>FFTW_REDFT01</code> computes an REDFT01 transform, i.e. a DCT-III (sometimes called &ldquo;the&rdquo; IDCT, being the inverse of DCT-II).
+(Logical <code>N=2*n</code>, inverse is <code>FFTW_REDFT=10</code>.)
+<span id="index-IDCT-2"></span>
+
+</li><li> <span id="index-FFTW_005fREDFT11-1"></span>
+<code>FFTW_REDFT11</code> computes an REDFT11 transform, i.e. a DCT-IV.
+(Logical <code>N=2*n</code>, inverse is <code>FFTW_REDFT11</code>.)
+
+</li><li> <span id="index-FFTW_005fRODFT00-1"></span>
+<code>FFTW_RODFT00</code> computes an RODFT00 transform, i.e. a DST-I.
+(Logical <code>N=2*(n+1)</code>, inverse is <code>FFTW_RODFT00</code>.)
+<span id="index-discrete-sine-transform-1"></span>
+<span id="index-DST-1"></span>
+
+</li><li> <span id="index-FFTW_005fRODFT10-1"></span>
+<code>FFTW_RODFT10</code> computes an RODFT10 transform, i.e. a DST-II.
+(Logical <code>N=2*n</code>, inverse is <code>FFTW_RODFT01</code>.)
+
+</li><li> <span id="index-FFTW_005fRODFT01-1"></span>
+<code>FFTW_RODFT01</code> computes an RODFT01 transform, i.e. a DST-III.
+(Logical <code>N=2*n</code>, inverse is <code>FFTW_RODFT=10</code>.)
+
+</li><li> <span id="index-FFTW_005fRODFT11-1"></span>
+<code>FFTW_RODFT11</code> computes an RODFT11 transform, i.e. a DST-IV.
+(Logical <code>N=2*n</code>, inverse is <code>FFTW_RODFT11</code>.)
+
+</li></ul>
+
+<hr>
+<div class="header">
+<p>
+Previous: <a href="Real_002dto_002dReal-Transforms.html" accesskey="p" rel="prev">Real-to-Real Transforms</a>, Up: <a href="Basic-Interface.html" accesskey="u" rel="up">Basic Interface</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

@@ -105,6 +105,44 @@ ALL_CPPFLAGS.extend(
         "-DNOMINMAX",
     ]
 )
+
+if platform.system() != "Darwin":
+    # Use FFTW3 for FFTs on all other platforms, which should speed up Rubberband by ~25%:
+    ALL_CPPFLAGS.extend(["-DHAVE_FFTW3=1", "-DLACK_SINCOS=1", "-DFFTW_DOUBLE_ONLY=1"])
+    ALL_INCLUDES += ["vendors/fftw3/api/", "vendors/fftw3/"]
+    fftw_paths = list(Path("vendors/fftw3/").glob("**/*.c"))
+    fftw_paths = [path for path in fftw_paths if "altivec" not in str(path)]
+    fftw_paths = [path for path in fftw_paths if "vsx" not in str(path)]
+    fftw_paths = [path for path in fftw_paths if "mpi" not in str(path)]
+    fftw_paths = [path for path in fftw_paths if "threads" not in str(path)]
+    fftw_paths = [path for path in fftw_paths if "tests" not in str(path)]
+    fftw_paths = [path for path in fftw_paths if "tools" not in str(path)]
+    fftw_paths = [path for path in fftw_paths if "support" not in str(path)]
+    fftw_paths = [path for path in fftw_paths if "common/" not in str(path)]
+    fftw_paths = [path for path in fftw_paths if "libbench" not in str(path)]
+    if "arm" in platform.processor() or "aarch64" in platform.processor():
+        fftw_paths = [
+            path
+            for path in fftw_paths
+            if all(x not in str(path) for x in set(["avx", "sse", "kcvi"]))
+        ]
+    else:
+        fftw_paths = [path for path in fftw_paths if all(x not in str(path) for x in set(["neon"]))]
+    fftw_paths.append(Path("vendors/fftw3/kernel/assert.c"))
+    ALL_SOURCE_PATHS += fftw_paths
+    ALL_CFLAGS.extend(
+        [
+            "-DHAVE_UINTPTR_T",
+            '-DPACKAGE="FFTW"',
+            '-DVERSION="0"',
+            '-DPACKAGE_VERSION="00000"',
+            '-DFFTW_CC="clang"',
+            "-DALIGNMENT=8",
+            "-DALIGNMENTA=16",
+            "-includestring.h",
+            "-includestdint.h",
+        ]
+    )
 ALL_SOURCE_PATHS += list(Path("vendors/rubberband/single").glob("*.cpp"))
 
 ALL_SOURCE_PATHS += list(Path("vendors").glob("*.c"))

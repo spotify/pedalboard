@@ -1,0 +1,193 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>New-array Execute Functions (FFTW 3.3.10)</title>
+
+<meta name="description" content="New-array Execute Functions (FFTW 3.3.10)">
+<meta name="keywords" content="New-array Execute Functions (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="FFTW-Reference.html" rel="up" title="FFTW Reference">
+<link href="Wisdom.html" rel="next" title="Wisdom">
+<link href="64_002dbit-Guru-Interface.html" rel="prev" title="64-bit Guru Interface">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="New_002darray-Execute-Functions"></span><div class="header">
+<p>
+Next: <a href="Wisdom.html" accesskey="n" rel="next">Wisdom</a>, Previous: <a href="Guru-Interface.html" accesskey="p" rel="prev">Guru Interface</a>, Up: <a href="FFTW-Reference.html" accesskey="u" rel="up">FFTW Reference</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="New_002darray-Execute-Functions-1"></span><h3 class="section">4.6 New-array Execute Functions</h3>
+<span id="index-execute-2"></span>
+<span id="index-new_002darray-execution"></span>
+
+<p>Normally, one executes a plan for the arrays with which the plan was
+created, by calling <code>fftw_execute(plan)</code> as described in <a href="Using-Plans.html">Using Plans</a>.
+<span id="index-fftw_005fexecute-2"></span>
+However, it is possible for sophisticated users to apply a given plan
+to a <em>different</em> array using the &ldquo;new-array execute&rdquo; functions
+detailed below, provided that the following conditions are met:
+</p>
+<ul>
+<li> The array size, strides, etcetera are the same (since those are set by
+the plan).
+
+</li><li> The input and output arrays are the same (in-place) or different
+(out-of-place) if the plan was originally created to be in-place or
+out-of-place, respectively.
+
+</li><li> For split arrays, the separations between the real and imaginary
+parts, <code>ii-ri</code> and <code>io-ro</code>, are the same as they were for
+the input and output arrays when the plan was created.  (This
+condition is automatically satisfied for interleaved arrays.)
+
+</li><li> The <em>alignment</em> of the new input/output arrays is the same as that
+of the input/output arrays when the plan was created, unless the plan
+was created with the <code>FFTW_UNALIGNED</code> flag.
+<span id="index-FFTW_005fUNALIGNED-1"></span>
+Here, the alignment is a platform-dependent quantity (for example, it is
+the address modulo 16 if SSE SIMD instructions are used, but the address
+modulo 4 for non-SIMD single-precision FFTW on the same machine).  In
+general, only arrays allocated with <code>fftw_malloc</code> are guaranteed to
+be equally aligned (see <a href="SIMD-alignment-and-fftw_005fmalloc.html">SIMD alignment and fftw_malloc</a>).
+
+</li></ul>
+
+<span id="index-alignment-2"></span>
+<p>The alignment issue is especially critical, because if you don&rsquo;t use
+<code>fftw_malloc</code> then you may have little control over the alignment
+of arrays in memory.  For example, neither the C++ <code>new</code> function
+nor the Fortran <code>allocate</code> statement provide strong enough
+guarantees about data alignment.  If you don&rsquo;t use <code>fftw_malloc</code>,
+therefore, you probably have to use <code>FFTW_UNALIGNED</code> (which
+disables most SIMD support).  If possible, it is probably better for
+you to simply create multiple plans (creating a new plan is quick once
+one exists for a given size), or better yet re-use the same array for
+your transforms.
+</p>
+<span id="index-fftw_005falignment_005fof-1"></span>
+<p>For rare circumstances in which you cannot control the alignment of
+allocated memory, but wish to determine where a given array is
+aligned like the original array for which a plan was created, you can
+use the <code>fftw_alignment_of</code> function:
+</p><div class="example">
+<pre class="example">int fftw_alignment_of(double *p);
+</pre></div>
+<p>Two arrays have equivalent alignment (for the purposes of applying a
+plan) if and only if <code>fftw_alignment_of</code> returns the same value
+for the corresponding pointers to their data (typecast to <code>double*</code> 
+if necessary).
+</p>
+<p>If you are tempted to use the new-array execute interface because you
+want to transform a known bunch of arrays of the same size, you should
+probably go use the advanced interface instead (see <a href="Advanced-Interface.html">Advanced Interface</a>)).
+</p>
+<p>The new-array execute functions are:
+</p>
+<div class="example">
+<pre class="example">void fftw_execute_dft(
+     const fftw_plan p, 
+     fftw_complex *in, fftw_complex *out);
+
+void fftw_execute_split_dft(
+     const fftw_plan p, 
+     double *ri, double *ii, double *ro, double *io);
+
+void fftw_execute_dft_r2c(
+     const fftw_plan p,
+     double *in, fftw_complex *out);
+
+void fftw_execute_split_dft_r2c(
+     const fftw_plan p,
+     double *in, double *ro, double *io);
+
+void fftw_execute_dft_c2r(
+     const fftw_plan p,
+     fftw_complex *in, double *out);
+
+void fftw_execute_split_dft_c2r(
+     const fftw_plan p,
+     double *ri, double *ii, double *out);
+
+void fftw_execute_r2r(
+     const fftw_plan p, 
+     double *in, double *out);
+</pre></div>
+<span id="index-fftw_005fexecute_005fdft"></span>
+<span id="index-fftw_005fexecute_005fsplit_005fdft"></span>
+<span id="index-fftw_005fexecute_005fdft_005fr2c"></span>
+<span id="index-fftw_005fexecute_005fsplit_005fdft_005fr2c"></span>
+<span id="index-fftw_005fexecute_005fdft_005fc2r"></span>
+<span id="index-fftw_005fexecute_005fsplit_005fdft_005fc2r"></span>
+<span id="index-fftw_005fexecute_005fr2r"></span>
+
+<p>These execute the <code>plan</code> to compute the corresponding transform on
+the input/output arrays specified by the subsequent arguments.  The
+input/output array arguments have the same meanings as the ones passed
+to the guru planner routines in the preceding sections.  The <code>plan</code>
+is not modified, and these routines can be called as many times as
+desired, or intermixed with calls to the ordinary <code>fftw_execute</code>.
+</p>
+<p>The <code>plan</code> <em>must</em> have been created for the transform type
+corresponding to the execute function, e.g. it must be a complex-DFT
+plan for <code>fftw_execute_dft</code>.  Any of the planner routines for that
+transform type, from the basic to the guru interface, could have been
+used to create the plan, however.
+</p>
+<hr>
+<div class="header">
+<p>
+Next: <a href="Wisdom.html" accesskey="n" rel="next">Wisdom</a>, Previous: <a href="Guru-Interface.html" accesskey="p" rel="prev">Guru Interface</a>, Up: <a href="FFTW-Reference.html" accesskey="u" rel="up">FFTW Reference</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

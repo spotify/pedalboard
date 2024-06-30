@@ -1,0 +1,148 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head><title>
+FFTW FAQ - Section 5
+</title>
+<link rev="made" href="mailto:fftw@fftw.org">
+<link rel="Contents" href="index.html">
+<link rel="Start" href="index.html">
+<link rel="Previous" href="section4.html"><link rel="Bookmark" title="FFTW FAQ" href="index.html">
+</head><body text="#000000" bgcolor="#FFFFFF"><h1>
+FFTW FAQ - Section 5 <br>
+Known bugs
+</h1>
+
+<ul>
+<li><a href="#rfftwndbug" rel=subdocument>Q5.1. FFTW 1.1 crashes in rfftwnd on Linux.</a>
+<li><a href="#fftwmpibug" rel=subdocument>Q5.2. The MPI transforms in FFTW 1.2 give incorrect results/leak
+memory.</a>
+<li><a href="#testsingbug" rel=subdocument>Q5.3. The test programs in FFTW 1.2.1 fail when I change FFTW to use single
+precision.</a>
+<li><a href="#teststoobig" rel=subdocument>Q5.4. The test program in FFTW 1.2.1 fails for n &gt;
+46340.</a>
+<li><a href="#linuxthreads" rel=subdocument>Q5.5. The threaded code fails on Linux Redhat 5.0</a>
+<li><a href="#bigrfftwnd" rel=subdocument>Q5.6. FFTW 2.0's rfftwnd fails for rank &gt; 1 transforms with a final
+dimension &gt;= 65536.</a>
+<li><a href="#primebug" rel=subdocument>Q5.7. FFTW 2.0's complex transforms give the wrong results with prime
+factors 17 to 97.</a>
+<li><a href="#mpichbug" rel=subdocument>Q5.8. FFTW 2.1.1's MPI test programs crash with
+MPICH.</a>
+<li><a href="#aixthreadbug" rel=subdocument>Q5.9. FFTW 2.1.2's multi-threaded transforms don't work on
+AIX.</a>
+<li><a href="#bigprimebug" rel=subdocument>Q5.10. FFTW 2.1.2's complex transforms give incorrect results for large prime
+sizes.</a>
+<li><a href="#solaristhreadbug" rel=subdocument>Q5.11. FFTW 2.1.3's multi-threaded transforms don't give any speedup on
+Solaris.</a>
+<li><a href="#aixflags" rel=subdocument>Q5.12. FFTW 2.1.3 crashes on AIX.</a>
+</ul><hr>
+
+<h2><A name="rfftwndbug">
+Question 5.1.  FFTW 1.1 crashes in rfftwnd on
+Linux.
+</A></h2>
+
+This bug was fixed in FFTW 1.2.  There was a bug in
+<code>rfftwnd</code> causing an incorrect amount of memory to be allocated.  The bug showed
+up in Linux with libc-5.3.12 (and nowhere else that we know of). 
+
+<h2><A name="fftwmpibug">
+Question 5.2.  The MPI transforms in FFTW 1.2 give incorrect
+results/leak memory.
+</A></h2>
+
+These bugs were corrected in FFTW 1.2.1.  The MPI transforms (really,
+just the transpose routines) in FFTW 1.2 had bugs that could cause
+errors in some situations.  
+<h2><A name="testsingbug">
+Question 5.3.  The test programs in FFTW 1.2.1 fail when I change FFTW
+to use single precision.
+</A></h2>
+
+This bug was fixed in FFTW 1.3.  (Older versions of FFTW did
+work in single precision, but the test programs didn't--the error
+tolerances in the tests were set for double precision.)
+
+<h2><A name="teststoobig">
+Question 5.4.  The test program in FFTW 1.2.1 fails for n &gt;
+46340.
+</A></h2>
+
+This bug was fixed in FFTW 1.3.  FFTW 1.2.1 produced the right answer,
+but the test program was wrong.  For large n, n*n in the naive
+transform that we used for comparison overflows 32 bit integer
+precision, breaking the test.  
+<h2><A name="linuxthreads">
+Question 5.5.  The threaded code fails on Linux Redhat
+5.0
+</A></h2>
+
+We had problems with glibc-2.0.5.  The code should work with
+glibc-2.0.7.  
+<h2><A name="bigrfftwnd">
+Question 5.6.  FFTW 2.0's rfftwnd fails for rank &gt; 1 transforms
+with a final dimension &gt;= 65536.
+</A></h2>
+
+This bug was fixed in FFTW 2.0.1.  (There was a 32-bit integer
+overflow due to a poorly-parenthesized expression.) 
+<h2><A name="primebug">
+Question 5.7.  FFTW 2.0's complex transforms give the wrong results
+with prime factors 17 to 97.
+</A></h2>
+
+There was a bug in the complex transforms that could cause incorrect
+results under (hopefully rare) circumstances for lengths with
+intermediate-size prime factors (17-97).  This bug was fixed in FFTW
+2.1.1.  
+<h2><A name="mpichbug">
+Question 5.8.  FFTW 2.1.1's MPI test programs crash with
+MPICH.
+</A></h2>
+
+This bug was fixed in FFTW 2.1.2.  The 2.1/2.1.1 MPI test programs
+crashed when using the MPICH implementation of MPI with the
+<code>ch_p4</code> device (TCP/IP); the transforms themselves worked fine. 
+
+<h2><A name="aixthreadbug">
+Question 5.9.  FFTW 2.1.2's multi-threaded transforms don't work on
+AIX.
+</A></h2>
+
+This bug was fixed in FFTW 2.1.3.  The multi-threaded transforms in
+previous versions didn't work with AIX's
+<code>pthreads</code> implementation, which idiosyncratically creates threads in detached
+(non-joinable) mode by default.  
+<h2><A name="bigprimebug">
+Question 5.10.  FFTW 2.1.2's complex transforms give incorrect results
+for large prime sizes.
+</A></h2>
+
+This bug was fixed in FFTW 2.1.3.  FFTW's complex-transform algorithm
+for prime sizes (in versions 2.0 to 2.1.2) had an integer overflow
+problem that caused incorrect results for many primes greater than
+32768 (on 32-bit machines).  (Sizes without large prime factors are
+not affected.) 
+<h2><A name="solaristhreadbug">
+Question 5.11.  FFTW 2.1.3's multi-threaded transforms don't give any
+speedup on Solaris.
+</A></h2>
+
+This bug was fixed in FFTW 2.1.4.  (By default, Solaris creates
+threads that do not parallelize over multiple processors, so one has
+to request the proper behavior specifically.)
+
+<h2><A name="aixflags">
+Question 5.12.  FFTW 2.1.3 crashes on AIX.
+</A></h2>
+
+The FFTW 2.1.3 <code>configure</code> script picked incorrect compiler flags for the <code>xlc</code> compiler on newer IBM processors.  This
+is fixed in FFTW 2.1.4.  <hr>
+Back: <a href="section4.html" rev=precedes>Internals of FFTW</a>.<br>
+<a href="index.html" rev=subdocument>Return to contents</a>.<p>
+<address>
+<A href="http://www.fftw.org">Matteo Frigo and Steven G. Johnson</A> / <A href="mailto:fftw@fftw.org">fftw@fftw.org</A>
+- 14 September 2021
+</address><br>
+Extracted from FFTW Frequently Asked Questions with Answers,
+Copyright &copy; 2021 Matteo Frigo and Massachusetts Institute of Technology.
+</body></html>

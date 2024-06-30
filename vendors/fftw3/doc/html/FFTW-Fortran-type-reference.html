@@ -1,0 +1,173 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>FFTW Fortran type reference (FFTW 3.3.10)</title>
+
+<meta name="description" content="FFTW Fortran type reference (FFTW 3.3.10)">
+<meta name="keywords" content="FFTW Fortran type reference (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Calling-FFTW-from-Modern-Fortran.html" rel="up" title="Calling FFTW from Modern Fortran">
+<link href="Plan-execution-in-Fortran.html" rel="next" title="Plan execution in Fortran">
+<link href="Reversing-array-dimensions.html" rel="prev" title="Reversing array dimensions">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="FFTW-Fortran-type-reference"></span><div class="header">
+<p>
+Next: <a href="Plan-execution-in-Fortran.html" accesskey="n" rel="next">Plan execution in Fortran</a>, Previous: <a href="Reversing-array-dimensions.html" accesskey="p" rel="prev">Reversing array dimensions</a>, Up: <a href="Calling-FFTW-from-Modern-Fortran.html" accesskey="u" rel="up">Calling FFTW from Modern Fortran</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="FFTW-Fortran-type-reference-1"></span><h3 class="section">7.3 FFTW Fortran type reference</h3>
+
+<p>The following are the most important type correspondences between the
+C interface and Fortran:
+</p>
+<ul>
+<li> <span id="index-fftw_005fplan-2"></span>
+Plans (<code>fftw_plan</code> and variants) are <code>type(C_PTR)</code> (i.e. an
+opaque pointer).
+
+</li><li> <span id="index-fftw_005fcomplex-3"></span>
+<span id="index-precision-8"></span>
+<span id="index-C_005fDOUBLE-1"></span>
+<span id="index-C_005fFLOAT"></span>
+<span id="index-C_005fLONG_005fDOUBLE"></span>
+<span id="index-C_005fDOUBLE_005fCOMPLEX-1"></span>
+<span id="index-C_005fFLOAT_005fCOMPLEX"></span>
+<span id="index-C_005fLONG_005fDOUBLE_005fCOMPLEX"></span>
+The C floating-point types <code>double</code>, <code>float</code>, and <code>long
+double</code> correspond to <code>real(C_DOUBLE)</code>, <code>real(C_FLOAT)</code>, and
+<code>real(C_LONG_DOUBLE)</code>, respectively.  The C complex types
+<code>fftw_complex</code>, <code>fftwf_complex</code>, and <code>fftwl_complex</code>
+correspond in Fortran to <code>complex(C_DOUBLE_COMPLEX)</code>,
+<code>complex(C_FLOAT_COMPLEX)</code>, and
+<code>complex(C_LONG_DOUBLE_COMPLEX)</code>, respectively.  
+Just as in C
+(see <a href="Precision.html">Precision</a>), the FFTW subroutines and types are prefixed with
+&lsquo;<samp>fftw_</samp>&rsquo;, <code>fftwf_</code>, and <code>fftwl_</code> for the different precisions, and link to different libraries (<code>-lfftw3</code>, <code>-lfftw3f</code>, and <code>-lfftw3l</code> on Unix), but use the <em>same</em> include file <code>fftw3.f03</code> and the <em>same</em> constants (all of which begin with &lsquo;<samp>FFTW_</samp>&rsquo;).  The exception is <code>long double</code> precision, for which you should <em>also</em> include <code>fftw3l.f03</code> (see <a href="Extended-and-quadruple-precision-in-Fortran.html">Extended and quadruple precision in Fortran</a>).
+
+</li><li> <span id="index-ptrdiff_005ft-2"></span>
+<span id="index-C_005fINT-1"></span>
+<span id="index-C_005fINTPTR_005fT"></span>
+<span id="index-C_005fSIZE_005fT"></span>
+<span id="index-fftw_005fmalloc-7"></span>
+The C integer types <code>int</code> and <code>unsigned</code> (used for planner
+flags) become <code>integer(C_INT)</code>.  The C integer type <code>ptrdiff_t</code> (e.g. in the <a href="64_002dbit-Guru-Interface.html">64-bit Guru Interface</a>) becomes <code>integer(C_INTPTR_T)</code>, and <code>size_t</code> (in <code>fftw_malloc</code> etc.) becomes <code>integer(C_SIZE_T)</code>.
+
+</li><li> <span id="index-fftw_005fr2r_005fkind-2"></span>
+<span id="index-C_005fFFTW_005fR2R_005fKIND"></span>
+The <code>fftw_r2r_kind</code> type (see <a href="Real_002dto_002dReal-Transform-Kinds.html">Real-to-Real Transform Kinds</a>)
+becomes <code>integer(C_FFTW_R2R_KIND)</code>.  The various constant values
+of the C enumerated type (<code>FFTW_R2HC</code> etc.) become simply integer
+constants of the same names in Fortran.
+
+</li><li> <span id="index-FFTW_005fDESTROY_005fINPUT-2"></span>
+<span id="index-in_002dplace-10"></span>
+<span id="index-fftw_005fflops-2"></span>
+Numeric array pointer arguments (e.g. <code>double *</code>)
+become <code>dimension(*), intent(out)</code> arrays of the same type, or
+<code>dimension(*), intent(in)</code> if they are pointers to constant data
+(e.g. <code>const int *</code>).  There are a few exceptions where numeric
+pointers refer to scalar outputs (e.g. for <code>fftw_flops</code>), in which
+case they are <code>intent(out)</code> scalar arguments in Fortran too.
+For the new-array execute functions (see <a href="New_002darray-Execute-Functions.html">New-array Execute Functions</a>),
+the input arrays are declared <code>dimension(*), intent(inout)</code>, since
+they can be modified in the case of in-place or <code>FFTW_DESTROY_INPUT</code>
+transforms.
+
+</li><li> <span id="index-fftw_005falloc_005freal-4"></span>
+<span id="index-c_005ff_005fpointer-1"></span>
+Pointer <em>return</em> values (e.g <code>double *</code>) become
+<code>type(C_PTR)</code>.  (If they are pointers to arrays, as for
+<code>fftw_alloc_real</code>, you can convert them back to Fortran array
+pointers with the standard intrinsic function <code>c_f_pointer</code>.)
+
+</li><li> <span id="index-guru-interface-3"></span>
+<span id="index-fftw_005fiodim-1"></span>
+<span id="index-fftw_005fiodim64-1"></span>
+<span id="index-64_002dbit-architecture-2"></span>
+The <code>fftw_iodim</code> type in the guru interface (see <a href="Guru-vector-and-transform-sizes.html">Guru vector and transform sizes</a>) becomes <code>type(fftw_iodim)</code> in Fortran, a
+derived data type (the Fortran analogue of C&rsquo;s <code>struct</code>) with
+three <code>integer(C_INT)</code> components: <code>n</code>, <code>is</code>, and
+<code>os</code>, with the same meanings as in C.  The <code>fftw_iodim64</code> type in the 64-bit guru interface (see <a href="64_002dbit-Guru-Interface.html">64-bit Guru Interface</a>) is the same, except that its components are of type <code>integer(C_INTPTR_T)</code>.
+
+</li><li> <span id="index-C_005fFUNPTR"></span>
+Using the wisdom import/export functions from Fortran is a bit tricky,
+and is discussed in <a href="Accessing-the-wisdom-API-from-Fortran.html">Accessing the wisdom API from Fortran</a>.  In
+brief, the <code>FILE *</code> arguments map to <code>type(C_PTR)</code>, <code>const char *</code> to <code>character(C_CHAR), dimension(*), intent(in)</code> (null-terminated!), and the generic read-char/write-char functions map to <code>type(C_FUNPTR)</code>.
+
+</li></ul>
+
+<span id="index-portability-5"></span>
+<p>You may be wondering if you need to search-and-replace
+<code>real(kind(0.0d0))</code> (or whatever your favorite Fortran spelling
+of &ldquo;double precision&rdquo; is) with <code>real(C_DOUBLE)</code> everywhere in
+your program, and similarly for <code>complex</code> and <code>integer</code>
+types.  The answer is no; you can still use your existing types.  As
+long as these types match their C counterparts, things should work
+without a hitch.  The worst that can happen, e.g. in the (unlikely)
+event of a system where <code>real(kind(0.0d0))</code> is different from
+<code>real(C_DOUBLE)</code>, is that the compiler will give you a
+type-mismatch error.  That is, if you don&rsquo;t use the
+<code>iso_c_binding</code> kinds you need to accept at least the theoretical
+possibility of having to change your code in response to compiler
+errors on some future machine, but you don&rsquo;t need to worry about
+silently compiling incorrect code that yields runtime errors.
+</p>
+<hr>
+<div class="header">
+<p>
+Next: <a href="Plan-execution-in-Fortran.html" accesskey="n" rel="next">Plan execution in Fortran</a>, Previous: <a href="Reversing-array-dimensions.html" accesskey="p" rel="prev">Reversing array dimensions</a>, Up: <a href="Calling-FFTW-from-Modern-Fortran.html" accesskey="u" rel="up">Calling FFTW from Modern Fortran</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

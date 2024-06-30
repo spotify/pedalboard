@@ -1,0 +1,281 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Upgrading from FFTW version 2 (FFTW 3.3.10)</title>
+
+<meta name="description" content="Upgrading from FFTW version 2 (FFTW 3.3.10)">
+<meta name="keywords" content="Upgrading from FFTW version 2 (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Installation-and-Customization.html" rel="next" title="Installation and Customization">
+<link href="Wisdom-of-Fortran_003f.html" rel="prev" title="Wisdom of Fortran?">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Upgrading-from-FFTW-version-2"></span><div class="header">
+<p>
+Next: <a href="Installation-and-Customization.html" accesskey="n" rel="next">Installation and Customization</a>, Previous: <a href="Calling-FFTW-from-Legacy-Fortran.html" accesskey="p" rel="prev">Calling FFTW from Legacy Fortran</a>, Up: <a href="index.html" accesskey="u" rel="up">Top</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Upgrading-from-FFTW-version-2-1"></span><h2 class="chapter">9 Upgrading from FFTW version 2</h2>
+
+<p>In this chapter, we outline the process for updating codes designed for
+the older FFTW 2 interface to work with FFTW 3.  The interface for FFTW
+3 is not backwards-compatible with the interface for FFTW 2 and earlier
+versions; codes written to use those versions will fail to link with
+FFTW 3.  Nor is it possible to write &ldquo;compatibility wrappers&rdquo; to
+bridge the gap (at least not efficiently), because FFTW 3 has different
+semantics from previous versions.  However, upgrading should be a
+straightforward process because the data formats are identical and the
+overall style of planning/execution is essentially the same.
+</p>
+<p>Unlike FFTW 2, there are no separate header files for real and complex
+transforms (or even for different precisions) in FFTW 3; all interfaces
+are defined in the <code>&lt;fftw3.h&gt;</code> header file.
+</p>
+<span id="Numeric-Types"></span><h3 class="heading">Numeric Types</h3>
+
+<p>The main difference in data types is that <code>fftw_complex</code> in FFTW 2
+was defined as a <code>struct</code> with macros <code>c_re</code> and <code>c_im</code>
+for accessing the real/imaginary parts.  (This is binary-compatible with
+FFTW 3 on any machine except perhaps for some older Crays in single
+precision.)  The equivalent macros for FFTW 3 are:
+</p>
+<div class="example">
+<pre class="example">#define c_re(c) ((c)[0])
+#define c_im(c) ((c)[1])
+</pre></div>
+
+<p>This does not work if you are using the C99 complex type, however,
+unless you insert a <code>double*</code> typecast into the above macros
+(see <a href="Complex-numbers.html">Complex numbers</a>).
+</p>
+<p>Also, FFTW 2 had an <code>fftw_real</code> typedef that was an alias for
+<code>double</code> (in double precision).  In FFTW 3 you should just use
+<code>double</code> (or whatever precision you are employing).
+</p>
+<span id="Plans"></span><h3 class="heading">Plans</h3>
+
+<p>The major difference between FFTW 2 and FFTW 3 is in the
+planning/execution division of labor.  In FFTW 2, plans were found for a
+given transform size and type, and then could be applied to <em>any</em>
+arrays and for <em>any</em> multiplicity/stride parameters.  In FFTW 3,
+you specify the particular arrays, stride parameters, etcetera when
+creating the plan, and the plan is then executed for <em>those</em> arrays
+(unless the guru interface is used) and <em>those</em> parameters
+<em>only</em>.  (FFTW 2 had &ldquo;specific planner&rdquo; routines that planned for
+a particular array and stride, but the plan could still be used for
+other arrays and strides.)  That is, much of the information that was
+formerly specified at execution time is now specified at planning time.
+</p>
+<p>Like FFTW 2&rsquo;s specific planner routines, the FFTW 3 planner overwrites
+the input/output arrays unless you use <code>FFTW_ESTIMATE</code>.
+</p>
+<p>FFTW 2 had separate data types <code>fftw_plan</code>, <code>fftwnd_plan</code>,
+<code>rfftw_plan</code>, and <code>rfftwnd_plan</code> for complex and real one- and
+multi-dimensional transforms, and each type had its own &lsquo;<samp>destroy</samp>&rsquo;
+function.  In FFTW 3, all plans are of type <code>fftw_plan</code> and all are
+destroyed by <code>fftw_destroy_plan(plan)</code>.
+</p>
+<p>Where you formerly used <code>fftw_create_plan</code> and <code>fftw_one</code> to
+plan and compute a single 1d transform, you would now use
+<code>fftw_plan_dft_1d</code> to plan the transform.  If you used the generic
+<code>fftw</code> function to execute the transform with multiplicity
+(<code>howmany</code>) and stride parameters, you would now use the advanced
+interface <code>fftw_plan_many_dft</code> to specify those parameters.  The
+plans are now executed with <code>fftw_execute(plan)</code>, which takes all
+of its parameters (including the input/output arrays) from the plan.
+</p>
+<p>In-place transforms no longer interpret their output argument as scratch
+space, nor is there an <code>FFTW_IN_PLACE</code> flag.  You simply pass the
+same pointer for both the input and output arguments.  (Previously, the
+output <code>ostride</code> and <code>odist</code> parameters were ignored for
+in-place transforms; now, if they are specified via the advanced
+interface, they are significant even in the in-place case, although they
+should normally equal the corresponding input parameters.)
+</p>
+<p>The <code>FFTW_ESTIMATE</code> and <code>FFTW_MEASURE</code> flags have the same
+meaning as before, although the planning time will differ.  You may also
+consider using <code>FFTW_PATIENT</code>, which is like <code>FFTW_MEASURE</code>
+except that it takes more time in order to consider a wider variety of
+algorithms.
+</p>
+<p>For multi-dimensional complex DFTs, instead of <code>fftwnd_create_plan</code>
+(or <code>fftw2d_create_plan</code> or <code>fftw3d_create_plan</code>), followed by
+<code>fftwnd_one</code>, you would use <code>fftw_plan_dft</code> (or
+<code>fftw_plan_dft_2d</code> or <code>fftw_plan_dft_3d</code>).  followed by
+<code>fftw_execute</code>.  If you used <code>fftwnd</code> to to specify strides
+etcetera, you would instead specify these via <code>fftw_plan_many_dft</code>.
+</p>
+<p>The analogues to <code>rfftw_create_plan</code> and <code>rfftw_one</code> with
+<code>FFTW_REAL_TO_COMPLEX</code> or <code>FFTW_COMPLEX_TO_REAL</code> directions
+are <code>fftw_plan_r2r_1d</code> with kind <code>FFTW_R2HC</code> or
+<code>FFTW_HC2R</code>, followed by <code>fftw_execute</code>.  The stride etcetera
+arguments of <code>rfftw</code> are now in <code>fftw_plan_many_r2r</code>.
+</p>
+<p>Instead of <code>rfftwnd_create_plan</code> (or <code>rfftw2d_create_plan</code> or
+<code>rfftw3d_create_plan</code>) followed by
+<code>rfftwnd_one_real_to_complex</code> or
+<code>rfftwnd_one_complex_to_real</code>, you now use <code>fftw_plan_dft_r2c</code>
+(or <code>fftw_plan_dft_r2c_2d</code> or <code>fftw_plan_dft_r2c_3d</code>) or
+<code>fftw_plan_dft_c2r</code> (or <code>fftw_plan_dft_c2r_2d</code> or
+<code>fftw_plan_dft_c2r_3d</code>), respectively, followed by
+<code>fftw_execute</code>.  As usual, the strides etcetera of
+<code>rfftwnd_real_to_complex</code> or <code>rfftwnd_complex_to_real</code> are no
+specified in the advanced planner routines,
+<code>fftw_plan_many_dft_r2c</code> or <code>fftw_plan_many_dft_c2r</code>.
+</p>
+<span id="Wisdom-2"></span><h3 class="heading">Wisdom</h3>
+
+<p>In FFTW 2, you had to supply the <code>FFTW_USE_WISDOM</code> flag in order to
+use wisdom; in FFTW 3, wisdom is always used.  (You could simulate the
+FFTW 2 wisdom-less behavior by calling <code>fftw_forget_wisdom</code> after
+every planner call.)
+</p>
+<p>The FFTW 3 wisdom import/export routines are almost the same as before
+(although the storage format is entirely different).  There is one
+significant difference, however.  In FFTW 2, the import routines would
+never read past the end of the wisdom, so you could store extra data
+beyond the wisdom in the same file, for example.  In FFTW 3, the
+file-import routine may read up to a few hundred bytes past the end of
+the wisdom, so you cannot store other data just beyond it.<a id="DOCF11" href="#FOOT11"><sup>11</sup></a>
+</p>
+<p>Wisdom has been enhanced by additional humility in FFTW 3: whereas FFTW
+2 would re-use wisdom for a given transform size regardless of the
+stride etc., in FFTW 3 wisdom is only used with the strides etc. for
+which it was created.  Unfortunately, this means FFTW 3 has to create
+new plans from scratch more often than FFTW 2 (in FFTW 2, planning
+e.g. one transform of size 1024 also created wisdom for all smaller
+powers of 2, but this no longer occurs).
+</p>
+<p>FFTW 3 also has the new routine <code>fftw_import_system_wisdom</code> to
+import wisdom from a standard system-wide location.
+</p>
+<span id="Memory-allocation"></span><h3 class="heading">Memory allocation</h3>
+
+<p>In FFTW 3, we recommend allocating your arrays with <code>fftw_malloc</code>
+and deallocating them with <code>fftw_free</code>; this is not required, but
+allows optimal performance when SIMD acceleration is used.  (Those two
+functions actually existed in FFTW 2, and worked the same way, but were
+not documented.)
+</p>
+<p>In FFTW 2, there were <code>fftw_malloc_hook</code> and <code>fftw_free_hook</code>
+functions that allowed the user to replace FFTW&rsquo;s memory-allocation
+routines (e.g. to implement different error-handling, since by default
+FFTW prints an error message and calls <code>exit</code> to abort the program
+if <code>malloc</code> returns <code>NULL</code>).  These hooks are not supported in
+FFTW 3; those few users who require this functionality can just
+directly modify the memory-allocation routines in FFTW (they are defined
+in <code>kernel/alloc.c</code>).
+</p>
+<span id="Fortran-interface"></span><h3 class="heading">Fortran interface</h3>
+
+<p>In FFTW 2, the subroutine names were obtained by replacing &lsquo;<samp>fftw_</samp>&rsquo;
+with &lsquo;<samp>fftw_f77</samp>&rsquo;; in FFTW 3, you replace &lsquo;<samp>fftw_</samp>&rsquo; with
+&lsquo;<samp>dfftw_</samp>&rsquo; (or &lsquo;<samp>sfftw_</samp>&rsquo; or &lsquo;<samp>lfftw_</samp>&rsquo;, depending upon the
+precision).
+</p>
+<p>In FFTW 3, we have begun recommending that you always declare the type
+used to store plans as <code>integer*8</code>.  (Too many people didn&rsquo;t notice
+our instruction to switch from <code>integer</code> to <code>integer*8</code> for
+64-bit machines.)
+</p>
+<p>In FFTW 3, we provide a <code>fftw3.f</code> &ldquo;header file&rdquo; to include in
+your code (and which is officially installed on Unix systems).  (In FFTW
+2, we supplied a <code>fftw_f77.i</code> file, but it was not installed.)
+</p>
+<p>Otherwise, the C-Fortran interface relationship is much the same as it
+was before (e.g. return values become initial parameters, and
+multi-dimensional arrays are in column-major order).  Unlike FFTW 2, we
+do provide some support for wisdom import/export in Fortran
+(see <a href="Wisdom-of-Fortran_003f.html">Wisdom of Fortran?</a>).
+</p>
+<span id="Threads"></span><h3 class="heading">Threads</h3>
+
+<p>Like FFTW 2, only the execution routines are thread-safe.  All planner
+routines, etcetera, should be called by only a single thread at a time
+(see <a href="Thread-safety.html">Thread safety</a>).  <em>Unlike</em> FFTW 2, there is no special
+<code>FFTW_THREADSAFE</code> flag for the planner to allow a given plan to be
+usable by multiple threads in parallel; this is now the case by default.
+</p>
+<p>The multi-threaded version of FFTW 2 required you to pass the number of
+threads each time you execute the transform.  The number of threads is
+now stored in the plan, and is specified before the planner is called by
+<code>fftw_plan_with_nthreads</code>.  The threads initialization routine used
+to be called <code>fftw_threads_init</code> and would return zero on success;
+the new routine is called <code>fftw_init_threads</code> and returns zero on
+failure. The current number of threads used by the planner can be
+checked with <code>fftw_planner_nthreads</code>. See <a href="Multi_002dthreaded-FFTW.html">Multi-threaded FFTW</a>.
+</p>
+<p>There is no separate threads header file in FFTW 3; all the function
+prototypes are in <code>&lt;fftw3.h&gt;</code>.  However, you still have to link to
+a separate library (<code>-lfftw3_threads -lfftw3 -lm</code> on Unix), as well as
+to the threading library (e.g. POSIX threads on Unix).
+</p>
+<div class="footnote">
+<hr>
+<h4 class="footnotes-heading">Footnotes</h4>
+
+<h5><a id="FOOT11" href="#DOCF11">(11)</a></h3>
+<p>We
+do our own buffering because GNU libc I/O routines are horribly slow for
+single-character I/O, apparently for thread-safety reasons (whether you
+are using threads or not).</p>
+</div>
+<hr>
+<div class="header">
+<p>
+Next: <a href="Installation-and-Customization.html" accesskey="n" rel="next">Installation and Customization</a>, Previous: <a href="Calling-FFTW-from-Legacy-Fortran.html" accesskey="p" rel="prev">Calling FFTW from Legacy Fortran</a>, Up: <a href="index.html" accesskey="u" rel="up">Top</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

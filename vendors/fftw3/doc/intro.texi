@@ -1,0 +1,165 @@
+@node    Introduction, Tutorial, Top, Top
+@chapter Introduction
+This manual documents version @value{VERSION} of FFTW, the
+@emph{Fastest Fourier Transform in the West}.  FFTW is a comprehensive
+collection of fast C routines for computing the discrete Fourier
+transform (DFT) and various special cases thereof.
+@cindex discrete Fourier transform
+@cindex DFT
+@itemize @bullet
+@item FFTW computes the DFT of complex data, real data, even-
+  or odd-symmetric real data (these symmetric transforms are usually
+  known as the discrete cosine or sine transform, respectively), and the
+  discrete Hartley transform (DHT) of real data.
+
+@item  The input data can have arbitrary length.  
+       FFTW employs @Onlogn{} algorithms for all lengths, including
+       prime numbers.
+
+@item  FFTW supports arbitrary multi-dimensional data.
+
+@item  FFTW supports the SSE, SSE2, AVX, AVX2, AVX512, KCVI, Altivec, VSX, and
+       NEON vector instruction sets.
+
+@item  FFTW includes parallel (multi-threaded) transforms
+       for shared-memory systems.
+@item  Starting with version 3.3, FFTW includes distributed-memory parallel
+       transforms using MPI.
+@end itemize
+
+We assume herein that you are familiar with the properties and uses of
+the DFT that are relevant to your application.  Otherwise, see
+e.g. @cite{The Fast Fourier Transform and Its Applications} by E. O. Brigham
+(Prentice-Hall, Englewood Cliffs, NJ, 1988).
+@uref{http://www.fftw.org, Our web page} also has links to FFT-related
+information online.
+@cindex FFTW
+
+@c TODO: revise.  We don't need to brag any longer
+@c
+@c FFTW is usually faster (and sometimes much faster) than all other
+@c freely-available Fourier transform programs found on the Net.  It is
+@c competitive with (and often faster than) the FFT codes in Sun's
+@c Performance Library, IBM's ESSL library, HP's CXML library, and
+@c Intel's MKL library, which are targeted at specific machines.
+@c Moreover, FFTW's performance is @emph{portable}.  Indeed, FFTW is
+@c unique in that it automatically adapts itself to your machine, your
+@c cache, the size of your memory, your number of registers, and all the
+@c other factors that normally make it impossible to optimize a program
+@c for more than one machine.  An extensive comparison of FFTW's
+@c performance with that of other Fourier transform codes has been made,
+@c and the results are available on the Web at
+@c @uref{http://fftw.org/benchfft, the benchFFT home page}.
+@c @cindex benchmark
+@c @fpindex benchfft
+
+In order to use FFTW effectively, you need to learn one basic concept
+of FFTW's internal structure: FFTW does not use a fixed algorithm for
+computing the transform, but instead it adapts the DFT algorithm to
+details of the underlying hardware in order to maximize performance.
+Hence, the computation of the transform is split into two phases.
+First, FFTW's @dfn{planner} ``learns'' the fastest way to compute the
+transform on your machine.  The planner
+@cindex planner
+produces a data structure called a @dfn{plan} that contains this
+@cindex plan
+information.  Subsequently, the plan is @dfn{executed}
+@cindex execute
+to transform the array of input data as dictated by the plan.  The
+plan can be reused as many times as needed.  In typical
+high-performance applications, many transforms of the same size are
+computed and, consequently, a relatively expensive initialization of
+this sort is acceptable.  On the other hand, if you need a single
+transform of a given size, the one-time cost of the planner becomes
+significant.  For this case, FFTW provides fast planners based on
+heuristics or on previously computed plans.
+
+FFTW supports transforms of data with arbitrary length, rank,
+multiplicity, and a general memory layout.  In simple cases, however,
+this generality may be unnecessary and confusing.  Consequently, we
+organized the interface to FFTW into three levels of increasing
+generality.
+@itemize @bullet
+@item The @dfn{basic interface} computes a single 
+      transform of contiguous data.
+@item The @dfn{advanced interface} computes transforms 
+      of multiple or strided arrays.
+@item The @dfn{guru interface} supports the most general data 
+      layouts, multiplicities, and strides.
+@end itemize
+We expect that most users will be best served by the basic interface,
+whereas the guru interface requires careful attention to the
+documentation to avoid problems.
+@cindex basic interface
+@cindex advanced interface
+@cindex guru interface 
+
+
+Besides the automatic performance adaptation performed by the planner,
+it is also possible for advanced users to customize FFTW manually.  For
+example, if code space is a concern, we provide a tool that links only
+the subset of FFTW needed by your application.  Conversely, you may need
+to extend FFTW because the standard distribution is not sufficient for
+your needs.  For example, the standard FFTW distribution works most
+efficiently for arrays whose size can be factored into small primes
+(@math{2}, @math{3}, @math{5}, and @math{7}), and otherwise it uses a
+slower general-purpose routine.  If you need efficient transforms of
+other sizes, you can use FFTW's code generator, which produces fast C
+programs (``codelets'') for any particular array size you may care
+about.
+@cindex code generator
+@cindex codelet
+For example, if you need transforms of size
+@ifinfo
+@math{513 = 19 x 3^3},
+@end ifinfo
+@tex
+$513 = 19 \cdot 3^3$,
+@end tex
+@html
+513&nbsp;=&nbsp;19*3<sup>3</sup>,
+@end html
+you can customize FFTW to support the factor @math{19} efficiently.
+
+For more information regarding FFTW, see the paper, ``The Design and
+Implementation of FFTW3,'' by M. Frigo and S. G. Johnson, which was an
+invited paper in @cite{Proc. IEEE} @b{93} (2), p. 216 (2005).  The
+code generator is described in the paper ``A fast Fourier transform
+compiler'',
+@cindex compiler
+by M. Frigo, in the @cite{Proceedings of the 1999 ACM SIGPLAN Conference
+on Programming Language Design and Implementation (PLDI), Atlanta,
+Georgia, May 1999}.  These papers, along with the latest version of
+FFTW, the FAQ, benchmarks, and other links, are available at
+@uref{http://www.fftw.org, the FFTW home page}.  
+
+The current version of FFTW incorporates many good ideas from the past
+thirty years of FFT literature.  In one way or another, FFTW uses the
+Cooley-Tukey algorithm, the prime factor algorithm, Rader's algorithm
+for prime sizes, and a split-radix algorithm (with a
+``conjugate-pair'' variation pointed out to us by Dan Bernstein).
+FFTW's code generator also produces new algorithms that we do not
+completely understand.
+@cindex algorithm
+The reader is referred to the cited papers for the appropriate
+references.
+
+The rest of this manual is organized as follows.  We first discuss the
+sequential (single-processor) implementation.  We start by describing
+the basic interface/features of FFTW in @ref{Tutorial}.  
+Next, @ref{Other Important Topics} discusses data alignment
+(@pxref{SIMD alignment and fftw_malloc}),
+the storage scheme of multi-dimensional arrays
+(@pxref{Multi-dimensional Array Format}), and FFTW's mechanism for
+storing plans on disk (@pxref{Words of Wisdom-Saving Plans}).  Next,
+@ref{FFTW Reference} provides comprehensive documentation of all
+FFTW's features.  Parallel transforms are discussed in their own
+chapters: @ref{Multi-threaded FFTW} and @ref{Distributed-memory FFTW
+with MPI}.  Fortran programmers can also use FFTW, as described in
+@ref{Calling FFTW from Legacy Fortran} and @ref{Calling FFTW from
+Modern Fortran}.  @ref{Installation and Customization} explains how to
+install FFTW in your computer system and how to adapt FFTW to your
+needs.  License and copyright information is given in @ref{License and
+Copyright}.  Finally, we thank all the people who helped us in
+@ref{Acknowledgments}.
+

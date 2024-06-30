@@ -1,0 +1,171 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>FFTW MPI Wisdom (FFTW 3.3.10)</title>
+
+<meta name="description" content="FFTW MPI Wisdom (FFTW 3.3.10)">
+<meta name="keywords" content="FFTW MPI Wisdom (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Distributed_002dmemory-FFTW-with-MPI.html" rel="up" title="Distributed-memory FFTW with MPI">
+<link href="Avoiding-MPI-Deadlocks.html" rel="next" title="Avoiding MPI Deadlocks">
+<link href="An-improved-replacement-for-MPI_005fAlltoall.html" rel="prev" title="An improved replacement for MPI_Alltoall">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="FFTW-MPI-Wisdom"></span><div class="header">
+<p>
+Next: <a href="Avoiding-MPI-Deadlocks.html" accesskey="n" rel="next">Avoiding MPI Deadlocks</a>, Previous: <a href="FFTW-MPI-Transposes.html" accesskey="p" rel="prev">FFTW MPI Transposes</a>, Up: <a href="Distributed_002dmemory-FFTW-with-MPI.html" accesskey="u" rel="up">Distributed-memory FFTW with MPI</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="FFTW-MPI-Wisdom-1"></span><h3 class="section">6.8 FFTW MPI Wisdom</h3>
+<span id="index-wisdom-2"></span>
+<span id="index-saving-plans-to-disk-2"></span>
+
+<p>FFTW&rsquo;s &ldquo;wisdom&rdquo; facility (see <a href="Words-of-Wisdom_002dSaving-Plans.html">Words of Wisdom-Saving Plans</a>) can
+be used to save MPI plans as well as to save uniprocessor plans.
+However, for MPI there are several unavoidable complications.
+</p>
+<span id="index-MPI-I_002fO-1"></span>
+<p>First, the MPI standard does not guarantee that every process can
+perform file I/O (at least, not using C stdio routines)&mdash;in general,
+we may only assume that process 0 is capable of I/O.<a id="DOCF7" href="#FOOT7"><sup>7</sup></a> So, if we
+want to export the wisdom from a single process to a file, we must
+first export the wisdom to a string, then send it to process 0, then
+write it to a file.
+</p>
+<p>Second, in principle we may want to have separate wisdom for every
+process, since in general the processes may run on different hardware
+even for a single MPI program.  However, in practice FFTW&rsquo;s MPI code
+is designed for the case of homogeneous hardware (see <a href="Load-balancing.html">Load balancing</a>), and in this case it is convenient to use the same wisdom
+for every process.  Thus, we need a mechanism to synchronize the wisdom.
+</p>
+<p>To address both of these problems, FFTW provides the following two
+functions:
+</p>
+<div class="example">
+<pre class="example">void fftw_mpi_broadcast_wisdom(MPI_Comm comm);
+void fftw_mpi_gather_wisdom(MPI_Comm comm);
+</pre></div>
+<span id="index-fftw_005fmpi_005fgather_005fwisdom"></span>
+<span id="index-fftw_005fmpi_005fbroadcast_005fwisdom"></span>
+
+<p>Given a communicator <code>comm</code>, <code>fftw_mpi_broadcast_wisdom</code>
+will broadcast the wisdom from process 0 to all other processes.
+Conversely, <code>fftw_mpi_gather_wisdom</code> will collect wisdom from all
+processes onto process 0.  (If the plans created for the same problem
+by different processes are not the same, <code>fftw_mpi_gather_wisdom</code>
+will arbitrarily choose one of the plans.)  Both of these functions
+may result in suboptimal plans for different processes if the
+processes are running on non-identical hardware.  Both of these
+functions are <em>collective</em> calls, which means that they must be
+executed by all processes in the communicator.
+<span id="index-collective-function-1"></span>
+</p>
+
+<p>So, for example, a typical code snippet to import wisdom from a file
+and use it on all processes would be:
+</p>
+<div class="example">
+<pre class="example">{
+    int rank;
+
+    fftw_mpi_init();
+    MPI_Comm_rank(MPI_COMM_WORLD, &amp;rank);
+    if (rank == 0) fftw_import_wisdom_from_filename(&quot;mywisdom&quot;);
+    fftw_mpi_broadcast_wisdom(MPI_COMM_WORLD);
+}
+</pre></div>
+
+<p>(Note that we must call <code>fftw_mpi_init</code> before importing any
+wisdom that might contain MPI plans.)  Similarly, a typical code
+snippet to export wisdom from all processes to a file is:
+<span id="index-fftw_005fmpi_005finit-2"></span>
+</p>
+<div class="example">
+<pre class="example">{
+    int rank;
+
+    fftw_mpi_gather_wisdom(MPI_COMM_WORLD);
+    MPI_Comm_rank(MPI_COMM_WORLD, &amp;rank);
+    if (rank == 0) fftw_export_wisdom_to_filename(&quot;mywisdom&quot;);
+}
+</pre></div>
+
+<div class="footnote">
+<hr>
+<h4 class="footnotes-heading">Footnotes</h4>
+
+<h5><a id="FOOT7" href="#DOCF7">(7)</a></h3>
+<p>In fact,
+even this assumption is not technically guaranteed by the standard,
+although it seems to be universal in actual MPI implementations and is
+widely assumed by MPI-using software.  Technically, you need to query
+the <code>MPI_IO</code> attribute of <code>MPI_COMM_WORLD</code> with
+<code>MPI_Attr_get</code>.  If this attribute is <code>MPI_PROC_NULL</code>, no
+I/O is possible.  If it is <code>MPI_ANY_SOURCE</code>, any process can
+perform I/O.  Otherwise, it is the rank of a process that can perform
+I/O ... but since it is not guaranteed to yield the <em>same</em> rank
+on all processes, you have to do an <code>MPI_Allreduce</code> of some kind
+if you want all processes to agree about which is going to do I/O.
+And even then, the standard only guarantees that this process can
+perform output, but not input. See e.g. <cite>Parallel Programming
+with MPI</cite> by P. S. Pacheco, section 8.1.3.  Needless to say, in our
+experience virtually no MPI programmers worry about this.</p>
+</div>
+<hr>
+<div class="header">
+<p>
+Next: <a href="Avoiding-MPI-Deadlocks.html" accesskey="n" rel="next">Avoiding MPI Deadlocks</a>, Previous: <a href="FFTW-MPI-Transposes.html" accesskey="p" rel="prev">FFTW MPI Transposes</a>, Up: <a href="Distributed_002dmemory-FFTW-with-MPI.html" accesskey="u" rel="up">Distributed-memory FFTW with MPI</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

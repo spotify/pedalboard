@@ -1,0 +1,2456 @@
+@node FFTW Reference, Multi-threaded FFTW, Other Important Topics, Top
+@chapter FFTW Reference
+
+This chapter provides a complete reference for all sequential (i.e.,
+one-processor) FFTW functions.  Parallel transforms are described in
+later chapters.
+
+@menu
+* Data Types and Files::
+* Using Plans::
+* Basic Interface::
+* Advanced Interface::
+* Guru Interface::
+* New-array Execute Functions::
+* Wisdom::
+* What FFTW Really Computes::
+@end menu
+
+@c ------------------------------------------------------------
+@node Data Types and Files, Using Plans, FFTW Reference, FFTW Reference
+@section Data Types and Files
+
+All programs using FFTW should include its header file:
+
+@example
+#include <fftw3.h>
+@end example
+
+You must also link to the FFTW library.  On Unix, this
+means adding @code{-lfftw3 -lm} at the @emph{end} of the link command.
+
+@menu
+* Complex numbers::
+* Precision::
+* Memory Allocation::
+@end menu
+
+@c =========>
+@node Complex numbers, Precision, Data Types and Files, Data Types and Files
+@subsection Complex numbers
+
+The default FFTW interface uses @code{double} precision for all
+floating-point numbers, and defines a @code{fftw_complex} type to hold
+complex numbers as:
+
+@example
+typedef double fftw_complex[2];
+@end example
+@tindex fftw_complex
+
+Here, the @code{[0]} element holds the real part and the @code{[1]}
+element holds the imaginary part.
+
+Alternatively, if you have a C compiler (such as @code{gcc}) that
+supports the C99 revision of the ANSI C standard, you can use C's new
+native complex type (which is binary-compatible with the typedef above).
+In particular, if you @code{#include <complex.h>} @emph{before}
+@code{<fftw3.h>}, then @code{fftw_complex} is defined to be the native
+complex type and you can manipulate it with ordinary arithmetic
+(e.g. @code{x = y * (3+4*I)}, where @code{x} and @code{y} are
+@code{fftw_complex} and @code{I} is the standard symbol for the
+imaginary unit);
+@cindex C99
+
+
+C++ has its own @code{complex<T>} template class, defined in the
+standard @code{<complex>} header file.  Reportedly, the C++ standards
+committee has recently agreed to mandate that the storage format used
+for this type be binary-compatible with the C99 type, i.e. an array
+@code{T[2]} with consecutive real @code{[0]} and imaginary @code{[1]}
+parts.  (See report
+@uref{http://www.open-std.org/jtc1/sc22/WG21/docs/papers/2002/n1388.pdf
+WG21/N1388}.)  Although not part of the official standard as of this
+writing, the proposal stated that: ``This solution has been tested with
+all current major implementations of the standard library and shown to
+be working.''  To the extent that this is true, if you have a variable
+@code{complex<double> *x}, you can pass it directly to FFTW via
+@code{reinterpret_cast<fftw_complex*>(x)}.
+@cindex C++
+@cindex portability
+
+@c =========>
+@node Precision, Memory Allocation, Complex numbers, Data Types and Files
+@subsection Precision
+@cindex precision
+
+You can install single and long-double precision versions of FFTW,
+which replace @code{double} with @code{float} and @code{long double},
+respectively (@pxref{Installation and Customization}).  To use these
+interfaces, you:
+
+@itemize @bullet
+
+@item
+Link to the single/long-double libraries; on Unix, @code{-lfftw3f} or
+@code{-lfftw3l} instead of (or in addition to) @code{-lfftw3}.  (You
+can link to the different-precision libraries simultaneously.)
+
+@item
+Include the @emph{same} @code{<fftw3.h>} header file.
+
+@item
+Replace all lowercase instances of @samp{fftw_} with @samp{fftwf_} or
+@samp{fftwl_} for single or long-double precision, respectively.
+(@code{fftw_complex} becomes @code{fftwf_complex}, @code{fftw_execute}
+becomes @code{fftwf_execute}, etcetera.)
+
+@item
+Uppercase names, i.e. names beginning with @samp{FFTW_}, remain the
+same.
+
+@item
+Replace @code{double} with @code{float} or @code{long double} for
+subroutine parameters.
+
+@end itemize
+
+Depending upon your compiler and/or hardware, @code{long double} may not
+be any more precise than @code{double} (or may not be supported at all,
+although it is standard in C99).
+@cindex C99
+
+
+We also support using the nonstandard @code{__float128}
+quadruple-precision type provided by recent versions of @code{gcc} on
+32- and 64-bit x86 hardware (@pxref{Installation and Customization}).
+To use this type, link with @code{-lfftw3q -lquadmath -lm} (the
+@code{libquadmath} library provided by @code{gcc} is needed for
+quadruple-precision trigonometric functions) and use @samp{fftwq_}
+identifiers.
+
+@c =========>
+@node Memory Allocation,  , Precision, Data Types and Files
+@subsection Memory Allocation
+
+@example
+void *fftw_malloc(size_t n);
+void fftw_free(void *p);
+@end example
+@findex fftw_malloc
+@findex fftw_free
+
+These are functions that behave identically to @code{malloc} and
+@code{free}, except that they guarantee that the returned pointer obeys
+any special alignment restrictions imposed by any algorithm in FFTW
+(e.g. for SIMD acceleration).  @xref{SIMD alignment and fftw_malloc}.
+@cindex alignment
+
+
+Data allocated by @code{fftw_malloc} @emph{must} be deallocated by
+@code{fftw_free} and not by the ordinary @code{free}.
+
+These routines simply call through to your operating system's
+@code{malloc} or, if necessary, its aligned equivalent
+(e.g. @code{memalign}), so you normally need not worry about any
+significant time or space overhead.  You are @emph{not required} to use
+them to allocate your data, but we strongly recommend it.
+
+Note: in C++, just as with ordinary @code{malloc}, you must typecast
+the output of @code{fftw_malloc} to whatever pointer type you are
+allocating.
+@cindex C++
+
+
+We also provide the following two convenience functions to allocate
+real and complex arrays with @code{n} elements, which are equivalent
+to @code{(double *) fftw_malloc(sizeof(double) * n)} and
+@code{(fftw_complex *) fftw_malloc(sizeof(fftw_complex) * n)},
+respectively:
+
+@example
+double *fftw_alloc_real(size_t n);
+fftw_complex *fftw_alloc_complex(size_t n);
+@end example
+@findex fftw_alloc_real
+@findex fftw_alloc_complex
+
+The equivalent functions in other precisions allocate arrays of @code{n}
+elements in that precision.  e.g. @code{fftwf_alloc_real(n)} is
+equivalent to @code{(float *) fftwf_malloc(sizeof(float) * n)}.
+@cindex precision
+
+@c ------------------------------------------------------------
+@node Using Plans, Basic Interface, Data Types and Files, FFTW Reference
+@section Using Plans
+
+Plans for all transform types in FFTW are stored as type
+@code{fftw_plan} (an opaque pointer type), and are created by one of the
+various planning routines described in the following sections.
+@tindex fftw_plan
+An @code{fftw_plan} contains all information necessary to compute the
+transform, including the pointers to the input and output arrays.
+
+@example
+void fftw_execute(const fftw_plan plan);
+@end example
+@findex fftw_execute
+
+This executes the @code{plan}, to compute the corresponding transform on
+the arrays for which it was planned (which must still exist).  The plan
+is not modified, and @code{fftw_execute} can be called as many times as
+desired.
+
+To apply a given plan to a different array, you can use the new-array execute
+interface.  @xref{New-array Execute Functions}.
+
+@code{fftw_execute} (and equivalents) is the only function in FFTW
+guaranteed to be thread-safe; see @ref{Thread safety}.
+
+This function:
+@example
+void fftw_destroy_plan(fftw_plan plan);
+@end example
+@findex fftw_destroy_plan
+deallocates the @code{plan} and all its associated data.
+
+FFTW's planner saves some other persistent data, such as the
+accumulated wisdom and a list of algorithms available in the current
+configuration.  If you want to deallocate all of that and reset FFTW
+to the pristine state it was in when you started your program, you can
+call:
+
+@example
+void fftw_cleanup(void);
+@end example
+@findex fftw_cleanup
+
+After calling @code{fftw_cleanup}, all existing plans become undefined,
+and you should not attempt to execute them nor to destroy them.  You can
+however create and execute/destroy new plans, in which case FFTW starts
+accumulating wisdom information again.
+
+@code{fftw_cleanup} does not deallocate your plans, however.  To prevent
+memory leaks, you must still call @code{fftw_destroy_plan} before
+executing @code{fftw_cleanup}.
+
+Occasionally, it may useful to know FFTW's internal ``cost'' metric
+that it uses to compare plans to one another; this cost is
+proportional to an execution time of the plan, in undocumented units,
+if the plan was created with the @code{FFTW_MEASURE} or other
+timing-based options, or alternatively is a heuristic cost function
+for @code{FFTW_ESTIMATE} plans.  (The cost values of measured and
+estimated plans are not comparable, being in different units.  Also,
+costs from different FFTW versions or the same version compiled
+differently may not be in the same units.  Plans created from wisdom
+have a cost of 0 since no timing measurement is performed for them.
+Finally, certain problems for which only one top-level algorithm was
+possible may have required no measurements of the cost of the whole
+plan, in which case @code{fftw_cost} will also return 0.)  The cost
+metric for a given plan is returned by:
+
+@example
+double fftw_cost(const fftw_plan plan);
+@end example
+@findex fftw_cost
+
+The following two routines are provided purely for academic purposes
+(that is, for entertainment).
+
+@example
+void fftw_flops(const fftw_plan plan, 
+                double *add, double *mul, double *fma);
+@end example
+@findex fftw_flops
+
+Given a @code{plan}, set @code{add}, @code{mul}, and @code{fma} to an
+exact count of the number of floating-point additions, multiplications,
+and fused multiply-add operations involved in the plan's execution.  The
+total number of floating-point operations (flops) is @code{add + mul +
+2*fma}, or @code{add + mul + fma} if the hardware supports fused
+multiply-add instructions (although the number of FMA operations is only
+approximate because of compiler voodoo).  (The number of operations
+should be an integer, but we use @code{double} to avoid overflowing
+@code{int} for large transforms; the arguments are of type @code{double}
+even for single and long-double precision versions of FFTW.)
+
+@example
+void fftw_fprint_plan(const fftw_plan plan, FILE *output_file);
+void fftw_print_plan(const fftw_plan plan);
+char *fftw_sprint_plan(const fftw_plan plan);
+@end example
+@findex fftw_fprint_plan
+@findex fftw_print_plan
+
+This outputs a ``nerd-readable'' representation of the @code{plan} to
+the given file, to @code{stdout}, or two a newly allocated
+NUL-terminated string (which the caller is responsible for deallocating
+with @code{free}), respectively.
+
+@c ------------------------------------------------------------
+@node Basic Interface, Advanced Interface, Using Plans, FFTW Reference
+@section Basic Interface
+@cindex basic interface
+
+Recall that the FFTW API is divided into three parts@footnote{@i{Gallia est
+omnis divisa in partes tres} (Julius Caesar).}: the @dfn{basic interface}
+computes a single transform of contiguous data, the @dfn{advanced
+interface} computes transforms of multiple or strided arrays, and the
+@dfn{guru interface} supports the most general data layouts,
+multiplicities, and strides.  This section describes the basic
+interface, which we expect to satisfy the needs of most users.
+
+@menu
+* Complex DFTs::
+* Planner Flags::
+* Real-data DFTs::
+* Real-data DFT Array Format::
+* Real-to-Real Transforms::
+* Real-to-Real Transform Kinds::
+@end menu
+
+@c =========>
+@node Complex DFTs, Planner Flags, Basic Interface, Basic Interface
+@subsection Complex DFTs
+
+@example
+fftw_plan fftw_plan_dft_1d(int n0,
+                           fftw_complex *in, fftw_complex *out,
+                           int sign, unsigned flags);
+fftw_plan fftw_plan_dft_2d(int n0, int n1,
+                           fftw_complex *in, fftw_complex *out,
+                           int sign, unsigned flags);
+fftw_plan fftw_plan_dft_3d(int n0, int n1, int n2,
+                           fftw_complex *in, fftw_complex *out,
+                           int sign, unsigned flags);
+fftw_plan fftw_plan_dft(int rank, const int *n,
+                        fftw_complex *in, fftw_complex *out,
+                        int sign, unsigned flags);
+@end example
+@findex fftw_plan_dft_1d
+@findex fftw_plan_dft_2d
+@findex fftw_plan_dft_3d
+@findex fftw_plan_dft
+
+Plan a complex input/output discrete Fourier transform (DFT) in zero or
+more dimensions, returning an @code{fftw_plan} (@pxref{Using Plans}).
+
+Once you have created a plan for a certain transform type and
+parameters, then creating another plan of the same type and parameters,
+but for different arrays, is fast and shares constant data with the
+first plan (if it still exists).
+
+The planner returns @code{NULL} if the plan cannot be created.  In the
+standard FFTW distribution, the basic interface is guaranteed to return
+a non-@code{NULL} plan.  A plan may be @code{NULL}, however, if you are
+using a customized FFTW configuration supporting a restricted set of
+transforms.
+
+@subsubheading Arguments
+@itemize @bullet
+
+@item
+@code{rank} is the rank of the transform (it should be the size of the
+array @code{*n}), and can be any non-negative integer.  (@xref{Complex
+Multi-Dimensional DFTs}, for the definition of ``rank''.)  The
+@samp{_1d}, @samp{_2d}, and @samp{_3d} planners correspond to a
+@code{rank} of @code{1}, @code{2}, and @code{3}, respectively.  The rank
+may be zero, which is equivalent to a rank-1 transform of size 1, i.e. a
+copy of one number from input to output.
+
+@item
+@code{n0}, @code{n1}, @code{n2}, or @code{n[0..rank-1]} (as appropriate
+for each routine) specify the size of the transform dimensions.  They
+can be any positive integer.
+ 
+@itemize @minus
+@item
+@cindex row-major
+Multi-dimensional arrays are stored in row-major order with dimensions:
+@code{n0} x @code{n1}; or @code{n0} x @code{n1} x @code{n2}; or
+@code{n[0]} x @code{n[1]} x ... x @code{n[rank-1]}.
+@xref{Multi-dimensional Array Format}.
+@item
+FFTW is best at handling sizes of the form
+@ifinfo
+@math{2^a 3^b 5^c 7^d 11^e 13^f},
+@end ifinfo
+@tex
+$2^a 3^b 5^c 7^d 11^e 13^f$,
+@end tex
+@html
+2<sup>a</sup> 3<sup>b</sup> 5<sup>c</sup> 7<sup>d</sup>
+        11<sup>e</sup> 13<sup>f</sup>,
+@end html
+where @math{e+f} is either @math{0} or @math{1}, and the other exponents
+are arbitrary.  Other sizes are computed by means of a slow,
+general-purpose algorithm (which nevertheless retains @Onlogn{} performance even for prime sizes).  It is possible to customize FFTW
+for different array sizes; see @ref{Installation and Customization}.
+Transforms whose sizes are powers of @math{2} are especially fast.
+@end itemize
+
+@item
+@code{in} and @code{out} point to the input and output arrays of the
+transform, which may be the same (yielding an in-place transform).
+@cindex in-place
+These arrays are overwritten during planning, unless
+@code{FFTW_ESTIMATE} is used in the flags.  (The arrays need not be
+initialized, but they must be allocated.)
+
+If @code{in == out}, the transform is @dfn{in-place} and the input
+array is overwritten. If @code{in != out}, the two arrays must
+not overlap (but FFTW does not check for this condition).
+
+@item
+@ctindex FFTW_FORWARD
+@ctindex FFTW_BACKWARD
+@code{sign} is the sign of the exponent in the formula that defines the
+Fourier transform.  It can be @math{-1} (= @code{FFTW_FORWARD}) or
+@math{+1} (= @code{FFTW_BACKWARD}).
+
+@item
+@cindex flags
+@code{flags} is a bitwise OR (@samp{|}) of zero or more planner flags,
+as defined in @ref{Planner Flags}.
+
+@end itemize
+
+FFTW computes an unnormalized transform: computing a forward followed by
+a backward transform (or vice versa) will result in the original data
+multiplied by the size of the transform (the product of the dimensions).
+@cindex normalization
+For more information, see @ref{What FFTW Really Computes}.
+
+@c =========>
+@node Planner Flags, Real-data DFTs, Complex DFTs, Basic Interface
+@subsection Planner Flags
+
+All of the planner routines in FFTW accept an integer @code{flags}
+argument, which is a bitwise OR (@samp{|}) of zero or more of the flag
+constants defined below.  These flags control the rigor (and time) of
+the planning process, and can also impose (or lift) restrictions on the
+type of transform algorithm that is employed.
+
+@emph{Important:} the planner overwrites the input array during
+planning unless a saved plan (@pxref{Wisdom}) is available for that
+problem, so you should initialize your input data after creating the
+plan.  The only exceptions to this are the @code{FFTW_ESTIMATE} and
+@code{FFTW_WISDOM_ONLY} flags, as mentioned below.
+
+In all  cases, if  wisdom is  available for the  given problem  that was
+created  with equal-or-greater  planning rigor,  then the  more rigorous
+wisdom is used.  For example, in @code{FFTW_ESTIMATE} mode any available
+wisdom is used, whereas  in @code{FFTW_PATIENT} mode only wisdom created
+in patient or exhaustive mode can be used.  @xref{Words of Wisdom-Saving
+Plans}.
+
+@subsubheading Planning-rigor flags
+@itemize @bullet
+
+@item
+@ctindex FFTW_ESTIMATE
+@code{FFTW_ESTIMATE} specifies that, instead of actual measurements of
+different algorithms, a simple heuristic is used to pick a (probably
+sub-optimal) plan quickly.  With this flag, the input/output arrays are
+not overwritten during planning.
+
+@item
+@ctindex FFTW_MEASURE
+@code{FFTW_MEASURE} tells FFTW to find an optimized plan by actually
+@emph{computing} several FFTs and measuring their execution time.
+Depending on your machine, this can take some time (often a few
+seconds).  @code{FFTW_MEASURE} is the default planning option.
+
+@item
+@ctindex FFTW_PATIENT
+@code{FFTW_PATIENT} is like @code{FFTW_MEASURE}, but considers a wider
+range of algorithms and often produces a ``more optimal'' plan
+(especially for large transforms), but at the expense of several times
+longer planning time (especially for large transforms).
+
+@item
+@ctindex FFTW_EXHAUSTIVE
+@code{FFTW_EXHAUSTIVE} is like @code{FFTW_PATIENT}, but considers an
+even wider range of algorithms, including many that we think are
+unlikely to be fast, to produce the most optimal plan but with a
+substantially increased planning time.
+
+@item
+@ctindex FFTW_WISDOM_ONLY
+@code{FFTW_WISDOM_ONLY} is a special planning mode in which the plan
+is only created if wisdom is available for the given problem, and
+otherwise a @code{NULL} plan is returned.  This can be combined with
+other flags, e.g. @samp{FFTW_WISDOM_ONLY | FFTW_PATIENT} creates a
+plan only if wisdom is available that was created in
+@code{FFTW_PATIENT} or @code{FFTW_EXHAUSTIVE} mode.  The
+@code{FFTW_WISDOM_ONLY} flag is intended for users who need to detect
+whether wisdom is available; for example, if wisdom is not available
+one may wish to allocate new arrays for planning so that user data is
+not overwritten.
+
+@end itemize
+
+@subsubheading Algorithm-restriction flags
+@itemize @bullet
+
+@item
+@ctindex FFTW_DESTROY_INPUT
+@code{FFTW_DESTROY_INPUT} specifies that an out-of-place transform is
+allowed to @emph{overwrite its input} array with arbitrary data; this
+can sometimes allow more efficient algorithms to be employed.
+@cindex out-of-place
+
+@item
+@ctindex FFTW_PRESERVE_INPUT
+@code{FFTW_PRESERVE_INPUT} specifies that an out-of-place transform must
+@emph{not change its input} array.  This is ordinarily the
+@emph{default}, except for c2r and hc2r (i.e. complex-to-real)
+transforms for which @code{FFTW_DESTROY_INPUT} is the default.  In the
+latter cases, passing @code{FFTW_PRESERVE_INPUT} will attempt to use
+algorithms that do not destroy the input, at the expense of worse
+performance; for multi-dimensional c2r transforms, however, no
+input-preserving algorithms are implemented and the planner will return
+@code{NULL} if one is requested.
+@cindex c2r
+@cindex hc2r
+
+@item
+@ctindex FFTW_UNALIGNED
+@cindex alignment
+@findex fftw_malloc
+@findex fftw_alignment_of
+@code{FFTW_UNALIGNED} specifies that the algorithm may not impose any
+unusual alignment requirements on the input/output arrays (i.e. no
+SIMD may be used).  This flag is normally @emph{not necessary}, since
+the planner automatically detects misaligned arrays.  The only use for
+this flag is if you want to use the new-array execute interface to
+execute a given plan on a different array that may not be aligned like
+the original.  (Using @code{fftw_malloc} makes this flag unnecessary
+even then.  You can also use @code{fftw_alignment_of} to detect
+whether two arrays are equivalently aligned.)
+
+@end itemize
+
+@subsubheading Limiting planning time
+
+@example
+extern void fftw_set_timelimit(double seconds);
+@end example
+@findex fftw_set_timelimit
+
+This function instructs FFTW to spend at most @code{seconds} seconds
+(approximately) in the planner.  If @code{seconds ==
+FFTW_NO_TIMELIMIT} (the default value, which is negative), then
+planning time is unbounded.  Otherwise, FFTW plans with a
+progressively wider range of algorithms until the given time limit
+is reached or the given range of algorithms is explored, returning the
+best available plan.
+@ctindex FFTW_NO_TIMELIMIT
+
+
+For example, specifying @code{FFTW_PATIENT} first plans in
+@code{FFTW_ESTIMATE} mode, then in @code{FFTW_MEASURE} mode, then
+finally (time permitting) in @code{FFTW_PATIENT}.  If
+@code{FFTW_EXHAUSTIVE} is specified instead, the planner will further
+progress to @code{FFTW_EXHAUSTIVE} mode.
+
+Note that the @code{seconds} argument specifies only a rough limit; in
+practice, the planner may use somewhat more time if the time limit is
+reached when the planner is in the middle of an operation that cannot
+be interrupted.  At the very least, the planner will complete planning
+in @code{FFTW_ESTIMATE} mode (which is thus equivalent to a time limit
+of 0).
+
+
+@c =========>
+@node Real-data DFTs, Real-data DFT Array Format, Planner Flags, Basic Interface
+@subsection Real-data DFTs
+
+@example
+fftw_plan fftw_plan_dft_r2c_1d(int n0,
+                               double *in, fftw_complex *out,
+                               unsigned flags);
+fftw_plan fftw_plan_dft_r2c_2d(int n0, int n1,
+                               double *in, fftw_complex *out,
+                               unsigned flags);
+fftw_plan fftw_plan_dft_r2c_3d(int n0, int n1, int n2,
+                               double *in, fftw_complex *out,
+                               unsigned flags);
+fftw_plan fftw_plan_dft_r2c(int rank, const int *n,
+                            double *in, fftw_complex *out,
+                            unsigned flags);
+@end example
+@findex fftw_plan_dft_r2c_1d
+@findex fftw_plan_dft_r2c_2d
+@findex fftw_plan_dft_r2c_3d
+@findex fftw_plan_dft_r2c
+@cindex r2c
+
+Plan a real-input/complex-output discrete Fourier transform (DFT) in
+zero or more dimensions, returning an @code{fftw_plan} (@pxref{Using
+Plans}).
+
+Once you have created a plan for a certain transform type and
+parameters, then creating another plan of the same type and parameters,
+but for different arrays, is fast and shares constant data with the
+first plan (if it still exists).
+
+The planner returns @code{NULL} if the plan cannot be created.  A
+non-@code{NULL} plan is always returned by the basic interface unless
+you are using a customized FFTW configuration supporting a restricted
+set of transforms, or if you use the @code{FFTW_PRESERVE_INPUT} flag
+with a multi-dimensional out-of-place c2r transform (see below).
+
+@subsubheading Arguments
+@itemize @bullet
+
+@item
+@code{rank} is the rank of the transform (it should be the size of the
+array @code{*n}), and can be any non-negative integer.  (@xref{Complex
+Multi-Dimensional DFTs}, for the definition of ``rank''.)  The
+@samp{_1d}, @samp{_2d}, and @samp{_3d} planners correspond to a
+@code{rank} of @code{1}, @code{2}, and @code{3}, respectively.  The rank
+may be zero, which is equivalent to a rank-1 transform of size 1, i.e. a
+copy of one real number (with zero imaginary part) from input to output.
+
+@item
+@code{n0}, @code{n1}, @code{n2}, or @code{n[0..rank-1]}, (as appropriate
+for each routine) specify the size of the transform dimensions.  They
+can be any positive integer.  This is different in general from the
+@emph{physical} array dimensions, which are described in @ref{Real-data
+DFT Array Format}.
+ 
+@itemize @minus
+@item
+FFTW is best at handling sizes of the form
+@ifinfo
+@math{2^a 3^b 5^c 7^d 11^e 13^f},
+@end ifinfo
+@tex
+$2^a 3^b 5^c 7^d 11^e 13^f$,
+@end tex
+@html
+2<sup>a</sup> 3<sup>b</sup> 5<sup>c</sup> 7<sup>d</sup>
+        11<sup>e</sup> 13<sup>f</sup>,
+@end html
+where @math{e+f} is either @math{0} or @math{1}, and the other exponents
+are arbitrary.  Other sizes are computed by means of a slow,
+general-purpose algorithm (which nevertheless retains @Onlogn{} performance even for prime sizes).  (It is possible to customize FFTW
+for different array sizes; see @ref{Installation and Customization}.)
+Transforms whose sizes are powers of @math{2} are especially fast, and
+it is generally beneficial for the @emph{last} dimension of an r2c/c2r
+transform to be @emph{even}.
+@end itemize
+
+@item
+@code{in} and @code{out} point to the input and output arrays of the
+transform, which may be the same (yielding an in-place transform).
+@cindex in-place
+These arrays are overwritten during planning, unless
+@code{FFTW_ESTIMATE} is used in the flags.  (The arrays need not be
+initialized, but they must be allocated.)  For an in-place transform, it
+is important to remember that the real array will require padding,
+described in @ref{Real-data DFT Array Format}.
+@cindex padding
+
+@item
+@cindex flags
+@code{flags} is a bitwise OR (@samp{|}) of zero or more planner flags,
+as defined in @ref{Planner Flags}.
+
+@end itemize
+
+The inverse transforms, taking complex input (storing the non-redundant
+half of a logically Hermitian array) to real output, are given by:
+
+@example
+fftw_plan fftw_plan_dft_c2r_1d(int n0,
+                               fftw_complex *in, double *out,
+                               unsigned flags);
+fftw_plan fftw_plan_dft_c2r_2d(int n0, int n1,
+                               fftw_complex *in, double *out,
+                               unsigned flags);
+fftw_plan fftw_plan_dft_c2r_3d(int n0, int n1, int n2,
+                               fftw_complex *in, double *out,
+                               unsigned flags);
+fftw_plan fftw_plan_dft_c2r(int rank, const int *n,
+                            fftw_complex *in, double *out,
+                            unsigned flags);
+@end example
+@findex fftw_plan_dft_c2r_1d
+@findex fftw_plan_dft_c2r_2d
+@findex fftw_plan_dft_c2r_3d
+@findex fftw_plan_dft_c2r
+@cindex c2r
+
+The arguments are the same as for the r2c transforms, except that the
+input and output data formats are reversed.
+
+FFTW computes an unnormalized transform: computing an r2c followed by a
+c2r transform (or vice versa) will result in the original data
+multiplied by the size of the transform (the product of the logical
+dimensions).
+@cindex normalization
+An r2c transform produces the same output as a @code{FFTW_FORWARD}
+complex DFT of the same input, and a c2r transform is correspondingly
+equivalent to @code{FFTW_BACKWARD}.  For more information, see @ref{What
+FFTW Really Computes}.
+
+@c =========>
+@node Real-data DFT Array Format, Real-to-Real Transforms, Real-data DFTs, Basic Interface
+@subsection Real-data DFT Array Format
+@cindex r2c/c2r multi-dimensional array format
+
+The output of a DFT of real data (r2c) contains symmetries that, in
+principle, make half of the outputs redundant (@pxref{What FFTW Really
+Computes}).  (Similarly for the input of an inverse c2r transform.)  In
+practice, it is not possible to entirely realize these savings in an
+efficient and understandable format that generalizes to
+multi-dimensional transforms.  Instead, the output of the r2c
+transforms is @emph{slightly} over half of the output of the
+corresponding complex transform.  We do not ``pack'' the data in any
+way, but store it as an ordinary array of @code{fftw_complex} values.
+In fact, this data is simply a subsection of what would be the array in
+the corresponding complex transform.
+
+Specifically, for a real transform of @math{d} (= @code{rank})
+dimensions @ndims{}, the complex data is an @ndimshalf array of
+@code{fftw_complex} values in row-major order (with the division rounded
+down).  That is, we only store the @emph{lower} half (non-negative
+frequencies), plus one element, of the last dimension of the data from
+the ordinary complex transform.  (We could have instead taken half of
+any other dimension, but implementation turns out to be simpler if the
+last, contiguous, dimension is used.)
+
+@cindex out-of-place
+For an out-of-place transform, the real data is simply an array with
+physical dimensions @ndims in row-major order.
+
+@cindex in-place
+@cindex padding
+For an in-place transform, some complications arise since the complex data
+is slightly larger than the real data.  In this case, the final
+dimension of the real data must be @emph{padded} with extra values to
+accommodate the size of the complex data---two extra if the last
+dimension is even and one if it is odd.  That is, the last dimension of
+the real data must physically contain
+@tex
+$2 (n_{d-1}/2+1)$
+@end tex
+@ifinfo
+2 * (n[d-1]/2+1)
+@end ifinfo
+@html
+2 * (n<sub>d-1</sub>/2+1)
+@end html
+@code{double} values (exactly enough to hold the complex data).  This
+physical array size does not, however, change the @emph{logical} array
+size---only
+@tex
+$n_{d-1}$
+@end tex
+@ifinfo
+n[d-1]
+@end ifinfo
+@html
+n<sub>d-1</sub>
+@end html
+values are actually stored in the last dimension, and
+@tex
+$n_{d-1}$
+@end tex
+@ifinfo
+n[d-1]
+@end ifinfo
+@html
+n<sub>d-1</sub>
+@end html
+is the last dimension passed to the planner.
+
+@c =========>
+@node Real-to-Real Transforms, Real-to-Real Transform Kinds, Real-data DFT Array Format, Basic Interface
+@subsection Real-to-Real Transforms
+@cindex r2r
+
+@example
+fftw_plan fftw_plan_r2r_1d(int n, double *in, double *out,
+                           fftw_r2r_kind kind, unsigned flags);
+fftw_plan fftw_plan_r2r_2d(int n0, int n1, double *in, double *out,
+                           fftw_r2r_kind kind0, fftw_r2r_kind kind1,
+                           unsigned flags);
+fftw_plan fftw_plan_r2r_3d(int n0, int n1, int n2,
+                           double *in, double *out,
+                           fftw_r2r_kind kind0,
+                           fftw_r2r_kind kind1,
+                           fftw_r2r_kind kind2,
+                           unsigned flags);
+fftw_plan fftw_plan_r2r(int rank, const int *n, double *in, double *out,
+                        const fftw_r2r_kind *kind, unsigned flags);
+@end example
+@findex fftw_plan_r2r_1d
+@findex fftw_plan_r2r_2d
+@findex fftw_plan_r2r_3d
+@findex fftw_plan_r2r
+
+Plan a real input/output (r2r) transform of various kinds in zero or
+more dimensions, returning an @code{fftw_plan} (@pxref{Using Plans}).
+
+Once you have created a plan for a certain transform type and
+parameters, then creating another plan of the same type and parameters,
+but for different arrays, is fast and shares constant data with the
+first plan (if it still exists).
+
+The planner returns @code{NULL} if the plan cannot be created.  A
+non-@code{NULL} plan is always returned by the basic interface unless
+you are using a customized FFTW configuration supporting a restricted
+set of transforms, or for size-1 @code{FFTW_REDFT00} kinds (which are
+not defined).
+@ctindex FFTW_REDFT00
+
+@subsubheading Arguments
+@itemize @bullet
+
+@item
+@code{rank} is the dimensionality of the transform (it should be the
+size of the arrays @code{*n} and @code{*kind}), and can be any
+non-negative integer.  The @samp{_1d}, @samp{_2d}, and @samp{_3d}
+planners correspond to a @code{rank} of @code{1}, @code{2}, and
+@code{3}, respectively.  A @code{rank} of zero is equivalent to a copy
+of one number from input to output.
+
+@item
+@code{n}, or @code{n0}/@code{n1}/@code{n2}, or @code{n[rank]},
+respectively, gives the (physical) size of the transform dimensions.
+They can be any positive integer.
+ 
+@itemize @minus
+@item
+@cindex row-major
+Multi-dimensional arrays are stored in row-major order with dimensions:
+@code{n0} x @code{n1}; or @code{n0} x @code{n1} x @code{n2}; or
+@code{n[0]} x @code{n[1]} x ... x @code{n[rank-1]}.
+@xref{Multi-dimensional Array Format}.
+@item
+FFTW is generally best at handling sizes of the form
+@ifinfo
+@math{2^a 3^b 5^c 7^d 11^e 13^f},
+@end ifinfo
+@tex
+$2^a 3^b 5^c 7^d 11^e 13^f$,
+@end tex
+@html
+2<sup>a</sup> 3<sup>b</sup> 5<sup>c</sup> 7<sup>d</sup>
+        11<sup>e</sup> 13<sup>f</sup>,
+@end html
+where @math{e+f} is either @math{0} or @math{1}, and the other exponents
+are arbitrary.  Other sizes are computed by means of a slow,
+general-purpose algorithm (which nevertheless retains @Onlogn{} performance even for prime sizes).  (It is possible to customize FFTW
+for different array sizes; see @ref{Installation and Customization}.)
+Transforms whose sizes are powers of @math{2} are especially fast.
+@item
+For a @code{REDFT00} or @code{RODFT00} transform kind in a dimension of
+size @math{n}, it is @math{n-1} or @math{n+1}, respectively, that
+should be factorizable in the above form.
+@end itemize
+
+@item
+@code{in} and @code{out} point to the input and output arrays of the
+transform, which may be the same (yielding an in-place transform).
+@cindex in-place
+These arrays are overwritten during planning, unless
+@code{FFTW_ESTIMATE} is used in the flags.  (The arrays need not be
+initialized, but they must be allocated.)
+
+@item
+@code{kind}, or @code{kind0}/@code{kind1}/@code{kind2}, or
+@code{kind[rank]}, is the kind of r2r transform used for the
+corresponding dimension.  The valid kind constants are described in
+@ref{Real-to-Real Transform Kinds}.  In a multi-dimensional transform,
+what is computed is the separable product formed by taking each
+transform kind along the corresponding dimension, one dimension after
+another.
+
+@item
+@cindex flags
+@code{flags} is a bitwise OR (@samp{|}) of zero or more planner flags,
+as defined in @ref{Planner Flags}.
+
+@end itemize
+
+@c =========>
+@node Real-to-Real Transform Kinds,  , Real-to-Real Transforms, Basic Interface
+@subsection Real-to-Real Transform Kinds
+@cindex kind (r2r)
+
+FFTW currently supports 11 different r2r transform kinds, specified by
+one of the constants below.  For the precise definitions of these
+transforms, see @ref{What FFTW Really Computes}.  For a more colloquial
+introduction to these transform kinds, see @ref{More DFTs of Real Data}.
+
+For dimension of size @code{n}, there is a corresponding ``logical''
+dimension @code{N} that determines the normalization (and the optimal
+factorization); the formula for @code{N} is given for each kind below.
+Also, with each transform kind is listed its corrsponding inverse
+transform.  FFTW computes unnormalized transforms: a transform followed
+by its inverse will result in the original data multiplied by @code{N}
+(or the product of the @code{N}'s for each dimension, in
+multi-dimensions).
+@cindex normalization
+
+@itemize @bullet
+
+@item
+@ctindex FFTW_R2HC
+@code{FFTW_R2HC} computes a real-input DFT with output in
+``halfcomplex'' format, i.e. real and imaginary parts for a transform of
+size @code{n} stored as:
+@tex
+$$
+r_0, r_1, r_2, \ldots, r_{n/2}, i_{(n+1)/2-1}, \ldots, i_2, i_1
+$$
+@end tex
+@ifinfo
+r0, r1, r2, r(n/2), i((n+1)/2-1), ..., i2, i1
+@end ifinfo
+@html
+<p align=center>
+r<sub>0</sub>, r<sub>1</sub>, r<sub>2</sub>, ..., r<sub>n/2</sub>, i<sub>(n+1)/2-1</sub>, ..., i<sub>2</sub>, i<sub>1</sub>
+</p>
+@end html
+(Logical @code{N=n}, inverse is @code{FFTW_HC2R}.)
+
+@item
+@ctindex FFTW_HC2R
+@code{FFTW_HC2R} computes the reverse of @code{FFTW_R2HC}, above.
+(Logical @code{N=n}, inverse is @code{FFTW_R2HC}.)
+
+@item
+@ctindex FFTW_DHT
+@code{FFTW_DHT} computes a discrete Hartley transform.
+(Logical @code{N=n}, inverse is @code{FFTW_DHT}.)
+@cindex discrete Hartley transform
+
+@item
+@ctindex FFTW_REDFT00
+@code{FFTW_REDFT00} computes an REDFT00 transform, i.e. a DCT-I.
+(Logical @code{N=2*(n-1)}, inverse is @code{FFTW_REDFT00}.)
+@cindex discrete cosine transform
+@cindex DCT
+
+@item
+@ctindex FFTW_REDFT10
+@code{FFTW_REDFT10} computes an REDFT10 transform, i.e. a DCT-II (sometimes called ``the'' DCT).
+(Logical @code{N=2*n}, inverse is @code{FFTW_REDFT01}.)
+
+@item
+@ctindex FFTW_REDFT01
+@code{FFTW_REDFT01} computes an REDFT01 transform, i.e. a DCT-III (sometimes called ``the'' IDCT, being the inverse of DCT-II).
+(Logical @code{N=2*n}, inverse is @code{FFTW_REDFT=10}.)
+@cindex IDCT
+
+@item
+@ctindex FFTW_REDFT11
+@code{FFTW_REDFT11} computes an REDFT11 transform, i.e. a DCT-IV.
+(Logical @code{N=2*n}, inverse is @code{FFTW_REDFT11}.)
+
+@item
+@ctindex FFTW_RODFT00
+@code{FFTW_RODFT00} computes an RODFT00 transform, i.e. a DST-I.
+(Logical @code{N=2*(n+1)}, inverse is @code{FFTW_RODFT00}.)
+@cindex discrete sine transform
+@cindex DST
+
+@item
+@ctindex FFTW_RODFT10
+@code{FFTW_RODFT10} computes an RODFT10 transform, i.e. a DST-II.
+(Logical @code{N=2*n}, inverse is @code{FFTW_RODFT01}.)
+
+@item
+@ctindex FFTW_RODFT01
+@code{FFTW_RODFT01} computes an RODFT01 transform, i.e. a DST-III.
+(Logical @code{N=2*n}, inverse is @code{FFTW_RODFT=10}.)
+
+@item
+@ctindex FFTW_RODFT11
+@code{FFTW_RODFT11} computes an RODFT11 transform, i.e. a DST-IV.
+(Logical @code{N=2*n}, inverse is @code{FFTW_RODFT11}.)
+
+@end itemize
+
+@c ------------------------------------------------------------
+@node Advanced Interface, Guru Interface, Basic Interface, FFTW Reference
+@section Advanced Interface
+@cindex advanced interface
+
+FFTW's ``advanced'' interface supplements the basic interface with four
+new planner routines, providing a new level of flexibility: you can plan
+a transform of multiple arrays simultaneously, operate on non-contiguous
+(strided) data, and transform a subset of a larger multi-dimensional
+array.  Other than these additional features, the planner operates in
+the same fashion as in the basic interface, and the resulting
+@code{fftw_plan} is used in the same way (@pxref{Using Plans}).
+
+@menu
+* Advanced Complex DFTs::
+* Advanced Real-data DFTs::
+* Advanced Real-to-real Transforms::
+@end menu
+
+@c =========>
+@node Advanced Complex DFTs, Advanced Real-data DFTs, Advanced Interface, Advanced Interface
+@subsection Advanced Complex DFTs
+
+@example
+fftw_plan fftw_plan_many_dft(int rank, const int *n, int howmany,
+                             fftw_complex *in, const int *inembed,
+                             int istride, int idist,
+                             fftw_complex *out, const int *onembed,
+                             int ostride, int odist,
+                             int sign, unsigned flags);
+@end example
+@findex fftw_plan_many_dft
+
+This routine plans multiple multidimensional complex DFTs, and it
+extends the @code{fftw_plan_dft} routine (@pxref{Complex DFTs}) to
+compute @code{howmany} transforms, each having rank @code{rank} and size
+@code{n}.  In addition, the transform data need not be contiguous, but
+it may be laid out in memory with an arbitrary stride.  To account for
+these possibilities, @code{fftw_plan_many_dft} adds the new parameters
+@code{howmany}, @{@code{i},@code{o}@}@code{nembed},
+@{@code{i},@code{o}@}@code{stride}, and
+@{@code{i},@code{o}@}@code{dist}.  The FFTW basic interface
+(@pxref{Complex DFTs}) provides routines specialized for ranks 1, 2,
+and@tie{}3, but the advanced interface handles only the general-rank
+case.
+
+@code{howmany} is the (nonnegative) number of transforms to compute.  The resulting
+plan computes @code{howmany} transforms, where the input of the
+@code{k}-th transform is at location @code{in+k*idist} (in C pointer
+arithmetic), and its output is at location @code{out+k*odist}.  Plans
+obtained in this way can often be faster than calling FFTW multiple
+times for the individual transforms.  The basic @code{fftw_plan_dft}
+interface corresponds to @code{howmany=1} (in which case the @code{dist}
+parameters are ignored).
+@cindex howmany parameter
+@cindex dist
+
+
+Each of the @code{howmany} transforms has rank @code{rank} and size
+@code{n}, as in the basic interface.  In addition, the advanced
+interface allows the input and output arrays of each transform to be
+row-major subarrays of larger rank-@code{rank} arrays, described by
+@code{inembed} and @code{onembed} parameters, respectively.
+@{@code{i},@code{o}@}@code{nembed} must be arrays of length @code{rank},
+and @code{n} should be elementwise less than or equal to
+@{@code{i},@code{o}@}@code{nembed}.  Passing @code{NULL} for an
+@code{nembed} parameter is equivalent to passing @code{n} (i.e. same
+physical and logical dimensions, as in the basic interface.)
+
+The @code{stride} parameters indicate that the @code{j}-th element of
+the input or output arrays is located at @code{j*istride} or
+@code{j*ostride}, respectively.  (For a multi-dimensional array,
+@code{j} is the ordinary row-major index.)  When combined with the
+@code{k}-th transform in a @code{howmany} loop, from above, this means
+that the (@code{j},@code{k})-th element is at @code{j*stride+k*dist}.
+(The basic @code{fftw_plan_dft} interface corresponds to a stride of 1.)
+@cindex stride
+
+
+For in-place transforms, the input and output @code{stride} and
+@code{dist} parameters should be the same; otherwise, the planner may
+return @code{NULL}.
+
+Arrays @code{n}, @code{inembed}, and @code{onembed} are not used after
+this function returns.  You can safely free or reuse them.
+
+@strong{Examples}:
+One transform of one 5 by 6 array contiguous in memory:
+@example
+   int rank = 2;
+   int n[] = @{5, 6@};
+   int howmany = 1;
+   int idist = odist = 0; /* unused because howmany = 1 */
+   int istride = ostride = 1; /* array is contiguous in memory */
+   int *inembed = n, *onembed = n;
+@end example
+
+Transform of three 5 by 6 arrays, each contiguous in memory,
+stored in memory one after another:
+@example
+   int rank = 2;
+   int n[] = @{5, 6@};
+   int howmany = 3;
+   int idist = odist = n[0]*n[1]; /* = 30, the distance in memory
+                                     between the first element
+                                     of the first array and the
+                                     first element of the second array */
+   int istride = ostride = 1; /* array is contiguous in memory */
+   int *inembed = n, *onembed = n;
+@end example
+
+Transform each column of a 2d array with 10 rows and 3 columns:
+@example
+   int rank = 1; /* not 2: we are computing 1d transforms */
+   int n[] = @{10@}; /* 1d transforms of length 10 */
+   int howmany = 3;
+   int idist = odist = 1;
+   int istride = ostride = 3; /* distance between two elements in 
+                                 the same column */
+   int *inembed = n, *onembed = n;
+@end example
+
+@c =========>
+@node Advanced Real-data DFTs, Advanced Real-to-real Transforms, Advanced Complex DFTs, Advanced Interface
+@subsection Advanced Real-data DFTs
+
+@example
+fftw_plan fftw_plan_many_dft_r2c(int rank, const int *n, int howmany,
+                                 double *in, const int *inembed,
+                                 int istride, int idist,
+                                 fftw_complex *out, const int *onembed,
+                                 int ostride, int odist,
+                                 unsigned flags);
+fftw_plan fftw_plan_many_dft_c2r(int rank, const int *n, int howmany,
+                                 fftw_complex *in, const int *inembed,
+                                 int istride, int idist,
+                                 double *out, const int *onembed,
+                                 int ostride, int odist,
+                                 unsigned flags);
+@end example
+@findex fftw_plan_many_dft_r2c
+@findex fftw_plan_many_dft_c2r
+
+Like @code{fftw_plan_many_dft}, these two functions add @code{howmany},
+@code{nembed}, @code{stride}, and @code{dist} parameters to the
+@code{fftw_plan_dft_r2c} and @code{fftw_plan_dft_c2r} functions, but
+otherwise behave the same as the basic interface.
+
+The interpretation of @code{howmany}, @code{stride}, and @code{dist} are
+the same as for @code{fftw_plan_many_dft}, above.  Note that the
+@code{stride} and @code{dist} for the real array are in units of
+@code{double}, and for the complex array are in units of
+@code{fftw_complex}.
+
+If an @code{nembed} parameter is @code{NULL}, it is interpreted as what
+it would be in the basic interface, as described in @ref{Real-data DFT
+Array Format}.  That is, for the complex array the size is assumed to be
+the same as @code{n}, but with the last dimension cut roughly in half.
+For the real array, the size is assumed to be @code{n} if the transform
+is out-of-place, or @code{n} with the last dimension ``padded'' if the
+transform is in-place.
+
+If an @code{nembed} parameter is non-@code{NULL}, it is interpreted as
+the physical size of the corresponding array, in row-major order, just
+as for @code{fftw_plan_many_dft}.  In this case, each dimension of
+@code{nembed} should be @code{>=} what it would be in the basic
+interface (e.g. the halved or padded @code{n}).
+
+Arrays @code{n}, @code{inembed}, and @code{onembed} are not used after
+this function returns.  You can safely free or reuse them.
+
+@c =========>
+@node Advanced Real-to-real Transforms,  , Advanced Real-data DFTs, Advanced Interface
+@subsection Advanced Real-to-real Transforms
+
+@example
+fftw_plan fftw_plan_many_r2r(int rank, const int *n, int howmany,
+                             double *in, const int *inembed,
+                             int istride, int idist,
+                             double *out, const int *onembed,
+                             int ostride, int odist,
+                             const fftw_r2r_kind *kind, unsigned flags);
+@end example
+@findex fftw_plan_many_r2r
+
+Like @code{fftw_plan_many_dft}, this functions adds @code{howmany},
+@code{nembed}, @code{stride}, and @code{dist} parameters to the
+@code{fftw_plan_r2r} function, but otherwise behave the same as the
+basic interface.  The interpretation of those additional parameters are
+the same as for @code{fftw_plan_many_dft}.  (Of course, the
+@code{stride} and @code{dist} parameters are now in units of
+@code{double}, not @code{fftw_complex}.)
+
+Arrays @code{n}, @code{inembed}, @code{onembed}, and @code{kind} are not
+used after this function returns.  You can safely free or reuse them.
+
+@c ------------------------------------------------------------
+@node Guru Interface, New-array Execute Functions, Advanced Interface, FFTW Reference
+@section Guru Interface
+@cindex guru interface
+
+The ``guru'' interface to FFTW is intended to expose as much as possible
+of the flexibility in the underlying FFTW architecture.  It allows one
+to compute multi-dimensional ``vectors'' (loops) of multi-dimensional
+transforms, where each vector/transform dimension has an independent
+size and stride.
+@cindex vector
+One can also use more general complex-number formats, e.g. separate real
+and imaginary arrays.
+
+For those users who require the flexibility of the guru interface, it is
+important that they pay special attention to the documentation lest they
+shoot themselves in the foot.
+
+@menu
+* Interleaved and split arrays::
+* Guru vector and transform sizes::
+* Guru Complex DFTs::
+* Guru Real-data DFTs::
+* Guru Real-to-real Transforms::
+* 64-bit Guru Interface::
+@end menu
+
+@c =========>
+@node  Interleaved and split arrays, Guru vector and transform sizes, Guru Interface, Guru Interface
+@subsection Interleaved and split arrays
+
+The guru interface supports two representations of complex numbers,
+which we call the interleaved and the split format.
+
+The @dfn{interleaved} format is the same one used by the basic and
+advanced interfaces, and it is documented in @ref{Complex numbers}.
+In the interleaved format, you provide pointers to the real part of a
+complex number, and the imaginary part understood to be stored in the
+next memory location.
+@cindex interleaved format
+
+
+The @dfn{split} format allows separate pointers to the real and
+imaginary parts of a complex array.
+@cindex split format
+
+
+Technically, the interleaved format is redundant, because you can
+always express an interleaved array in terms of a split array with
+appropriate pointers and strides.  On the other hand, the interleaved
+format is simpler to use, and it is common in practice.  Hence, FFTW
+supports it as a special case.
+
+@c =========>
+@node Guru vector and transform sizes, Guru Complex DFTs, Interleaved and split arrays, Guru Interface
+@subsection Guru vector and transform sizes
+
+The guru interface introduces one basic new data structure,
+@code{fftw_iodim}, that is used to specify sizes and strides for
+multi-dimensional transforms and vectors:
+
+@example
+typedef struct @{
+     int n;
+     int is;
+     int os;
+@} fftw_iodim;
+@end example
+@tindex fftw_iodim
+
+Here, @code{n} is the size of the dimension, and @code{is} and @code{os}
+are the strides of that dimension for the input and output arrays.  (The
+stride is the separation of consecutive elements along this dimension.)
+
+The meaning of the stride parameter depends on the type of the array
+that the stride refers to.  @emph{If the array is interleaved complex,
+strides are expressed in units of complex numbers
+(@code{fftw_complex}).  If the array is split complex or real, strides
+are expressed in units of real numbers (@code{double}).}  This
+convention is consistent with the usual pointer arithmetic in the C
+language.  An interleaved array is denoted by a pointer @code{p} to
+@code{fftw_complex}, so that @code{p+1} points to the next complex
+number.  Split arrays are denoted by pointers to @code{double}, in
+which case pointer arithmetic operates in units of
+@code{sizeof(double)}.
+@cindex stride
+
+
+The guru planner interfaces all take a (@code{rank}, @code{dims[rank]})
+pair describing the transform size, and a (@code{howmany_rank},
+@code{howmany_dims[howmany_rank]}) pair describing the ``vector'' size (a
+multi-dimensional loop of transforms to perform), where @code{dims} and
+@code{howmany_dims} are arrays of @code{fftw_iodim}.  Each @code{n} field must
+be positive for @code{dims} and nonnegative for @code{howmany_dims}, while both
+@code{rank} and @code{howmany_rank} must be nonnegative.
+
+For example, the @code{howmany} parameter in the advanced complex-DFT
+interface corresponds to @code{howmany_rank} = 1,
+@code{howmany_dims[0].n} = @code{howmany}, @code{howmany_dims[0].is} =
+@code{idist}, and @code{howmany_dims[0].os} = @code{odist}.
+@cindex howmany loop
+@cindex dist
+(To compute a single transform, you can just use @code{howmany_rank} = 0.)
+
+
+A row-major multidimensional array with dimensions @code{n[rank]}
+(@pxref{Row-major Format}) corresponds to @code{dims[i].n} =
+@code{n[i]} and the recurrence @code{dims[i].is} = @code{n[i+1] *
+dims[i+1].is} (similarly for @code{os}).  The stride of the last
+(@code{i=rank-1}) dimension is the overall stride of the array.
+e.g. to be equivalent to the advanced complex-DFT interface, you would
+have @code{dims[rank-1].is} = @code{istride} and
+@code{dims[rank-1].os} = @code{ostride}.
+@cindex row-major
+
+
+In general, we only guarantee FFTW to return a non-@code{NULL} plan if
+the vector and transform dimensions correspond to a set of distinct
+indices, and for in-place transforms the input/output strides should
+be the same.
+
+@c =========>
+@node Guru Complex DFTs, Guru Real-data DFTs, Guru vector and transform sizes, Guru Interface
+@subsection Guru Complex DFTs
+
+@example
+fftw_plan fftw_plan_guru_dft(
+     int rank, const fftw_iodim *dims,
+     int howmany_rank, const fftw_iodim *howmany_dims,
+     fftw_complex *in, fftw_complex *out,
+     int sign, unsigned flags);
+
+fftw_plan fftw_plan_guru_split_dft(
+     int rank, const fftw_iodim *dims,
+     int howmany_rank, const fftw_iodim *howmany_dims,
+     double *ri, double *ii, double *ro, double *io,
+     unsigned flags);
+@end example
+@findex fftw_plan_guru_dft
+@findex fftw_plan_guru_split_dft
+
+These two functions plan a complex-data, multi-dimensional DFT
+for the interleaved and split format, respectively.
+Transform dimensions are given by (@code{rank}, @code{dims}) over a
+multi-dimensional vector (loop) of dimensions (@code{howmany_rank},
+@code{howmany_dims}).  @code{dims} and @code{howmany_dims} should point
+to @code{fftw_iodim} arrays of length @code{rank} and
+@code{howmany_rank}, respectively.
+
+@cindex flags
+@code{flags} is a bitwise OR (@samp{|}) of zero or more planner flags,
+as defined in @ref{Planner Flags}.
+
+In the @code{fftw_plan_guru_dft} function, the pointers @code{in} and
+@code{out} point to the interleaved input and output arrays,
+respectively.  The sign can be either @math{-1} (=
+@code{FFTW_FORWARD}) or @math{+1} (= @code{FFTW_BACKWARD}).  If the
+pointers are equal, the transform is in-place.
+
+In the @code{fftw_plan_guru_split_dft} function,
+@code{ri} and @code{ii} point to the real and imaginary input arrays,
+and @code{ro} and @code{io} point to the real and imaginary output
+arrays.  The input and output pointers may be the same, indicating an
+in-place transform.  For example, for @code{fftw_complex} pointers
+@code{in} and @code{out}, the corresponding parameters are:
+
+@example
+ri = (double *) in;
+ii = (double *) in + 1;
+ro = (double *) out;
+io = (double *) out + 1;
+@end example
+
+Because @code{fftw_plan_guru_split_dft} accepts split arrays, strides
+are expressed in units of @code{double}.  For a contiguous
+@code{fftw_complex} array, the overall stride of the transform should
+be 2, the distance between consecutive real parts or between
+consecutive imaginary parts; see @ref{Guru vector and transform
+sizes}.  Note that the dimension strides are applied equally to the
+real and imaginary parts; real and imaginary arrays with different
+strides are not supported.
+
+There is no @code{sign} parameter in @code{fftw_plan_guru_split_dft}.
+This function always plans for an @code{FFTW_FORWARD} transform.  To
+plan for an @code{FFTW_BACKWARD} transform, you can exploit the
+identity that the backwards DFT is equal to the forwards DFT with the
+real and imaginary parts swapped.  For example, in the case of the
+@code{fftw_complex} arrays above, the @code{FFTW_BACKWARD} transform
+is computed by the parameters:
+
+@example
+ri = (double *) in + 1;
+ii = (double *) in;
+ro = (double *) out + 1;
+io = (double *) out;
+@end example
+
+@c =========>
+@node Guru Real-data DFTs, Guru Real-to-real Transforms, Guru Complex DFTs, Guru Interface
+@subsection Guru Real-data DFTs
+
+@example
+fftw_plan fftw_plan_guru_dft_r2c(
+     int rank, const fftw_iodim *dims,
+     int howmany_rank, const fftw_iodim *howmany_dims,
+     double *in, fftw_complex *out,
+     unsigned flags);
+
+fftw_plan fftw_plan_guru_split_dft_r2c(
+     int rank, const fftw_iodim *dims,
+     int howmany_rank, const fftw_iodim *howmany_dims,
+     double *in, double *ro, double *io,
+     unsigned flags);
+
+fftw_plan fftw_plan_guru_dft_c2r(
+     int rank, const fftw_iodim *dims,
+     int howmany_rank, const fftw_iodim *howmany_dims,
+     fftw_complex *in, double *out,
+     unsigned flags);
+
+fftw_plan fftw_plan_guru_split_dft_c2r(
+     int rank, const fftw_iodim *dims,
+     int howmany_rank, const fftw_iodim *howmany_dims,
+     double *ri, double *ii, double *out,
+     unsigned flags);
+@end example
+@findex fftw_plan_guru_dft_r2c
+@findex fftw_plan_guru_split_dft_r2c
+@findex fftw_plan_guru_dft_c2r
+@findex fftw_plan_guru_split_dft_c2r
+
+Plan a real-input (r2c) or real-output (c2r), multi-dimensional DFT with
+transform dimensions given by (@code{rank}, @code{dims}) over a
+multi-dimensional vector (loop) of dimensions (@code{howmany_rank},
+@code{howmany_dims}).  @code{dims} and @code{howmany_dims} should point
+to @code{fftw_iodim} arrays of length @code{rank} and
+@code{howmany_rank}, respectively.  As for the basic and advanced
+interfaces, an r2c transform is @code{FFTW_FORWARD} and a c2r transform
+is @code{FFTW_BACKWARD}.
+
+The @emph{last} dimension of @code{dims} is interpreted specially:
+that dimension of the real array has size @code{dims[rank-1].n}, but
+that dimension of the complex array has size @code{dims[rank-1].n/2+1}
+(division rounded down).  The strides, on the other hand, are taken to
+be exactly as specified.  It is up to the user to specify the strides
+appropriately for the peculiar dimensions of the data, and we do not
+guarantee that the planner will succeed (return non-@code{NULL}) for
+any dimensions other than those described in @ref{Real-data DFT Array
+Format} and generalized in @ref{Advanced Real-data DFTs}.  (That is,
+for an in-place transform, each individual dimension should be able to
+operate in place.)
+@cindex in-place
+
+
+@code{in} and @code{out} point to the input and output arrays for r2c
+and c2r transforms, respectively.  For split arrays, @code{ri} and
+@code{ii} point to the real and imaginary input arrays for a c2r
+transform, and @code{ro} and @code{io} point to the real and imaginary
+output arrays for an r2c transform.  @code{in} and @code{ro} or
+@code{ri} and @code{out} may be the same, indicating an in-place
+transform.   (In-place transforms where @code{in} and @code{io} or
+@code{ii} and @code{out} are the same are not currently supported.)
+
+@cindex flags
+@code{flags} is a bitwise OR (@samp{|}) of zero or more planner flags,
+as defined in @ref{Planner Flags}.
+
+In-place transforms of rank greater than 1 are currently only
+supported for interleaved arrays.  For split arrays, the planner will
+return @code{NULL}.
+@cindex in-place
+
+@c =========>
+@node Guru Real-to-real Transforms, 64-bit Guru Interface, Guru Real-data DFTs, Guru Interface
+@subsection Guru Real-to-real Transforms
+
+@example
+fftw_plan fftw_plan_guru_r2r(int rank, const fftw_iodim *dims,
+                             int howmany_rank,
+                             const fftw_iodim *howmany_dims,
+                             double *in, double *out,
+                             const fftw_r2r_kind *kind,
+                             unsigned flags);
+@end example
+@findex fftw_plan_guru_r2r
+
+Plan a real-to-real (r2r) multi-dimensional @code{FFTW_FORWARD}
+transform with transform dimensions given by (@code{rank}, @code{dims})
+over a multi-dimensional vector (loop) of dimensions
+(@code{howmany_rank}, @code{howmany_dims}).  @code{dims} and
+@code{howmany_dims} should point to @code{fftw_iodim} arrays of length
+@code{rank} and @code{howmany_rank}, respectively.
+
+The transform kind of each dimension is given by the @code{kind}
+parameter, which should point to an array of length @code{rank}.  Valid
+@code{fftw_r2r_kind} constants are given in @ref{Real-to-Real Transform
+Kinds}.
+
+@code{in} and @code{out} point to the real input and output arrays; they
+may be the same, indicating an in-place transform.
+
+@cindex flags
+@code{flags} is a bitwise OR (@samp{|}) of zero or more planner flags,
+as defined in @ref{Planner Flags}.
+
+@c =========>
+@node 64-bit Guru Interface,  , Guru Real-to-real Transforms, Guru Interface
+@subsection 64-bit Guru Interface
+@cindex 64-bit architecture
+
+When compiled in 64-bit mode on a 64-bit architecture (where addresses
+are 64 bits wide), FFTW uses 64-bit quantities internally for all
+transform sizes, strides, and so on---you don't have to do anything
+special to exploit this.  However, in the ordinary FFTW interfaces,
+you specify the transform size by an @code{int} quantity, which is
+normally only 32 bits wide.  This means that, even though FFTW is
+using 64-bit sizes internally, you cannot specify a single transform
+dimension larger than
+@ifinfo
+2^31-1
+@end ifinfo
+@html
+2<sup><small>31</small></sup>&minus;1
+@end html
+@tex
+$2^{31}-1$
+@end tex
+numbers.
+
+We expect that few users will require transforms larger than this, but,
+for those who do, we provide a 64-bit version of the guru interface in
+which all sizes are specified as integers of type @code{ptrdiff_t}
+instead of @code{int}.  (@code{ptrdiff_t} is a signed integer type
+defined by the C standard to be wide enough to represent address
+differences, and thus must be at least 64 bits wide on a 64-bit
+machine.)  We stress that there is @emph{no performance advantage} to
+using this interface---the same internal FFTW code is employed
+regardless---and it is only necessary if you want to specify very
+large transform sizes.
+@tindex ptrdiff_t
+
+
+In particular, the 64-bit guru interface is a set of planner routines
+that are exactly the same as the guru planner routines, except that
+they are named with @samp{guru64} instead of @samp{guru} and they take
+arguments of type @code{fftw_iodim64} instead of @code{fftw_iodim}.
+For example, instead of @code{fftw_plan_guru_dft}, we have
+@code{fftw_plan_guru64_dft}.
+
+@example
+fftw_plan fftw_plan_guru64_dft(
+     int rank, const fftw_iodim64 *dims,
+     int howmany_rank, const fftw_iodim64 *howmany_dims,
+     fftw_complex *in, fftw_complex *out,
+     int sign, unsigned flags);
+@end example
+@findex fftw_plan_guru64_dft
+
+The @code{fftw_iodim64} type is similar to @code{fftw_iodim}, with the
+same interpretation, except that it uses type @code{ptrdiff_t} instead
+of type @code{int}.
+
+@example
+typedef struct @{
+     ptrdiff_t n;
+     ptrdiff_t is;
+     ptrdiff_t os;
+@} fftw_iodim64;
+@end example
+@tindex fftw_iodim64
+
+Every other @samp{fftw_plan_guru} function also has a
+@samp{fftw_plan_guru64} equivalent, but we do not repeat their
+documentation here since they are identical to the 32-bit versions
+except as noted above.
+
+@c -----------------------------------------------------------
+@node New-array Execute Functions, Wisdom, Guru Interface, FFTW Reference
+@section New-array Execute Functions
+@cindex execute
+@cindex new-array execution
+
+Normally, one executes a plan for the arrays with which the plan was
+created, by calling @code{fftw_execute(plan)} as described in @ref{Using
+Plans}.
+@findex fftw_execute
+However, it is possible for sophisticated users to apply a given plan
+to a @emph{different} array using the ``new-array execute'' functions
+detailed below, provided that the following conditions are met:
+
+@itemize @bullet
+
+@item
+The array size, strides, etcetera are the same (since those are set by
+the plan).
+
+@item
+The input and output arrays are the same (in-place) or different
+(out-of-place) if the plan was originally created to be in-place or
+out-of-place, respectively.
+
+@item
+For split arrays, the separations between the real and imaginary
+parts, @code{ii-ri} and @code{io-ro}, are the same as they were for
+the input and output arrays when the plan was created.  (This
+condition is automatically satisfied for interleaved arrays.)
+
+@item
+The @dfn{alignment} of the new input/output arrays is the same as that
+of the input/output arrays when the plan was created, unless the plan
+was created with the @code{FFTW_UNALIGNED} flag.
+@ctindex FFTW_UNALIGNED
+Here, the alignment is a platform-dependent quantity (for example, it is
+the address modulo 16 if SSE SIMD instructions are used, but the address
+modulo 4 for non-SIMD single-precision FFTW on the same machine).  In
+general, only arrays allocated with @code{fftw_malloc} are guaranteed to
+be equally aligned (@pxref{SIMD alignment and fftw_malloc}).
+
+@end itemize
+
+@cindex alignment
+The alignment issue is especially critical, because if you don't use
+@code{fftw_malloc} then you may have little control over the alignment
+of arrays in memory.  For example, neither the C++ @code{new} function
+nor the Fortran @code{allocate} statement provide strong enough
+guarantees about data alignment.  If you don't use @code{fftw_malloc},
+therefore, you probably have to use @code{FFTW_UNALIGNED} (which
+disables most SIMD support).  If possible, it is probably better for
+you to simply create multiple plans (creating a new plan is quick once
+one exists for a given size), or better yet re-use the same array for
+your transforms.
+
+@findex fftw_alignment_of
+For rare circumstances in which you cannot control the alignment of
+allocated memory, but wish to determine where a given array is
+aligned like the original array for which a plan was created, you can
+use the @code{fftw_alignment_of} function:
+@example
+int fftw_alignment_of(double *p);
+@end example
+Two arrays have equivalent alignment (for the purposes of applying a
+plan) if and only if @code{fftw_alignment_of} returns the same value
+for the corresponding pointers to their data (typecast to @code{double*} 
+if necessary).
+
+If you are tempted to use the new-array execute interface because you
+want to transform a known bunch of arrays of the same size, you should
+probably go use the advanced interface instead (@pxref{Advanced
+Interface})).
+
+The new-array execute functions are:
+
+@example
+void fftw_execute_dft(
+     const fftw_plan p, 
+     fftw_complex *in, fftw_complex *out);
+
+void fftw_execute_split_dft(
+     const fftw_plan p, 
+     double *ri, double *ii, double *ro, double *io);
+
+void fftw_execute_dft_r2c(
+     const fftw_plan p,
+     double *in, fftw_complex *out);
+
+void fftw_execute_split_dft_r2c(
+     const fftw_plan p,
+     double *in, double *ro, double *io);
+
+void fftw_execute_dft_c2r(
+     const fftw_plan p,
+     fftw_complex *in, double *out);
+
+void fftw_execute_split_dft_c2r(
+     const fftw_plan p,
+     double *ri, double *ii, double *out);
+
+void fftw_execute_r2r(
+     const fftw_plan p, 
+     double *in, double *out);
+@end example
+@findex fftw_execute_dft
+@findex fftw_execute_split_dft
+@findex fftw_execute_dft_r2c
+@findex fftw_execute_split_dft_r2c
+@findex fftw_execute_dft_c2r
+@findex fftw_execute_split_dft_c2r
+@findex fftw_execute_r2r
+
+These execute the @code{plan} to compute the corresponding transform on
+the input/output arrays specified by the subsequent arguments.  The
+input/output array arguments have the same meanings as the ones passed
+to the guru planner routines in the preceding sections.  The @code{plan}
+is not modified, and these routines can be called as many times as
+desired, or intermixed with calls to the ordinary @code{fftw_execute}.
+
+The @code{plan} @emph{must} have been created for the transform type
+corresponding to the execute function, e.g. it must be a complex-DFT
+plan for @code{fftw_execute_dft}.  Any of the planner routines for that
+transform type, from the basic to the guru interface, could have been
+used to create the plan, however.
+
+@c ------------------------------------------------------------
+@node Wisdom, What FFTW Really Computes, New-array Execute Functions, FFTW Reference
+@section Wisdom
+@cindex wisdom
+@cindex saving plans to disk
+
+This section documents the FFTW mechanism for saving and restoring
+plans from disk.  This mechanism is called @dfn{wisdom}.
+
+@menu
+* Wisdom Export::
+* Wisdom Import::
+* Forgetting Wisdom::
+* Wisdom Utilities::
+@end menu
+
+@c =========>
+@node Wisdom Export, Wisdom Import, Wisdom, Wisdom
+@subsection Wisdom Export
+
+@example
+int fftw_export_wisdom_to_filename(const char *filename);
+void fftw_export_wisdom_to_file(FILE *output_file);
+char *fftw_export_wisdom_to_string(void);
+void fftw_export_wisdom(void (*write_char)(char c, void *), void *data);
+@end example
+@findex fftw_export_wisdom
+@findex fftw_export_wisdom_to_filename
+@findex fftw_export_wisdom_to_file
+@findex fftw_export_wisdom_to_string
+
+These functions allow you to export all currently accumulated wisdom
+in a form from which it can be later imported and restored, even
+during a separate run of the program. (@xref{Words of Wisdom-Saving
+Plans}.)  The current store of wisdom is not affected by calling any
+of these routines.
+
+@code{fftw_export_wisdom} exports the wisdom to any output
+medium, as specified by the callback function
+@code{write_char}. @code{write_char} is a @code{putc}-like function that
+writes the character @code{c} to some output; its second parameter is
+the @code{data} pointer passed to @code{fftw_export_wisdom}.  For
+convenience, the following three ``wrapper'' routines are provided:
+
+@code{fftw_export_wisdom_to_filename} writes wisdom to a file named
+@code{filename} (which is created or overwritten), returning @code{1}
+on success and @code{0} on failure.  A lower-level function, which
+requires you to open and close the file yourself (e.g. if you want to
+write wisdom to a portion of a larger file) is
+@code{fftw_export_wisdom_to_file}.  This writes the wisdom to the
+current position in @code{output_file}, which should be open with
+write permission; upon exit, the file remains open and is positioned
+at the end of the wisdom data.
+
+@code{fftw_export_wisdom_to_string} returns a pointer to a
+@code{NULL}-terminated string holding the wisdom data. This string is
+dynamically allocated, and it is the responsibility of the caller to
+deallocate it with @code{free} when it is no longer needed.
+
+All of these routines export the wisdom in the same format, which we
+will not document here except to say that it is LISP-like ASCII text
+that is insensitive to white space.
+
+@c =========>
+@node Wisdom Import, Forgetting Wisdom, Wisdom Export, Wisdom
+@subsection Wisdom Import
+
+@example
+int fftw_import_system_wisdom(void);
+int fftw_import_wisdom_from_filename(const char *filename);
+int fftw_import_wisdom_from_string(const char *input_string);
+int fftw_import_wisdom(int (*read_char)(void *), void *data);
+@end example
+@findex fftw_import_wisdom
+@findex fftw_import_system_wisdom
+@findex fftw_import_wisdom_from_filename
+@findex fftw_import_wisdom_from_file
+@findex fftw_import_wisdom_from_string
+
+These functions import wisdom into a program from data stored by the
+@code{fftw_export_wisdom} functions above. (@xref{Words of
+Wisdom-Saving Plans}.)  The imported wisdom replaces any wisdom
+already accumulated by the running program.
+
+@code{fftw_import_wisdom} imports wisdom from any input medium, as
+specified by the callback function @code{read_char}. @code{read_char} is
+a @code{getc}-like function that returns the next character in the
+input; its parameter is the @code{data} pointer passed to
+@code{fftw_import_wisdom}. If the end of the input data is reached
+(which should never happen for valid data), @code{read_char} should
+return @code{EOF} (as defined in @code{<stdio.h>}).  For convenience,
+the following three ``wrapper'' routines are provided:
+
+@code{fftw_import_wisdom_from_filename} reads wisdom from a file named
+@code{filename}.  A lower-level function, which requires you to open
+and close the file yourself (e.g. if you want to read wisdom from a
+portion of a larger file) is @code{fftw_import_wisdom_from_file}. This
+reads wisdom from the current position in @code{input_file} (which
+should be open with read permission); upon exit, the file remains
+open, but the position of the read pointer is unspecified.
+
+@code{fftw_import_wisdom_from_string} reads wisdom from the
+@code{NULL}-terminated string @code{input_string}.
+
+@code{fftw_import_system_wisdom} reads wisdom from an
+implementation-defined standard file (@code{/etc/fftw/wisdom} on Unix
+and GNU systems).
+@cindex wisdom, system-wide
+
+
+The return value of these import routines is @code{1} if the wisdom was
+read successfully and @code{0} otherwise. Note that, in all of these
+functions, any data in the input stream past the end of the wisdom data
+is simply ignored.
+
+@c =========>
+@node Forgetting Wisdom, Wisdom Utilities, Wisdom Import, Wisdom
+@subsection Forgetting Wisdom
+
+@example
+void fftw_forget_wisdom(void);
+@end example
+@findex fftw_forget_wisdom
+
+Calling @code{fftw_forget_wisdom} causes all accumulated @code{wisdom}
+to be discarded and its associated memory to be freed. (New
+@code{wisdom} can still be gathered subsequently, however.)
+
+@c =========>
+@node Wisdom Utilities,  , Forgetting Wisdom, Wisdom
+@subsection Wisdom Utilities
+
+FFTW includes two standalone utility programs that deal with wisdom.  We
+merely summarize them here, since they come with their own @code{man}
+pages for Unix and GNU systems (with HTML versions on our web site).
+
+The first program is @code{fftw-wisdom} (or @code{fftwf-wisdom} in
+single precision, etcetera), which can be used to create a wisdom file
+containing plans for any of the transform sizes and types supported by
+FFTW.  It is preferable to create wisdom directly from your executable
+(@pxref{Caveats in Using Wisdom}), but this program is useful for
+creating global wisdom files for @code{fftw_import_system_wisdom}.
+@cindex fftw-wisdom utility
+
+
+The second program is @code{fftw-wisdom-to-conf}, which takes a wisdom
+file as input and produces a @dfn{configuration routine} as output.  The
+latter is a C subroutine that you can compile and link into your
+program, replacing a routine of the same name in the FFTW library, that
+determines which parts of FFTW are callable by your program.
+@code{fftw-wisdom-to-conf} produces a configuration routine that links
+to only those parts of FFTW needed by the saved plans in the wisdom,
+greatly reducing the size of statically linked executables (which should
+only attempt to create plans corresponding to those in the wisdom,
+however).
+@cindex fftw-wisdom-to-conf utility
+@cindex configuration routines
+
+@c ------------------------------------------------------------
+@node What FFTW Really Computes,  , Wisdom, FFTW Reference
+@section What FFTW Really Computes
+
+In this section, we provide precise mathematical definitions for the
+transforms that FFTW computes.  These transform definitions are fairly
+standard, but some authors follow slightly different conventions for the
+normalization of the transform (the constant factor in front) and the
+sign of the complex exponent.  We begin by presenting the
+one-dimensional (1d) transform definitions, and then give the
+straightforward extension to multi-dimensional transforms.
+
+@menu
+* The 1d Discrete Fourier Transform (DFT)::
+* The 1d Real-data DFT::
+* 1d Real-even DFTs (DCTs)::
+* 1d Real-odd DFTs (DSTs)::
+* 1d Discrete Hartley Transforms (DHTs)::
+* Multi-dimensional Transforms::
+@end menu
+
+@c =========>
+@node The 1d Discrete Fourier Transform (DFT), The 1d Real-data DFT, What FFTW Really Computes, What FFTW Really Computes
+@subsection The 1d Discrete Fourier Transform (DFT)
+
+@cindex discrete Fourier transform
+@cindex DFT
+The forward (@code{FFTW_FORWARD}) discrete Fourier transform (DFT) of a
+1d complex array @math{X} of size @math{n} computes an array @math{Y},
+where:
+@tex
+$$
+Y_k = \sum_{j = 0}^{n - 1} X_j e^{-2\pi j k \sqrt{-1}/n} \ .
+$$
+@end tex
+@ifinfo
+@center Y[k] = sum for j = 0 to (n - 1) of X[j] * exp(-2 pi j k sqrt(-1)/n) .
+@end ifinfo
+@html
+<center><img src="equation-dft.png" align="top">.</center>
+@end html
+The backward (@code{FFTW_BACKWARD}) DFT computes:
+@tex
+$$
+Y_k = \sum_{j = 0}^{n - 1} X_j e^{2\pi j k \sqrt{-1}/n} \ .
+$$
+@end tex
+@ifinfo
+@center Y[k] = sum for j = 0 to (n - 1) of X[j] * exp(2 pi j k sqrt(-1)/n) .
+@end ifinfo
+@html
+<center><img src="equation-idft.png" align="top">.</center>
+@end html
+
+@cindex normalization
+FFTW computes an unnormalized transform, in that there is no coefficient
+in front of the summation in the DFT.  In other words, applying the
+forward and then the backward transform will multiply the input by
+@math{n}.
+
+@cindex frequency
+From above, an @code{FFTW_FORWARD} transform corresponds to a sign of
+@math{-1} in the exponent of the DFT.  Note also that we use the
+standard ``in-order'' output ordering---the @math{k}-th output
+corresponds to the frequency @math{k/n} (or @math{k/T}, where @math{T}
+is your total sampling period).  For those who like to think in terms of
+positive and negative frequencies, this means that the positive
+frequencies are stored in the first half of the output and the negative
+frequencies are stored in backwards order in the second half of the
+output.  (The frequency @math{-k/n} is the same as the frequency
+@math{(n-k)/n}.)
+
+@c =========>
+@node The 1d Real-data DFT, 1d Real-even DFTs (DCTs), The 1d Discrete Fourier Transform (DFT), What FFTW Really Computes
+@subsection The 1d Real-data DFT
+
+The real-input (r2c) DFT in FFTW computes the @emph{forward} transform
+@math{Y} of the size @code{n} real array @math{X}, exactly as defined
+above, i.e.
+@tex
+$$
+Y_k = \sum_{j = 0}^{n - 1} X_j e^{-2\pi j k \sqrt{-1}/n} \ .
+$$
+@end tex
+@ifinfo
+@center Y[k] = sum for j = 0 to (n - 1) of X[j] * exp(-2 pi j k sqrt(-1)/n) .
+@end ifinfo
+@html
+<center><img src="equation-dft.png" align="top">.</center>
+@end html
+This output array @math{Y} can easily be shown to possess the
+``Hermitian'' symmetry
+@cindex Hermitian
+@tex
+$Y_k = Y_{n-k}^*$,
+@end tex
+@ifinfo
+Y[k] = Y[n-k]*,
+@end ifinfo
+@html
+<i>Y<sub>k</sub> = Y<sub>n-k</sub></i><sup>*</sup>,
+@end html
+where we take @math{Y} to be periodic so that
+@tex
+$Y_n = Y_0$.
+@end tex
+@ifinfo
+Y[n] = Y[0].
+@end ifinfo
+@html
+<i>Y<sub>n</sub> = Y</i><sub>0</sub>.
+@end html
+
+As a result of this symmetry, half of the output @math{Y} is redundant
+(being the complex conjugate of the other half), and so the 1d r2c
+transforms only output elements @math{0}@dots{}@math{n/2} of @math{Y}
+(@math{n/2+1} complex numbers), where the division by @math{2} is
+rounded down. 
+
+Moreover, the Hermitian symmetry implies that
+@tex
+$Y_0$
+@end tex
+@ifinfo
+Y[0]
+@end ifinfo
+@html
+<i>Y</i><sub>0</sub>
+@end html
+and, if @math{n} is even, the
+@tex
+$Y_{n/2}$
+@end tex
+@ifinfo
+Y[n/2]
+@end ifinfo
+@html
+<i>Y</i><sub><i>n</i>/2</sub>
+@end html
+element, are purely real.  So, for the @code{R2HC} r2r transform, the
+halfcomplex format does not store the imaginary parts of these elements.
+@cindex r2r
+@ctindex R2HC
+@cindex halfcomplex format
+
+
+The c2r and @code{H2RC} r2r transforms compute the backward DFT of the
+@emph{complex} array @math{X} with Hermitian symmetry, stored in the
+r2c/@code{R2HC} output formats, respectively, where the backward
+transform is defined exactly as for the complex case:
+@tex
+$$
+Y_k = \sum_{j = 0}^{n - 1} X_j e^{2\pi j k \sqrt{-1}/n} \ .
+$$
+@end tex
+@ifinfo
+@center Y[k] = sum for j = 0 to (n - 1) of X[j] * exp(2 pi j k sqrt(-1)/n) .
+@end ifinfo
+@html
+<center><img src="equation-idft.png" align="top">.</center>
+@end html
+The outputs @code{Y} of this transform can easily be seen to be purely
+real, and are stored as an array of real numbers.
+
+@cindex normalization
+Like FFTW's complex DFT, these transforms are unnormalized.  In other
+words, applying the real-to-complex (forward) and then the
+complex-to-real (backward) transform will multiply the input by
+@math{n}.
+
+@c =========>
+@node 1d Real-even DFTs (DCTs), 1d Real-odd DFTs (DSTs), The 1d Real-data DFT, What FFTW Really Computes
+@subsection 1d Real-even DFTs (DCTs)
+
+The Real-even symmetry DFTs in FFTW are exactly equivalent to the unnormalized
+forward (and backward) DFTs as defined above, where the input array
+@math{X} of length @math{N} is purely real and is also @dfn{even} symmetry.  In
+this case, the output array is likewise real and even symmetry.
+@cindex real-even DFT
+@cindex REDFT
+
+
+@ctindex REDFT00
+For the case of @code{REDFT00}, this even symmetry means that
+@tex
+$X_j = X_{N-j}$,
+@end tex
+@ifinfo
+X[j] = X[N-j],
+@end ifinfo
+@html
+<i>X<sub>j</sub> = X<sub>N-j</sub></i>,
+@end html
+where we take @math{X} to be periodic so that
+@tex
+$X_N = X_0$.
+@end tex
+@ifinfo
+X[N] = X[0].
+@end ifinfo
+@html
+<i>X<sub>N</sub> = X</i><sub>0</sub>.
+@end html
+Because of this redundancy, only the first @math{n} real numbers are
+actually stored, where @math{N = 2(n-1)}.
+
+The proper definition of even symmetry for @code{REDFT10},
+@code{REDFT01}, and @code{REDFT11} transforms is somewhat more intricate
+because of the shifts by @math{1/2} of the input and/or output, although
+the corresponding boundary conditions are given in @ref{Real even/odd
+DFTs (cosine/sine transforms)}.  Because of the even symmetry, however,
+the sine terms in the DFT all cancel and the remaining cosine terms are
+written explicitly below.  This formulation often leads people to call
+such a transform a @dfn{discrete cosine transform} (DCT), although it is
+really just a special case of the DFT.
+@cindex discrete cosine transform
+@cindex DCT
+
+
+In each of the definitions below, we transform a real array @math{X} of
+length @math{n} to a real array @math{Y} of length @math{n}:
+
+@subsubheading REDFT00 (DCT-I)
+@ctindex REDFT00
+An @code{REDFT00} transform (type-I DCT) in FFTW is defined by:
+@tex
+$$
+Y_k = X_0 + (-1)^k X_{n-1}
+       + 2 \sum_{j=1}^{n-2} X_j \cos [ \pi j k / (n-1)].
+$$
+@end tex
+@ifinfo
+Y[k] = X[0] + (-1)^k X[n-1] + 2 (sum for j = 1 to n-2 of X[j] cos(pi jk /(n-1))).
+@end ifinfo
+@html
+<center><img src="equation-redft00.png" align="top">.</center>
+@end html
+Note that this transform is not defined for @math{n=1}.  For @math{n=2},
+the summation term above is dropped as you might expect.
+
+@subsubheading REDFT10 (DCT-II)
+@ctindex REDFT10
+An @code{REDFT10} transform (type-II DCT, sometimes called ``the'' DCT) in FFTW is defined by:
+@tex
+$$
+Y_k = 2 \sum_{j=0}^{n-1} X_j \cos [\pi (j+1/2) k / n].
+$$
+@end tex
+@ifinfo
+Y[k] = 2 (sum for j = 0 to n-1 of X[j] cos(pi (j+1/2) k / n)).
+@end ifinfo
+@html
+<center><img src="equation-redft10.png" align="top">.</center>
+@end html
+
+@subsubheading REDFT01 (DCT-III)
+@ctindex REDFT01
+An @code{REDFT01} transform (type-III DCT) in FFTW is defined by:
+@tex
+$$
+Y_k = X_0 + 2 \sum_{j=1}^{n-1} X_j \cos [\pi j (k+1/2) / n].
+$$
+@end tex
+@ifinfo
+Y[k] = X[0] + 2 (sum for j = 1 to n-1 of X[j] cos(pi j (k+1/2) / n)).
+@end ifinfo
+@html
+<center><img src="equation-redft01.png" align="top">.</center>
+@end html
+In the case of @math{n=1}, this reduces to
+@tex
+$Y_0 = X_0$.
+@end tex
+@ifinfo
+Y[0] = X[0].
+@end ifinfo
+@html
+<i>Y</i><sub>0</sub> = <i>X</i><sub>0</sub>.
+@end html
+Up to a scale factor (see below), this is the inverse of @code{REDFT10} (``the'' DCT), and so the @code{REDFT01} (DCT-III) is sometimes called the ``IDCT''.
+@cindex IDCT
+
+@subsubheading REDFT11 (DCT-IV)
+@ctindex REDFT11
+An @code{REDFT11} transform (type-IV DCT) in FFTW is defined by:
+@tex
+$$
+Y_k = 2 \sum_{j=0}^{n-1} X_j \cos [\pi (j+1/2) (k+1/2) / n].
+$$
+@end tex
+@ifinfo
+Y[k] = 2 (sum for j = 0 to n-1 of X[j] cos(pi (j+1/2) (k+1/2) / n)).
+@end ifinfo
+@html
+<center><img src="equation-redft11.png" align="top">.</center>
+@end html
+
+@subsubheading Inverses and Normalization
+
+These definitions correspond directly to the unnormalized DFTs used
+elsewhere in FFTW (hence the factors of @math{2} in front of the
+summations).  The unnormalized inverse of @code{REDFT00} is
+@code{REDFT00}, of @code{REDFT10} is @code{REDFT01} and vice versa, and
+of @code{REDFT11} is @code{REDFT11}.  Each unnormalized inverse results
+in the original array multiplied by @math{N}, where @math{N} is the
+@emph{logical} DFT size.  For @code{REDFT00}, @math{N=2(n-1)} (note that
+@math{n=1} is not defined); otherwise, @math{N=2n}.
+@cindex normalization
+
+
+In defining the discrete cosine transform, some authors also include
+additional factors of
+@ifinfo
+sqrt(2)
+@end ifinfo
+@html
+&radic;2
+@end html
+@tex
+$\sqrt{2}$
+@end tex
+(or its inverse) multiplying selected inputs and/or outputs.  This is a
+mostly cosmetic change that makes the transform orthogonal, but
+sacrifices the direct equivalence to a symmetric DFT.
+
+@c =========>
+@node 1d Real-odd DFTs (DSTs), 1d Discrete Hartley Transforms (DHTs), 1d Real-even DFTs (DCTs), What FFTW Really Computes
+@subsection 1d Real-odd DFTs (DSTs)
+
+The Real-odd symmetry DFTs in FFTW are exactly equivalent to the unnormalized
+forward (and backward) DFTs as defined above, where the input array
+@math{X} of length @math{N} is purely real and is also @dfn{odd} symmetry.  In
+this case, the output is odd symmetry and purely imaginary.
+@cindex real-odd DFT
+@cindex RODFT
+
+
+@ctindex RODFT00
+For the case of @code{RODFT00}, this odd symmetry means that
+@tex
+$X_j = -X_{N-j}$,
+@end tex
+@ifinfo
+X[j] = -X[N-j],
+@end ifinfo
+@html
+<i>X<sub>j</sub> = -X<sub>N-j</sub></i>,
+@end html
+where we take @math{X} to be periodic so that
+@tex
+$X_N = X_0$.
+@end tex
+@ifinfo
+X[N] = X[0].
+@end ifinfo
+@html
+<i>X<sub>N</sub> = X</i><sub>0</sub>.
+@end html
+Because of this redundancy, only the first @math{n} real numbers
+starting at @math{j=1} are actually stored (the @math{j=0} element is
+zero), where @math{N = 2(n+1)}.
+
+The proper definition of odd symmetry for @code{RODFT10},
+@code{RODFT01}, and @code{RODFT11} transforms is somewhat more intricate
+because of the shifts by @math{1/2} of the input and/or output, although
+the corresponding boundary conditions are given in @ref{Real even/odd
+DFTs (cosine/sine transforms)}.  Because of the odd symmetry, however,
+the cosine terms in the DFT all cancel and the remaining sine terms are
+written explicitly below.  This formulation often leads people to call
+such a transform a @dfn{discrete sine transform} (DST), although it is
+really just a special case of the DFT.
+@cindex discrete sine transform
+@cindex DST
+
+
+In each of the definitions below, we transform a real array @math{X} of
+length @math{n} to a real array @math{Y} of length @math{n}:
+
+@subsubheading RODFT00 (DST-I)
+@ctindex RODFT00
+An @code{RODFT00} transform (type-I DST) in FFTW is defined by:
+@tex
+$$
+Y_k = 2 \sum_{j=0}^{n-1} X_j \sin [ \pi (j+1) (k+1) / (n+1)].
+$$
+@end tex
+@ifinfo
+Y[k] = 2 (sum for j = 0 to n-1 of X[j] sin(pi (j+1)(k+1) / (n+1))).
+@end ifinfo
+@html
+<center><img src="equation-rodft00.png" align="top">.</center>
+@end html
+
+@subsubheading RODFT10 (DST-II)
+@ctindex RODFT10
+An @code{RODFT10} transform (type-II DST) in FFTW is defined by:
+@tex
+$$
+Y_k = 2 \sum_{j=0}^{n-1} X_j \sin [\pi (j+1/2) (k+1) / n].
+$$
+@end tex
+@ifinfo
+Y[k] = 2 (sum for j = 0 to n-1 of X[j] sin(pi (j+1/2) (k+1) / n)).
+@end ifinfo
+@html
+<center><img src="equation-rodft10.png" align="top">.</center>
+@end html
+
+@subsubheading RODFT01 (DST-III)
+@ctindex RODFT01
+An @code{RODFT01} transform (type-III DST) in FFTW is defined by:
+@tex
+$$
+Y_k = (-1)^k X_{n-1} + 2 \sum_{j=0}^{n-2} X_j \sin [\pi (j+1) (k+1/2) / n].
+$$
+@end tex
+@ifinfo
+Y[k] = (-1)^k X[n-1] + 2 (sum for j = 0 to n-2 of X[j] sin(pi (j+1) (k+1/2) / n)).
+@end ifinfo
+@html
+<center><img src="equation-rodft01.png" align="top">.</center>
+@end html
+In the case of @math{n=1}, this reduces to
+@tex
+$Y_0 = X_0$.
+@end tex
+@ifinfo
+Y[0] = X[0].
+@end ifinfo
+@html
+<i>Y</i><sub>0</sub> = <i>X</i><sub>0</sub>.
+@end html
+
+@subsubheading RODFT11 (DST-IV)
+@ctindex RODFT11
+An @code{RODFT11} transform (type-IV DST) in FFTW is defined by:
+@tex
+$$
+Y_k = 2 \sum_{j=0}^{n-1} X_j \sin [\pi (j+1/2) (k+1/2) / n].
+$$
+@end tex
+@ifinfo
+Y[k] = 2 (sum for j = 0 to n-1 of X[j] sin(pi (j+1/2) (k+1/2) / n)).
+@end ifinfo
+@html
+<center><img src="equation-rodft11.png" align="top">.</center>
+@end html
+
+@subsubheading Inverses and Normalization
+
+These definitions correspond directly to the unnormalized DFTs used
+elsewhere in FFTW (hence the factors of @math{2} in front of the
+summations).  The unnormalized inverse of @code{RODFT00} is
+@code{RODFT00}, of @code{RODFT10} is @code{RODFT01} and vice versa, and
+of @code{RODFT11} is @code{RODFT11}.  Each unnormalized inverse results
+in the original array multiplied by @math{N}, where @math{N} is the
+@emph{logical} DFT size.  For @code{RODFT00}, @math{N=2(n+1)};
+otherwise, @math{N=2n}.
+@cindex normalization
+
+
+In defining the discrete sine transform, some authors also include
+additional factors of
+@ifinfo
+sqrt(2)
+@end ifinfo
+@html
+&radic;2
+@end html
+@tex
+$\sqrt{2}$
+@end tex
+(or its inverse) multiplying selected inputs and/or outputs.  This is a
+mostly cosmetic change that makes the transform orthogonal, but
+sacrifices the direct equivalence to an antisymmetric DFT.
+
+@c =========>
+@node 1d Discrete Hartley Transforms (DHTs), Multi-dimensional Transforms, 1d Real-odd DFTs (DSTs), What FFTW Really Computes
+@subsection 1d Discrete Hartley Transforms (DHTs)
+
+@cindex discrete Hartley transform
+@cindex DHT
+The discrete Hartley transform (DHT) of a 1d real array @math{X} of size
+@math{n} computes a real array @math{Y} of the same size, where:
+@tex
+$$
+Y_k = \sum_{j = 0}^{n - 1} X_j [ \cos(2\pi j k / n) + \sin(2\pi j k / n)].
+$$
+@end tex
+@ifinfo
+@center Y[k] = sum for j = 0 to (n - 1) of X[j] * [cos(2 pi j k / n) + sin(2 pi j k / n)].
+@end ifinfo
+@html
+<center><img src="equation-dht.png" align="top">.</center>
+@end html
+
+@cindex normalization
+FFTW computes an unnormalized transform, in that there is no coefficient
+in front of the summation in the DHT.  In other words, applying the
+transform twice (the DHT is its own inverse) will multiply the input by
+@math{n}.
+
+@c =========>
+@node Multi-dimensional Transforms,  , 1d Discrete Hartley Transforms (DHTs), What FFTW Really Computes
+@subsection Multi-dimensional Transforms
+
+The multi-dimensional transforms of FFTW, in general, compute simply the
+separable product of the given 1d transform along each dimension of the
+array.  Since each of these transforms is unnormalized, computing the
+forward followed by the backward/inverse multi-dimensional transform
+will result in the original array scaled by the product of the
+normalization factors for each dimension (e.g. the product of the
+dimension sizes, for a multi-dimensional DFT).
+
+@tex
+As an explicit example, consider the following exact mathematical
+definition of our multi-dimensional DFT.  Let $X$ be a $d$-dimensional
+complex array whose elements are $X[j_1, j_2, \ldots, j_d]$, where $0
+\leq j_s < n_s$ for all~$s \in \{ 1, 2, \ldots, d \}$.  Let also
+$\omega_s = e^{2\pi \sqrt{-1}/n_s}$, for all ~$s \in \{ 1, 2, \ldots, d
+\}$.
+
+The forward transform computes a complex array~$Y$, whose
+structure is the same as that of~$X$, defined by
+
+$$
+Y[k_1, k_2, \ldots, k_d] =
+    \sum_{j_1 = 0}^{n_1 - 1}
+        \sum_{j_2 = 0}^{n_2 - 1}
+           \cdots
+              \sum_{j_d = 0}^{n_d - 1}
+                  X[j_1, j_2, \ldots, j_d] 
+                      \omega_1^{-j_1 k_1}
+                      \omega_2^{-j_2 k_2}
+                      \cdots
+                      \omega_d^{-j_d k_d} \ .
+$$
+
+The backward transform computes
+$$
+Y[k_1, k_2, \ldots, k_d] =
+    \sum_{j_1 = 0}^{n_1 - 1}
+        \sum_{j_2 = 0}^{n_2 - 1}
+           \cdots
+              \sum_{j_d = 0}^{n_d - 1}
+                  X[j_1, j_2, \ldots, j_d] 
+                      \omega_1^{j_1 k_1}
+                      \omega_2^{j_2 k_2}
+                      \cdots
+                      \omega_d^{j_d k_d} \ .
+$$
+
+Computing the forward transform followed by the backward transform
+will multiply the array by $\prod_{s=1}^{d} n_d$.
+@end tex
+
+@cindex r2c
+The definition of FFTW's multi-dimensional DFT of real data (r2c)
+deserves special attention.  In this case, we logically compute the full
+multi-dimensional DFT of the input data; since the input data are purely
+real, the output data have the Hermitian symmetry and therefore only one
+non-redundant half need be stored.  More specifically, for an @ndims multi-dimensional real-input DFT, the full (logical) complex output array
+@tex
+$Y[k_0, k_1, \ldots, k_{d-1}]$
+@end tex
+@html
+<i>Y</i>[<i>k</i><sub>0</sub>, <i>k</i><sub>1</sub>, ...,
+<i>k</i><sub><i>d-1</i></sub>]
+@end html
+@ifinfo
+Y[k[0], k[1], ..., k[d-1]]
+@end ifinfo
+has the symmetry:
+@tex
+$$
+Y[k_0, k_1, \ldots, k_{d-1}] = Y[n_0 - k_0, n_1 - k_1, \ldots, n_{d-1} - k_{d-1}]^*
+$$
+@end tex
+@html
+<i>Y</i>[<i>k</i><sub>0</sub>, <i>k</i><sub>1</sub>, ...,
+<i>k</i><sub><i>d-1</i></sub>] = <i>Y</i>[<i>n</i><sub>0</sub> -
+<i>k</i><sub>0</sub>, <i>n</i><sub>1</sub> - <i>k</i><sub>1</sub>, ...,
+<i>n</i><sub><i>d-1</i></sub> - <i>k</i><sub><i>d-1</i></sub>]<sup>*</sup>
+@end html
+@ifinfo
+Y[k[0], k[1], ..., k[d-1]] = Y[n[0] - k[0], n[1] - k[1], ..., n[d-1] - k[d-1]]*
+@end ifinfo
+(where each dimension is periodic).  Because of this symmetry, we only
+store the
+@tex
+$k_{d-1} = 0 \cdots n_{d-1}/2$
+@end tex
+@html
+<i>k</i><sub><i>d-1</i></sub> = 0...<i>n</i><sub><i>d-1</i></sub>/2+1
+@end html
+@ifinfo
+k[d-1] = 0...n[d-1]/2
+@end ifinfo
+elements of the @emph{last} dimension (division by @math{2} is rounded
+down).  (We could instead have cut any other dimension in half, but the
+last dimension proved computationally convenient.)  This results in the
+peculiar array format described in more detail by @ref{Real-data DFT
+Array Format}.
+
+The multi-dimensional c2r transform is simply the unnormalized inverse
+of the r2c transform.  i.e. it is the same as FFTW's complex backward
+multi-dimensional DFT, operating on a Hermitian input array in the
+peculiar format mentioned above and outputting a real array (since the
+DFT output is purely real).
+
+We should remind the user that the separable product of 1d transforms
+along each dimension, as computed by FFTW, is not always the same thing
+as the usual multi-dimensional transform.  A multi-dimensional
+@code{R2HC} (or @code{HC2R}) transform is not identical to the
+multi-dimensional DFT, requiring some post-processing to combine the
+requisite real and imaginary parts, as was described in @ref{The
+Halfcomplex-format DFT}.  Likewise, FFTW's multidimensional
+@code{FFTW_DHT} r2r transform is not the same thing as the logical
+multi-dimensional discrete Hartley transform defined in the literature,
+as discussed in @ref{The Discrete Hartley Transform}.
+

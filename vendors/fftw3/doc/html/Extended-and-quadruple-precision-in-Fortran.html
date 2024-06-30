@@ -1,0 +1,102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Extended and quadruple precision in Fortran (FFTW 3.3.10)</title>
+
+<meta name="description" content="Extended and quadruple precision in Fortran (FFTW 3.3.10)">
+<meta name="keywords" content="Extended and quadruple precision in Fortran (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Overview-of-Fortran-interface.html" rel="up" title="Overview of Fortran interface">
+<link href="Reversing-array-dimensions.html" rel="next" title="Reversing array dimensions">
+<link href="Overview-of-Fortran-interface.html" rel="prev" title="Overview of Fortran interface">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Extended-and-quadruple-precision-in-Fortran"></span><div class="header">
+<p>
+Previous: <a href="Overview-of-Fortran-interface.html" accesskey="p" rel="prev">Overview of Fortran interface</a>, Up: <a href="Overview-of-Fortran-interface.html" accesskey="u" rel="up">Overview of Fortran interface</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Extended-and-quadruple-precision-in-Fortran-1"></span><h4 class="subsection">7.1.1 Extended and quadruple precision in Fortran</h4>
+<span id="index-precision-7"></span>
+
+<p>If FFTW is compiled in <code>long double</code> (extended) precision
+(see <a href="Installation-and-Customization.html">Installation and Customization</a>), you may be able to call the
+resulting <code>fftwl_</code> routines (see <a href="Precision.html">Precision</a>) from Fortran if
+your compiler supports the <code>C_LONG_DOUBLE_COMPLEX</code> type code.
+</p>
+<p>Because some Fortran compilers do not support
+<code>C_LONG_DOUBLE_COMPLEX</code>, the <code>fftwl_</code> declarations are
+segregated into a separate interface file <code>fftw3l.f03</code>, which you
+should include <em>in addition</em> to <code>fftw3.f03</code> (which declares
+precision-independent &lsquo;<samp>FFTW_</samp>&rsquo; constants):
+</p>
+<span id="index-iso_005fc_005fbinding-2"></span>
+<div class="example">
+<pre class="example">  use, intrinsic :: iso_c_binding 
+  include 'fftw3.f03'
+  include 'fftw3l.f03'
+</pre></div>
+
+<p>We also support using the nonstandard <code>__float128</code>
+quadruple-precision type provided by recent versions of <code>gcc</code> on
+32- and 64-bit x86 hardware (see <a href="Installation-and-Customization.html">Installation and Customization</a>),
+using the corresponding <code>real(16)</code> and <code>complex(16)</code> types
+supported by <code>gfortran</code>.  The quadruple-precision &lsquo;<samp>fftwq_</samp>&rsquo;
+functions (see <a href="Precision.html">Precision</a>) are declared in a <code>fftw3q.f03</code>
+interface file, which should be included in addition to
+<code>fftw3.f03</code>, as above.  You should also link with
+<code>-lfftw3q -lquadmath -lm</code> as in C.
+</p>
+
+
+
+</body>
+</html>

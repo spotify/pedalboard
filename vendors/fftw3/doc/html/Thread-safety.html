@@ -1,0 +1,138 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Thread safety (FFTW 3.3.10)</title>
+
+<meta name="description" content="Thread safety (FFTW 3.3.10)">
+<meta name="keywords" content="Thread safety (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Multi_002dthreaded-FFTW.html" rel="up" title="Multi-threaded FFTW">
+<link href="Distributed_002dmemory-FFTW-with-MPI.html" rel="next" title="Distributed-memory FFTW with MPI">
+<link href="How-Many-Threads-to-Use_003f.html" rel="prev" title="How Many Threads to Use?">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Thread-safety"></span><div class="header">
+<p>
+Previous: <a href="How-Many-Threads-to-Use_003f.html" accesskey="p" rel="prev">How Many Threads to Use?</a>, Up: <a href="Multi_002dthreaded-FFTW.html" accesskey="u" rel="up">Multi-threaded FFTW</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Thread-safety-1"></span><h3 class="section">5.4 Thread safety</h3>
+
+<span id="index-threads-1"></span>
+<span id="index-OpenMP-3"></span>
+<span id="index-thread-safety-1"></span>
+<p>Users writing multi-threaded programs (including OpenMP) must concern
+themselves with the <em>thread safety</em> of the libraries they
+use&mdash;that is, whether it is safe to call routines in parallel from
+multiple threads.  FFTW can be used in such an environment, but some
+care must be taken because the planner routines share data
+(e.g. wisdom and trigonometric tables) between calls and plans.
+</p>
+<p>The upshot is that the only thread-safe routine in FFTW is
+<code>fftw_execute</code> (and the new-array variants thereof).  All other routines
+(e.g. the planner) should only be called from one thread at a time.  So,
+for example, you can wrap a semaphore lock around any calls to the
+planner; even more simply, you can just create all of your plans from
+one thread.  We do not think this should be an important restriction
+(FFTW is designed for the situation where the only performance-sensitive
+code is the actual execution of the transform), and the benefits of
+shared data between plans are great.
+</p>
+<p>Note also that, since the plan is not modified by <code>fftw_execute</code>,
+it is safe to execute the <em>same plan</em> in parallel by multiple
+threads.  However, since a given plan operates by default on a fixed
+array, you need to use one of the new-array execute functions (see <a href="New_002darray-Execute-Functions.html">New-array Execute Functions</a>) so that different threads compute the transform of different data.
+</p>
+<p>(Users should note that these comments only apply to programs using
+shared-memory threads or OpenMP.  Parallelism using MPI or forked processes
+involves a separate address-space and global variables for each process,
+and is not susceptible to problems of this sort.)
+</p>
+<p>The FFTW planner is intended to be called from a single thread.  If you
+really must call it from multiple threads, you are expected to grab
+whatever lock makes sense for your application, with the understanding
+that you may be holding that lock for a long time, which is undesirable.
+</p>
+<p>Neither strategy works, however, in the following situation.  The
+&ldquo;application&rdquo; is structured as a set of &ldquo;plugins&rdquo; which are unaware
+of each other, and for whatever reason the &ldquo;plugins&rdquo; cannot coordinate
+on grabbing the lock.  (This is not a technical problem, but an
+organizational one.  The &ldquo;plugins&rdquo; are written by independent agents,
+and from the perspective of each plugin&rsquo;s author, each plugin is using
+FFTW correctly from a single thread.)  To cope with this situation,
+starting from FFTW-3.3.5, FFTW supports an API to make the planner
+thread-safe:
+</p>
+<div class="example">
+<pre class="example">void fftw_make_planner_thread_safe(void);
+</pre></div>
+<span id="index-fftw_005fmake_005fplanner_005fthread_005fsafe"></span>
+
+<p>This call operates by brute force: It just installs a hook that wraps a
+lock (chosen by us) around all planner calls.  So there is no magic and
+you get the worst of all worlds.  The planner is still single-threaded,
+but you cannot choose which lock to use.  The planner still holds the
+lock for a long time, but you cannot impose a timeout on lock
+acquisition.  As of FFTW-3.3.5 and FFTW-3.3.6, this call does not work
+when using OpenMP as threading substrate.  (Suggestions on what to do
+about this bug are welcome.)  <em>Do not use
+<code>fftw_make_planner_thread_safe</code> unless there is no other choice,</em>
+such as in the application/plugin situation.
+</p><hr>
+<div class="header">
+<p>
+Previous: <a href="How-Many-Threads-to-Use_003f.html" accesskey="p" rel="prev">How Many Threads to Use?</a>, Up: <a href="Multi_002dthreaded-FFTW.html" accesskey="u" rel="up">Multi-threaded FFTW</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

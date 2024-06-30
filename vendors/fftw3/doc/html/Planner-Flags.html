@@ -1,0 +1,204 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Planner Flags (FFTW 3.3.10)</title>
+
+<meta name="description" content="Planner Flags (FFTW 3.3.10)">
+<meta name="keywords" content="Planner Flags (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Basic-Interface.html" rel="up" title="Basic Interface">
+<link href="Real_002ddata-DFTs.html" rel="next" title="Real-data DFTs">
+<link href="Complex-DFTs.html" rel="prev" title="Complex DFTs">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Planner-Flags"></span><div class="header">
+<p>
+Next: <a href="Real_002ddata-DFTs.html" accesskey="n" rel="next">Real-data DFTs</a>, Previous: <a href="Complex-DFTs.html" accesskey="p" rel="prev">Complex DFTs</a>, Up: <a href="Basic-Interface.html" accesskey="u" rel="up">Basic Interface</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Planner-Flags-1"></span><h4 class="subsection">4.3.2 Planner Flags</h4>
+
+<p>All of the planner routines in FFTW accept an integer <code>flags</code>
+argument, which is a bitwise OR (&lsquo;<samp>|</samp>&rsquo;) of zero or more of the flag
+constants defined below.  These flags control the rigor (and time) of
+the planning process, and can also impose (or lift) restrictions on the
+type of transform algorithm that is employed.
+</p>
+<p><em>Important:</em> the planner overwrites the input array during
+planning unless a saved plan (see <a href="Wisdom.html">Wisdom</a>) is available for that
+problem, so you should initialize your input data after creating the
+plan.  The only exceptions to this are the <code>FFTW_ESTIMATE</code> and
+<code>FFTW_WISDOM_ONLY</code> flags, as mentioned below.
+</p>
+<p>In all  cases, if  wisdom is  available for the  given problem  that was
+created  with equal-or-greater  planning rigor,  then the  more rigorous
+wisdom is used.  For example, in <code>FFTW_ESTIMATE</code> mode any available
+wisdom is used, whereas  in <code>FFTW_PATIENT</code> mode only wisdom created
+in patient or exhaustive mode can be used.  See <a href="Words-of-Wisdom_002dSaving-Plans.html">Words of Wisdom-Saving Plans</a>.
+</p>
+<span id="Planning_002drigor-flags"></span><h4 class="subsubheading">Planning-rigor flags</h4>
+<ul>
+<li> <span id="index-FFTW_005fESTIMATE-2"></span>
+<code>FFTW_ESTIMATE</code> specifies that, instead of actual measurements of
+different algorithms, a simple heuristic is used to pick a (probably
+sub-optimal) plan quickly.  With this flag, the input/output arrays are
+not overwritten during planning.
+
+</li><li> <span id="index-FFTW_005fMEASURE-2"></span>
+<code>FFTW_MEASURE</code> tells FFTW to find an optimized plan by actually
+<em>computing</em> several FFTs and measuring their execution time.
+Depending on your machine, this can take some time (often a few
+seconds).  <code>FFTW_MEASURE</code> is the default planning option.
+
+</li><li> <span id="index-FFTW_005fPATIENT-2"></span>
+<code>FFTW_PATIENT</code> is like <code>FFTW_MEASURE</code>, but considers a wider
+range of algorithms and often produces a &ldquo;more optimal&rdquo; plan
+(especially for large transforms), but at the expense of several times
+longer planning time (especially for large transforms).
+
+</li><li> <span id="index-FFTW_005fEXHAUSTIVE-1"></span>
+<code>FFTW_EXHAUSTIVE</code> is like <code>FFTW_PATIENT</code>, but considers an
+even wider range of algorithms, including many that we think are
+unlikely to be fast, to produce the most optimal plan but with a
+substantially increased planning time.
+
+</li><li> <span id="index-FFTW_005fWISDOM_005fONLY"></span>
+<code>FFTW_WISDOM_ONLY</code> is a special planning mode in which the plan
+is only created if wisdom is available for the given problem, and
+otherwise a <code>NULL</code> plan is returned.  This can be combined with
+other flags, e.g. &lsquo;<samp>FFTW_WISDOM_ONLY | FFTW_PATIENT</samp>&rsquo; creates a
+plan only if wisdom is available that was created in
+<code>FFTW_PATIENT</code> or <code>FFTW_EXHAUSTIVE</code> mode.  The
+<code>FFTW_WISDOM_ONLY</code> flag is intended for users who need to detect
+whether wisdom is available; for example, if wisdom is not available
+one may wish to allocate new arrays for planning so that user data is
+not overwritten.
+
+</li></ul>
+
+<span id="Algorithm_002drestriction-flags"></span><h4 class="subsubheading">Algorithm-restriction flags</h4>
+<ul>
+<li> <span id="index-FFTW_005fDESTROY_005fINPUT"></span>
+<code>FFTW_DESTROY_INPUT</code> specifies that an out-of-place transform is
+allowed to <em>overwrite its input</em> array with arbitrary data; this
+can sometimes allow more efficient algorithms to be employed.
+<span id="index-out_002dof_002dplace"></span>
+
+</li><li> <span id="index-FFTW_005fPRESERVE_005fINPUT-1"></span>
+<code>FFTW_PRESERVE_INPUT</code> specifies that an out-of-place transform must
+<em>not change its input</em> array.  This is ordinarily the
+<em>default</em>, except for c2r and hc2r (i.e. complex-to-real)
+transforms for which <code>FFTW_DESTROY_INPUT</code> is the default.  In the
+latter cases, passing <code>FFTW_PRESERVE_INPUT</code> will attempt to use
+algorithms that do not destroy the input, at the expense of worse
+performance; for multi-dimensional c2r transforms, however, no
+input-preserving algorithms are implemented and the planner will return
+<code>NULL</code> if one is requested.
+<span id="index-c2r-1"></span>
+<span id="index-hc2r-1"></span>
+
+</li><li> <span id="index-FFTW_005fUNALIGNED"></span>
+<span id="index-alignment-1"></span>
+<span id="index-fftw_005fmalloc-4"></span>
+<span id="index-fftw_005falignment_005fof"></span>
+<code>FFTW_UNALIGNED</code> specifies that the algorithm may not impose any
+unusual alignment requirements on the input/output arrays (i.e. no
+SIMD may be used).  This flag is normally <em>not necessary</em>, since
+the planner automatically detects misaligned arrays.  The only use for
+this flag is if you want to use the new-array execute interface to
+execute a given plan on a different array that may not be aligned like
+the original.  (Using <code>fftw_malloc</code> makes this flag unnecessary
+even then.  You can also use <code>fftw_alignment_of</code> to detect
+whether two arrays are equivalently aligned.)
+
+</li></ul>
+
+<span id="Limiting-planning-time"></span><h4 class="subsubheading">Limiting planning time</h4>
+
+<div class="example">
+<pre class="example">extern void fftw_set_timelimit(double seconds);
+</pre></div>
+<span id="index-fftw_005fset_005ftimelimit"></span>
+
+<p>This function instructs FFTW to spend at most <code>seconds</code> seconds
+(approximately) in the planner.  If <code>seconds ==
+FFTW_NO_TIMELIMIT</code> (the default value, which is negative), then
+planning time is unbounded.  Otherwise, FFTW plans with a
+progressively wider range of algorithms until the given time limit
+is reached or the given range of algorithms is explored, returning the
+best available plan.
+<span id="index-FFTW_005fNO_005fTIMELIMIT"></span>
+</p>
+
+<p>For example, specifying <code>FFTW_PATIENT</code> first plans in
+<code>FFTW_ESTIMATE</code> mode, then in <code>FFTW_MEASURE</code> mode, then
+finally (time permitting) in <code>FFTW_PATIENT</code>.  If
+<code>FFTW_EXHAUSTIVE</code> is specified instead, the planner will further
+progress to <code>FFTW_EXHAUSTIVE</code> mode.
+</p>
+<p>Note that the <code>seconds</code> argument specifies only a rough limit; in
+practice, the planner may use somewhat more time if the time limit is
+reached when the planner is in the middle of an operation that cannot
+be interrupted.  At the very least, the planner will complete planning
+in <code>FFTW_ESTIMATE</code> mode (which is thus equivalent to a time limit
+of 0).
+</p>
+
+<hr>
+<div class="header">
+<p>
+Next: <a href="Real_002ddata-DFTs.html" accesskey="n" rel="next">Real-data DFTs</a>, Previous: <a href="Complex-DFTs.html" accesskey="p" rel="prev">Complex DFTs</a>, Up: <a href="Basic-Interface.html" accesskey="u" rel="up">Basic Interface</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Interleaved and split arrays (FFTW 3.3.10)</title>
+
+<meta name="description" content="Interleaved and split arrays (FFTW 3.3.10)">
+<meta name="keywords" content="Interleaved and split arrays (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Guru-Interface.html" rel="up" title="Guru Interface">
+<link href="Guru-vector-and-transform-sizes.html" rel="next" title="Guru vector and transform sizes">
+<link href="Guru-Interface.html" rel="prev" title="Guru Interface">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Interleaved-and-split-arrays"></span><div class="header">
+<p>
+Next: <a href="Guru-vector-and-transform-sizes.html" accesskey="n" rel="next">Guru vector and transform sizes</a>, Previous: <a href="Guru-Interface.html" accesskey="p" rel="prev">Guru Interface</a>, Up: <a href="Guru-Interface.html" accesskey="u" rel="up">Guru Interface</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Interleaved-and-split-arrays-1"></span><h4 class="subsection">4.5.1 Interleaved and split arrays</h4>
+
+<p>The guru interface supports two representations of complex numbers,
+which we call the interleaved and the split format.
+</p>
+<p>The <em>interleaved</em> format is the same one used by the basic and
+advanced interfaces, and it is documented in <a href="Complex-numbers.html">Complex numbers</a>.
+In the interleaved format, you provide pointers to the real part of a
+complex number, and the imaginary part understood to be stored in the
+next memory location.
+<span id="index-interleaved-format"></span>
+</p>
+
+<p>The <em>split</em> format allows separate pointers to the real and
+imaginary parts of a complex array.
+<span id="index-split-format"></span>
+</p>
+
+<p>Technically, the interleaved format is redundant, because you can
+always express an interleaved array in terms of a split array with
+appropriate pointers and strides.  On the other hand, the interleaved
+format is simpler to use, and it is common in practice.  Hence, FFTW
+supports it as a special case.
+</p>
+
+
+
+</body>
+</html>

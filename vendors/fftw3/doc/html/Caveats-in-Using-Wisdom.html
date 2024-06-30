@@ -1,0 +1,128 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Caveats in Using Wisdom (FFTW 3.3.10)</title>
+
+<meta name="description" content="Caveats in Using Wisdom (FFTW 3.3.10)">
+<meta name="keywords" content="Caveats in Using Wisdom (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Other-Important-Topics.html" rel="up" title="Other Important Topics">
+<link href="FFTW-Reference.html" rel="next" title="FFTW Reference">
+<link href="Words-of-Wisdom_002dSaving-Plans.html" rel="prev" title="Words of Wisdom-Saving Plans">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Caveats-in-Using-Wisdom"></span><div class="header">
+<p>
+Previous: <a href="Words-of-Wisdom_002dSaving-Plans.html" accesskey="p" rel="prev">Words of Wisdom-Saving Plans</a>, Up: <a href="Other-Important-Topics.html" accesskey="u" rel="up">Other Important Topics</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Caveats-in-Using-Wisdom-1"></span><h3 class="section">3.4 Caveats in Using Wisdom</h3>
+<span id="index-wisdom_002c-problems-with"></span>
+
+<blockquote>
+<i>
+<p>For in much wisdom is much grief, and he that increaseth knowledge
+increaseth sorrow.
+</i>
+[Ecclesiastes 1:18]
+<span id="index-Ecclesiastes"></span>
+</p></blockquote>
+
+<span id="index-portability-1"></span>
+<p>There are pitfalls to using wisdom, in that it can negate FFTW&rsquo;s
+ability to adapt to changing hardware and other conditions. For
+example, it would be perfectly possible to export wisdom from a
+program running on one processor and import it into a program running
+on another processor.  Doing so, however, would mean that the second
+program would use plans optimized for the first processor, instead of
+the one it is running on.
+</p>
+<p>It should be safe to reuse wisdom as long as the hardware and program
+binaries remain unchanged. (Actually, the optimal plan may change even
+between runs of the same binary on identical hardware, due to
+differences in the virtual memory environment, etcetera.  Users
+seriously interested in performance should worry about this problem,
+too.)  It is likely that, if the same wisdom is used for two
+different program binaries, even running on the same machine, the
+plans may be sub-optimal because of differing code alignments.  It is
+therefore wise to recreate wisdom every time an application is
+recompiled.  The more the underlying hardware and software changes
+between the creation of wisdom and its use, the greater grows
+the risk of sub-optimal plans.
+</p>
+<p>Nevertheless, if the choice is between using <code>FFTW_ESTIMATE</code> or
+using possibly-suboptimal wisdom (created on the same machine, but for a
+different binary), the wisdom is likely to be better.  For this reason,
+we provide a function to import wisdom from a standard system-wide
+location (<code>/etc/fftw/wisdom</code> on Unix):
+<span id="index-wisdom_002c-system_002dwide"></span>
+</p>
+<div class="example">
+<pre class="example">int fftw_import_system_wisdom(void);
+</pre></div>
+<span id="index-fftw_005fimport_005fsystem_005fwisdom"></span>
+
+<p>FFTW also provides a standalone program, <code>fftw-wisdom</code> (described
+by its own <code>man</code> page on Unix) with which users can create wisdom,
+e.g. for a canonical set of sizes to store in the system wisdom file.
+See <a href="Wisdom-Utilities.html">Wisdom Utilities</a>.
+<span id="index-fftw_002dwisdom-utility"></span>
+</p>
+<hr>
+<div class="header">
+<p>
+Previous: <a href="Words-of-Wisdom_002dSaving-Plans.html" accesskey="p" rel="prev">Words of Wisdom-Saving Plans</a>, Up: <a href="Other-Important-Topics.html" accesskey="u" rel="up">Other Important Topics</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

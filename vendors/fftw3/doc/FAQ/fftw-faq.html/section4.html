@@ -1,0 +1,64 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head><title>
+FFTW FAQ - Section 4
+</title>
+<link rev="made" href="mailto:fftw@fftw.org">
+<link rel="Contents" href="index.html">
+<link rel="Start" href="index.html">
+<link rel="Next" href="section5.html"><link rel="Previous" href="section3.html"><link rel="Bookmark" title="FFTW FAQ" href="index.html">
+</head><body text="#000000" bgcolor="#FFFFFF"><h1>
+FFTW FAQ - Section 4 <br>
+Internals of FFTW
+</h1>
+
+<ul>
+<li><a href="#howworks" rel=subdocument>Q4.1. How does FFTW work?</a>
+<li><a href="#whyfast" rel=subdocument>Q4.2. Why is FFTW so fast?</a>
+</ul><hr>
+
+<h2><A name="howworks">
+Question 4.1.  How does FFTW work?
+</A></h2>
+
+The innovation (if it can be so called) in FFTW consists in having a
+variety of composable <i>solvers</i>, representing different FFT algorithms and implementation strategies, whose combination into a
+particular <i>plan</i> for a given size can be determined at runtime according to the characteristics of your machine/compiler. 
+This peculiar software architecture allows FFTW to adapt itself to
+almost any machine.  
+<p>
+For more details (albeit somewhat outdated), see the paper &quot;FFTW:
+An Adaptive Software Architecture for the FFT&quot;, by M. Frigo and
+S. G. Johnson, <i>Proc. ICASSP</i> 3, 1381 (1998), also available at <A href="http://www.fftw.org">the FFTW web page</A>.  
+<h2><A name="whyfast">
+Question 4.2.  Why is FFTW so fast?
+</A></h2>
+
+This is a complex question, and there is no simple answer.  In fact,
+the authors do not fully know the answer, either.  In addition to many
+small performance hacks throughout FFTW, there are three general
+reasons for FFTW's speed.  
+<ul>
+<li>	FFTW uses a variety of FFT algorithms and implementation styles
+that can be arbitrarily composed to adapt itself to
+a machine.  See <A href="#howworks">Q4.1 `How does FFTW work?'</A>.  
+<li>	FFTW uses a code generator to produce highly-optimized
+routines for computing small transforms. 
+
+<li>	FFTW uses explicit divide-and-conquer to take advantage
+of the memory hierarchy.  
+</ul>
+For more details (albeit somewhat outdated), see the paper &quot;FFTW:
+An Adaptive Software Architecture for the FFT&quot;, by M. Frigo and
+S. G. Johnson, <i>Proc. ICASSP</i> 3, 1381 (1998), available along with other references at
+<A href="http://www.fftw.org">the FFTW web page</A>.  <hr>
+Next: <a href="section5.html" rel=precedes>Known bugs</a>.<br>
+Back: <a href="section3.html" rev=precedes>Using FFTW</a>.<br>
+<a href="index.html" rev=subdocument>Return to contents</a>.<p>
+<address>
+<A href="http://www.fftw.org">Matteo Frigo and Steven G. Johnson</A> / <A href="mailto:fftw@fftw.org">fftw@fftw.org</A>
+- 14 September 2021
+</address><br>
+Extracted from FFTW Frequently Asked Questions with Answers,
+Copyright &copy; 2021 Matteo Frigo and Massachusetts Institute of Technology.
+</body></html>

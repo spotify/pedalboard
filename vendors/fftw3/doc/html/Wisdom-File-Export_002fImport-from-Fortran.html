@@ -1,0 +1,105 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Wisdom File Export/Import from Fortran (FFTW 3.3.10)</title>
+
+<meta name="description" content="Wisdom File Export/Import from Fortran (FFTW 3.3.10)">
+<meta name="keywords" content="Wisdom File Export/Import from Fortran (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Accessing-the-wisdom-API-from-Fortran.html" rel="up" title="Accessing the wisdom API from Fortran">
+<link href="Wisdom-String-Export_002fImport-from-Fortran.html" rel="next" title="Wisdom String Export/Import from Fortran">
+<link href="Accessing-the-wisdom-API-from-Fortran.html" rel="prev" title="Accessing the wisdom API from Fortran">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Wisdom-File-Export_002fImport-from-Fortran"></span><div class="header">
+<p>
+Next: <a href="Wisdom-String-Export_002fImport-from-Fortran.html" accesskey="n" rel="next">Wisdom String Export/Import from Fortran</a>, Previous: <a href="Accessing-the-wisdom-API-from-Fortran.html" accesskey="p" rel="prev">Accessing the wisdom API from Fortran</a>, Up: <a href="Accessing-the-wisdom-API-from-Fortran.html" accesskey="u" rel="up">Accessing the wisdom API from Fortran</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Wisdom-File-Export_002fImport-from-Fortran-1"></span><h4 class="subsection">7.6.1 Wisdom File Export/Import from Fortran</h4>
+
+<span id="index-fftw_005fimport-wisdom_005ffrom_005ffilename"></span>
+<span id="index-fftw_005fexport_005fwisdom_005fto_005ffilename-2"></span>
+<p>The easiest way to export and import wisdom is to do so using
+<code>fftw_export_wisdom_to_filename</code> and
+<code>fftw_wisdom_from_filename</code>.  The only trick is that these
+require you to pass a C string, which is an array of type
+<code>CHARACTER(C_CHAR)</code> that is terminated by <code>C_NULL_CHAR</code>.
+You can call them like this:
+</p>
+<div class="example">
+<pre class="example">  integer(C_INT) :: ret
+  ret = fftw_export_wisdom_to_filename(C_CHAR_'my_wisdom.dat' // C_NULL_CHAR)
+  if (ret .eq. 0) stop 'error exporting wisdom to file'
+  ret = fftw_import_wisdom_from_filename(C_CHAR_'my_wisdom.dat' // C_NULL_CHAR)
+  if (ret .eq. 0) stop 'error importing wisdom from file'
+</pre></div>
+
+<p>Note that prepending &lsquo;<samp>C_CHAR_</samp>&rsquo; is needed to specify that the
+literal string is of kind <code>C_CHAR</code>, and we null-terminate the
+string by appending &lsquo;<samp>// C_NULL_CHAR</samp>&rsquo;.  These functions return an
+<code>integer(C_INT)</code> (<code>ret</code>) which is <code>0</code> if an error
+occurred during export/import and nonzero otherwise.
+</p>
+<p>It is also possible to use the lower-level routines
+<code>fftw_export_wisdom_to_file</code> and
+<code>fftw_import_wisdom_from_file</code>, which accept parameters of the C
+type <code>FILE*</code>, expressed in Fortran as <code>type(C_PTR)</code>.
+However, you are then responsible for creating the <code>FILE*</code>
+yourself.  You can do this by using <code>iso_c_binding</code> to define
+Fortran intefaces for the C library functions <code>fopen</code> and
+<code>fclose</code>, which is a bit strange in Fortran but workable.
+</p>
+
+
+
+</body>
+</html>

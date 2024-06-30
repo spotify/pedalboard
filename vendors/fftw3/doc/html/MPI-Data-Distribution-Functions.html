@@ -1,0 +1,187 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>MPI Data Distribution Functions (FFTW 3.3.10)</title>
+
+<meta name="description" content="MPI Data Distribution Functions (FFTW 3.3.10)">
+<meta name="keywords" content="MPI Data Distribution Functions (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="FFTW-MPI-Reference.html" rel="up" title="FFTW MPI Reference">
+<link href="MPI-Plan-Creation.html" rel="next" title="MPI Plan Creation">
+<link href="Using-MPI-Plans.html" rel="prev" title="Using MPI Plans">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="MPI-Data-Distribution-Functions"></span><div class="header">
+<p>
+Next: <a href="MPI-Plan-Creation.html" accesskey="n" rel="next">MPI Plan Creation</a>, Previous: <a href="Using-MPI-Plans.html" accesskey="p" rel="prev">Using MPI Plans</a>, Up: <a href="FFTW-MPI-Reference.html" accesskey="u" rel="up">FFTW MPI Reference</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="MPI-Data-Distribution-Functions-1"></span><h4 class="subsection">6.12.4 MPI Data Distribution Functions</h4>
+
+<span id="index-data-distribution-5"></span>
+<p>As described above (see <a href="MPI-Data-Distribution.html">MPI Data Distribution</a>), in order to
+allocate your arrays, <em>before</em> creating a plan, you must first
+call one of the following routines to determine the required
+allocation size and the portion of the array locally stored on a given
+process.  The <code>MPI_Comm</code> communicator passed here must be
+equivalent to the communicator used below for plan creation.
+</p>
+<p>The basic interface for multidimensional transforms consists of the
+functions:
+</p>
+<span id="index-fftw_005fmpi_005flocal_005fsize_005f2d-2"></span>
+<span id="index-fftw_005fmpi_005flocal_005fsize_005f3d"></span>
+<span id="index-fftw_005fmpi_005flocal_005fsize"></span>
+<span id="index-fftw_005fmpi_005flocal_005fsize_005f2d_005ftransposed-1"></span>
+<span id="index-fftw_005fmpi_005flocal_005fsize_005f3d_005ftransposed-1"></span>
+<span id="index-fftw_005fmpi_005flocal_005fsize_005ftransposed"></span>
+<div class="example">
+<pre class="example">ptrdiff_t fftw_mpi_local_size_2d(ptrdiff_t n0, ptrdiff_t n1, MPI_Comm comm,
+                                 ptrdiff_t *local_n0, ptrdiff_t *local_0_start);
+ptrdiff_t fftw_mpi_local_size_3d(ptrdiff_t n0, ptrdiff_t n1, ptrdiff_t n2,
+                                 MPI_Comm comm,
+                                 ptrdiff_t *local_n0, ptrdiff_t *local_0_start);
+ptrdiff_t fftw_mpi_local_size(int rnk, const ptrdiff_t *n, MPI_Comm comm,
+                              ptrdiff_t *local_n0, ptrdiff_t *local_0_start);
+
+ptrdiff_t fftw_mpi_local_size_2d_transposed(ptrdiff_t n0, ptrdiff_t n1, MPI_Comm comm,
+                                            ptrdiff_t *local_n0, ptrdiff_t *local_0_start,
+                                            ptrdiff_t *local_n1, ptrdiff_t *local_1_start);
+ptrdiff_t fftw_mpi_local_size_3d_transposed(ptrdiff_t n0, ptrdiff_t n1, ptrdiff_t n2,
+                                            MPI_Comm comm,
+                                            ptrdiff_t *local_n0, ptrdiff_t *local_0_start,
+                                            ptrdiff_t *local_n1, ptrdiff_t *local_1_start);
+ptrdiff_t fftw_mpi_local_size_transposed(int rnk, const ptrdiff_t *n, MPI_Comm comm,
+                                         ptrdiff_t *local_n0, ptrdiff_t *local_0_start,
+                                         ptrdiff_t *local_n1, ptrdiff_t *local_1_start);
+</pre></div>
+
+<p>These functions return the number of elements to allocate (complex
+numbers for DFT/r2c/c2r plans, real numbers for r2r plans), whereas
+the <code>local_n0</code> and <code>local_0_start</code> return the portion
+(<code>local_0_start</code> to <code>local_0_start + local_n0 - 1</code>) of the
+first dimension of an n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;n<sub>d-1</sub>
+ array that is stored on the local
+process.  See <a href="Basic-and-advanced-distribution-interfaces.html">Basic and advanced distribution interfaces</a>.  For
+<code>FFTW_MPI_TRANSPOSED_OUT</code> plans, the &lsquo;<samp>_transposed</samp>&rsquo; variants
+are useful in order to also return the local portion of the first
+dimension in the n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&hellip;&times;&nbsp;n<sub>d-1</sub>
+ transposed output.  
+See <a href="Transposed-distributions.html">Transposed distributions</a>.  
+The advanced interface for multidimensional transforms is:
+</p>
+<span id="index-advanced-interface-5"></span>
+<span id="index-fftw_005fmpi_005flocal_005fsize_005fmany-1"></span>
+<span id="index-fftw_005fmpi_005flocal_005fsize_005fmany_005ftransposed-1"></span>
+<div class="example">
+<pre class="example">ptrdiff_t fftw_mpi_local_size_many(int rnk, const ptrdiff_t *n, ptrdiff_t howmany,
+                                   ptrdiff_t block0, MPI_Comm comm,
+                                   ptrdiff_t *local_n0, ptrdiff_t *local_0_start);
+ptrdiff_t fftw_mpi_local_size_many_transposed(int rnk, const ptrdiff_t *n, ptrdiff_t howmany,
+                                              ptrdiff_t block0, ptrdiff_t block1, MPI_Comm comm,
+                                              ptrdiff_t *local_n0, ptrdiff_t *local_0_start,
+                                              ptrdiff_t *local_n1, ptrdiff_t *local_1_start);
+</pre></div>
+
+<p>These differ from the basic interface in only two ways.  First, they
+allow you to specify block sizes <code>block0</code> and <code>block1</code> (the
+latter for the transposed output); you can pass
+<code>FFTW_MPI_DEFAULT_BLOCK</code> to use FFTW&rsquo;s default block size as in
+the basic interface.  Second, you can pass a <code>howmany</code> parameter,
+corresponding to the advanced planning interface below: this is for
+transforms of contiguous <code>howmany</code>-tuples of numbers
+(<code>howmany = 1</code> in the basic interface).
+</p>
+<p>The corresponding basic and advanced routines for one-dimensional
+transforms (currently only complex DFTs) are:
+</p>
+<span id="index-fftw_005fmpi_005flocal_005fsize_005f1d-1"></span>
+<span id="index-fftw_005fmpi_005flocal_005fsize_005fmany_005f1d"></span>
+<div class="example">
+<pre class="example">ptrdiff_t fftw_mpi_local_size_1d(
+             ptrdiff_t n0, MPI_Comm comm, int sign, unsigned flags,
+             ptrdiff_t *local_ni, ptrdiff_t *local_i_start,
+             ptrdiff_t *local_no, ptrdiff_t *local_o_start);
+ptrdiff_t fftw_mpi_local_size_many_1d(
+             ptrdiff_t n0, ptrdiff_t howmany,
+             MPI_Comm comm, int sign, unsigned flags,
+             ptrdiff_t *local_ni, ptrdiff_t *local_i_start,
+             ptrdiff_t *local_no, ptrdiff_t *local_o_start);
+</pre></div>
+
+<span id="index-FFTW_005fMPI_005fSCRAMBLED_005fOUT-1"></span>
+<span id="index-FFTW_005fMPI_005fSCRAMBLED_005fIN-1"></span>
+<p>As above, the return value is the number of elements to allocate
+(complex numbers, for complex DFTs).  The <code>local_ni</code> and
+<code>local_i_start</code> arguments return the portion
+(<code>local_i_start</code> to <code>local_i_start + local_ni - 1</code>) of the
+1d array that is stored on this process for the transform
+<em>input</em>, and <code>local_no</code> and <code>local_o_start</code> are the
+corresponding quantities for the input.  The <code>sign</code>
+(<code>FFTW_FORWARD</code> or <code>FFTW_BACKWARD</code>) and <code>flags</code> must
+match the arguments passed when creating a plan.  Although the inputs
+and outputs have different data distributions in general, it is
+guaranteed that the <em>output</em> data distribution of an
+<code>FFTW_FORWARD</code> plan will match the <em>input</em> data distribution
+of an <code>FFTW_BACKWARD</code> plan and vice versa; similarly for the
+<code>FFTW_MPI_SCRAMBLED_OUT</code> and <code>FFTW_MPI_SCRAMBLED_IN</code> flags.
+See <a href="One_002ddimensional-distributions.html">One-dimensional distributions</a>.
+</p>
+<hr>
+<div class="header">
+<p>
+Next: <a href="MPI-Plan-Creation.html" accesskey="n" rel="next">MPI Plan Creation</a>, Previous: <a href="Using-MPI-Plans.html" accesskey="p" rel="prev">Using MPI Plans</a>, Up: <a href="FFTW-MPI-Reference.html" accesskey="u" rel="up">FFTW MPI Reference</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

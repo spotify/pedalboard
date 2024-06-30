@@ -1,0 +1,76 @@
+# -*- makefile -*-
+# This file contains special make rules to generate codelets.
+# Most of this file requires GNU make .
+
+CODLIST = codlist.c
+CODELET_NAME=codelet_
+
+# only delete codlist.c in maintainer-mode, since it is included in the dist
+# FIXME: is there a way to delete in 'make clean' only when builddir != srcdir?
+maintainer-clean-local:
+	rm -f $(CODLIST)
+
+if MAINTAINER_MODE
+
+# rule to build codlist
+$(CODLIST): Makefile
+	(									\
+	echo "#include \"kernel/ifftw.h\"";					\
+	echo $(INCLUDE_SIMD_HEADER);						\
+	echo;									\
+	for i in $(ALL_CODELETS) NIL; do					\
+	   if test "$$i" != NIL; then						\
+	     j=`basename $$i | sed -e 's/[.][cS]$$//g'`;			\
+             echo "extern void $(XRENAME)($(CODELET_NAME)$$j)(planner *);";	\
+           fi									\
+	done;									\
+	echo;									\
+	echo;									\
+	echo "extern const solvtab $(SOLVTAB_NAME);";				\
+	echo "const solvtab $(SOLVTAB_NAME) = {";				\
+	for i in $(ALL_CODELETS) NIL; do					\
+	   if test "$$i" != NIL; then						\
+	     j=`basename $$i | sed -e 's/[.][cS]$$//g'`;			\
+	     echo "   SOLVTAB($(XRENAME)($(CODELET_NAME)$$j)),";		\
+	   fi									\
+	done;									\
+	echo "   SOLVTAB_END";							\
+	echo "};";								\
+	) >$@
+
+#INDENT = indent -kr -cs -i5 -l800 -fca -nfc1 -sc -sob -cli4 -TR -Tplanner -TV
+TWOVERS = sh ${top_srcdir}/support/twovers.sh
+GENFFTDIR = ${top_builddir}/genfft
+GEN_NOTW = ${GENFFTDIR}/gen_notw.native
+GEN_NOTW_C = ${GENFFTDIR}/gen_notw_c.native
+GEN_TWIDDLE = ${GENFFTDIR}/gen_twiddle.native
+GEN_TWIDDLE_C = ${GENFFTDIR}/gen_twiddle_c.native
+GEN_TWIDSQ = ${GENFFTDIR}/gen_twidsq.native
+GEN_TWIDSQ_C = ${GENFFTDIR}/gen_twidsq_c.native
+GEN_R2CF = ${GENFFTDIR}/gen_r2cf.native
+GEN_R2CB = ${GENFFTDIR}/gen_r2cb.native
+GEN_HC2HC = ${GENFFTDIR}/gen_hc2hc.native
+GEN_HC2C = ${GENFFTDIR}/gen_hc2c.native
+GEN_HC2CDFT = ${GENFFTDIR}/gen_hc2cdft.native
+GEN_HC2CDFT_C = ${GENFFTDIR}/gen_hc2cdft_c.native
+GEN_R2R = ${GENFFTDIR}/gen_r2r.native
+PRELUDE_DFT = ${top_srcdir}/support/codelet_prelude.dft
+PRELUDE_RDFT = ${top_srcdir}/support/codelet_prelude.rdft
+ADD_DATE = sed -e s/@DATE@/"`date`"/
+
+COPYRIGHT=${top_srcdir}/COPYRIGHT
+CODELET_DEPS=$(COPYRIGHT) $(PRELUDE) 
+PRELUDE_COMMANDS_DFT=cat $(COPYRIGHT) $(PRELUDE_DFT)
+PRELUDE_COMMANDS_RDFT=cat $(COPYRIGHT) $(PRELUDE_RDFT)
+
+FLAGS_COMMON = -compact -variables 4
+DFT_FLAGS_COMMON = $(FLAGS_COMMON) -pipeline-latency 4
+RDFT_FLAGS_COMMON = $(FLAGS_COMMON) -pipeline-latency 4
+
+# cancel the hideous builtin rules that cause an infinite loop
+%: %.o
+%: %.s
+%: %.c
+%: %.S
+
+endif # MAINTAINER_MODE

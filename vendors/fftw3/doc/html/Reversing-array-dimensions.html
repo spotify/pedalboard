@@ -1,0 +1,173 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Reversing array dimensions (FFTW 3.3.10)</title>
+
+<meta name="description" content="Reversing array dimensions (FFTW 3.3.10)">
+<meta name="keywords" content="Reversing array dimensions (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Calling-FFTW-from-Modern-Fortran.html" rel="up" title="Calling FFTW from Modern Fortran">
+<link href="FFTW-Fortran-type-reference.html" rel="next" title="FFTW Fortran type reference">
+<link href="Extended-and-quadruple-precision-in-Fortran.html" rel="prev" title="Extended and quadruple precision in Fortran">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Reversing-array-dimensions"></span><div class="header">
+<p>
+Next: <a href="FFTW-Fortran-type-reference.html" accesskey="n" rel="next">FFTW Fortran type reference</a>, Previous: <a href="Overview-of-Fortran-interface.html" accesskey="p" rel="prev">Overview of Fortran interface</a>, Up: <a href="Calling-FFTW-from-Modern-Fortran.html" accesskey="u" rel="up">Calling FFTW from Modern Fortran</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Reversing-array-dimensions-1"></span><h3 class="section">7.2 Reversing array dimensions</h3>
+
+<span id="index-row_002dmajor-6"></span>
+<span id="index-column_002dmajor-1"></span>
+<p>A minor annoyance in calling FFTW from Fortran is that FFTW&rsquo;s array
+dimensions are defined in the C convention (row-major order), while
+Fortran&rsquo;s array dimensions are the opposite convention (column-major
+order). See <a href="Multi_002ddimensional-Array-Format.html">Multi-dimensional Array Format</a>.  This is just a
+bookkeeping difference, with no effect on performance.  The only
+consequence of this is that, whenever you create an FFTW plan for a
+multi-dimensional transform, you must always <em>reverse the
+ordering of the dimensions</em>.
+</p>
+<p>For example, consider the three-dimensional (L&nbsp;&times;&nbsp;M&nbsp;&times;&nbsp;N
+) arrays:
+</p>
+<div class="example">
+<pre class="example">  complex(C_DOUBLE_COMPLEX), dimension(L,M,N) :: in, out
+</pre></div>
+
+<p>To plan a DFT for these arrays using <code>fftw_plan_dft_3d</code>, you could do:
+</p>
+<span id="index-fftw_005fplan_005fdft_005f3d-2"></span>
+<div class="example">
+<pre class="example">  plan = fftw_plan_dft_3d(N,M,L, in,out, FFTW_FORWARD,FFTW_ESTIMATE)
+</pre></div>
+
+<p>That is, from FFTW&rsquo;s perspective this is a N&nbsp;&times;&nbsp;M&nbsp;&times;&nbsp;L
+ array.
+<em>No data transposition need occur</em>, as this is <em>only
+notation</em>.  Similarly, to use the more generic routine
+<code>fftw_plan_dft</code> with the same arrays, you could do:
+</p>
+<div class="example">
+<pre class="example">  integer(C_INT), dimension(3) :: n = [N,M,L]
+  plan = fftw_plan_dft_3d(3, n, in,out, FFTW_FORWARD,FFTW_ESTIMATE)
+</pre></div>
+
+<p>Note, by the way, that this is different from the legacy Fortran
+interface (see <a href="Fortran_002dinterface-routines.html">Fortran-interface routines</a>), which automatically
+reverses the order of the array dimension for you.  Here, you are
+calling the C interface directly, so there is no &ldquo;translation&rdquo; layer.
+</p>
+<span id="index-r2c_002fc2r-multi_002ddimensional-array-format-2"></span>
+<p>An important thing to keep in mind is the implication of this for
+multidimensional real-to-complex transforms (see <a href="Multi_002dDimensional-DFTs-of-Real-Data.html">Multi-Dimensional DFTs of Real Data</a>).  In C, a multidimensional real-to-complex DFT
+chops the last dimension roughly in half (N&nbsp;&times;&nbsp;M&nbsp;&times;&nbsp;L
+ real input
+goes to N&nbsp;&times;&nbsp;M&nbsp;&times;&nbsp;L/2+1
+ complex output).  In Fortran, because
+the array dimension notation is reversed, the <em>first</em> dimension of
+the complex data is chopped roughly in half.  For example consider the
+&lsquo;<samp>r2c</samp>&rsquo; transform of L&nbsp;&times;&nbsp;M&nbsp;&times;&nbsp;N
+ real input in Fortran:
+</p>
+<span id="index-fftw_005fplan_005fdft_005fr2c_005f3d-2"></span>
+<span id="index-fftw_005fexecute_005fdft_005fr2c-1"></span>
+<div class="example">
+<pre class="example">  type(C_PTR) :: plan
+  real(C_DOUBLE), dimension(L,M,N) :: in
+  complex(C_DOUBLE_COMPLEX), dimension(L/2+1,M,N) :: out
+  plan = fftw_plan_dft_r2c_3d(N,M,L, in,out, FFTW_ESTIMATE)
+  ...
+  call fftw_execute_dft_r2c(plan, in, out)
+</pre></div>
+
+<span id="index-in_002dplace-9"></span>
+<span id="index-padding-5"></span>
+<p>Alternatively, for an in-place r2c transform, as described in the C
+documentation we must <em>pad</em> the <em>first</em> dimension of the
+real input with an extra two entries (which are ignored by FFTW) so as
+to leave enough space for the complex output. The input is
+<em>allocated</em> as a 2[L/2+1]&nbsp;&times;&nbsp;M&nbsp;&times;&nbsp;N
+ array, even though only
+L&nbsp;&times;&nbsp;M&nbsp;&times;&nbsp;N
+ of it is actually used.  In this example, we will
+allocate the array as a pointer type, using &lsquo;<samp>fftw_alloc</samp>&rsquo; to
+ensure aligned memory for maximum performance (see <a href="Allocating-aligned-memory-in-Fortran.html">Allocating aligned memory in Fortran</a>); this also makes it easy to reference the
+same memory as both a real array and a complex array.
+</p>
+<span id="index-fftw_005falloc_005fcomplex-4"></span>
+<span id="index-c_005ff_005fpointer"></span>
+<div class="example">
+<pre class="example">  real(C_DOUBLE), pointer :: in(:,:,:)
+  complex(C_DOUBLE_COMPLEX), pointer :: out(:,:,:)
+  type(C_PTR) :: plan, data
+  data = fftw_alloc_complex(int((L/2+1) * M * N, C_SIZE_T))
+  call c_f_pointer(data, in, [2*(L/2+1),M,N])
+  call c_f_pointer(data, out, [L/2+1,M,N])
+  plan = fftw_plan_dft_r2c_3d(N,M,L, in,out, FFTW_ESTIMATE)
+  ...
+  call fftw_execute_dft_r2c(plan, in, out)
+  ...
+  call fftw_destroy_plan(plan)
+  call fftw_free(data)
+</pre></div>
+
+<hr>
+<div class="header">
+<p>
+Next: <a href="FFTW-Fortran-type-reference.html" accesskey="n" rel="next">FFTW Fortran type reference</a>, Previous: <a href="Overview-of-Fortran-interface.html" accesskey="p" rel="prev">Overview of Fortran interface</a>, Up: <a href="Calling-FFTW-from-Modern-Fortran.html" accesskey="u" rel="up">Calling FFTW from Modern Fortran</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

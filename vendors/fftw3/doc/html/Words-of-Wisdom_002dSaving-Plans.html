@@ -1,0 +1,141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Words of Wisdom-Saving Plans (FFTW 3.3.10)</title>
+
+<meta name="description" content="Words of Wisdom-Saving Plans (FFTW 3.3.10)">
+<meta name="keywords" content="Words of Wisdom-Saving Plans (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Other-Important-Topics.html" rel="up" title="Other Important Topics">
+<link href="Caveats-in-Using-Wisdom.html" rel="next" title="Caveats in Using Wisdom">
+<link href="Dynamic-Arrays-in-C_002dThe-Wrong-Way.html" rel="prev" title="Dynamic Arrays in C-The Wrong Way">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Words-of-Wisdom_002dSaving-Plans"></span><div class="header">
+<p>
+Next: <a href="Caveats-in-Using-Wisdom.html" accesskey="n" rel="next">Caveats in Using Wisdom</a>, Previous: <a href="Multi_002ddimensional-Array-Format.html" accesskey="p" rel="prev">Multi-dimensional Array Format</a>, Up: <a href="Other-Important-Topics.html" accesskey="u" rel="up">Other Important Topics</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Words-of-Wisdom_002d_002d_002dSaving-Plans"></span><h3 class="section">3.3 Words of Wisdom&mdash;Saving Plans</h3>
+<span id="index-wisdom"></span>
+<span id="index-saving-plans-to-disk"></span>
+
+<p>FFTW implements a method for saving plans to disk and restoring them.
+In fact, what FFTW does is more general than just saving and loading
+plans.  The mechanism is called <em>wisdom</em>.  Here, we describe
+this feature at a high level. See <a href="FFTW-Reference.html">FFTW Reference</a>, for a less casual
+but more complete discussion of how to use wisdom in FFTW.
+</p>
+<p>Plans created with the <code>FFTW_MEASURE</code>, <code>FFTW_PATIENT</code>, or
+<code>FFTW_EXHAUSTIVE</code> options produce near-optimal FFT performance,
+but may require a long time to compute because FFTW must measure the
+runtime of many possible plans and select the best one.  This setup is
+designed for the situations where so many transforms of the same size
+must be computed that the start-up time is irrelevant.  For short
+initialization times, but slower transforms, we have provided
+<code>FFTW_ESTIMATE</code>.  The <code>wisdom</code> mechanism is a way to get the
+best of both worlds: you compute a good plan once, save it to
+disk, and later reload it as many times as necessary.  The wisdom
+mechanism can actually save and reload many plans at once, not just
+one.
+<span id="index-FFTW_005fMEASURE-1"></span>
+<span id="index-FFTW_005fPATIENT-1"></span>
+<span id="index-FFTW_005fEXHAUSTIVE"></span>
+<span id="index-FFTW_005fESTIMATE-1"></span>
+</p>
+
+<p>Whenever you create a plan, the FFTW planner accumulates wisdom, which
+is information sufficient to reconstruct the plan.  After planning,
+you can save this information to disk by means of the function:
+</p><div class="example">
+<pre class="example">int fftw_export_wisdom_to_filename(const char *filename);
+</pre></div>
+<span id="index-fftw_005fexport_005fwisdom_005fto_005ffilename"></span>
+<p>(This function returns non-zero on success.)
+</p>
+<p>The next time you run the program, you can restore the wisdom with
+<code>fftw_import_wisdom_from_filename</code> (which also returns non-zero on success),
+and then recreate the plan using the same flags as before.
+</p><div class="example">
+<pre class="example">int fftw_import_wisdom_from_filename(const char *filename);
+</pre></div>
+<span id="index-fftw_005fimport_005fwisdom_005ffrom_005ffilename"></span>
+
+<p>Wisdom is automatically used for any size to which it is applicable, as
+long as the planner flags are not more &ldquo;patient&rdquo; than those with which
+the wisdom was created.  For example, wisdom created with
+<code>FFTW_MEASURE</code> can be used if you later plan with
+<code>FFTW_ESTIMATE</code> or <code>FFTW_MEASURE</code>, but not with
+<code>FFTW_PATIENT</code>.
+</p>
+<p>The <code>wisdom</code> is cumulative, and is stored in a global, private
+data structure managed internally by FFTW.  The storage space required
+is minimal, proportional to the logarithm of the sizes the wisdom was
+generated from.  If memory usage is a concern, however, the wisdom can
+be forgotten and its associated memory freed by calling:
+</p><div class="example">
+<pre class="example">void fftw_forget_wisdom(void);
+</pre></div>
+<span id="index-fftw_005fforget_005fwisdom"></span>
+
+<p>Wisdom can be exported to a file, a string, or any other medium.
+For details, see <a href="Wisdom.html">Wisdom</a>.
+</p>
+<hr>
+<div class="header">
+<p>
+Next: <a href="Caveats-in-Using-Wisdom.html" accesskey="n" rel="next">Caveats in Using Wisdom</a>, Previous: <a href="Multi_002ddimensional-Array-Format.html" accesskey="p" rel="prev">Multi-dimensional Array Format</a>, Up: <a href="Other-Important-Topics.html" accesskey="u" rel="up">Other Important Topics</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>
