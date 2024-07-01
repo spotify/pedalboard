@@ -148,6 +148,8 @@ if platform.system() != "Darwin":
     else:
         # And on x86, ignore the ARM-specific SIMD code:
         fftw_paths = ignore_files_matching(fftw_paths, "neon")
+        # Support for FMA4 instructions:
+        ALL_CFLAGS.append("-mfma4")
         # Target Broadwell for the best SIMD support:
         ALL_CFLAGS.append("-march=broadwell")
 
