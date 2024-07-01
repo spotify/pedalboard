@@ -117,7 +117,7 @@ def ignore_files_matching(files: set[Path], *matches) -> set[str]:
             else:
                 new_files.append(file)
         files = new_files
-    return set(files)
+    return files
 
 
 if platform.system() != "Darwin":

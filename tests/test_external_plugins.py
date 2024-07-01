@@ -557,7 +557,7 @@ def test_attributes_proxy(plugin_filename: str):
         [
             (path, parameter)
             for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
-            for parameter in [k for k, v in get_parameters(path).items() if v.type == bool]
+            for parameter in [k for k, v in get_parameters(path).items() if v.type is bool]
         ],
         5,
     ),
@@ -585,7 +585,7 @@ def test_bool_parameters(plugin_filename: str, parameter_name: str):
         [
             (path, parameter)
             for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
-            for parameter in [k for k, v in get_parameters(path).items() if v.type == bool]
+            for parameter in [k for k, v in get_parameters(path).items() if v.type is bool]
         ],
         5,
     ),
@@ -681,7 +681,7 @@ def test_float_parameter_valdation(plugin_filename: str, parameter_name: str):
         [
             (path, parameter)
             for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
-            for parameter in [k for k, v in get_parameters(path).items() if v.type == str]
+            for parameter in [k for k, v in get_parameters(path).items() if v.type is str]
         ],
         5,
     ),
@@ -709,7 +709,7 @@ def test_str_parameters(plugin_filename: str, parameter_name: str):
         [
             (path, parameter)
             for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
-            for parameter in [k for k, v in get_parameters(path).items() if v.type == str]
+            for parameter in [k for k, v in get_parameters(path).items() if v.type is str]
         ],
         5,
     ),
