@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -22,8 +22,8 @@
 #ifndef __API_H__
 #define __API_H__
 
-#ifndef CALLING_FFTW /* defined in hook.c, when calling internal functions */
-#  define COMPILING_FFTW /* used for DLL symbol exporting in fftw3.h */
+#ifndef CALLING_FFTW   /* defined in hook.c, when calling internal functions */
+#define COMPILING_FFTW /* used for DLL symbol exporting in fftw3.h */
 #endif
 
 /* When compiling with GNU libtool on Windows, DLL_EXPORT is #defined
@@ -41,7 +41,7 @@
    us to mark things correctly, which is necessary for other compilers
    (such as MS VC++). */
 #ifdef DLL_EXPORT
-#  define FFTW_DLL
+#define FFTW_DLL
 #endif
 
 /* just in case: force <fftw3.h> not to use C99 complex numbers
@@ -54,15 +54,14 @@
 #include "rdft/rdft.h"
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif /* __cplusplus */
 
 /* the API ``plan'' contains both the kernel plan and problem */
 struct X(plan_s) {
-     plan *pln;
-     problem *prb;
-     int sign;
+  plan *pln;
+  problem *prb;
+  int sign;
 };
 
 /* shorthand */
@@ -73,22 +72,21 @@ typedef R C[2];
 
 #define EXTRACT_REIM(sign, c, r, i) X(extract_reim)(sign, (c)[0], r, i)
 
-#define TAINT_UNALIGNED(p, flg) TAINT(p, ((flg) & FFTW_UNALIGNED) != 0)
+#define TAINT_UNALIGNED(p, flg) TAINT(p, ((flg)&FFTW_UNALIGNED) != 0)
 
-tensor *X(mktensor_rowmajor)(int rnk, const int *n,
-			     const int *niphys, const int *nophys,
-			     int is, int os);
+tensor *X(mktensor_rowmajor)(int rnk, const int *n, const int *niphys,
+                             const int *nophys, int is, int os);
 
-tensor *X(mktensor_iodims)(int rank, const X(iodim) *dims, int is, int os);
-tensor *X(mktensor_iodims64)(int rank, const X(iodim64) *dims, int is, int os);
-const int *X(rdft2_pad)(int rnk, const int *n, const int *nembed,
-			int inplace, int cmplx, int **nfree);
+tensor *X(mktensor_iodims)(int rank, const X(iodim) * dims, int is, int os);
+tensor *X(mktensor_iodims64)(int rank, const X(iodim64) * dims, int is, int os);
+const int *X(rdft2_pad)(int rnk, const int *n, const int *nembed, int inplace,
+                        int cmplx, int **nfree);
 
 int X(many_kosherp)(int rnk, const int *n, int howmany);
-int X(guru_kosherp)(int rank, const X(iodim) *dims,
-		    int howmany_rank, const X(iodim) *howmany_dims);
-int X(guru64_kosherp)(int rank, const X(iodim64) *dims,
-		    int howmany_rank, const X(iodim64) *howmany_dims);
+int X(guru_kosherp)(int rank, const X(iodim) * dims, int howmany_rank,
+                    const X(iodim) * howmany_dims);
+int X(guru64_kosherp)(int rank, const X(iodim64) * dims, int howmany_rank,
+                      const X(iodim64) * howmany_dims);
 
 /* Note: FFTW_EXTERN is used for "internal" functions used in tests/hook.c */
 
@@ -107,11 +105,11 @@ apiplan *X(mkapiplan)(int sign, unsigned flags, problem *prb);
 rdft_kind *X(map_r2r_kind)(int rank, const X(r2r_kind) * kind);
 
 typedef void (*planner_hook_t)(void);
-                                                     
+
 void X(set_planner_hooks)(planner_hook_t before, planner_hook_t after);
 
 #ifdef __cplusplus
-}  /* extern "C" */
+} /* extern "C" */
 #endif /* __cplusplus */
 
-#endif				/* __API_H__ */
+#endif /* __API_H__ */

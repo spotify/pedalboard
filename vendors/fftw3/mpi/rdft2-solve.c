@@ -14,16 +14,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #include "mpi-rdft2.h"
 
 /* use the apply() operation for MPI_RDFT2 problems */
-void XM(rdft2_solve)(const plan *ego_, const problem *p_)
-{
-     const plan_mpi_rdft2 *ego = (const plan_mpi_rdft2 *) ego_;
-     const problem_mpi_rdft2 *p = (const problem_mpi_rdft2 *) p_;
-     ego->apply(ego_, UNTAINT(p->I), UNTAINT(p->O));
+void XM(rdft2_solve)(const plan *ego_, const problem *p_) {
+  const plan_mpi_rdft2 *ego = (const plan_mpi_rdft2 *)ego_;
+  const problem_mpi_rdft2 *p = (const problem_mpi_rdft2 *)p_;
+  ego->apply(ego_, UNTAINT(p->I), UNTAINT(p->O));
 }

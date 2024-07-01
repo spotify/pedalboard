@@ -1,10 +1,10 @@
 /* declarations of common subroutines, etc. for use with FFTW
    self-test/benchmark program (see bench.c). */
 
-#include "libbench2/bench-user.h"
 #include "api/fftw3.h"
+#include "libbench2/bench-user.h"
 
-#define CONCAT(prefix, name) prefix ## name
+#define CONCAT(prefix, name) prefix##name
 #if defined(BENCHFFT_SINGLE)
 #define FFTW(x) CONCAT(fftwf_, x)
 #elif defined(BENCHFFT_LDOUBLE)
@@ -16,8 +16,7 @@
 #endif
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif /* __cplusplus */
 
 extern FFTW(plan) mkplan(bench_problem *p, unsigned flags);
@@ -27,11 +26,10 @@ extern int import_wisdom(FILE *f);
 extern void export_wisdom(FILE *f);
 
 #if defined(HAVE_THREADS) || defined(HAVE_OPENMP)
-#  define HAVE_SMP
-   extern int threads_ok;
+#define HAVE_SMP
+extern int threads_ok;
 #endif
 
 #ifdef __cplusplus
-}  /* extern "C" */
+} /* extern "C" */
 #endif /* __cplusplus */
-

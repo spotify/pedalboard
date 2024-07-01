@@ -14,40 +14,39 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #include "api/api.h"
 
 #if defined(FFTW_SINGLE)
-#  define WISDOM_NAME "wisdomf"
+#define WISDOM_NAME "wisdomf"
 #elif defined(FFTW_LDOUBLE)
-#  define WISDOM_NAME "wisdoml"
+#define WISDOM_NAME "wisdoml"
 #else
-#  define WISDOM_NAME "wisdom"
+#define WISDOM_NAME "wisdom"
 #endif
 
 /* OS-specific configuration-file directory */
 #if defined(__DJGPP__)
-#  define WISDOM_DIR "/dev/env/DJDIR/etc/fftw/"
+#define WISDOM_DIR "/dev/env/DJDIR/etc/fftw/"
 #else
-#  define WISDOM_DIR "/etc/fftw/"
+#define WISDOM_DIR "/etc/fftw/"
 #endif
 
-int X(import_system_wisdom)(void)
-{
+int X(import_system_wisdom)(void) {
 #if defined(__WIN32__) || defined(WIN32) || defined(_WINDOWS)
-     return 0; /* TODO? */
+  return 0; /* TODO? */
 #else
 
-     FILE *f;
-     f = fopen(WISDOM_DIR WISDOM_NAME, "r");
-     if (f) {
-          int ret = X(import_wisdom_from_file)(f);
-          fclose(f);
-          return ret;
-     } else
-          return 0;
+  FILE *f;
+  f = fopen(WISDOM_DIR WISDOM_NAME, "r");
+  if (f) {
+    int ret = X(import_wisdom_from_file)(f);
+    fclose(f);
+    return ret;
+  } else
+    return 0;
 #endif
 }

@@ -14,10 +14,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
-
 
 #include "api/api.h"
 
@@ -31,58 +30,58 @@ const char X(codelet_optim)[] = "";
 const char X(version)[] = PACKAGE "-" PACKAGE_VERSION
 
 #if HAVE_FMA
-   "-fma"
+                                  "-fma"
 #endif
 
 #if HAVE_SSE2
-   "-sse2"
+                                  "-sse2"
 #endif
 
-  /* Earlier versions of FFTW only provided 256-bit AVX, which meant
-   * it was important to also enable sse2 for best performance for
-   * short transforms. Since some programs check for this and warn
-   * the user, we explicitly add avx_128 to the suffix to emphasize
-   * that this version is more capable.
-   */
+/* Earlier versions of FFTW only provided 256-bit AVX, which meant
+ * it was important to also enable sse2 for best performance for
+ * short transforms. Since some programs check for this and warn
+ * the user, we explicitly add avx_128 to the suffix to emphasize
+ * that this version is more capable.
+ */
 
 #if HAVE_AVX
-   "-avx"
+                                  "-avx"
 #endif
 
 #if HAVE_AVX_128_FMA
-   "-avx_128_fma"
+                                  "-avx_128_fma"
 #endif
 
 #if HAVE_AVX2
-   "-avx2-avx2_128"
+                                  "-avx2-avx2_128"
 #endif
 
 #if HAVE_AVX512
-   "-avx512"
+                                  "-avx512"
 #endif
 
 #if HAVE_KCVI
-   "-kcvi"
+                                  "-kcvi"
 #endif
 
 #if HAVE_ALTIVEC
-   "-altivec"
+                                  "-altivec"
 #endif
 
 #if HAVE_VSX
-   "-vsx"
+                                  "-vsx"
 #endif
 
 #if HAVE_NEON
-   "-neon"
+                                  "-neon"
 #endif
 
 #if defined(HAVE_GENERIC_SIMD128)
-   "-generic_simd128"
+                                  "-generic_simd128"
 #endif
 
 #if defined(HAVE_GENERIC_SIMD256)
-   "-generic_simd256"
+                                  "-generic_simd256"
 #endif
 
-;
+    ;

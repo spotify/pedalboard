@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -58,9 +58,9 @@
    There are a couple of constraints that a schedule should satisfy
    (besides the obvious one that every processor has to communicate
    with every other processor exactly once).
-   
+
    * First, and most importantly, there must be no deadlocks.
-   
+
    * Second, we would like to overlap communications as much as possible,
    so that all exchanges occur in parallel.  It turns out that perfect
    overlap is possible for all number of processes (npes).
@@ -83,7 +83,7 @@
    (These people actually impose a lot of additional constraints that
    we don't care about, so they are solving harder problems. [1] gives
    a simple enough algorithm for our purposes, though.)
-   
+
    In the timetabling problem, N teams can all play one another in N-1
    steps if N is even, and N steps if N is odd.  Here, however,
    there is a "self-communication" step (a team must also "play itself")
@@ -100,22 +100,20 @@
    to achieve any desired order on a particular process.
 */
 
-void free_comm_schedule(int **sched, int npes)
-{
-     if (sched) {
-	  int i;
+void free_comm_schedule(int **sched, int npes) {
+  if (sched) {
+    int i;
 
-	  for (i = 0; i < npes; ++i)
-	       free(sched[i]);
-	  free(sched);
-     }
+    for (i = 0; i < npes; ++i)
+      free(sched[i]);
+    free(sched);
+  }
 }
 
-void empty_comm_schedule(int **sched, int npes)
-{
-     int i;
-     for (i = 0; i < npes; ++i)
-	  sched[i][0] = -1;
+void empty_comm_schedule(int **sched, int npes) {
+  int i;
+  for (i = 0; i < npes; ++i)
+    sched[i][0] = -1;
 }
 
 extern void fill_comm_schedule(int **sched, int npes);
@@ -124,138 +122,132 @@ extern void fill_comm_schedule(int **sched, int npes);
    The schedule is initialized to a deadlock-free, maximum overlap
    schedule.  Returns NULL on an error (may print a message to
    stderr if there is a program bug detected).  */
-int **make_comm_schedule(int npes)
-{
-     int **sched;
-     int i;
+int **make_comm_schedule(int npes) {
+  int **sched;
+  int i;
 
-     sched = (int **) malloc(sizeof(int *) * npes);
-     if (!sched)
-	  return NULL;
+  sched = (int **)malloc(sizeof(int *) * npes);
+  if (!sched)
+    return NULL;
 
-     for (i = 0; i < npes; ++i)
-	  sched[i] = NULL;
+  for (i = 0; i < npes; ++i)
+    sched[i] = NULL;
 
-     for (i = 0; i < npes; ++i) {
-	  sched[i] = (int *) malloc(sizeof(int) * 10 * (npes + 1));
-	  if (!sched[i]) {
-	       free_comm_schedule(sched,npes);
-	       return NULL;
-	  }
-     }
-     
-     empty_comm_schedule(sched,npes);
-     fill_comm_schedule(sched,npes);
+  for (i = 0; i < npes; ++i) {
+    sched[i] = (int *)malloc(sizeof(int) * 10 * (npes + 1));
+    if (!sched[i]) {
+      free_comm_schedule(sched, npes);
+      return NULL;
+    }
+  }
 
-     if (!check_comm_schedule(sched,npes)) {
-	  free_comm_schedule(sched,npes);
-	  return NULL;
-     }
+  empty_comm_schedule(sched, npes);
+  fill_comm_schedule(sched, npes);
 
-     return sched;
+  if (!check_comm_schedule(sched, npes)) {
+    free_comm_schedule(sched, npes);
+    return NULL;
+  }
+
+  return sched;
 }
 
-static void add_dest_to_comm_schedule(int **sched, int pe, int dest)
-{
-     int i;
-     
-     for (i = 0; sched[pe][i] != -1; ++i)
-	  ;
+static void add_dest_to_comm_schedule(int **sched, int pe, int dest) {
+  int i;
 
-     sched[pe][i] = dest;
-     sched[pe][i+1] = -1;
+  for (i = 0; sched[pe][i] != -1; ++i)
+    ;
+
+  sched[pe][i] = dest;
+  sched[pe][i + 1] = -1;
 }
 
-static void add_pair_to_comm_schedule(int **sched, int pe1, int pe2)
-{
-     add_dest_to_comm_schedule(sched, pe1, pe2);
-     if (pe1 != pe2)
-	  add_dest_to_comm_schedule(sched, pe2, pe1);
+static void add_pair_to_comm_schedule(int **sched, int pe1, int pe2) {
+  add_dest_to_comm_schedule(sched, pe1, pe2);
+  if (pe1 != pe2)
+    add_dest_to_comm_schedule(sched, pe2, pe1);
 }
 
 /* Simplification of algorithm presented in [1] (we have fewer
    constraints).  Produces a perfect schedule (npes steps).  */
 
-void fill_comm_schedule(int **sched, int npes)
-{
-     int pe, i, n;
+void fill_comm_schedule(int **sched, int npes) {
+  int pe, i, n;
 
-     if (npes % 2 == 0) {
-	  n = npes;
-	  for (pe = 0; pe < npes; ++pe)
-	       add_pair_to_comm_schedule(sched,pe,pe);
-     }
-     else
-	  n = npes + 1;
+  if (npes % 2 == 0) {
+    n = npes;
+    for (pe = 0; pe < npes; ++pe)
+      add_pair_to_comm_schedule(sched, pe, pe);
+  } else
+    n = npes + 1;
 
-     for (pe = 0; pe < n - 1; ++pe) {
-	  add_pair_to_comm_schedule(sched, pe, npes % 2 == 0 ? npes - 1 : pe);
-	  
-	  for (i = 1; i < n/2; ++i) {
-	       int pe_a, pe_b;
+  for (pe = 0; pe < n - 1; ++pe) {
+    add_pair_to_comm_schedule(sched, pe, npes % 2 == 0 ? npes - 1 : pe);
 
-	       pe_a = pe - i;
-	       if (pe_a < 0)
-		    pe_a += n - 1;
+    for (i = 1; i < n / 2; ++i) {
+      int pe_a, pe_b;
 
-	       pe_b = (pe + i) % (n - 1);
+      pe_a = pe - i;
+      if (pe_a < 0)
+        pe_a += n - 1;
 
-	       add_pair_to_comm_schedule(sched,pe_a,pe_b);
-	  }
-     }
+      pe_b = (pe + i) % (n - 1);
+
+      add_pair_to_comm_schedule(sched, pe_a, pe_b);
+    }
+  }
 }
 
 /* given an array sched[npes], fills it with the communications
    schedule for process pe. */
-void fill1_comm_sched(int *sched, int which_pe, int npes)
-{
-     int pe, i, n, s = 0;
-     if (npes % 2 == 0) {
-	  n = npes;
-	  sched[s++] = which_pe;
-     }
-     else
-	  n = npes + 1;
-     for (pe = 0; pe < n - 1; ++pe) {
-	  if (npes % 2 == 0) {
-	       if (pe == which_pe) sched[s++] = npes - 1;
-	       else if (npes - 1 == which_pe) sched[s++] = pe;
-	  }
-	  else if (pe == which_pe) sched[s++] = pe;
+void fill1_comm_sched(int *sched, int which_pe, int npes) {
+  int pe, i, n, s = 0;
+  if (npes % 2 == 0) {
+    n = npes;
+    sched[s++] = which_pe;
+  } else
+    n = npes + 1;
+  for (pe = 0; pe < n - 1; ++pe) {
+    if (npes % 2 == 0) {
+      if (pe == which_pe)
+        sched[s++] = npes - 1;
+      else if (npes - 1 == which_pe)
+        sched[s++] = pe;
+    } else if (pe == which_pe)
+      sched[s++] = pe;
 
-	  if (pe != which_pe && which_pe < n - 1) {
-	       i = (pe - which_pe + (n - 1)) % (n - 1);
-	       if (i < n/2)
-		    sched[s++] = (pe + i) % (n - 1);
-	       
-	       i = (which_pe - pe + (n - 1)) % (n - 1);
-	       if (i < n/2)
-		    sched[s++] = (pe - i + (n - 1)) % (n - 1);
-	  }
-     }
-     if (s != npes) {
-	  fprintf(stderr, "bug in fill1_com_schedule (%d, %d/%d)\n", 
-		  s, which_pe, npes);
-	  exit(EXIT_FAILURE);
-     }
+    if (pe != which_pe && which_pe < n - 1) {
+      i = (pe - which_pe + (n - 1)) % (n - 1);
+      if (i < n / 2)
+        sched[s++] = (pe + i) % (n - 1);
+
+      i = (which_pe - pe + (n - 1)) % (n - 1);
+      if (i < n / 2)
+        sched[s++] = (pe - i + (n - 1)) % (n - 1);
+    }
+  }
+  if (s != npes) {
+    fprintf(stderr, "bug in fill1_com_schedule (%d, %d/%d)\n", s, which_pe,
+            npes);
+    exit(EXIT_FAILURE);
+  }
 }
 
 /* sort the communication schedule sched for npes so that the schedule
    on process sortpe is ascending or descending (!ascending). */
-static void sort1_comm_sched(int *sched, int npes, int sortpe, int ascending)
-{
-     int *sortsched, i;
-     sortsched = (int *) malloc(npes * sizeof(int) * 2);
-     fill1_comm_sched(sortsched, sortpe, npes);
-     if (ascending)
-          for (i = 0; i < npes; ++i)
-               sortsched[npes + sortsched[i]] = sched[i];
-     else
-          for (i = 0; i < npes; ++i)
-               sortsched[2*npes - 1 - sortsched[i]] = sched[i];
-     for (i = 0; i < npes; ++i)
-          sched[i] = sortsched[npes + i];
-     free(sortsched);
+static void sort1_comm_sched(int *sched, int npes, int sortpe, int ascending) {
+  int *sortsched, i;
+  sortsched = (int *)malloc(npes * sizeof(int) * 2);
+  fill1_comm_sched(sortsched, sortpe, npes);
+  if (ascending)
+    for (i = 0; i < npes; ++i)
+      sortsched[npes + sortsched[i]] = sched[i];
+  else
+    for (i = 0; i < npes; ++i)
+      sortsched[2 * npes - 1 - sortsched[i]] = sched[i];
+  for (i = 0; i < npes; ++i)
+    sched[i] = sortsched[npes + i];
+  free(sortsched);
 }
 
 /* Below, we have various checks in case of bugs: */
@@ -263,121 +255,127 @@ static void sort1_comm_sched(int *sched, int npes, int sortpe, int ascending)
 /* check for deadlocks by simulating the schedule and looking for
    cycles in the dependency list; returns 0 if there are deadlocks
    (or other errors) */
-static int check_schedule_deadlock(int **sched, int npes)
-{
-     int *step, *depend, *visited, pe, pe2, period, done = 0;
-     int counter = 0;
+static int check_schedule_deadlock(int **sched, int npes) {
+  int *step, *depend, *visited, pe, pe2, period, done = 0;
+  int counter = 0;
 
-     /* step[pe] is the step in the schedule that a given pe is on */
-     step = (int *) malloc(sizeof(int) * npes);
+  /* step[pe] is the step in the schedule that a given pe is on */
+  step = (int *)malloc(sizeof(int) * npes);
 
-     /* depend[pe] is the pe' that pe is currently waiting for a message
-	from (-1 if none) */
-     depend = (int *) malloc(sizeof(int) * npes);
+  /* depend[pe] is the pe' that pe is currently waiting for a message
+     from (-1 if none) */
+  depend = (int *)malloc(sizeof(int) * npes);
 
-     /* visited[pe] tells whether we have visited the current pe already
-	when we are looking for cycles. */
-     visited = (int *) malloc(sizeof(int) * npes);
+  /* visited[pe] tells whether we have visited the current pe already
+     when we are looking for cycles. */
+  visited = (int *)malloc(sizeof(int) * npes);
 
-     if (!step || !depend || !visited) {
-	  free(step); free(depend); free(visited);
-	  return 0;
-     }
+  if (!step || !depend || !visited) {
+    free(step);
+    free(depend);
+    free(visited);
+    return 0;
+  }
 
-     for (pe = 0; pe < npes; ++pe)
-	  step[pe] = 0;
+  for (pe = 0; pe < npes; ++pe)
+    step[pe] = 0;
 
-     while (!done) {
-	  ++counter;
+  while (!done) {
+    ++counter;
 
-	  for (pe = 0; pe < npes; ++pe)
-	       depend[pe] = sched[pe][step[pe]];
-	  
-	  /* now look for cycles in the dependencies with period > 2: */
-	  for (pe = 0; pe < npes; ++pe)
-	       if (depend[pe] != -1) {
-		    for (pe2 = 0; pe2 < npes; ++pe2)
-			 visited[pe2] = 0;
+    for (pe = 0; pe < npes; ++pe)
+      depend[pe] = sched[pe][step[pe]];
 
-		    period = 0;
-		    pe2 = pe;
-		    do {
-			 visited[pe2] = period + 1;
-			 pe2 = depend[pe2];
-			 period++;
-		    } while (pe2 != -1 && !visited[pe2]);
+    /* now look for cycles in the dependencies with period > 2: */
+    for (pe = 0; pe < npes; ++pe)
+      if (depend[pe] != -1) {
+        for (pe2 = 0; pe2 < npes; ++pe2)
+          visited[pe2] = 0;
 
-		    if (pe2 == -1) {
-			 fprintf(stderr,
-				 "BUG: unterminated cycle in schedule!\n");
-			 free(step); free(depend);
-			 free(visited);
-			 return 0;
-		    }
-		    if (period - (visited[pe2] - 1) > 2) {
-			 fprintf(stderr,"BUG: deadlock in schedule!\n");
-			 free(step); free(depend);
-			 free(visited);
-			 return 0;
-		    }
+        period = 0;
+        pe2 = pe;
+        do {
+          visited[pe2] = period + 1;
+          pe2 = depend[pe2];
+          period++;
+        } while (pe2 != -1 && !visited[pe2]);
 
-		    if (pe2 == pe)
-			 step[pe]++;
-	       }
+        if (pe2 == -1) {
+          fprintf(stderr, "BUG: unterminated cycle in schedule!\n");
+          free(step);
+          free(depend);
+          free(visited);
+          return 0;
+        }
+        if (period - (visited[pe2] - 1) > 2) {
+          fprintf(stderr, "BUG: deadlock in schedule!\n");
+          free(step);
+          free(depend);
+          free(visited);
+          return 0;
+        }
 
-	  done = 1;
-	  for (pe = 0; pe < npes; ++pe)
-	       if (sched[pe][step[pe]] != -1) {
-		    done = 0;
-		    break;
-	       }
-     }
+        if (pe2 == pe)
+          step[pe]++;
+      }
 
-     free(step); free(depend); free(visited);
-     return (counter > 0 ? counter : 1);
+    done = 1;
+    for (pe = 0; pe < npes; ++pe)
+      if (sched[pe][step[pe]] != -1) {
+        done = 0;
+        break;
+      }
+  }
+
+  free(step);
+  free(depend);
+  free(visited);
+  return (counter > 0 ? counter : 1);
 }
 
 /* sanity checks; prints message and returns 0 on failure.
    undocumented feature: the return value on success is actually the
    number of steps required for the schedule to complete, counting
    stalls. */
-int check_comm_schedule(int **sched, int npes)
-{
-     int pe, i, comm_pe;
-     
-     for (pe = 0; pe < npes; ++pe) {
-	  for (comm_pe = 0; comm_pe < npes; ++comm_pe) {
-	       for (i = 0; sched[pe][i] != -1 && sched[pe][i] != comm_pe; ++i)
-		    ;
-	       if (sched[pe][i] == -1) {
-		    fprintf(stderr,"BUG: schedule never sends message from "
-			    "%d to %d.\n",pe,comm_pe);
-		    return 0;  /* never send message to comm_pe */
-	       }
-	  }
-	  for (i = 0; sched[pe][i] != -1; ++i)
-	       ;
-	  if (i != npes) {
-	       fprintf(stderr,"BUG: schedule sends too many messages from "
-		       "%d\n",pe);
-	       return 0;
-	  }
-     }
-     return check_schedule_deadlock(sched,npes);
+int check_comm_schedule(int **sched, int npes) {
+  int pe, i, comm_pe;
+
+  for (pe = 0; pe < npes; ++pe) {
+    for (comm_pe = 0; comm_pe < npes; ++comm_pe) {
+      for (i = 0; sched[pe][i] != -1 && sched[pe][i] != comm_pe; ++i)
+        ;
+      if (sched[pe][i] == -1) {
+        fprintf(stderr,
+                "BUG: schedule never sends message from "
+                "%d to %d.\n",
+                pe, comm_pe);
+        return 0; /* never send message to comm_pe */
+      }
+    }
+    for (i = 0; sched[pe][i] != -1; ++i)
+      ;
+    if (i != npes) {
+      fprintf(stderr,
+              "BUG: schedule sends too many messages from "
+              "%d\n",
+              pe);
+      return 0;
+    }
+  }
+  return check_schedule_deadlock(sched, npes);
 }
 
 /* invert the order of all the schedules; this has no effect on
    its required properties. */
-void invert_comm_schedule(int **sched, int npes)
-{
-     int pe, i;
+void invert_comm_schedule(int **sched, int npes) {
+  int pe, i;
 
-     for (pe = 0; pe < npes; ++pe)
-	  for (i = 0; i < npes/2; ++i) {
-	       int dummy = sched[pe][i];
-	       sched[pe][i] = sched[pe][npes-1-i];
-	       sched[pe][npes-1-i] = dummy;
-	  }
+  for (pe = 0; pe < npes; ++pe)
+    for (i = 0; i < npes / 2; ++i) {
+      int dummy = sched[pe][i];
+      sched[pe][i] = sched[pe][npes - 1 - i];
+      sched[pe][npes - 1 - i] = dummy;
+    }
 }
 
 /* Sort the schedule for sort_pe in ascending order of processor
@@ -387,166 +385,155 @@ void invert_comm_schedule(int **sched, int npes)
    fix this if it were really important.  Actually, we don't
    get an extra stall when sort_pe == 0 or npes-1, which is sufficient
    for our purposes. */
-void sort_comm_schedule(int **sched, int npes, int sort_pe)
-{
-     int i,j,pe;
+void sort_comm_schedule(int **sched, int npes, int sort_pe) {
+  int i, j, pe;
 
-     /* Note that we can do this sort in O(npes) swaps because we know
-	that the numbers we are sorting are just 0...npes-1.   But we'll
-	just do a bubble sort for simplicity here. */
+  /* Note that we can do this sort in O(npes) swaps because we know
+     that the numbers we are sorting are just 0...npes-1.   But we'll
+     just do a bubble sort for simplicity here. */
 
-     for (i = 0; i < npes - 1; ++i)
-	  for (j = i + 1; j < npes; ++j)
-	       if (sched[sort_pe][i] > sched[sort_pe][j]) {
-		    for (pe = 0; pe < npes; ++pe) {
-			 int s = sched[pe][i];
-			 sched[pe][i] = sched[pe][j];
-			 sched[pe][j] = s;
-		    }
-	       }
+  for (i = 0; i < npes - 1; ++i)
+    for (j = i + 1; j < npes; ++j)
+      if (sched[sort_pe][i] > sched[sort_pe][j]) {
+        for (pe = 0; pe < npes; ++pe) {
+          int s = sched[pe][i];
+          sched[pe][i] = sched[pe][j];
+          sched[pe][j] = s;
+        }
+      }
 }
 
 /* print the schedule (for debugging purposes) */
-void print_comm_schedule(int **sched, int npes)
-{
-     int pe, i, width;
+void print_comm_schedule(int **sched, int npes) {
+  int pe, i, width;
 
-     if (npes < 10)
-	  width = 1;
-     else if (npes < 100)
-	  width = 2;
-     else
-	  width = 3;
+  if (npes < 10)
+    width = 1;
+  else if (npes < 100)
+    width = 2;
+  else
+    width = 3;
 
-     for (pe = 0; pe < npes; ++pe) {
-	  printf("pe %*d schedule:", width, pe);
-	  for (i = 0; sched[pe][i] != -1; ++i)
-	       printf("  %*d",width,sched[pe][i]);
-	  printf("\n");
-     }
+  for (pe = 0; pe < npes; ++pe) {
+    printf("pe %*d schedule:", width, pe);
+    for (i = 0; sched[pe][i] != -1; ++i)
+      printf("  %*d", width, sched[pe][i]);
+    printf("\n");
+  }
 }
 
-int main(int argc, char **argv)
-{
-     int **sched;
-     int npes = -1, sortpe = -1, steps, i;
+int main(int argc, char **argv) {
+  int **sched;
+  int npes = -1, sortpe = -1, steps, i;
 
-     if (argc >= 2) {
-	  npes = atoi(argv[1]);
-	  if (npes <= 0) {
-	       fprintf(stderr,"npes must be positive!");
-	       return 1;
-	  }
-     }
-     if (argc >= 3) {
-	  sortpe = atoi(argv[2]);
-	  if (sortpe < 0 || sortpe >= npes) {
-	       fprintf(stderr,"sortpe must be between 0 and npes-1.\n");
-	       return 1;
-	  }
-     }
+  if (argc >= 2) {
+    npes = atoi(argv[1]);
+    if (npes <= 0) {
+      fprintf(stderr, "npes must be positive!");
+      return 1;
+    }
+  }
+  if (argc >= 3) {
+    sortpe = atoi(argv[2]);
+    if (sortpe < 0 || sortpe >= npes) {
+      fprintf(stderr, "sortpe must be between 0 and npes-1.\n");
+      return 1;
+    }
+  }
 
-     if (npes != -1) {
-	  printf("Computing schedule for npes = %d:\n",npes);
-	  sched = make_comm_schedule(npes);
-	  if (!sched) {
-	       fprintf(stderr,"Out of memory!");
-	       return 6;
-	  }
-	  
-	  if (steps = check_comm_schedule(sched,npes))
-	       printf("schedule OK (takes %d steps to complete).\n", steps);
-	  else
-	       printf("schedule not OK.\n");
+  if (npes != -1) {
+    printf("Computing schedule for npes = %d:\n", npes);
+    sched = make_comm_schedule(npes);
+    if (!sched) {
+      fprintf(stderr, "Out of memory!");
+      return 6;
+    }
 
-	  print_comm_schedule(sched, npes);
-	  
-	  if (sortpe != -1) {
-	       printf("\nRe-creating schedule for pe = %d...\n", sortpe);
-	       int *sched1 = (int*) malloc(sizeof(int) * npes);
-	       for (i = 0; i < npes; ++i) sched1[i] = -1;
-	       fill1_comm_sched(sched1, sortpe, npes);
-	       printf("  =");
-	       for (i = 0; i < npes; ++i) 
-		    printf("  %*d", npes < 10 ? 1 : (npes < 100 ? 2 : 3),
-			   sched1[i]);
-	       printf("\n");
+    if (steps = check_comm_schedule(sched, npes))
+      printf("schedule OK (takes %d steps to complete).\n", steps);
+    else
+      printf("schedule not OK.\n");
 
-	       printf("\nSorting schedule for sortpe = %d...\n", sortpe);
-	       sort_comm_schedule(sched,npes,sortpe);
-	       
-	       if (steps = check_comm_schedule(sched,npes))
-		    printf("schedule OK (takes %d steps to complete).\n", 
-			   steps);
-	       else
-		    printf("schedule not OK.\n");
+    print_comm_schedule(sched, npes);
 
-	       print_comm_schedule(sched, npes);
+    if (sortpe != -1) {
+      printf("\nRe-creating schedule for pe = %d...\n", sortpe);
+      int *sched1 = (int *)malloc(sizeof(int) * npes);
+      for (i = 0; i < npes; ++i)
+        sched1[i] = -1;
+      fill1_comm_sched(sched1, sortpe, npes);
+      printf("  =");
+      for (i = 0; i < npes; ++i)
+        printf("  %*d", npes < 10 ? 1 : (npes < 100 ? 2 : 3), sched1[i]);
+      printf("\n");
 
-	       printf("\nInverting schedule...\n");
-	       invert_comm_schedule(sched,npes);
-	       
-	       if (steps = check_comm_schedule(sched,npes))
-		    printf("schedule OK (takes %d steps to complete).\n", 
-			   steps);
-	       else
-		    printf("schedule not OK.\n");
+      printf("\nSorting schedule for sortpe = %d...\n", sortpe);
+      sort_comm_schedule(sched, npes, sortpe);
 
-	       print_comm_schedule(sched, npes);
-	       
-	       free_comm_schedule(sched,npes);
+      if (steps = check_comm_schedule(sched, npes))
+        printf("schedule OK (takes %d steps to complete).\n", steps);
+      else
+        printf("schedule not OK.\n");
 
-	       free(sched1);
-	  }
-     }
-     else {
-	  printf("Doing infinite tests...\n");
-	  for (npes = 1; ; ++npes) {
-	       int *sched1 = (int*) malloc(sizeof(int) * npes);
-	       printf("npes = %d...",npes);
-	       sched = make_comm_schedule(npes);
-	       if (!sched) {
-		    fprintf(stderr,"Out of memory!\n");
-		    return 5;
-	       }
-	       for (sortpe = 0; sortpe < npes; ++sortpe) {
-		    empty_comm_schedule(sched,npes);
-		    fill_comm_schedule(sched,npes);
-		    if (!check_comm_schedule(sched,npes)) {
-			 fprintf(stderr,
-				 "\n -- fill error for sortpe = %d!\n",sortpe);
-			 return 2;
-		    }
+      print_comm_schedule(sched, npes);
 
-		    for (i = 0; i < npes; ++i) sched1[i] = -1;
-		    fill1_comm_sched(sched1, sortpe, npes);
-		    for (i = 0; i < npes; ++i)
-			 if (sched1[i] != sched[sortpe][i])
-			      fprintf(stderr,
-				      "\n -- fill1 error for pe = %d!\n",
-				      sortpe);
+      printf("\nInverting schedule...\n");
+      invert_comm_schedule(sched, npes);
 
-		    sort_comm_schedule(sched,npes,sortpe);
-		    if (!check_comm_schedule(sched,npes)) {
-			 fprintf(stderr,
-				 "\n -- sort error for sortpe = %d!\n",sortpe);
-			 return 3;
-		    }
-		    invert_comm_schedule(sched,npes);
-		    if (!check_comm_schedule(sched,npes)) {
-			 fprintf(stderr,
-				 "\n -- invert error for sortpe = %d!\n",
-				 sortpe);
-			 return 4;
-		    }
-	       }
-	       free_comm_schedule(sched,npes);
-	       printf("OK\n");
-	       if (npes % 50 == 0)
-		    printf("(...Hit Ctrl-C to stop...)\n");
-	       free(sched1);
-	  }
-     }
+      if (steps = check_comm_schedule(sched, npes))
+        printf("schedule OK (takes %d steps to complete).\n", steps);
+      else
+        printf("schedule not OK.\n");
 
-     return 0;
+      print_comm_schedule(sched, npes);
+
+      free_comm_schedule(sched, npes);
+
+      free(sched1);
+    }
+  } else {
+    printf("Doing infinite tests...\n");
+    for (npes = 1;; ++npes) {
+      int *sched1 = (int *)malloc(sizeof(int) * npes);
+      printf("npes = %d...", npes);
+      sched = make_comm_schedule(npes);
+      if (!sched) {
+        fprintf(stderr, "Out of memory!\n");
+        return 5;
+      }
+      for (sortpe = 0; sortpe < npes; ++sortpe) {
+        empty_comm_schedule(sched, npes);
+        fill_comm_schedule(sched, npes);
+        if (!check_comm_schedule(sched, npes)) {
+          fprintf(stderr, "\n -- fill error for sortpe = %d!\n", sortpe);
+          return 2;
+        }
+
+        for (i = 0; i < npes; ++i)
+          sched1[i] = -1;
+        fill1_comm_sched(sched1, sortpe, npes);
+        for (i = 0; i < npes; ++i)
+          if (sched1[i] != sched[sortpe][i])
+            fprintf(stderr, "\n -- fill1 error for pe = %d!\n", sortpe);
+
+        sort_comm_schedule(sched, npes, sortpe);
+        if (!check_comm_schedule(sched, npes)) {
+          fprintf(stderr, "\n -- sort error for sortpe = %d!\n", sortpe);
+          return 3;
+        }
+        invert_comm_schedule(sched, npes);
+        if (!check_comm_schedule(sched, npes)) {
+          fprintf(stderr, "\n -- invert error for sortpe = %d!\n", sortpe);
+          return 4;
+        }
+      }
+      free_comm_schedule(sched, npes);
+      printf("OK\n");
+      if (npes % 50 == 0)
+        printf("(...Hit Ctrl-C to stop...)\n");
+      free(sched1);
+    }
+  }
+
+  return 0;
 }

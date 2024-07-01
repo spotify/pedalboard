@@ -14,15 +14,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
-
 
 #include "ct-hc2c.h"
 
 void X(khc2c_register)(planner *p, khc2c codelet, const hc2c_desc *desc,
-		       hc2c_kind hc2ckind)
-{
-     X(regsolver_hc2c_direct)(p, codelet, desc, hc2ckind);
+                       hc2c_kind hc2ckind) {
+  X(regsolver_hc2c_direct)(p, codelet, desc, hc2ckind);
 }

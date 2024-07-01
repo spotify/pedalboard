@@ -44,7 +44,9 @@
 #define HAVE_LIMITS_H
 
 /* Name of package */
+#ifndef PACKAGE
 #define PACKAGE "lame"
+#endif
 
 /* Define if compiler has function prototypes */
 #define PROTOTYPES 1
@@ -78,8 +80,11 @@ typedef unsigned short uint16_t;
 #define __DEFINED_uint16_t
 typedef unsigned int uint32_t;
 #define __DEFINED_uint32_t
-typedef unsigned long long uint64_t;
-#define __DEFINED_uint64_t
+
+// #ifndef __DEFINED_uint64_t
+// typedef unsigned long long uint64_t;
+// #define __DEFINED_uint64_t
+// #endif
 
 typedef signed char int8_t;
 #define __DEFINED_int8_t

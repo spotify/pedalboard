@@ -14,37 +14,30 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
-
 #include "kernel/ifftw.h"
 
-solver *X(mksolver)(size_t size, const solver_adt *adt)
-{
-     solver *s = (solver *)MALLOC(size, SOLVERS);
+solver *X(mksolver)(size_t size, const solver_adt *adt) {
+  solver *s = (solver *)MALLOC(size, SOLVERS);
 
-     s->adt = adt;
-     s->refcnt = 0;
-     return s;
+  s->adt = adt;
+  s->refcnt = 0;
+  return s;
 }
 
-void X(solver_use)(solver *ego)
-{
-     ++ego->refcnt;
+void X(solver_use)(solver *ego) { ++ego->refcnt; }
+
+void X(solver_destroy)(solver *ego) {
+  if ((--ego->refcnt) == 0) {
+    if (ego->adt->destroy)
+      ego->adt->destroy(ego);
+    X(ifree)(ego);
+  }
 }
 
-void X(solver_destroy)(solver *ego)
-{
-     if ((--ego->refcnt) == 0) {
-	  if (ego->adt->destroy)
-	       ego->adt->destroy(ego);
-          X(ifree)(ego);
-     }
-}
-
-void X(solver_register)(planner *plnr, solver *s)
-{
-     plnr->adt->register_solver(plnr, s);
+void X(solver_register)(planner *plnr, solver *s) {
+  plnr->adt->register_solver(plnr, s);
 }

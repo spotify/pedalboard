@@ -14,23 +14,22 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #include "api/api.h"
 
-X(plan) X(plan_r2r_3d)(int nx, int ny, int nz,
-		       R *in, R *out, X(r2r_kind) kindx,
-		       X(r2r_kind) kindy, X(r2r_kind) kindz, unsigned flags)
-{
-     int n[3];
-     X(r2r_kind) kind[3];
-     n[0] = nx;
-     n[1] = ny;
-     n[2] = nz;
-     kind[0] = kindx;
-     kind[1] = kindy;
-     kind[2] = kindz;
-     return X(plan_r2r)(3, n, in, out, kind, flags);
+X(plan)
+X(plan_r2r_3d)(int nx, int ny, int nz, R *in, R *out, X(r2r_kind) kindx,
+               X(r2r_kind) kindy, X(r2r_kind) kindz, unsigned flags) {
+  int n[3];
+  X(r2r_kind) kind[3];
+  n[0] = nx;
+  n[1] = ny;
+  n[2] = nz;
+  kind[0] = kindx;
+  kind[1] = kindy;
+  kind[2] = kindz;
+  return X(plan_r2r)(3, n, in, out, kind, flags);
 }

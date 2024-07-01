@@ -97,7 +97,7 @@ for suffix in FLOAT_SUFFIXES_TO_IGNORE:
 def strip_common_float_suffixes(
     s: Union[float, str, bool], strip_si_prefixes: bool = True
 ) -> Union[float, str, bool]:
-    if not isinstance(s, str) or (hasattr(s, "type") and s.type != str):  # type: ignore
+    if not isinstance(s, str) or (hasattr(s, "type") and s.type is not str):  # type: ignore
         return s
 
     s = s.strip()

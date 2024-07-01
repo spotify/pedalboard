@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -47,37 +47,36 @@
    a user's "requested" block sizes in d.b[].  Therefore, for simplicity,
    we simply ignore d.b[] for now.
 */
-INT XM(choose_radix)(ddim d, int n_pes, unsigned flags, int sign,
-		     INT rblock[2], INT mblock[2])
-{
-     INT r, m;
+INT XM(choose_radix)(ddim d, int n_pes, unsigned flags, int sign, INT rblock[2],
+                     INT mblock[2]) {
+  INT r, m;
 
-     UNUSED(flags); /* we would need this if we paid attention to d.b[*] */
+  UNUSED(flags); /* we would need this if we paid attention to d.b[*] */
 
-     /* If n_pes is a factor of d.n, then choose r to be d.n / n_pes.
-        This not only ensures that the input (the m dimension) is
-        equally distributed if possible, and at the r dimension is
-        maximally equally distributed (if d.n/n_pes >= n_pes), it also
-        makes one of the local transpositions in the algorithm
-        trivial. */
-     if (d.n % n_pes == 0 /* it's good if n_pes divides d.n ...*/
-	 && d.n / n_pes >= n_pes /* .. unless we can't use n_pes processes */)
-	  r = d.n / n_pes;
-     else {  /* n_pes does not divide d.n, pick a factor close to sqrt(d.n) */
-	  for (r = X(isqrt)(d.n); d.n % r != 0; ++r)
-	       ;
-     }
-     if (r == 1 || r == d.n) return 0; /* punt if we can't reduce size */
+  /* If n_pes is a factor of d.n, then choose r to be d.n / n_pes.
+     This not only ensures that the input (the m dimension) is
+     equally distributed if possible, and at the r dimension is
+     maximally equally distributed (if d.n/n_pes >= n_pes), it also
+     makes one of the local transpositions in the algorithm
+     trivial. */
+  if (d.n % n_pes == 0 /* it's good if n_pes divides d.n ...*/
+      && d.n / n_pes >= n_pes /* .. unless we can't use n_pes processes */)
+    r = d.n / n_pes;
+  else { /* n_pes does not divide d.n, pick a factor close to sqrt(d.n) */
+    for (r = X(isqrt)(d.n); d.n % r != 0; ++r)
+      ;
+  }
+  if (r == 1 || r == d.n)
+    return 0; /* punt if we can't reduce size */
 
-     if (sign != FFT_SIGN) { /* swap {m,r} so that scrambling is reversible */
-	  m = r;
-	  r = d.n / m;
-     }
-     else
-	  m = d.n / r;
+  if (sign != FFT_SIGN) { /* swap {m,r} so that scrambling is reversible */
+    m = r;
+    r = d.n / m;
+  } else
+    m = d.n / r;
 
-     rblock[IB] = rblock[OB] = XM(default_block)(r, n_pes);
-     mblock[IB] = mblock[OB] = XM(default_block)(m, n_pes);
+  rblock[IB] = rblock[OB] = XM(default_block)(r, n_pes);
+  mblock[IB] = mblock[OB] = XM(default_block)(m, n_pes);
 
-     return r;
+  return r;
 }

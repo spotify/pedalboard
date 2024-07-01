@@ -14,23 +14,22 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
-
 #include "kernel/ifftw.h"
 
-int X(tensor_kosherp)(const tensor *x)
-{
-     int i;
+int X(tensor_kosherp)(const tensor *x) {
+  int i;
 
-     if (x->rnk < 0) return 0;
+  if (x->rnk < 0)
+    return 0;
 
-     if (FINITE_RNK(x->rnk)) {
-	  for (i = 0; i < x->rnk; ++i)
-	       if (x->dims[i].n < 0)
-		    return 0;
-     }
-     return 1;
+  if (FINITE_RNK(x->rnk)) {
+    for (i = 0; i < x->rnk; ++i)
+      if (x->dims[i].n < 0)
+        return 0;
+  }
+  return 1;
 }

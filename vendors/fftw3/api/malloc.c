@@ -14,22 +14,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #include "api/api.h"
 
+void *X(malloc)(size_t n) { return X(kernel_malloc)(n); }
 
-void *X(malloc)(size_t n)
-{
-     return X(kernel_malloc)(n);
-}
-
-void X(free)(void *p)
-{
-     X(kernel_free)(p);
-}
+void X(free)(void *p) { X(kernel_free)(p); }
 
 /* The following two routines are mainly for the convenience of
    the Fortran 2003 API, although C users may find them convienent
@@ -39,12 +32,6 @@ void X(free)(void *p)
    in a Fortran context.  So we provide routines to allocate real
    and complex arrays, which are all that are really needed by FFTW. */
 
-R *X(alloc_real)(size_t n)
-{
-     return (R *) X(malloc)(sizeof(R) * n);
-}
+R *X(alloc_real)(size_t n) { return (R *)X(malloc)(sizeof(R) * n); }
 
-C *X(alloc_complex)(size_t n)
-{
-     return (C *) X(malloc)(sizeof(C) * n);
-}
+C *X(alloc_complex)(size_t n) { return (C *)X(malloc)(sizeof(C) * n); }

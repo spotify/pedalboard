@@ -14,18 +14,16 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
-
 
 #include "libbench2/bench.h"
 #include <stdio.h>
 
-void report_can_do(const char *param)
-{
-     bench_problem *p;
-     p = problem_parse(param);
-     ovtpvt("#%c\n", can_do(p) ? 't' : 'f');
-     problem_destroy(p);
+void report_can_do(const char *param) {
+  bench_problem *p;
+  p = problem_parse(param);
+  ovtpvt("#%c\n", can_do(p) ? 't' : 'f');
+  problem_destroy(p);
 }

@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -23,23 +23,19 @@
 const INT X(an_INT_guaranteed_to_be_zero) = 0;
 
 #ifdef PRECOMPUTE_ARRAY_INDICES
-stride X(mkstride)(INT n, INT s)
-{
-     int i;
-     INT *p;
+stride X(mkstride)(INT n, INT s) {
+  int i;
+  INT *p;
 
-     A(n >= 0);
-     p = (INT *) MALLOC((size_t)n * sizeof(INT), STRIDES);
+  A(n >= 0);
+  p = (INT *)MALLOC((size_t)n * sizeof(INT), STRIDES);
 
-     for (i = 0; i < n; ++i)
-          p[i] = s * i;
+  for (i = 0; i < n; ++i)
+    p[i] = s * i;
 
-     return p;
+  return p;
 }
 
-void X(stride_destroy)(stride p)
-{
-     X(ifree0)(p);
-}
+void X(stride_destroy)(stride p) { X(ifree0)(p); }
 
 #endif

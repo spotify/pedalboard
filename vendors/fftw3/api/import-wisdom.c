@@ -14,33 +14,31 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #include "api/api.h"
 
 typedef struct {
-     scanner super;
-     int (*read_char)(void *);
-     void *data;
+  scanner super;
+  int (*read_char)(void *);
+  void *data;
 } S;
 
-static int getchr_generic(scanner * s_)
-{
-     S *s = (S *) s_;
-     return (s->read_char)(s->data);
+static int getchr_generic(scanner *s_) {
+  S *s = (S *)s_;
+  return (s->read_char)(s->data);
 }
 
-int X(import_wisdom)(int (*read_char)(void *), void *data)
-{
-     S *s = (S *) X(mkscanner)(sizeof(S), getchr_generic);
-     planner *plnr = X(the_planner)();
-     int ret;
+int X(import_wisdom)(int (*read_char)(void *), void *data) {
+  S *s = (S *)X(mkscanner)(sizeof(S), getchr_generic);
+  planner *plnr = X(the_planner)();
+  int ret;
 
-     s->read_char = read_char;
-     s->data = data;
-     ret = plnr->adt->imprt(plnr, (scanner *) s);
-     X(scanner_destroy)((scanner *) s);
-     return ret;
+  s->read_char = read_char;
+  s->data = data;
+  ret = plnr->adt->imprt(plnr, (scanner *)s);
+  X(scanner_destroy)((scanner *)s);
+  return ret;
 }

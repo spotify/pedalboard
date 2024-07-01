@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -22,8 +22,7 @@
 #include "dft/dft.h"
 
 /* guru interface: requires care in alignment, r - i, etcetera. */
-void X(execute_split_dft)(const X(plan) p, R *ri, R *ii, R *ro, R *io)
-{
-     plan_dft *pln = (plan_dft *) p->pln;
-     pln->apply((plan *) pln, ri, ii, ro, io);
+void X(execute_split_dft)(const X(plan) p, R *ri, R *ii, R *ro, R *io) {
+  plan_dft *pln = (plan_dft *)p->pln;
+  pln->apply((plan *)pln, ri, ii, ro, io);
 }

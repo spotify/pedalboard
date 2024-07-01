@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -29,53 +29,51 @@
    So, we do our own buffering.  This completely defeats the purpose
    of having stdio in the first place, of course.
 */
-  
+
 #define BUFSZ 256
 
 typedef struct {
-     scanner super;
-     FILE *f;
-     char buf[BUFSZ];
-     char *bufr, *bufw;
+  scanner super;
+  FILE *f;
+  char buf[BUFSZ];
+  char *bufr, *bufw;
 } S;
 
-static int getchr_file(scanner * sc_)
-{
-     S *sc = (S *) sc_;
+static int getchr_file(scanner *sc_) {
+  S *sc = (S *)sc_;
 
-     if (sc->bufr >= sc->bufw) {
-	  sc->bufr = sc->buf;
-	  sc->bufw = sc->buf + fread(sc->buf, 1, BUFSZ, sc->f);
-	  if (sc->bufr >= sc->bufw)
-	       return EOF;
-     }
+  if (sc->bufr >= sc->bufw) {
+    sc->bufr = sc->buf;
+    sc->bufw = sc->buf + fread(sc->buf, 1, BUFSZ, sc->f);
+    if (sc->bufr >= sc->bufw)
+      return EOF;
+  }
 
-     return *(sc->bufr++);
+  return *(sc->bufr++);
 }
 
-static scanner *mkscanner_file(FILE *f)
-{
-     S *sc = (S *) X(mkscanner)(sizeof(S), getchr_file);
-     sc->f = f;
-     sc->bufr = sc->bufw = sc->buf;
-     return &sc->super;
+static scanner *mkscanner_file(FILE *f) {
+  S *sc = (S *)X(mkscanner)(sizeof(S), getchr_file);
+  sc->f = f;
+  sc->bufr = sc->bufw = sc->buf;
+  return &sc->super;
 }
 
-int X(import_wisdom_from_file)(FILE *input_file)
-{
-     scanner *s = mkscanner_file(input_file);
-     planner *plnr = X(the_planner)();
-     int ret = plnr->adt->imprt(plnr, s);
-     X(scanner_destroy)(s);
-     return ret;
+int X(import_wisdom_from_file)(FILE *input_file) {
+  scanner *s = mkscanner_file(input_file);
+  planner *plnr = X(the_planner)();
+  int ret = plnr->adt->imprt(plnr, s);
+  X(scanner_destroy)(s);
+  return ret;
 }
 
-int X(import_wisdom_from_filename)(const char *filename)
-{
-     FILE *f = fopen(filename, "r");
-     int ret;
-     if (!f) return 0; /* error opening file */
-     ret = X(import_wisdom_from_file)(f);
-     if (fclose(f)) ret = 0; /* error closing file */
-     return ret;
+int X(import_wisdom_from_filename)(const char *filename) {
+  FILE *f = fopen(filename, "r");
+  int ret;
+  if (!f)
+    return 0; /* error opening file */
+  ret = X(import_wisdom_from_file)(f);
+  if (fclose(f))
+    ret = 0; /* error closing file */
+  return ret;
 }

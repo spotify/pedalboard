@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -23,43 +23,36 @@
 /* common functions for rearrangements of the data for the *-rank1-bigvec
    solvers */
 
-static int div_mult(INT b, INT a) { 
-     return (a > b && a % b == 0);
-}
-static int div_mult2(INT b, INT a, INT n) { 
-     return (div_mult(b, a) && div_mult(n, b));
+static int div_mult(INT b, INT a) { return (a > b && a % b == 0); }
+static int div_mult2(INT b, INT a, INT n) {
+  return (div_mult(b, a) && div_mult(n, b));
 }
 
-int XM(rearrange_applicable)(rearrangement rearrange, 
-			     ddim dim0, INT vn, int n_pes)
-{
-     /* note: it is important that cases other than CONTIG be
-	applicable only when the resulting transpose dimension
-	is divisible by n_pes; otherwise, the allocation size
-	returned by the API will be incorrect */
-     return ((rearrange != DISCONTIG || div_mult(n_pes, vn))
-	     && (rearrange != SQUARE_BEFORE 
-		 || div_mult2(dim0.b[IB], vn, n_pes))
-	     && (rearrange != SQUARE_AFTER
-		 || (dim0.b[IB] != dim0.b[OB]
-		     && div_mult2(dim0.b[OB], vn, n_pes)))
-	     && (rearrange != SQUARE_MIDDLE
-		 || div_mult(dim0.n * n_pes, vn)));
+int XM(rearrange_applicable)(rearrangement rearrange, ddim dim0, INT vn,
+                             int n_pes) {
+  /* note: it is important that cases other than CONTIG be
+     applicable only when the resulting transpose dimension
+     is divisible by n_pes; otherwise, the allocation size
+     returned by the API will be incorrect */
+  return ((rearrange != DISCONTIG || div_mult(n_pes, vn)) &&
+          (rearrange != SQUARE_BEFORE || div_mult2(dim0.b[IB], vn, n_pes)) &&
+          (rearrange != SQUARE_AFTER ||
+           (dim0.b[IB] != dim0.b[OB] && div_mult2(dim0.b[OB], vn, n_pes))) &&
+          (rearrange != SQUARE_MIDDLE || div_mult(dim0.n * n_pes, vn)));
 }
 
-INT XM(rearrange_ny)(rearrangement rearrange, ddim dim0, INT vn, int n_pes)
-{
-     switch (rearrange) {
-	 case CONTIG:
-	      return vn;
-	 case DISCONTIG:
-	      return n_pes;
-	 case SQUARE_BEFORE:
-	      return dim0.b[IB];
-	 case SQUARE_AFTER:
-	      return dim0.b[OB];
-	 case SQUARE_MIDDLE:
-	      return dim0.n * n_pes;
-     }
-     return 0;
+INT XM(rearrange_ny)(rearrangement rearrange, ddim dim0, INT vn, int n_pes) {
+  switch (rearrange) {
+  case CONTIG:
+    return vn;
+  case DISCONTIG:
+    return n_pes;
+  case SQUARE_BEFORE:
+    return dim0.b[IB];
+  case SQUARE_AFTER:
+    return dim0.b[OB];
+  case SQUARE_MIDDLE:
+    return dim0.n * n_pes;
+  }
+  return 0;
 }

@@ -14,14 +14,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
-
 #include "rdft/hc2hc.h"
 
-void X(khc2hc_register)(planner *p, khc2hc codelet, const hc2hc_desc *desc)
-{
-     X(regsolver_hc2hc_direct)(p, codelet, desc);
+void X(khc2hc_register)(planner *p, khc2hc codelet, const hc2hc_desc *desc) {
+  X(regsolver_hc2hc_direct)(p, codelet, desc);
 }

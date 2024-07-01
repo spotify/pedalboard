@@ -14,30 +14,28 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #include "api/api.h"
 #include "rdft/rdft.h"
 
-X(plan) XGURU(dft_r2c)(int rank, const IODIM *dims,
-		       int howmany_rank,
-		       const IODIM *howmany_dims,
-		       R *in, C *out, unsigned flags)
-{
-     R *ro, *io;
+X(plan)
+XGURU(dft_r2c)(int rank, const IODIM *dims, int howmany_rank,
+               const IODIM *howmany_dims, R *in, C *out, unsigned flags) {
+  R *ro, *io;
 
-     if (!GURU_KOSHERP(rank, dims, howmany_rank, howmany_dims)) return 0;
+  if (!GURU_KOSHERP(rank, dims, howmany_rank, howmany_dims))
+    return 0;
 
-     EXTRACT_REIM(FFT_SIGN, out, &ro, &io);
+  EXTRACT_REIM(FFT_SIGN, out, &ro, &io);
 
-     return X(mkapiplan)(
-	  0, flags,
-	  X(mkproblem_rdft2_d_3pointers)(
-	       MKTENSOR_IODIMS(rank, dims, 1, 2),
-	       MKTENSOR_IODIMS(howmany_rank, howmany_dims, 1, 2),
-	       TAINT_UNALIGNED(in, flags),
-	       TAINT_UNALIGNED(ro, flags),
-	       TAINT_UNALIGNED(io, flags), R2HC));
+  return X(mkapiplan)(0, flags,
+                      X(mkproblem_rdft2_d_3pointers)(
+                          MKTENSOR_IODIMS(rank, dims, 1, 2),
+                          MKTENSOR_IODIMS(howmany_rank, howmany_dims, 1, 2),
+                          TAINT_UNALIGNED(in, flags),
+                          TAINT_UNALIGNED(ro, flags),
+                          TAINT_UNALIGNED(io, flags), R2HC));
 }

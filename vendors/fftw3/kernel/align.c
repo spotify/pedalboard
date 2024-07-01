@@ -14,28 +14,26 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
-
 
 #include "kernel/ifftw.h"
 
 #if HAVE_SIMD
-#  define ALGN 16
+#define ALGN 16
 #else
-   /* disable the alignment machinery, because it will break,
-      e.g., if sizeof(R) == 12 (as in long-double/x86) */
-#  define ALGN 0
+/* disable the alignment machinery, because it will break,
+   e.g., if sizeof(R) == 12 (as in long-double/x86) */
+#define ALGN 0
 #endif
 
 /* NONPORTABLE */
-int X(ialignment_of)(R *p)
-{
+int X(ialignment_of)(R *p) {
 #if ALGN == 0
-     UNUSED(p);
-     return 0;
+  UNUSED(p);
+  return 0;
 #else
-     return (int)(((uintptr_t) p) % ALGN);
+  return (int)(((uintptr_t)p) % ALGN);
 #endif
 }

@@ -31,14 +31,13 @@
 
 #include "amd64-cpuid.h"
 
-int X(have_simd_kcvi)(void)
-{
-       static int init = 0, res;
-       if (!init) {
-         res = 1;
-         init = 1;
-       }
-       return res;
+int X(have_simd_kcvi)(void) {
+  static int init = 0, res;
+  if (!init) {
+    res = 1;
+    init = 1;
+  }
+  return res;
 }
 
 #else /* 32-bit code */

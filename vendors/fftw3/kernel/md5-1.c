@@ -14,41 +14,28 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #include "kernel/ifftw.h"
 
-
-void X(md5putb)(md5 *p, const void *d_, size_t len)
-{
-     size_t i;
-     const unsigned char *d = (const unsigned char *)d_;
-     for (i = 0; i < len; ++i)
-	  X(md5putc)(p, d[i]);
+void X(md5putb)(md5 *p, const void *d_, size_t len) {
+  size_t i;
+  const unsigned char *d = (const unsigned char *)d_;
+  for (i = 0; i < len; ++i)
+    X(md5putc)(p, d[i]);
 }
 
-void X(md5puts)(md5 *p, const char *s)
-{
-     /* also hash final '\0' */
-     do {
-	  X(md5putc)(p, (unsigned)(*s & 0xFF));
-     } while(*s++);
+void X(md5puts)(md5 *p, const char *s) {
+  /* also hash final '\0' */
+  do {
+    X(md5putc)(p, (unsigned)(*s & 0xFF));
+  } while (*s++);
 }
 
-void X(md5int)(md5 *p, int i)
-{
-     X(md5putb)(p, &i, sizeof(i));
-}
+void X(md5int)(md5 *p, int i) { X(md5putb)(p, &i, sizeof(i)); }
 
-void X(md5INT)(md5 *p, INT i)
-{
-     X(md5putb)(p, &i, sizeof(i));
-}
+void X(md5INT)(md5 *p, INT i) { X(md5putb)(p, &i, sizeof(i)); }
 
-void X(md5unsigned)(md5 *p, unsigned i)
-{
-     X(md5putb)(p, &i, sizeof(i));
-}
-
+void X(md5unsigned)(md5 *p, unsigned i) { X(md5putb)(p, &i, sizeof(i)); }

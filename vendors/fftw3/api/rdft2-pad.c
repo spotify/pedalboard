@@ -14,26 +14,25 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
-#include <string.h>
 #include "api/api.h"
+#include <string.h>
 
-const int *X(rdft2_pad)(int rnk, const int *n, const int *nembed,
-			int inplace, int cmplx, int **nfree)
-{
-     A(FINITE_RNK(rnk));
-     *nfree = 0;
-     if (!nembed && rnk > 0) {
-          if (inplace || cmplx) {
-               int *np = (int *) MALLOC(sizeof(int) * (unsigned)rnk, PROBLEMS);
-               memcpy(np, n, sizeof(int) * (unsigned)rnk);
-               np[rnk - 1] = (n[rnk - 1] / 2 + 1) * (1 + !cmplx);
-               nembed = *nfree = np;
-          } else
-               nembed = n;
-     }
-     return nembed;
+const int *X(rdft2_pad)(int rnk, const int *n, const int *nembed, int inplace,
+                        int cmplx, int **nfree) {
+  A(FINITE_RNK(rnk));
+  *nfree = 0;
+  if (!nembed && rnk > 0) {
+    if (inplace || cmplx) {
+      int *np = (int *)MALLOC(sizeof(int) * (unsigned)rnk, PROBLEMS);
+      memcpy(np, n, sizeof(int) * (unsigned)rnk);
+      np[rnk - 1] = (n[rnk - 1] / 2 + 1) * (1 + !cmplx);
+      nembed = *nfree = np;
+    } else
+      nembed = n;
+  }
+  return nembed;
 }

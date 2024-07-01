@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -22,9 +22,8 @@
 #include "rdft/rdft.h"
 
 /* guru interface: requires care in alignment, r - i, etcetera. */
-void X(execute_split_dft_c2r)(const X(plan) p, R *ri, R *ii, R *out)
-{
-     plan_rdft2 *pln = (plan_rdft2 *) p->pln;
-     problem_rdft2 *prb = (problem_rdft2 *) p->prb;
-     pln->apply((plan *) pln, out, out + (prb->r1 - prb->r0), ri, ii);
+void X(execute_split_dft_c2r)(const X(plan) p, R *ri, R *ii, R *out) {
+  plan_rdft2 *pln = (plan_rdft2 *)p->pln;
+  problem_rdft2 *prb = (problem_rdft2 *)p->prb;
+  pln->apply((plan *)pln, out, out + (prb->r1 - prb->r0), ri, ii);
 }

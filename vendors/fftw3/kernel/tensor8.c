@@ -14,21 +14,18 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
-
 #include "kernel/ifftw.h"
 
-void X(tensor_destroy2)(tensor *a, tensor *b)
-{
-     X(tensor_destroy)(a);
-     X(tensor_destroy)(b);
+void X(tensor_destroy2)(tensor *a, tensor *b) {
+  X(tensor_destroy)(a);
+  X(tensor_destroy)(b);
 }
 
-void X(tensor_destroy4)(tensor *a, tensor *b, tensor *c, tensor *d)
-{
-     X(tensor_destroy2)(a, b);
-     X(tensor_destroy2)(c, d);
+void X(tensor_destroy4)(tensor *a, tensor *b, tensor *c, tensor *d) {
+  X(tensor_destroy2)(a, b);
+  X(tensor_destroy2)(c, d);
 }

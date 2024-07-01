@@ -14,40 +14,35 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #include "api/api.h"
 
-char *X(sprint_plan)(const X(plan) p)
-{
-     size_t cnt;
-     char *s;
-     plan *pln = p->pln;
+char *X(sprint_plan)(const X(plan) p) {
+  size_t cnt;
+  char *s;
+  plan *pln = p->pln;
 
-     printer *pr = X(mkprinter_cnt)(&cnt);
-     pln->adt->print(pln, pr);
-     X(printer_destroy)(pr);
+  printer *pr = X(mkprinter_cnt)(&cnt);
+  pln->adt->print(pln, pr);
+  X(printer_destroy)(pr);
 
-     s = (char *) malloc(sizeof(char) * (cnt + 1));
-     if (s) {
-          pr = X(mkprinter_str)(s);
-          pln->adt->print(pln, pr);
-          X(printer_destroy)(pr);
-     }
-     return s;
+  s = (char *)malloc(sizeof(char) * (cnt + 1));
+  if (s) {
+    pr = X(mkprinter_str)(s);
+    pln->adt->print(pln, pr);
+    X(printer_destroy)(pr);
+  }
+  return s;
 }
 
-void X(fprint_plan)(const X(plan) p, FILE *output_file)
-{
-     printer *pr = X(mkprinter_file)(output_file);
-     plan *pln = p->pln;
-     pln->adt->print(pln, pr);
-     X(printer_destroy)(pr);
+void X(fprint_plan)(const X(plan) p, FILE *output_file) {
+  printer *pr = X(mkprinter_file)(output_file);
+  plan *pln = p->pln;
+  pln->adt->print(pln, pr);
+  X(printer_destroy)(pr);
 }
 
-void X(print_plan)(const X(plan) p)
-{
-     X(fprint_plan)(p, stdout);
-}
+void X(print_plan)(const X(plan) p) { X(fprint_plan)(p, stdout); }

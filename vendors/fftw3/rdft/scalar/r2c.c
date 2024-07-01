@@ -14,24 +14,24 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #include "rdft/codelet-rdft.h"
 
 #include "rdft/scalar/r2cf.h"
-const kr2c_genus GENUS = { R2HC, 1 };
+const kr2c_genus GENUS = {R2HC, 1};
 #undef GENUS
 
 #include "rdft/scalar/r2cfII.h"
-const kr2c_genus GENUS = { R2HCII, 1 };
+const kr2c_genus GENUS = {R2HCII, 1};
 #undef GENUS
 
 #include "rdft/scalar/r2cb.h"
-const kr2c_genus GENUS = { HC2R, 1 };
+const kr2c_genus GENUS = {HC2R, 1};
 #undef GENUS
 
 #include "rdft/scalar/r2cbIII.h"
-const kr2c_genus GENUS = { HC2RIII, 1 };
+const kr2c_genus GENUS = {HC2RIII, 1};
 #undef GENUS

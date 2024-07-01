@@ -14,30 +14,27 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
-
 
 #include "kernel/ifftw.h"
 #include "simd-common.h"
 
 #if HAVE_SIMD
 
-R *X(taint)(R *p, INT s)
-{
-     if (((unsigned)s * sizeof(R)) % ALIGNMENT)
-	  p = (R *) (PTRINT(p) | TAINT_BIT);
-     if (((unsigned)s * sizeof(R)) % ALIGNMENTA)
-	  p = (R *) (PTRINT(p) | TAINT_BITA);
-     return p;
+R *X(taint)(R *p, INT s) {
+  if (((unsigned)s * sizeof(R)) % ALIGNMENT)
+    p = (R *)(PTRINT(p) | TAINT_BIT);
+  if (((unsigned)s * sizeof(R)) % ALIGNMENTA)
+    p = (R *)(PTRINT(p) | TAINT_BITA);
+  return p;
 }
 
 /* join the taint of two pointers that are supposed to be
    the same modulo the taint */
-R *X(join_taint)(R *p1, R *p2)
-{
-     A(UNTAINT(p1) == UNTAINT(p2));
-     return (R *)(PTRINT(p1) | PTRINT(p2));
+R *X(join_taint)(R *p1, R *p2) {
+  A(UNTAINT(p1) == UNTAINT(p2));
+  return (R *)(PTRINT(p1) | PTRINT(p2));
 }
 #endif

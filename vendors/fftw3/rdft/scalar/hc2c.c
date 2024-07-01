@@ -14,26 +14,31 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #include "rdft/codelet-rdft.h"
 #include "rdft/scalar/hc2cf.h"
 
-static int okp(const R *Rp, const R *Ip, const R *Rm, const R *Im, 
-	       INT rs, INT mb, INT me, INT ms, 
-	       const planner *plnr)
-{
-     UNUSED(Rp); UNUSED(Ip); UNUSED(Rm); UNUSED(Im);
-     UNUSED(rs); UNUSED(mb); UNUSED(me); UNUSED(ms); UNUSED(plnr);
+static int okp(const R *Rp, const R *Ip, const R *Rm, const R *Im, INT rs,
+               INT mb, INT me, INT ms, const planner *plnr) {
+  UNUSED(Rp);
+  UNUSED(Ip);
+  UNUSED(Rm);
+  UNUSED(Im);
+  UNUSED(rs);
+  UNUSED(mb);
+  UNUSED(me);
+  UNUSED(ms);
+  UNUSED(plnr);
 
-     return 1;
+  return 1;
 }
 
-const hc2c_genus GENUS = { okp, R2HC, 1 };
+const hc2c_genus GENUS = {okp, R2HC, 1};
 
 #undef GENUS
 #include "rdft/scalar/hc2cb.h"
 
-const hc2c_genus GENUS = { okp, HC2R, 1 };
+const hc2c_genus GENUS = {okp, HC2R, 1};

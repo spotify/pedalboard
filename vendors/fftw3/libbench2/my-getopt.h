@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -23,14 +23,14 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif                          /* __cplusplus */
+#endif /* __cplusplus */
 
 enum { REQARG, OPTARG, NOARG };
 
 struct my_option {
-     const char *long_name;
-     int argtype;
-     int short_name;
+  const char *long_name;
+  int argtype;
+  int short_name;
 };
 
 extern int my_optind;
@@ -40,7 +40,7 @@ extern void my_usage(const char *progname, const struct my_option *opt);
 extern int my_getopt(int argc, char *argv[], const struct my_option *optarray);
 
 #ifdef __cplusplus
-}                               /* extern "C" */
-#endif                          /* __cplusplus */
+} /* extern "C" */
+#endif /* __cplusplus */
 
 #endif /* __MY_GETOPT_H__ */

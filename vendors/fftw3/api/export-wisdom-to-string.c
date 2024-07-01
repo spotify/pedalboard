@@ -14,29 +14,28 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #include "api/api.h"
 
-char *X(export_wisdom_to_string)(void)
-{
-     printer *p;
-     planner *plnr = X(the_planner)();
-     size_t cnt;
-     char *s;
+char *X(export_wisdom_to_string)(void) {
+  printer *p;
+  planner *plnr = X(the_planner)();
+  size_t cnt;
+  char *s;
 
-     p = X(mkprinter_cnt)(&cnt);
-     plnr->adt->exprt(plnr, p);
-     X(printer_destroy)(p);
+  p = X(mkprinter_cnt)(&cnt);
+  plnr->adt->exprt(plnr, p);
+  X(printer_destroy)(p);
 
-     s = (char *) malloc(sizeof(char) * (cnt + 1));
-     if (s) {
-          p = X(mkprinter_str)(s);
-          plnr->adt->exprt(plnr, p);
-          X(printer_destroy)(p);
-     }
+  s = (char *)malloc(sizeof(char) * (cnt + 1));
+  if (s) {
+    p = X(mkprinter_str)(s);
+    plnr->adt->exprt(plnr, p);
+    X(printer_destroy)(p);
+  }
 
-     return s;
+  return s;
 }

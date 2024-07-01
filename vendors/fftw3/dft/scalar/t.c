@@ -14,24 +14,23 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
-#include "dft/codelet-dft.h"
 #include "dft/scalar/t.h"
+#include "dft/codelet-dft.h"
 
-static int okp(const ct_desc *d,
-	       const R *rio, const R *iio, 
-	       INT rs, INT vs, INT m, INT mb, INT me, INT ms,
-	       const planner *plnr)
-{
-     UNUSED(rio); UNUSED(iio); UNUSED(m); UNUSED(mb); UNUSED(me); UNUSED(plnr);
-     return (1
-	     && (!d->rs || (d->rs == rs))
-	     && (!d->vs || (d->vs == vs))
-	     && (!d->ms || (d->ms == ms))
-	  );
+static int okp(const ct_desc *d, const R *rio, const R *iio, INT rs, INT vs,
+               INT m, INT mb, INT me, INT ms, const planner *plnr) {
+  UNUSED(rio);
+  UNUSED(iio);
+  UNUSED(m);
+  UNUSED(mb);
+  UNUSED(me);
+  UNUSED(plnr);
+  return (1 && (!d->rs || (d->rs == rs)) && (!d->vs || (d->vs == vs)) &&
+          (!d->ms || (d->ms == ms)));
 }
 
-const ct_genus GENUS = { okp, 1 };
+const ct_genus GENUS = {okp, 1};

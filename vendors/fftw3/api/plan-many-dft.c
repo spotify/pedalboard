@@ -14,38 +14,33 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #include "api/api.h"
 #include "dft/dft.h"
 
-#define N0(nembed)((nembed) ? (nembed) : n)
+#define N0(nembed) ((nembed) ? (nembed) : n)
 
-X(plan) X(plan_many_dft)(int rank, const int *n,
-			 int howmany,
-			 C *in, const int *inembed,
-			 int istride, int idist,
-			 C *out, const int *onembed,
-			 int ostride, int odist, int sign, unsigned flags)
-{
-     R *ri, *ii, *ro, *io;
+X(plan)
+X(plan_many_dft)(int rank, const int *n, int howmany, C *in, const int *inembed,
+                 int istride, int idist, C *out, const int *onembed,
+                 int ostride, int odist, int sign, unsigned flags) {
+  R *ri, *ii, *ro, *io;
 
-     if (!X(many_kosherp)(rank, n, howmany)) return 0;
+  if (!X(many_kosherp)(rank, n, howmany))
+    return 0;
 
-     EXTRACT_REIM(sign, in, &ri, &ii);
-     EXTRACT_REIM(sign, out, &ro, &io);
+  EXTRACT_REIM(sign, in, &ri, &ii);
+  EXTRACT_REIM(sign, out, &ro, &io);
 
-     return 
-	  X(mkapiplan)(sign, flags,
-		       X(mkproblem_dft_d)(
-			    X(mktensor_rowmajor)(rank, n, 
-						 N0(inembed), N0(onembed),
-						 2 * istride, 2 * ostride),
-			    X(mktensor_1d)(howmany, 2 * idist, 2 * odist),
-			    TAINT_UNALIGNED(ri, flags),
-			    TAINT_UNALIGNED(ii, flags),
-			    TAINT_UNALIGNED(ro, flags),
-			    TAINT_UNALIGNED(io, flags)));
+  return X(mkapiplan)(
+      sign, flags,
+      X(mkproblem_dft_d)(X(mktensor_rowmajor)(rank, n, N0(inembed), N0(onembed),
+                                              2 * istride, 2 * ostride),
+                         X(mktensor_1d)(howmany, 2 * idist, 2 * odist),
+                         TAINT_UNALIGNED(ri, flags), TAINT_UNALIGNED(ii, flags),
+                         TAINT_UNALIGNED(ro, flags),
+                         TAINT_UNALIGNED(io, flags)));
 }

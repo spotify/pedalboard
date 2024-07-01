@@ -14,30 +14,30 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #ifndef __THREADS_H__
 #define __THREADS_H__
 
-#include "kernel/ifftw.h"
 #include "dft/ct.h"
+#include "kernel/ifftw.h"
 #include "rdft/hc2hc.h"
 
 typedef struct {
-     int min, max, thr_num;
-     void *data;
+  int min, max, thr_num;
+  void *data;
 } spawn_data;
 
-typedef void *(*spawn_function) (spawn_data *);
+typedef void *(*spawn_function)(spawn_data *);
 
-void X(spawn_loop)(int loopmax, int nthreads,
-		   spawn_function proc, void *data);
+void X(spawn_loop)(int loopmax, int nthreads, spawn_function proc, void *data);
 int X(ithreads_init)(void);
 void X(threads_cleanup)(void);
 
-typedef void (*spawnloop_function)(spawn_function, spawn_data *, size_t, int, void *);
+typedef void (*spawnloop_function)(spawn_function, spawn_data *, size_t, int,
+                                   void *);
 extern spawnloop_function X(spawnloop_callback);
 extern void *X(spawnloop_callback_data);
 
@@ -48,9 +48,10 @@ void X(rdft_thr_vrank_geq1_register)(planner *p);
 void X(rdft2_thr_vrank_geq1_register)(planner *p);
 
 ct_solver *X(mksolver_ct_threads)(size_t size, INT r, int dec,
-				  ct_mkinferior mkcldw,
-				  ct_force_vrecursion force_vrecursionp);
-hc2hc_solver *X(mksolver_hc2hc_threads)(size_t size, INT r, hc2hc_mkinferior mkcldw);
+                                  ct_mkinferior mkcldw,
+                                  ct_force_vrecursion force_vrecursionp);
+hc2hc_solver *X(mksolver_hc2hc_threads)(size_t size, INT r,
+                                        hc2hc_mkinferior mkcldw);
 
 void X(threads_conf_standard)(planner *p);
 void X(threads_register_hooks)(void);

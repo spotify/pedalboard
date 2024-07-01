@@ -14,23 +14,16 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
-
 #include "threads/threads.h"
 
-static const solvtab s =
-{
-     SOLVTAB(X(dft_thr_vrank_geq1_register)),
-     SOLVTAB(X(rdft_thr_vrank_geq1_register)),
-     SOLVTAB(X(rdft2_thr_vrank_geq1_register)),
+static const solvtab s = {SOLVTAB(X(dft_thr_vrank_geq1_register)),
+                          SOLVTAB(X(rdft_thr_vrank_geq1_register)),
+                          SOLVTAB(X(rdft2_thr_vrank_geq1_register)),
 
-     SOLVTAB_END
-};
+                          SOLVTAB_END};
 
-void X(threads_conf_standard)(planner *p)
-{
-     X(solvtab_exec)(s, p);
-}
+void X(threads_conf_standard)(planner *p) { X(solvtab_exec)(s, p); }

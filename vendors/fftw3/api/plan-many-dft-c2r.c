@@ -14,46 +14,43 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #include "api/api.h"
 #include "rdft/rdft.h"
 
-X(plan) X(plan_many_dft_c2r)(int rank, const int *n,
-			     int howmany,
-			     C *in, const int *inembed,
-			     int istride, int idist,
-			     R *out, const int *onembed,
-			     int ostride, int odist, unsigned flags)
-{
-     R *ri, *ii;
-     int *nfi, *nfo;
-     int inplace;
-     X(plan) p;
+X(plan)
+X(plan_many_dft_c2r)(int rank, const int *n, int howmany, C *in,
+                     const int *inembed, int istride, int idist, R *out,
+                     const int *onembed, int ostride, int odist,
+                     unsigned flags) {
+  R *ri, *ii;
+  int *nfi, *nfo;
+  int inplace;
+  X(plan) p;
 
-     if (!X(many_kosherp)(rank, n, howmany)) return 0;
+  if (!X(many_kosherp)(rank, n, howmany))
+    return 0;
 
-     EXTRACT_REIM(FFT_SIGN, in, &ri, &ii);
-     inplace = out == ri;
+  EXTRACT_REIM(FFT_SIGN, in, &ri, &ii);
+  inplace = out == ri;
 
-     if (!inplace)
-	  flags |= FFTW_DESTROY_INPUT;
-     p = X(mkapiplan)(
-	  0, flags,
-	  X(mkproblem_rdft2_d_3pointers)(
-	       X(mktensor_rowmajor)(
-		    rank, n, 
-		    X(rdft2_pad)(rank, n, inembed, inplace, 1, &nfi),
-		    X(rdft2_pad)(rank, n, onembed, inplace, 0, &nfo),
-		    2 * istride, ostride),
-	       X(mktensor_1d)(howmany, 2 * idist, odist),
-	       TAINT_UNALIGNED(out, flags),
-	       TAINT_UNALIGNED(ri, flags), TAINT_UNALIGNED(ii, flags),
-	       HC2R));
+  if (!inplace)
+    flags |= FFTW_DESTROY_INPUT;
+  p = X(mkapiplan)(
+      0, flags,
+      X(mkproblem_rdft2_d_3pointers)(
+          X(mktensor_rowmajor)(rank, n,
+                               X(rdft2_pad)(rank, n, inembed, inplace, 1, &nfi),
+                               X(rdft2_pad)(rank, n, onembed, inplace, 0, &nfo),
+                               2 * istride, ostride),
+          X(mktensor_1d)(howmany, 2 * idist, odist),
+          TAINT_UNALIGNED(out, flags), TAINT_UNALIGNED(ri, flags),
+          TAINT_UNALIGNED(ii, flags), HC2R));
 
-     X(ifree0)(nfi);
-     X(ifree0)(nfo);
-     return p;
+  X(ifree0)(nfi);
+  X(ifree0)(nfo);
+  return p;
 }

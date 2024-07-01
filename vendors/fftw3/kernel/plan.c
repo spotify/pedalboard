@@ -14,10 +14,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
-
 
 #include "kernel/ifftw.h"
 
@@ -25,46 +24,41 @@
    accidental result."  (Ambrose Bierce, The Enlarged Devil's
    Dictionary). */
 
-plan *X(mkplan)(size_t size, const plan_adt *adt)
-{
-     plan *p = (plan *)MALLOC(size, PLANS);
+plan *X(mkplan)(size_t size, const plan_adt *adt) {
+  plan *p = (plan *)MALLOC(size, PLANS);
 
-     A(adt->destroy);
-     p->adt = adt;
-     X(ops_zero)(&p->ops);
-     p->pcost = 0.0;
-     p->wakefulness = SLEEPY;
-     p->could_prune_now_p = 0;
-     
-     return p;
+  A(adt->destroy);
+  p->adt = adt;
+  X(ops_zero)(&p->ops);
+  p->pcost = 0.0;
+  p->wakefulness = SLEEPY;
+  p->could_prune_now_p = 0;
+
+  return p;
 }
 
 /*
  * destroy a plan
  */
-void X(plan_destroy_internal)(plan *ego)
-{
-     if (ego) {
-	  A(ego->wakefulness == SLEEPY);
-          ego->adt->destroy(ego);
-	  X(ifree)(ego);
-     }
+void X(plan_destroy_internal)(plan *ego) {
+  if (ego) {
+    A(ego->wakefulness == SLEEPY);
+    ego->adt->destroy(ego);
+    X(ifree)(ego);
+  }
 }
 
 /* dummy destroy routine for plans with no local state */
-void X(plan_null_destroy)(plan *ego)
-{
-     UNUSED(ego);
-     /* nothing */
+void X(plan_null_destroy)(plan *ego) {
+  UNUSED(ego);
+  /* nothing */
 }
 
-void X(plan_awake)(plan *ego, enum wakefulness wakefulness)
-{
-     if (ego) {
-	  A(((wakefulness == SLEEPY) ^ (ego->wakefulness == SLEEPY)));
-	  
-	  ego->adt->awake(ego, wakefulness);
-	  ego->wakefulness = wakefulness;
-     }
-}
+void X(plan_awake)(plan *ego, enum wakefulness wakefulness) {
+  if (ego) {
+    A(((wakefulness == SLEEPY) ^ (ego->wakefulness == SLEEPY)));
 
+    ego->adt->awake(ego, wakefulness);
+    ego->wakefulness = wakefulness;
+  }
+}

@@ -14,19 +14,17 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
-
 #include "rdft/rdft.h"
 
-plan *X(mkplan_rdft2)(size_t size, const plan_adt *adt, rdft2apply apply)
-{
-     plan_rdft2 *ego;
+plan *X(mkplan_rdft2)(size_t size, const plan_adt *adt, rdft2apply apply) {
+  plan_rdft2 *ego;
 
-     ego = (plan_rdft2 *) X(mkplan)(size, adt);
-     ego->apply = apply;
+  ego = (plan_rdft2 *)X(mkplan)(size, adt);
+  ego->apply = apply;
 
-     return &(ego->super);
+  return &(ego->super);
 }

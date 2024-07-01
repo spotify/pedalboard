@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -24,13 +24,12 @@
    Flip real and imaginary if there the sign does not match
    FFTW's idea of what the sign should be */
 
-void X(extract_reim)(int sign, R *c, R **r, R **i)
-{
-     if (sign == FFT_SIGN) {
-          *r = c + 0;
-          *i = c + 1;
-     } else {
-          *r = c + 1;
-          *i = c + 0;
-     }
+void X(extract_reim)(int sign, R *c, R **r, R **i) {
+  if (sign == FFT_SIGN) {
+    *r = c + 0;
+    *i = c + 1;
+  } else {
+    *r = c + 1;
+    *i = c + 0;
+  }
 }

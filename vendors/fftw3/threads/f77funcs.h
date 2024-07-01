@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -23,22 +23,18 @@
    f77api.c, possibly multiple times in order to support multiple
    compiler manglings (via redefinition of F77). */
 
-FFTW_VOIDFUNC F77(plan_with_nthreads, PLAN_WITH_NTHREADS)(int *nthreads)
-{
-     X(plan_with_nthreads)(*nthreads);
+FFTW_VOIDFUNC F77(plan_with_nthreads, PLAN_WITH_NTHREADS)(int *nthreads) {
+  X(plan_with_nthreads)(*nthreads);
 }
 
-FFTW_VOIDFUNC F77(planner_nthreads, PLANNER_NTHREADS)(int *nthreads)
-{
-    *nthreads = X(planner_nthreads)();
+FFTW_VOIDFUNC F77(planner_nthreads, PLANNER_NTHREADS)(int *nthreads) {
+  *nthreads = X(planner_nthreads)();
 }
 
-FFTW_VOIDFUNC F77(init_threads, INIT_THREADS)(int *okay)
-{
-     *okay = X(init_threads)();
+FFTW_VOIDFUNC F77(init_threads, INIT_THREADS)(int *okay) {
+  *okay = X(init_threads)();
 }
 
-FFTW_VOIDFUNC F77(cleanup_threads, CLEANUP_THREADS)(void)
-{
-     X(cleanup_threads)();
+FFTW_VOIDFUNC F77(cleanup_threads, CLEANUP_THREADS)(void) {
+  X(cleanup_threads)();
 }

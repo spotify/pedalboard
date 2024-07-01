@@ -14,30 +14,28 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
-
 
 #include "libbench2/bench.h"
 
 /* set I/O arrays to zero.  Default routine */
-void problem_zero(bench_problem *p)
-{
-     bench_complex czero = {0, 0};
-     if (p->kind == PROBLEM_COMPLEX) {
-	  caset((bench_complex *) p->inphys, p->iphyssz, czero);
-	  caset((bench_complex *) p->outphys, p->ophyssz, czero);
-     } else if (p->kind == PROBLEM_R2R) {
-	  aset((bench_real *) p->inphys, p->iphyssz, 0.0);
-	  aset((bench_real *) p->outphys, p->ophyssz, 0.0);
-     } else if (p->kind == PROBLEM_REAL && p->sign < 0) {
-	  aset((bench_real *) p->inphys, p->iphyssz, 0.0);
-	  caset((bench_complex *) p->outphys, p->ophyssz, czero);
-     } else if (p->kind == PROBLEM_REAL && p->sign > 0) {
-	  caset((bench_complex *) p->inphys, p->iphyssz, czero);
-	  aset((bench_real *) p->outphys, p->ophyssz, 0.0);
-     } else {
-	  BENCH_ASSERT(0); /* TODO */
-     }
+void problem_zero(bench_problem *p) {
+  bench_complex czero = {0, 0};
+  if (p->kind == PROBLEM_COMPLEX) {
+    caset((bench_complex *)p->inphys, p->iphyssz, czero);
+    caset((bench_complex *)p->outphys, p->ophyssz, czero);
+  } else if (p->kind == PROBLEM_R2R) {
+    aset((bench_real *)p->inphys, p->iphyssz, 0.0);
+    aset((bench_real *)p->outphys, p->ophyssz, 0.0);
+  } else if (p->kind == PROBLEM_REAL && p->sign < 0) {
+    aset((bench_real *)p->inphys, p->iphyssz, 0.0);
+    caset((bench_complex *)p->outphys, p->ophyssz, czero);
+  } else if (p->kind == PROBLEM_REAL && p->sign > 0) {
+    caset((bench_complex *)p->inphys, p->iphyssz, czero);
+    aset((bench_real *)p->outphys, p->ophyssz, 0.0);
+  } else {
+    BENCH_ASSERT(0); /* TODO */
+  }
 }

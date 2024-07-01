@@ -14,10 +14,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
-
 
 #ifdef _MSC_VER
 #ifndef inline
@@ -33,116 +32,111 @@
 #endif
 
 /* cpuid version to get all registers. Donated by Erik Lindahl from Gromacs. */
-static inline void
-cpuid_all(int level, int ecxval, int *eax, int *ebx, int *ecx, int *edx)
-{
-#    ifdef _MSC_VER
-    int CPUInfo[4];
+static inline void cpuid_all(int level, int ecxval, int *eax, int *ebx,
+                             int *ecx, int *edx) {
+#ifdef _MSC_VER
+  int CPUInfo[4];
 
 #if (_MSC_VER > 1500) || (_MSC_VER == 1500 & _MSC_FULL_VER >= 150030729)
-    /* MSVC 9.0 SP1 or later */
-    __cpuidex(CPUInfo, level, ecxval);
+  /* MSVC 9.0 SP1 or later */
+  __cpuidex(CPUInfo, level, ecxval);
 #else
-    __cpuid(CPUInfo, level);
+  __cpuid(CPUInfo, level);
 #endif
-    *eax = CPUInfo[0];
-    *ebx = CPUInfo[1];
-    *ecx = CPUInfo[2];
-    *edx = CPUInfo[3];
-    
-#    else
-    /* Not MSVC */
-    *eax = level;
-    *ecx = ecxval;
-    *ebx = 0;
-    *edx = 0;
-    /* No need to save ebx if we are not in pic mode */
-    __asm__ ("cpuid            \n\t"
-             : "+a" (*eax), "+b" (*ebx), "+c" (*ecx), "+d" (*edx));
-#    endif
+  *eax = CPUInfo[0];
+  *ebx = CPUInfo[1];
+  *ecx = CPUInfo[2];
+  *edx = CPUInfo[3];
+
+#else
+  /* Not MSVC */
+  *eax = level;
+  *ecx = ecxval;
+  *ebx = 0;
+  *edx = 0;
+  /* No need to save ebx if we are not in pic mode */
+  __asm__("cpuid            \n\t"
+          : "+a"(*eax), "+b"(*ebx), "+c"(*ecx), "+d"(*edx));
+#endif
 }
 
-
-static inline int cpuid_ecx(int op)
-{
-#    ifdef _MSC_VER
-#    ifdef __INTEL_COMPILER
-     int result;
-     _asm {
+static inline int cpuid_ecx(int op) {
+#ifdef _MSC_VER
+#ifdef __INTEL_COMPILER
+  int result;
+  _asm {
 	  push rbx
           mov eax,op
           cpuid
           mov result,ecx
           pop rbx
-     }
-     return result;
-#    else
-     int cpu_info[4];
-     __cpuid(cpu_info,op);
-     return cpu_info[2];
-#    endif
-#    else
-     int eax, ecx = 0, edx;
+  }
+  return result;
+#else
+  int cpu_info[4];
+  __cpuid(cpu_info, op);
+  return cpu_info[2];
+#endif
+#else
+  int eax, ecx = 0, edx;
 
-     __asm__("pushq %%rbx\n\tcpuid\n\tpopq %%rbx"
-	     : "=a" (eax), "+c" (ecx), "=d" (edx)
-	     : "a" (op));
-     return ecx;
-#    endif
+  __asm__("pushq %%rbx\n\tcpuid\n\tpopq %%rbx"
+          : "=a"(eax), "+c"(ecx), "=d"(edx)
+          : "a"(op));
+  return ecx;
+#endif
 }
 
-static inline int cpuid_ebx(int op)
-{
-#    ifdef _MSC_VER
-#    ifdef __INTEL_COMPILER
-     int result;
-     _asm {
+static inline int cpuid_ebx(int op) {
+#ifdef _MSC_VER
+#ifdef __INTEL_COMPILER
+  int result;
+  _asm {
           push rbx
           mov eax,op
           cpuid
           mov result,ebx
           pop rbx
-     }
-     return result;
-#    else
-     int cpu_info[4];
-     __cpuid(cpu_info,op);
-     return cpu_info[1];
-#    endif
-#    else
-     int eax, ecx = 0, edx;
+  }
+  return result;
+#else
+  int cpu_info[4];
+  __cpuid(cpu_info, op);
+  return cpu_info[1];
+#endif
+#else
+  int eax, ecx = 0, edx;
 
-     __asm__("pushq %%rbx\n\tcpuid\nmov %%ebx,%%ecx\n\tpopq %%rbx"
-             : "=a" (eax), "+c" (ecx), "=d" (edx)
-             : "a" (op));
-     return ecx;
-#    endif
+  __asm__("pushq %%rbx\n\tcpuid\nmov %%ebx,%%ecx\n\tpopq %%rbx"
+          : "=a"(eax), "+c"(ecx), "=d"(edx)
+          : "a"(op));
+  return ecx;
+#endif
 }
 
-static inline int xgetbv_eax(int op)
-{
-#    ifdef _MSC_VER
-#    ifdef __INTEL_COMPILER
-     int veax, vedx;
-     _asm {
+static inline int xgetbv_eax(int op) {
+#ifdef _MSC_VER
+#ifdef __INTEL_COMPILER
+  int veax, vedx;
+  _asm {
           mov ecx,op
           xgetbv
           mov veax,eax
           mov vedx,edx
-     }
-     return veax;
-#    else
-#    if defined(_MSC_VER) && (_MSC_VER >= 1600)
-     unsigned __int64 result;
-     result = _xgetbv(op);
-     return (int)result;
-#    else
-#    error "Need at least Visual Studio 10 SP1 for AVX support"
-#    endif
-#    endif
-#    else
-     int eax, edx;
-     __asm__ (".byte 0x0f, 0x01, 0xd0" : "=a"(eax), "=d"(edx) : "c" (op));
-     return eax;
+  }
+  return veax;
+#else
+#if defined(_MSC_VER) && (_MSC_VER >= 1600)
+  unsigned __int64 result;
+  result = _xgetbv(op);
+  return (int)result;
+#else
+#error "Need at least Visual Studio 10 SP1 for AVX support"
+#endif
+#endif
+#else
+  int eax, edx;
+  __asm__(".byte 0x0f, 0x01, 0xd0" : "=a"(eax), "=d"(edx) : "c"(op));
+  return eax;
 #endif
 }

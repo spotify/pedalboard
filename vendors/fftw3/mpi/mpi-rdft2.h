@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -29,31 +29,29 @@
 
 /* problem.c: */
 typedef struct {
-     problem super;
-     dtensor *sz;
-     INT vn; /* vector length (vector stride 1) */
-     R *I, *O; /* contiguous interleaved arrays */
+  problem super;
+  dtensor *sz;
+  INT vn;   /* vector length (vector stride 1) */
+  R *I, *O; /* contiguous interleaved arrays */
 
-     rdft_kind kind; /* assert(kind < DHT) */
-     unsigned flags; /* TRANSPOSED_IN/OUT meaningful for rnk>1 only
-			SCRAMBLED_IN/OUT meaningful for 1d transforms only */
+  rdft_kind kind; /* assert(kind < DHT) */
+  unsigned flags; /* TRANSPOSED_IN/OUT meaningful for rnk>1 only
+                     SCRAMBLED_IN/OUT meaningful for 1d transforms only */
 
-     MPI_Comm comm;
+  MPI_Comm comm;
 } problem_mpi_rdft2;
 
-problem *XM(mkproblem_rdft2)(const dtensor *sz, INT vn,
-			     R *I, R *O, MPI_Comm comm,
-			     rdft_kind kind, unsigned flags);
-problem *XM(mkproblem_rdft2_d)(dtensor *sz, INT vn,
-			       R *I, R *O, MPI_Comm comm,
-			       rdft_kind kind, unsigned flags);
+problem *XM(mkproblem_rdft2)(const dtensor *sz, INT vn, R *I, R *O,
+                             MPI_Comm comm, rdft_kind kind, unsigned flags);
+problem *XM(mkproblem_rdft2_d)(dtensor *sz, INT vn, R *I, R *O, MPI_Comm comm,
+                               rdft_kind kind, unsigned flags);
 
 /* solve.c: */
 void XM(rdft2_solve)(const plan *ego_, const problem *p_);
 
 /* plans have same operands as rdft plans, so just re-use */
 typedef plan_rdft plan_mpi_rdft2;
-#define MKPLAN_MPI_RDFT2(type, adt, apply) \
+#define MKPLAN_MPI_RDFT2(type, adt, apply)                                     \
   (type *)X(mkplan_rdft)(sizeof(type), adt, apply)
 
 int XM(rdft2_serial_applicable)(const problem_mpi_rdft2 *p);

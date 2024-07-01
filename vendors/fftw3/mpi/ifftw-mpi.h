@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -36,17 +36,17 @@
 #define TRANSPOSED_OUT (1 << 3)
 #define RANK1_BIGVEC_ONLY (1 << 4) /* for rank=1, allow only bigvec solver */
 
-#define ONLY_SCRAMBLEDP(flags) (!((flags) & ~(SCRAMBLED_IN|SCRAMBLED_OUT)))
-#define ONLY_TRANSPOSEDP(flags) (!((flags) & ~(TRANSPOSED_IN|TRANSPOSED_OUT)))
+#define ONLY_SCRAMBLEDP(flags) (!((flags) & ~(SCRAMBLED_IN | SCRAMBLED_OUT)))
+#define ONLY_TRANSPOSEDP(flags) (!((flags) & ~(TRANSPOSED_IN | TRANSPOSED_OUT)))
 
 #if defined(FFTW_SINGLE)
-#  define FFTW_MPI_TYPE MPI_FLOAT
+#define FFTW_MPI_TYPE MPI_FLOAT
 #elif defined(FFTW_LDOUBLE)
-#  define FFTW_MPI_TYPE MPI_LONG_DOUBLE
+#define FFTW_MPI_TYPE MPI_LONG_DOUBLE
 #elif defined(FFTW_QUAD)
-#  error MPI quad-precision type is unknown
+#error MPI quad-precision type is unknown
 #else
-#  define FFTW_MPI_TYPE MPI_DOUBLE
+#define FFTW_MPI_TYPE MPI_DOUBLE
 #endif
 
 /* all fftw-mpi identifiers start with fftw_mpi (or fftwf_mpi etc.) */
@@ -59,27 +59,27 @@
    sizes ib and ob, respectively. */
 typedef enum { IB = 0, OB } block_kind;
 typedef struct {
-     INT n;
-     INT b[2]; /* b[IB], b[OB] */
+  INT n;
+  INT b[2]; /* b[IB], b[OB] */
 } ddim;
 
 /* Loop over k in {IB, OB}.  Note: need explicit casts for C++. */
-#define FORALL_BLOCK_KIND(k) for (k = IB; k <= OB; k = (block_kind) (((int) k) + 1))
+#define FORALL_BLOCK_KIND(k)                                                   \
+  for (k = IB; k <= OB; k = (block_kind)(((int)k) + 1))
 
 /* unlike tensors in the serial FFTW, the ordering of the dtensor
    dimensions matters - both the array and the block layout are
    row-major order. */
 typedef struct {
-     int rnk;
+  int rnk;
 #if defined(STRUCT_HACK_KR)
-     ddim dims[1];
+  ddim dims[1];
 #elif defined(STRUCT_HACK_C99)
-     ddim dims[];
+  ddim dims[];
 #else
-     ddim *dims;
+  ddim *dims;
 #endif
 } dtensor;
-
 
 /* dtensor.c: */
 dtensor *XM(mkdtensor)(int rnk);
@@ -101,16 +101,16 @@ INT XM(block)(INT n, INT block, int which_block);
 /* for multiple distributed dimensions: */
 INT XM(num_blocks_total)(const dtensor *sz, block_kind k);
 int XM(idle_process)(const dtensor *sz, block_kind k, int which_pe);
-void XM(block_coords)(const dtensor *sz, block_kind k, int which_pe, 
-		     INT *coords);
+void XM(block_coords)(const dtensor *sz, block_kind k, int which_pe,
+                      INT *coords);
 INT XM(total_block)(const dtensor *sz, block_kind k, int which_pe);
 int XM(is_local_after)(int dim, const dtensor *sz, block_kind k);
 int XM(is_local)(const dtensor *sz, block_kind k);
 int XM(is_block1d)(const dtensor *sz, block_kind k);
 
 /* choose-radix.c */
-INT XM(choose_radix)(ddim d, int n_pes, unsigned flags, int sign,
-                     INT rblock[2], INT mblock[2]);
+INT XM(choose_radix)(ddim d, int n_pes, unsigned flags, int sign, INT rblock[2],
+                     INT mblock[2]);
 
 /***********************************************************************/
 /* any_true.c */
@@ -130,22 +130,23 @@ void XM(conf_standard)(planner *p);
    TODO: can we pare this down to CONTIG and DISCONTIG, at least
    in MEASURE mode?  SQUARE_MIDDLE is also used for 1d destroy-input DFTs. */
 typedef enum {
-     CONTIG = 0, /* vn x 1: make subsequent DFTs contiguous */
-     DISCONTIG, /* P x (vn/P) for P processes */
-     SQUARE_BEFORE, /* try to get square transpose at beginning */
-     SQUARE_MIDDLE, /* try to get square transpose in the middle */
-     SQUARE_AFTER /* try to get square transpose at end */
+  CONTIG = 0,    /* vn x 1: make subsequent DFTs contiguous */
+  DISCONTIG,     /* P x (vn/P) for P processes */
+  SQUARE_BEFORE, /* try to get square transpose at beginning */
+  SQUARE_MIDDLE, /* try to get square transpose in the middle */
+  SQUARE_AFTER   /* try to get square transpose at end */
 } rearrangement;
 
 /* skipping SQUARE_AFTER since it doesn't seem to offer any advantage
    over SQUARE_BEFORE */
-#define FORALL_REARRANGE(rearrange) for (rearrange = CONTIG; rearrange <= SQUARE_MIDDLE; rearrange = (rearrangement) (((int) rearrange) + 1))
+#define FORALL_REARRANGE(rearrange)                                            \
+  for (rearrange = CONTIG; rearrange <= SQUARE_MIDDLE;                         \
+       rearrange = (rearrangement)(((int)rearrange) + 1))
 
-int XM(rearrange_applicable)(rearrangement rearrange, 
-			     ddim dim0, INT vn, int n_pes);
+int XM(rearrange_applicable)(rearrangement rearrange, ddim dim0, INT vn,
+                             int n_pes);
 INT XM(rearrange_ny)(rearrangement rearrange, ddim dim0, INT vn, int n_pes);
 
 /***********************************************************************/
 
 #endif /* __IFFTW_MPI_H__ */
-

@@ -14,16 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
-
 #include "rdft/rdft.h"
 
-void X(kr2c_register)(planner *p, kr2c codelet, const kr2c_desc *desc)
-{
-     REGISTER_SOLVER(p, X(mksolver_rdft_r2c_direct)(codelet, desc));
-     REGISTER_SOLVER(p, X(mksolver_rdft_r2c_directbuf)(codelet, desc));
-     REGISTER_SOLVER(p, X(mksolver_rdft2_direct)(codelet, desc));
+void X(kr2c_register)(planner *p, kr2c codelet, const kr2c_desc *desc) {
+  REGISTER_SOLVER(p, X(mksolver_rdft_r2c_direct)(codelet, desc));
+  REGISTER_SOLVER(p, X(mksolver_rdft_r2c_directbuf)(codelet, desc));
+  REGISTER_SOLVER(p, X(mksolver_rdft2_direct)(codelet, desc));
 }

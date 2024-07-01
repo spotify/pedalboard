@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -37,11 +37,23 @@
    half a sample/slot. */
 
 typedef enum {
-     R2HC00, R2HC01, R2HC10, R2HC11,
-     HC2R00, HC2R01, HC2R10, HC2R11,
-     DHT, 
-     REDFT00, REDFT01, REDFT10, REDFT11, /* real-even == DCT's */
-     RODFT00, RODFT01, RODFT10, RODFT11  /*  real-odd == DST's */
+  R2HC00,
+  R2HC01,
+  R2HC10,
+  R2HC11,
+  HC2R00,
+  HC2R01,
+  HC2R10,
+  HC2R11,
+  DHT,
+  REDFT00,
+  REDFT01,
+  REDFT10,
+  REDFT11, /* real-even == DCT's */
+  RODFT00,
+  RODFT01,
+  RODFT10,
+  RODFT11 /*  real-odd == DST's */
 } rdft_kind;
 
 /* standard R2HC/HC2R transforms are unshifted */
@@ -67,71 +79,65 @@ typedef enum {
 typedef struct kr2c_desc_s kr2c_desc;
 
 typedef struct {
-     rdft_kind kind;
-     INT vl;
+  rdft_kind kind;
+  INT vl;
 } kr2c_genus;
 
 struct kr2c_desc_s {
-     INT n;    /* size of transform computed */
-     const char *nam;
-     opcnt ops;
-     const kr2c_genus *genus;
+  INT n; /* size of transform computed */
+  const char *nam;
+  opcnt ops;
+  const kr2c_genus *genus;
 };
 
-typedef void (*kr2c) (R *R0, R *R1, R *Cr, R *Ci,
-		      stride rs, stride csr, stride csi,
-		      INT vl, INT ivs, INT ovs);
+typedef void (*kr2c)(R *R0, R *R1, R *Cr, R *Ci, stride rs, stride csr,
+                     stride csi, INT vl, INT ivs, INT ovs);
 void X(kr2c_register)(planner *p, kr2c codelet, const kr2c_desc *desc);
 
 /* half-complex to half-complex DIT/DIF codelets: */
 typedef struct hc2hc_desc_s hc2hc_desc;
 
 typedef struct {
-     rdft_kind kind;
-     INT vl;
+  rdft_kind kind;
+  INT vl;
 } hc2hc_genus;
 
 struct hc2hc_desc_s {
-     INT radix;
-     const char *nam;
-     const tw_instr *tw;
-     const hc2hc_genus *genus;
-     opcnt ops;
+  INT radix;
+  const char *nam;
+  const tw_instr *tw;
+  const hc2hc_genus *genus;
+  opcnt ops;
 };
 
-typedef void (*khc2hc) (R *rioarray, R *iioarray, const R *W,
-			stride rs, INT mb, INT me, INT ms);
+typedef void (*khc2hc)(R *rioarray, R *iioarray, const R *W, stride rs, INT mb,
+                       INT me, INT ms);
 void X(khc2hc_register)(planner *p, khc2hc codelet, const hc2hc_desc *desc);
 
 /* half-complex to rdft2-complex DIT/DIF codelets: */
 typedef struct hc2c_desc_s hc2c_desc;
 
-typedef enum {
-     HC2C_VIA_RDFT,
-     HC2C_VIA_DFT
-} hc2c_kind;
+typedef enum { HC2C_VIA_RDFT, HC2C_VIA_DFT } hc2c_kind;
 
 typedef struct {
-     int (*okp)(
-	  const R *Rp, const R *Ip, const R *Rm, const R *Im, 
-	  INT rs, INT mb, INT me, INT ms, 
-	  const planner *plnr);
-     rdft_kind kind;
-     INT vl;
+  int (*okp)(const R *Rp, const R *Ip, const R *Rm, const R *Im, INT rs, INT mb,
+             INT me, INT ms, const planner *plnr);
+  rdft_kind kind;
+  INT vl;
 } hc2c_genus;
 
 struct hc2c_desc_s {
-     INT radix;
-     const char *nam;
-     const tw_instr *tw;
-     const hc2c_genus *genus;
-     opcnt ops;
+  INT radix;
+  const char *nam;
+  const tw_instr *tw;
+  const hc2c_genus *genus;
+  opcnt ops;
 };
 
-typedef void (*khc2c) (R *Rp, R *Ip, R *Rm, R *Im, const R *W,
-		       stride rs, INT mb, INT me, INT ms);
+typedef void (*khc2c)(R *Rp, R *Ip, R *Rm, R *Im, const R *W, stride rs, INT mb,
+                      INT me, INT ms);
 void X(khc2c_register)(planner *p, khc2c codelet, const hc2c_desc *desc,
-		       hc2c_kind hc2ckind);
+                       hc2c_kind hc2ckind);
 
 extern const solvtab X(solvtab_rdft_r2cf);
 extern const solvtab X(solvtab_rdft_r2cb);
@@ -152,21 +158,21 @@ extern const solvtab X(solvtab_rdft_generic_simd256);
 typedef struct kr2r_desc_s kr2r_desc;
 
 typedef struct {
-     INT vl;
+  INT vl;
 } kr2r_genus;
 
 struct kr2r_desc_s {
-     INT n;    /* size of transform computed */
-     const char *nam;
-     opcnt ops;
-     const kr2r_genus *genus;
-     rdft_kind kind;
+  INT n; /* size of transform computed */
+  const char *nam;
+  opcnt ops;
+  const kr2r_genus *genus;
+  rdft_kind kind;
 };
 
-typedef void (*kr2r) (const R *I, R *O, stride is, stride os,
-		      INT vl, INT ivs, INT ovs);
+typedef void (*kr2r)(const R *I, R *O, stride is, stride os, INT vl, INT ivs,
+                     INT ovs);
 void X(kr2r_register)(planner *p, kr2r codelet, const kr2r_desc *desc);
 
 extern const solvtab X(solvtab_rdft_r2r);
 
-#endif				/* __RDFT_CODELET_H__ */
+#endif /* __RDFT_CODELET_H__ */

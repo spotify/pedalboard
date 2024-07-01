@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -22,13 +22,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void X(assertion_failed)(const char *s, int line, const char *file)
-{
-     fflush(stdout);
-     fprintf(stderr, "fftw: %s:%d: assertion failed: %s\n", file, line, s);
+void X(assertion_failed)(const char *s, int line, const char *file) {
+  fflush(stdout);
+  fprintf(stderr, "fftw: %s:%d: assertion failed: %s\n", file, line, s);
 #ifdef HAVE_ABORT
-     abort();
+  abort();
 #else
-     exit(EXIT_FAILURE);
+  exit(EXIT_FAILURE);
 #endif
 }

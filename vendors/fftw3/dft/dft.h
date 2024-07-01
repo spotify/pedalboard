@@ -14,49 +14,47 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
-
 
 #ifndef __DFT_H__
 #define __DFT_H__
 
-#include "kernel/ifftw.h"
 #include "dft/codelet-dft.h"
+#include "kernel/ifftw.h"
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif /* __cplusplus */
 
 /* problem.c: */
 typedef struct {
-     problem super;
-     tensor *sz, *vecsz;
-     R *ri, *ii, *ro, *io;
+  problem super;
+  tensor *sz, *vecsz;
+  R *ri, *ii, *ro, *io;
 } problem_dft;
 
 void X(dft_zerotens)(tensor *sz, R *ri, R *ii);
-problem *X(mkproblem_dft)(const tensor *sz, const tensor *vecsz,
-				R *ri, R *ii, R *ro, R *io);
-problem *X(mkproblem_dft_d)(tensor *sz, tensor *vecsz,
-			    R *ri, R *ii, R *ro, R *io);
+problem *X(mkproblem_dft)(const tensor *sz, const tensor *vecsz, R *ri, R *ii,
+                          R *ro, R *io);
+problem *X(mkproblem_dft_d)(tensor *sz, tensor *vecsz, R *ri, R *ii, R *ro,
+                            R *io);
 
 /* solve.c: */
 void X(dft_solve)(const plan *ego_, const problem *p_);
 
 /* plan.c: */
-typedef void (*dftapply) (const plan *ego, R *ri, R *ii, R *ro, R *io);
+typedef void (*dftapply)(const plan *ego, R *ri, R *ii, R *ro, R *io);
 
 typedef struct {
-     plan super;
-     dftapply apply;
+  plan super;
+  dftapply apply;
 } plan_dft;
 
 plan *X(mkplan_dft)(size_t size, const plan_adt *adt, dftapply apply);
 
-#define MKPLAN_DFT(type, adt, apply) \
+#define MKPLAN_DFT(type, adt, apply)                                           \
   (type *)X(mkplan_dft)(sizeof(type), adt, apply)
 
 /* various solvers */
@@ -82,7 +80,7 @@ void X(ct_genericbuf_register)(planner *p);
 void X(dft_conf_standard)(planner *p);
 
 #ifdef __cplusplus
-}  /* extern "C" */
+} /* extern "C" */
 #endif /* __cplusplus */
 
 #endif /* __DFT_H__ */

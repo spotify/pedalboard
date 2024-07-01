@@ -14,19 +14,16 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
-
 
 #include "dft/dft.h"
 
 /* use the apply() operation for DFT problems */
-void X(dft_solve)(const plan *ego_, const problem *p_)
-{
-     const plan_dft *ego = (const plan_dft *) ego_;
-     const problem_dft *p = (const problem_dft *) p_;
-     ego->apply(ego_, 
-		UNTAINT(p->ri), UNTAINT(p->ii), 
-		UNTAINT(p->ro), UNTAINT(p->io));
+void X(dft_solve)(const plan *ego_, const problem *p_) {
+  const plan_dft *ego = (const plan_dft *)ego_;
+  const problem_dft *p = (const problem_dft *)p_;
+  ego->apply(ego_, UNTAINT(p->ri), UNTAINT(p->ii), UNTAINT(p->ro),
+             UNTAINT(p->io));
 }

@@ -14,26 +14,24 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
-#include "dft/codelet-dft.h"
 #include "dft/scalar/n.h"
+#include "dft/codelet-dft.h"
 
-static int okp(const kdft_desc *d,
-	       const R *ri, const R *ii, 
-	       const R *ro, const R *io,
-	       INT is, INT os, INT vl, INT ivs, INT ovs,
-	       const planner *plnr)
-{
-     UNUSED(ri); UNUSED(ii); UNUSED(ro); UNUSED(io); UNUSED(vl); UNUSED(plnr);
-     return (1
-	     && (!d->is || (d->is == is))
-	     && (!d->os || (d->os == os))
-	     && (!d->ivs || (d->ivs == ivs))
-	     && (!d->ovs || (d->ovs == ovs))
-	  );
+static int okp(const kdft_desc *d, const R *ri, const R *ii, const R *ro,
+               const R *io, INT is, INT os, INT vl, INT ivs, INT ovs,
+               const planner *plnr) {
+  UNUSED(ri);
+  UNUSED(ii);
+  UNUSED(ro);
+  UNUSED(io);
+  UNUSED(vl);
+  UNUSED(plnr);
+  return (1 && (!d->is || (d->is == is)) && (!d->os || (d->os == os)) &&
+          (!d->ivs || (d->ivs == ivs)) && (!d->ovs || (d->ovs == ovs)));
 }
 
-const kdft_genus GENUS = { okp, 1 };
+const kdft_genus GENUS = {okp, 1};

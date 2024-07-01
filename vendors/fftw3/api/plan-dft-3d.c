@@ -14,19 +14,19 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #include "api/api.h"
 #include "dft/dft.h"
 
-X(plan) X(plan_dft_3d)(int nx, int ny, int nz,
-		       C *in, C *out, int sign, unsigned flags)
-{
-     int n[3];
-     n[0] = nx;
-     n[1] = ny;
-     n[2] = nz;
-     return X(plan_dft)(3, n, in, out, sign, flags);
+X(plan)
+X(plan_dft_3d)(int nx, int ny, int nz, C *in, C *out, int sign,
+               unsigned flags) {
+  int n[3];
+  n[0] = nx;
+  n[1] = ny;
+  n[2] = nz;
+  return X(plan_dft)(3, n, in, out, sign, flags);
 }

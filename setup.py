@@ -106,28 +106,49 @@ ALL_CPPFLAGS.extend(
     ]
 )
 
+
+def ignore_files_matching(files: set[Path], *matches) -> set[str]:
+    matches = set(matches)
+    for match in matches:
+        new_files = []
+        for file in files:
+            if match in str(file):
+                print(f"Skipping compilation of: {file}")
+            else:
+                new_files.append(file)
+        files = new_files
+    return set(files)
+
+
 if platform.system() != "Darwin":
-    # Use FFTW3 for FFTs on all other platforms, which should speed up Rubberband by ~25%:
+    # Use FFTW3 for FFTs on all other platforms, which should speed up Rubberband by ~30%:
     ALL_CPPFLAGS.extend(["-DHAVE_FFTW3=1", "-DLACK_SINCOS=1", "-DFFTW_DOUBLE_ONLY=1"])
     ALL_INCLUDES += ["vendors/fftw3/api/", "vendors/fftw3/"]
     fftw_paths = list(Path("vendors/fftw3/").glob("**/*.c"))
-    fftw_paths = [path for path in fftw_paths if "altivec" not in str(path)]
-    fftw_paths = [path for path in fftw_paths if "vsx" not in str(path)]
-    fftw_paths = [path for path in fftw_paths if "mpi" not in str(path)]
-    fftw_paths = [path for path in fftw_paths if "threads" not in str(path)]
-    fftw_paths = [path for path in fftw_paths if "tests" not in str(path)]
-    fftw_paths = [path for path in fftw_paths if "tools" not in str(path)]
-    fftw_paths = [path for path in fftw_paths if "support" not in str(path)]
-    fftw_paths = [path for path in fftw_paths if "common/" not in str(path)]
-    fftw_paths = [path for path in fftw_paths if "libbench" not in str(path)]
+    fftw_paths = ignore_files_matching(
+        fftw_paths,
+        # Don't bother compiling in Altivec or VSX (PowerPC) support;
+        # it's 2024, not 2004 (although RIP my G5 cheese grater)
+        "altivec",
+        "vsx",
+        # We're not using FFTW in multi-threaded mode:
+        "mpi",
+        "threads",
+        # No need for tests, tools, or support code:
+        "tests",
+        "tools",
+        "support",
+        "common/",
+        "libbench",
+    )
+
+    # On ARM, ignore the X86-specific SIMD code:
     if "arm" in platform.processor() or "aarch64" in platform.processor():
-        fftw_paths = [
-            path
-            for path in fftw_paths
-            if all(x not in str(path) for x in set(["avx", "sse", "kcvi"]))
-        ]
+        fftw_paths = ignore_files_matching(fftw_paths, "avx", "sse", "kcvi")
     else:
-        fftw_paths = [path for path in fftw_paths if all(x not in str(path) for x in set(["neon"]))]
+        # And on x86, ignore the ARM-specific SIMD code:
+        fftw_paths = ignore_files_matching(fftw_paths, "neon")
+
     fftw_paths.append(Path("vendors/fftw3/kernel/assert.c"))
     ALL_SOURCE_PATHS += fftw_paths
     ALL_CFLAGS.extend(
@@ -141,6 +162,8 @@ if platform.system() != "Darwin":
             "-DALIGNMENTA=16",
             "-includestring.h",
             "-includestdint.h",
+            "-includevendors/fftw3/dft/codelet-dft.h",
+            "-includevendors/fftw3/rdft/codelet-rdft.h",
         ]
     )
 ALL_SOURCE_PATHS += list(Path("vendors/rubberband/single").glob("*.cpp"))

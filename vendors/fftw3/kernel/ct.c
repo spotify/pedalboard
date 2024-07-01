@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
@@ -22,10 +22,9 @@
 
 #include "kernel/ifftw.h"
 
-#define POW2P(n) (((n) > 0) && (((n) & ((n) - 1)) == 0))
+#define POW2P(n) (((n) > 0) && (((n) & ((n)-1)) == 0))
 
 /* TRUE if radix-r is ugly for size n */
-int X(ct_uglyp)(INT min_n, INT v, INT n, INT r)
-{
-     return (n <= min_n) || (POW2P(n) && (v * (n / r)) <= 4);
+int X(ct_uglyp)(INT min_n, INT v, INT n, INT r) {
+  return (n <= min_n) || (POW2P(n) && (v * (n / r)) <= 4);
 }

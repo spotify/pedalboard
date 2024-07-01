@@ -14,34 +14,30 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
 
 #include "kernel/ifftw.h"
 
-void *X(malloc_plain)(size_t n)
-{
-     void *p;
-     if (n == 0)
-          n = 1;
-     p = X(kernel_malloc)(n);
-     CK(p);
+void *X(malloc_plain)(size_t n) {
+  void *p;
+  if (n == 0)
+    n = 1;
+  p = X(kernel_malloc)(n);
+  CK(p);
 
 #ifdef MIN_ALIGNMENT
-     A((((uintptr_t)p) % MIN_ALIGNMENT) == 0);
+  A((((uintptr_t)p) % MIN_ALIGNMENT) == 0);
 #endif
 
-     return p;
+  return p;
 }
 
-void X(ifree)(void *p)
-{
-     X(kernel_free)(p);
-}
+void X(ifree)(void *p) { X(kernel_free)(p); }
 
-void X(ifree0)(void *p)
-{
-     /* common pattern */
-     if (p) X(ifree)(p);
+void X(ifree0)(void *p) {
+  /* common pattern */
+  if (p)
+    X(ifree)(p);
 }
