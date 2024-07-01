@@ -166,8 +166,8 @@ if platform.system() != "Darwin":
             ]
         )
 
-    fftw_paths.append(Path("vendors/fftw3/kernel/assert.c"))
     ALL_SOURCE_PATHS += fftw_paths
+
     ALL_CFLAGS.extend(
         [
             "-DHAVE_UINTPTR_T",
@@ -215,7 +215,7 @@ if platform.system() != "Darwin":
             "-DHAVE_SYSCTL",
         ]
     )
-    #
+
 ALL_SOURCE_PATHS += list(Path("vendors/rubberband/single").glob("*.cpp"))
 
 ALL_SOURCE_PATHS += list(Path("vendors").glob("*.c"))
