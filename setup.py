@@ -147,8 +147,8 @@ if platform.system() != "Darwin":
         fftw_paths = ignore_files_matching(fftw_paths, "avx", "sse", "kcvi")
         ALL_CFLAGS.append("-DHAVE_NEON=1")
     else:
-        # And on x86, ignore the ARM-specific SIMD code:
-        fftw_paths = ignore_files_matching(fftw_paths, "neon")
+        # And on x86, ignore the ARM-specific SIMD code (and KCVI; not GCC or Clang compatible).
+        fftw_paths = ignore_files_matching(fftw_paths, "neon", "kcvi")
         # Support for FMA4 instructions:
         ALL_CFLAGS.append("-mfma4")
         # Target Cannon Lake for reasonably modern SIMD support:
