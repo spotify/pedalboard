@@ -144,7 +144,7 @@ if platform.system() != "Darwin":
 
     # On ARM, ignore the X86-specific SIMD code:
     if "arm" in platform.processor() or "aarch64" in platform.processor():
-        fftw_paths = ignore_files_matching(fftw_paths, "avx", "sse", "kcvi")
+        fftw_paths = ignore_files_matching(fftw_paths, "avx", "/sse", "kcvi")
         ALL_CFLAGS.append("-DHAVE_NEON=1")
     else:
         # And on x86, ignore the ARM-specific SIMD code (and KCVI; not GCC or Clang compatible).
