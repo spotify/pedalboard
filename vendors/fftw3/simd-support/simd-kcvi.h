@@ -30,6 +30,18 @@
     "Knights Corner vector instructions only works in single or double precision"
 #endif
 
+#ifdef __GNUC__
+unsigned char _MM_SWIZ_REG_NONE = 0;
+unsigned char _MM_SWIZ_REG_DCBA = 0;
+unsigned char _MM_SWIZ_REG_CDAB = 1;
+unsigned char _MM_SWIZ_REG_BADC = 2;
+unsigned char _MM_SWIZ_REG_AAAA = 3;
+unsigned char _MM_SWIZ_REG_BBBB = 4;
+unsigned char _MM_SWIZ_REG_CCCC = 5;
+unsigned char _MM_SWIZ_REG_DDDD = 6;
+unsigned char _MM_SWIZ_REG_DACB = 7;
+#endif
+
 #ifdef FFTW_SINGLE
 #define DS(d, s) s /* single-precision option */
 #define SUFF(name) name##_ps

@@ -137,7 +137,7 @@ if platform.system() != "Darwin":
         # No need for tests, tools, or support code:
         "tests",
         "tools",
-        "support",
+        "/support",
         "common/",
         "libbench",
     )
@@ -209,6 +209,7 @@ ALL_INCLUDES += [
 # libgsm
 ALL_SOURCE_PATHS += [p for p in Path("vendors/libgsm/src").glob("*.c") if "toast" not in p.name]
 ALL_INCLUDES += ["vendors/libgsm/inc"]
+ALL_CFLAGS += ["-Wno-comment"]
 
 
 # Add platform-specific flags:
