@@ -107,13 +107,14 @@ ALL_CPPFLAGS.extend(
 )
 
 
-def ignore_files_matching(files: set[Path], *matches) -> set[str]:
+def ignore_files_matching(files, *matches):
     matches = set(matches)
     for match in matches:
         new_files = []
         for file in files:
             if match in str(file):
-                print(f"Skipping compilation of: {file}")
+                # print(f"Skipping compilation of: {file}")
+                pass
             else:
                 new_files.append(file)
         files = new_files
@@ -151,8 +152,7 @@ if platform.system() != "Darwin":
         fftw_paths = ignore_files_matching(fftw_paths, "neon", "kcvi")
         # Support for FMA4 instructions:
         ALL_CFLAGS.append("-mfma4")
-        # Target Cannon Lake for reasonably modern SIMD support:
-        ALL_CFLAGS.append("-march=cannonlake")
+        ALL_CFLAGS.append("-march=native")
         # Enable SIMD instructions:
         ALL_CFLAGS.extend(
             [
@@ -160,7 +160,7 @@ if platform.system() != "Darwin":
                 "-DHAVE_AVX",
                 "-DHAVE_AVX_128_FMA",
                 "-DHAVE_AVX2",
-                "-DHAVE_AVX512",
+                # "-DHAVE_AVX512", # Not supported on GitHub Actions yet :(
                 "-DHAVE_GENERIC_SIMD128",
                 "-DHAVE_GENERIC_SIMD256",
             ]
@@ -175,8 +175,6 @@ if platform.system() != "Darwin":
             '-DVERSION="0"',
             '-DPACKAGE_VERSION="00000"',
             '-DFFTW_CC="clang"',
-            "-DALIGNMENT=8",
-            "-DALIGNMENTA=16",
             "-includestring.h",
             "-includestdint.h",
             "-includevendors/fftw3/dft/codelet-dft.h",
