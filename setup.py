@@ -141,6 +141,7 @@ if platform.system() != "Darwin":
         "/support",
         "common/",
         "libbench",
+        "avx512",
     )
 
     # On ARM, ignore the X86-specific SIMD code:
