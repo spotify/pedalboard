@@ -102,7 +102,8 @@ ALL_CPPFLAGS.extend(
         "-DUSE_BQRESAMPLER=1",
         "-D_HAS_STD_BYTE=0",
         "-DNOMINMAX",
-        "-DALREADY_CONFIGURED=1",
+        "-DALREADY_CONFIGURED",
+        "-USE_PTHREADS",
     ]
 )
 
