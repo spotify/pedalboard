@@ -144,6 +144,7 @@ if platform.system() != "Darwin":
         "libbench",
         "avx512",
         "avx-128-fma",
+        "generic-simd",
     )
 
     # On ARM, ignore the X86-specific SIMD code:
@@ -162,8 +163,8 @@ if platform.system() != "Darwin":
                 # "-DHAVE_AVX_128_FMA",
                 "-DHAVE_AVX2",
                 # "-DHAVE_AVX512", # Not supported on GitHub Actions yet :(
-                "-DHAVE_GENERIC_SIMD128",
-                "-DHAVE_GENERIC_SIMD256",
+                # "-DHAVE_GENERIC_SIMD128",
+                # "-DHAVE_GENERIC_SIMD256",
             ]
         )
 
