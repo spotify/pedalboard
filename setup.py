@@ -100,7 +100,6 @@ if "musllinux" in os.getenv("CIBW_BUILD", ""):
 ALL_CPPFLAGS.extend(
     [
         "-DUSE_BQRESAMPLER=1",
-        "-DNO_THREADING=0",
         "-D_HAS_STD_BYTE=0",
         "-DNOMINMAX",
         "-DALREADY_CONFIGURED=1",
