@@ -122,8 +122,10 @@ def ignore_files_matching(files, *matches):
     return files
 
 
-if platform.system() != "Darwin":
-    # Use FFTW3 for FFTs on all other platforms, which should speed up Rubberband by ~30%:
+if platform.system() == "Windows":
+    ALL_CPPFLAGS.append("-DUSE_BUILTIN_FFT")
+elif platform.system() == "Linux":
+    # Use FFTW3 for FFTs on Linux, which should speed up Rubberband by 3-4x:
     ALL_CPPFLAGS.extend(["-DHAVE_FFTW3=1", "-DLACK_SINCOS=1", "-DFFTW_DOUBLE_ONLY=1"])
     ALL_INCLUDES += ["vendors/fftw3/api/", "vendors/fftw3/"]
     fftw_paths = list(Path("vendors/fftw3/").glob("**/*.c"))
