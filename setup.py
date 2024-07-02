@@ -152,7 +152,6 @@ if platform.system() != "Darwin":
     else:
         # And on x86, ignore the ARM-specific SIMD code (and KCVI; not GCC or Clang compatible).
         fftw_paths = ignore_files_matching(fftw_paths, "neon", "kcvi")
-        ALL_CFLAGS.append("-mavx")
         ALL_CFLAGS.append("-march=broadwell")
         # Enable SIMD instructions:
         ALL_CFLAGS.extend(
@@ -241,7 +240,6 @@ ALL_INCLUDES += [
 # libgsm
 ALL_SOURCE_PATHS += [p for p in Path("vendors/libgsm/src").glob("*.c") if "toast" not in p.name]
 ALL_INCLUDES += ["vendors/libgsm/inc"]
-ALL_CFLAGS += ["-Wno-comment"]
 
 
 # Add platform-specific flags:
@@ -253,6 +251,7 @@ if platform.system() == "Darwin":
         ALL_LINK_ARGS.append("-flto=thin")
     ALL_LINK_ARGS.append("-fvisibility=hidden")
     ALL_CPPFLAGS.append("-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1")
+    ALL_CFLAGS += ["-Wno-comment"]
 elif platform.system() == "Linux":
     ALL_CPPFLAGS.append("-DLINUX=1")
     # We use GCC on Linux, which doesn't take a value for the -flto flag:
@@ -260,6 +259,7 @@ elif platform.system() == "Linux":
         ALL_CPPFLAGS.append("-flto")
         ALL_LINK_ARGS.append("-flto")
     ALL_LINK_ARGS.append("-fvisibility=hidden")
+    ALL_CFLAGS += ["-Wno-comment"]
 elif platform.system() == "Windows":
     ALL_CPPFLAGS.append("-DWINDOWS=1")
     ALL_CPPFLAGS.append("-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1")
