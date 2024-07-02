@@ -1,0 +1,279 @@
+\input texinfo    @c -*-texinfo-*-
+@c Update by C-x C-e on: (texinfo-multiple-files-update "fftw3.texi" nil t)
+@setfilename fftw3.info
+@include version.texi
+@finalout
+@settitle FFTW @value{VERSION}
+@setchapternewpage odd
+@c define constant index (ct)
+@defcodeindex ct
+@syncodeindex ct fn
+@syncodeindex vr fn
+@syncodeindex pg fn
+@syncodeindex tp fn
+@c define foreign function index (ff)
+@defcodeindex ff
+@syncodeindex ff cp
+@c define foreign constant index (fc)
+@defcodeindex fc
+@syncodeindex fc cp
+@c define foreign program index (fp)
+@defcodeindex fp
+@syncodeindex fp cp
+@comment %**end of header
+
+@iftex
+@paragraphindent 0
+@parskip=@medskipamount
+@end iftex
+
+@c
+@c The following macros are coded in a weird way:
+
+@c    @macro FOO
+@c    @noindent
+@c    <STUFF>
+@c    @refill
+@c    @end macro
+
+@c The @noindent/@refill stuff is not necessary in texinfo up to version
+@c 4, but it is a hack necessary to make texinfo-5 work.
+
+@c Texinfo has been stable for the first 15 years of FFTW's history.
+@c Then some genius, with too much time in his hands and on a mission to
+@c deliver the world from the evil of the C language, decided to rewrite
+@c makeinfo in Perl, the old C version of makeinfo being, as I said,
+@c evil.  The official excuse for the rewrite was that now I can have my
+@c manual in XML format, as if XML were a feature.
+
+@c The result of this stroke of genius is that texinfo-5 has different
+@c rules for macro expansion than texinfo-4 does, specifically regarding
+@c whether or not spaces after a macro are ignored.  Texinfo-4 had weird
+@c rules, but at least they were constant and internally more or less
+@c consistent.  Texinfo-5 has different rules, and even worse the rules
+@c in texinfo-5 are inconsistent between the TeX and HTML output
+@c processors.  This situation makes it almost impossible for us to
+@c produce a manual that works with both texinfo 4 and 5 in all modes
+@c (TeX, info, and html).  The @noindent/@refill hack is my best shot at
+@c patching this situation.
+
+@c "@noindent" has two effects: First, it makes texinfo-5 believe that
+@c the next "@ifinfo" is on a new line, otherwise texinfo-5 complains
+@c that it is not (even though it obviously is).  Second, "@noindent" is
+@c a macro that eats extra space, and we want this effect because somehow
+@c macro expansion in texinfo-5 inserts extra spaces that were not there
+@c in texinfo-4.
+
+@c "@refill" stops texinfo-5 from interpreting the rest of the line after
+@c a macro invocation as an argument to "@end tex".  For example, in
+@c "FFTW uses @Onlogn algorithms", somehow texinfo-5 thinks that
+@c "algorithms" is an argument to "@end tex".  "@noindent" would have the
+@c same effect (as would any other macro invocation, I think), but,
+@c unlike "@noindent", "@refill" does not eat spaces and does not scan
+@c the rest of the input file for macro arguments.  However, "@refill" is
+@c deemed "obsolete" in the texinfo-5 source code, so expect this to
+@c break at some point.
+
+@c This situation is wholly unsatisfactory, and the GNU project is
+@c obviously out of control.  If this nonsense persists, we will abandon
+@c texinfo and produce a latex-only version of the manual.
+
+
+@macro Onlogn
+@noindent
+@ifinfo
+O(n log n)
+@end ifinfo
+@html
+<i>O</i>(<i>n</i>&nbsp;log&nbsp;<i>n</i>)
+@end html
+@tex
+$O(n \\log n)$
+@end tex
+@refill
+@end macro
+
+@macro ndims
+@noindent
+@ifinfo
+n[0] x n[1] x n[2] x ... x n[d-1]
+@end ifinfo
+@html
+n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;n<sub>d-1</sub>
+@end html
+@tex
+$n_0 \\times n_1 \\times n_2 \\times \\cdots \\times n_{d-1}$
+@end tex
+@refill
+@end macro
+
+@macro ndimshalf
+@noindent
+@ifinfo
+n[0] x n[1] x n[2] x ... x (n[d-1]/2 + 1)
+@end ifinfo
+@html
+n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;(n<sub>d-1</sub>/2 + 1)
+@end html
+@tex
+$n_0 \\times n_1 \\times n_2 \\times \\cdots \\times (n_{d-1}/2 + 1)$
+@end tex
+@refill
+@end macro
+
+@macro ndimspad
+@noindent
+@ifinfo
+n[0] x n[1] x n[2] x ... x [2 (n[d-1]/2 + 1)]
+@end ifinfo
+@html
+n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;[2&nbsp;(n<sub>d-1</sub>/2 + 1)]
+@end html
+@tex
+$n_0 \\times n_1 \\times n_2 \\times \\cdots \\times [2(n_{d-1}/2 + 1)]$
+@end tex
+@refill
+@end macro
+
+@macro twodims{d1, d2}
+@noindent
+@ifinfo
+\d1\ x \d2\
+@end ifinfo
+@html
+\d1\&nbsp;&times;&nbsp;\d2\
+@end html
+@tex
+$\d1\ \\times \d2\$
+@end tex
+@refill
+@end macro
+
+@macro threedims{d1, d2, d3}
+@noindent
+@ifinfo
+\d1\ x \d2\ x \d3\
+@end ifinfo
+@html
+\d1\&nbsp;&times;&nbsp;\d2\&nbsp;&times;&nbsp;\d3\
+@end html
+@tex
+$\d1\ \\times \d2\ \\times \d3\$
+@end tex
+@refill
+@end macro
+
+@macro dimk{k}
+@noindent
+@ifinfo
+n[\k\]
+@end ifinfo
+@html
+n<sub>\k\</sub>
+@end html
+@tex
+$n_\k\$
+@end tex
+@refill
+@end macro
+
+
+@macro ndimstrans
+@noindent
+@ifinfo
+n[1] x n[0] x n[2] x ... x n[d-1]
+@end ifinfo
+@html
+n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&hellip;&times;&nbsp;n<sub>d-1</sub>
+@end html
+@tex
+$n_1 \\times n_0 \\times n_2 \\times \\cdots \\times n_{d-1}$
+@end tex
+@refill
+@end macro
+
+@copying
+This manual is for FFTW
+(version @value{VERSION}, @value{UPDATED}).
+
+Copyright @copyright{} 2003 Matteo Frigo.
+
+Copyright @copyright{} 2003 Massachusetts Institute of Technology.
+
+@quotation
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation.
+@end quotation
+@end copying
+
+@dircategory Development 
+@direntry
+* fftw3: (fftw3).	FFTW User's Manual.
+@end direntry
+
+@titlepage
+@title FFTW
+@subtitle for version @value{VERSION}, @value{UPDATED}
+@author Matteo Frigo
+@author Steven G. Johnson
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top, Introduction, (dir), (dir)
+@top FFTW User Manual
+Welcome to FFTW, the Fastest Fourier Transform in the West.  FFTW is a
+collection of fast C routines to compute the discrete Fourier transform.
+This manual documents FFTW version @value{VERSION}.
+@end ifnottex
+
+@menu
+* Introduction::                
+* Tutorial::                    
+* Other Important Topics::      
+* FFTW Reference::              
+* Multi-threaded FFTW::         
+* Distributed-memory FFTW with MPI::  
+* Calling FFTW from Modern Fortran::  
+* Calling FFTW from Legacy Fortran::  
+* Upgrading from FFTW version 2::  
+* Installation and Customization::  
+* Acknowledgments::             
+* License and Copyright::       
+* Concept Index::               
+* Library Index::               
+@end menu
+
+@c ************************************************************
+@include intro.texi
+@include tutorial.texi
+@include other.texi
+@include reference.texi
+@include threads.texi
+@include mpi.texi
+@include modern-fortran.texi
+@include legacy-fortran.texi
+@include upgrading.texi
+@include install.texi
+@include acknowledgements.texi
+@include license.texi
+@include cindex.texi
+@include findex.texi
+@c ************************************************************
+
+@bye

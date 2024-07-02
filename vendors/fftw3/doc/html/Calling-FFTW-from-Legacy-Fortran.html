@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Calling FFTW from Legacy Fortran (FFTW 3.3.10)</title>
+
+<meta name="description" content="Calling FFTW from Legacy Fortran (FFTW 3.3.10)">
+<meta name="keywords" content="Calling FFTW from Legacy Fortran (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Fortran_002dinterface-routines.html" rel="next" title="Fortran-interface routines">
+<link href="Defining-an-FFTW-module.html" rel="prev" title="Defining an FFTW module">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Calling-FFTW-from-Legacy-Fortran"></span><div class="header">
+<p>
+Next: <a href="Upgrading-from-FFTW-version-2.html" accesskey="n" rel="next">Upgrading from FFTW version 2</a>, Previous: <a href="Calling-FFTW-from-Modern-Fortran.html" accesskey="p" rel="prev">Calling FFTW from Modern Fortran</a>, Up: <a href="index.html" accesskey="u" rel="up">Top</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Calling-FFTW-from-Legacy-Fortran-1"></span><h2 class="chapter">8 Calling FFTW from Legacy Fortran</h2>
+<span id="index-Fortran-interface-3"></span>
+
+<p>This chapter describes the interface to FFTW callable by Fortran code
+in older compilers not supporting the Fortran 2003 C interoperability
+features (see <a href="Calling-FFTW-from-Modern-Fortran.html">Calling FFTW from Modern Fortran</a>).  This interface
+has the major disadvantage that it is not type-checked, so if you
+mistake the argument types or ordering then your program will not have
+any compiler errors, and will likely crash at runtime.  So, greater
+care is needed.  Also, technically interfacing older Fortran versions
+to C is nonstandard, but in practice we have found that the techniques
+used in this chapter have worked with all known Fortran compilers for
+many years.
+</p>
+<p>The legacy Fortran interface differs from the C interface only in the
+prefix (&lsquo;<samp>dfftw_</samp>&rsquo; instead of &lsquo;<samp>fftw_</samp>&rsquo; in double precision) and
+a few other minor details.  This Fortran interface is included in the
+FFTW libraries by default, unless a Fortran compiler isn&rsquo;t found on
+your system or <code>--disable-fortran</code> is included in the
+<code>configure</code> flags.  We assume here that the reader is already
+familiar with the usage of FFTW in C, as described elsewhere in this
+manual.
+</p>
+<p>The MPI parallel interface to FFTW is <em>not</em> currently available
+to legacy Fortran.
+</p>
+<table class="menu" border="0" cellspacing="0">
+<tr><td align="left" valign="top">&bull; <a href="Fortran_002dinterface-routines.html" accesskey="1">Fortran-interface routines</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="FFTW-Constants-in-Fortran.html" accesskey="2">FFTW Constants in Fortran</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="FFTW-Execution-in-Fortran.html" accesskey="3">FFTW Execution in Fortran</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Fortran-Examples.html" accesskey="4">Fortran Examples</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Wisdom-of-Fortran_003f.html" accesskey="5">Wisdom of Fortran?</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+</table>
+
+<hr>
+<div class="header">
+<p>
+Next: <a href="Upgrading-from-FFTW-version-2.html" accesskey="n" rel="next">Upgrading from FFTW version 2</a>, Previous: <a href="Calling-FFTW-from-Modern-Fortran.html" accesskey="p" rel="prev">Calling FFTW from Modern Fortran</a>, Up: <a href="index.html" accesskey="u" rel="up">Top</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

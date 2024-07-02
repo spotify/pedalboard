@@ -1,0 +1,43 @@
+TODO before FFTW-$2\pi$:
+
+* figure out how to autodetect NEON at runtime
+
+* figure out the arm cycle counter business
+
+* Wisdom: make it clear that it is specific to the exact fftw version
+  and configuration.  Report error codes when reading wisdom.  Maybe
+  have multiple system wisdom files, one per version?
+
+* DCT/DST codelets?  which kinds?
+
+* investigate the addition-chain trig computation
+
+* I can't believe that there isn't a closed form for the omega
+  array in Rader.
+
+* convolution problem type(s)
+
+* Explore the idea of having n < 0 in tensors, possibly to mean
+  inverse DFT.
+
+* better estimator: possibly, let "other" cost be coef * n, where
+  coef is a per-solver constant determined via some big numerical
+  optimization/fit.
+
+* vector radix, multidimensional codelets
+
+* it may be a good idea to unify all those little loops that do
+  copying, (X[i], X[n-i]) <- (X[i] + X[n-i], X[i] - X[n-i]),
+  and multiplication of vectors by twiddle factors.
+
+* Pruned FFTs (basically, a vecloop that skips zeros).
+
+* Try FFTPACK-style back-and-forth (Stockham) FFT.  (We tried this a
+  few years ago and it was slower, but perhaps matters have changed.)
+
+* Generate assembly directly for more processors, or maybe fork gcc.  =)
+
+* ensure that threaded solvers generate (block_size % 4 == 0)
+  to allow SIMD to be used.
+
+* memoize triggen.

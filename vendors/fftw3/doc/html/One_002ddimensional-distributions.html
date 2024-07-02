@@ -1,0 +1,128 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>One-dimensional distributions (FFTW 3.3.10)</title>
+
+<meta name="description" content="One-dimensional distributions (FFTW 3.3.10)">
+<meta name="keywords" content="One-dimensional distributions (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="MPI-Data-Distribution.html" rel="up" title="MPI Data Distribution">
+<link href="Multi_002ddimensional-MPI-DFTs-of-Real-Data.html" rel="next" title="Multi-dimensional MPI DFTs of Real Data">
+<link href="Transposed-distributions.html" rel="prev" title="Transposed distributions">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="One_002ddimensional-distributions"></span><div class="header">
+<p>
+Previous: <a href="Transposed-distributions.html" accesskey="p" rel="prev">Transposed distributions</a>, Up: <a href="MPI-Data-Distribution.html" accesskey="u" rel="up">MPI Data Distribution</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="One_002ddimensional-distributions-1"></span><h4 class="subsection">6.4.4 One-dimensional distributions</h4>
+
+<p>For one-dimensional distributed DFTs using FFTW, matters are slightly
+more complicated because the data distribution is more closely tied to
+how the algorithm works.  In particular, you can no longer pass an
+arbitrary block size and must accept FFTW&rsquo;s default; also, the block
+sizes may be different for input and output.  Also, the data
+distribution depends on the flags and transform direction, in order
+for forward and backward transforms to work correctly.
+</p>
+<div class="example">
+<pre class="example">ptrdiff_t fftw_mpi_local_size_1d(ptrdiff_t n0, MPI_Comm comm,
+                int sign, unsigned flags,
+                ptrdiff_t *local_ni, ptrdiff_t *local_i_start,
+                ptrdiff_t *local_no, ptrdiff_t *local_o_start);
+</pre></div>
+<span id="index-fftw_005fmpi_005flocal_005fsize_005f1d"></span>
+
+<p>This function computes the data distribution for a 1d transform of
+size <code>n0</code> with the given transform <code>sign</code> and <code>flags</code>.
+Both input and output data use block distributions.  The input on the
+current process will consist of <code>local_ni</code> numbers starting at
+index <code>local_i_start</code>; e.g. if only a single process is used,
+then <code>local_ni</code> will be <code>n0</code> and <code>local_i_start</code> will
+be <code>0</code>.  Similarly for the output, with <code>local_no</code> numbers
+starting at index <code>local_o_start</code>.  The return value of
+<code>fftw_mpi_local_size_1d</code> will be the total number of elements to
+allocate on the current process (which might be slightly larger than
+the local size due to intermediate steps in the algorithm).
+</p>
+<p>As mentioned above (see <a href="Load-balancing.html">Load balancing</a>), the data will be divided
+equally among the processes if <code>n0</code> is divisible by the
+<em>square</em> of the number of processes.  In this case,
+<code>local_ni</code> will equal <code>local_no</code>.  Otherwise, they may be
+different.
+</p>
+<p>For some applications, such as convolutions, the order of the output
+data is irrelevant.  In this case, performance can be improved by
+specifying that the output data be stored in an FFTW-defined
+&ldquo;scrambled&rdquo; format.  (In particular, this is the analogue of
+transposed output in the multidimensional case: scrambled output saves
+a communications step.)  If you pass <code>FFTW_MPI_SCRAMBLED_OUT</code> in
+the flags, then the output is stored in this (undocumented) scrambled
+order.  Conversely, to perform the inverse transform of data in
+scrambled order, pass the <code>FFTW_MPI_SCRAMBLED_IN</code> flag.
+<span id="index-FFTW_005fMPI_005fSCRAMBLED_005fOUT"></span>
+<span id="index-FFTW_005fMPI_005fSCRAMBLED_005fIN"></span>
+</p>
+
+<p>In MPI FFTW, only composite sizes <code>n0</code> can be parallelized; we
+have not yet implemented a parallel algorithm for large prime sizes.
+</p>
+<hr>
+<div class="header">
+<p>
+Previous: <a href="Transposed-distributions.html" accesskey="p" rel="prev">Transposed distributions</a>, Up: <a href="MPI-Data-Distribution.html" accesskey="u" rel="up">MPI Data Distribution</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

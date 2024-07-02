@@ -1,0 +1,99 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Wisdom Utilities (FFTW 3.3.10)</title>
+
+<meta name="description" content="Wisdom Utilities (FFTW 3.3.10)">
+<meta name="keywords" content="Wisdom Utilities (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Wisdom.html" rel="up" title="Wisdom">
+<link href="What-FFTW-Really-Computes.html" rel="next" title="What FFTW Really Computes">
+<link href="Forgetting-Wisdom.html" rel="prev" title="Forgetting Wisdom">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Wisdom-Utilities"></span><div class="header">
+<p>
+Previous: <a href="Forgetting-Wisdom.html" accesskey="p" rel="prev">Forgetting Wisdom</a>, Up: <a href="Wisdom.html" accesskey="u" rel="up">Wisdom</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Wisdom-Utilities-1"></span><h4 class="subsection">4.7.4 Wisdom Utilities</h4>
+
+<p>FFTW includes two standalone utility programs that deal with wisdom.  We
+merely summarize them here, since they come with their own <code>man</code>
+pages for Unix and GNU systems (with HTML versions on our web site).
+</p>
+<p>The first program is <code>fftw-wisdom</code> (or <code>fftwf-wisdom</code> in
+single precision, etcetera), which can be used to create a wisdom file
+containing plans for any of the transform sizes and types supported by
+FFTW.  It is preferable to create wisdom directly from your executable
+(see <a href="Caveats-in-Using-Wisdom.html">Caveats in Using Wisdom</a>), but this program is useful for
+creating global wisdom files for <code>fftw_import_system_wisdom</code>.
+<span id="index-fftw_002dwisdom-utility-1"></span>
+</p>
+
+<p>The second program is <code>fftw-wisdom-to-conf</code>, which takes a wisdom
+file as input and produces a <em>configuration routine</em> as output.  The
+latter is a C subroutine that you can compile and link into your
+program, replacing a routine of the same name in the FFTW library, that
+determines which parts of FFTW are callable by your program.
+<code>fftw-wisdom-to-conf</code> produces a configuration routine that links
+to only those parts of FFTW needed by the saved plans in the wisdom,
+greatly reducing the size of statically linked executables (which should
+only attempt to create plans corresponding to those in the wisdom,
+however).
+<span id="index-fftw_002dwisdom_002dto_002dconf-utility"></span>
+<span id="index-configuration-routines"></span>
+</p>
+
+
+
+</body>
+</html>

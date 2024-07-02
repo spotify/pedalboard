@@ -1,0 +1,725 @@
+@node Calling FFTW from Modern Fortran, Calling FFTW from Legacy Fortran, Distributed-memory FFTW with MPI, Top
+@chapter Calling FFTW from Modern Fortran
+@cindex Fortran interface
+
+Fortran 2003 standardized ways for Fortran code to call C libraries,
+and this allows us to support a direct translation of the FFTW C API
+into Fortran.  Compared to the legacy Fortran 77 interface
+(@pxref{Calling FFTW from Legacy Fortran}), this direct interface
+offers many advantages, especially compile-time type-checking and
+aligned memory allocation.  As of this writing, support for these C
+interoperability features seems widespread, having been implemented in
+nearly all major Fortran compilers (e.g. GNU, Intel, IBM,
+Oracle/Solaris, Portland Group, NAG).
+@cindex portability
+
+This chapter documents that interface.  For the most part, since this
+interface allows Fortran to call the C interface directly, the usage
+is identical to C translated to Fortran syntax.  However, there are a
+few subtle points such as memory allocation, wisdom, and data types
+that deserve closer attention.
+
+@menu
+* Overview of Fortran interface::
+* Reversing array dimensions::
+* FFTW Fortran type reference::
+* Plan execution in Fortran::
+* Allocating aligned memory in Fortran::
+* Accessing the wisdom API from Fortran::
+* Defining an FFTW module::
+@end menu
+
+@c -------------------------------------------------------
+@node Overview of Fortran interface, Reversing array dimensions, Calling FFTW from Modern Fortran, Calling FFTW from Modern Fortran
+@section Overview of Fortran interface
+
+FFTW provides a file @code{fftw3.f03} that defines Fortran 2003
+interfaces for all of its C routines, except for the MPI routines
+described elsewhere, which can be found in the same directory as
+@code{fftw3.h} (the C header file).  In any Fortran subroutine where
+you want to use FFTW functions, you should begin with:
+
+@cindex iso_c_binding
+@example
+  use, intrinsic :: iso_c_binding 
+  include 'fftw3.f03'
+@end example
+
+This includes the interface definitions and the standard
+@code{iso_c_binding} module (which defines the equivalents of C
+types).  You can also put the FFTW functions into a module if you
+prefer (@pxref{Defining an FFTW module}).
+
+At this point, you can now call anything in the FFTW C interface
+directly, almost exactly as in C other than minor changes in syntax.
+For example:
+
+@findex fftw_plan_dft_2d
+@findex fftw_execute_dft
+@findex fftw_destroy_plan
+@example
+  type(C_PTR) :: plan
+  complex(C_DOUBLE_COMPLEX), dimension(1024,1000) :: in, out
+  plan = fftw_plan_dft_2d(1000,1024, in,out, FFTW_FORWARD,FFTW_ESTIMATE)
+  ...
+  call fftw_execute_dft(plan, in, out)
+  ...
+  call fftw_destroy_plan(plan)
+@end example
+
+A few important things to keep in mind are:
+
+@itemize @bullet
+
+@item
+@tindex fftw_complex
+@ctindex C_PTR
+@ctindex C_INT
+@ctindex C_DOUBLE
+@ctindex C_DOUBLE_COMPLEX
+FFTW plans are @code{type(C_PTR)}.  Other C types are mapped in the
+obvious way via the @code{iso_c_binding} standard: @code{int} turns
+into @code{integer(C_INT)}, @code{fftw_complex} turns into
+@code{complex(C_DOUBLE_COMPLEX)}, @code{double} turns into
+@code{real(C_DOUBLE)}, and so on. @xref{FFTW Fortran type reference}.
+
+@item
+Functions in C become functions in Fortran if they have a return value,
+and subroutines in Fortran otherwise.
+
+@item
+The ordering of the Fortran array dimensions must be @emph{reversed}
+when they are passed to the FFTW plan creation, thanks to differences
+in array indexing conventions (@pxref{Multi-dimensional Array
+Format}).  This is @emph{unlike} the legacy Fortran interface
+(@pxref{Fortran-interface routines}), which reversed the dimensions
+for you.  @xref{Reversing array dimensions}.
+
+@item
+@cindex alignment
+@cindex SIMD
+Using ordinary Fortran array declarations like this works, but may
+yield suboptimal performance because the data may not be not aligned
+to exploit SIMD instructions on modern proessors (@pxref{SIMD
+alignment and fftw_malloc}). Better performance will often be obtained
+by allocating with @samp{fftw_alloc}. @xref{Allocating aligned memory
+in Fortran}.
+
+@item
+@findex fftw_execute
+Similar to the legacy Fortran interface (@pxref{FFTW Execution in
+Fortran}), we currently recommend @emph{not} using @code{fftw_execute}
+but rather using the more specialized functions like
+@code{fftw_execute_dft} (@pxref{New-array Execute Functions}).  
+However, you should execute the plan on the @code{same arrays} as the
+ones for which you created the plan, unless you are especially
+careful.  @xref{Plan execution in Fortran}.  To prevent
+you from using @code{fftw_execute} by mistake, the @code{fftw3.f03}
+file does not provide an @code{fftw_execute} interface declaration.
+
+@item
+@cindex flags
+Multiple planner flags are combined with @code{ior} (equivalent to @samp{|} in C).  e.g. @code{FFTW_MEASURE | FFTW_DESTROY_INPUT} becomes @code{ior(FFTW_MEASURE, FFTW_DESTROY_INPUT)}.  (You can also use @samp{+} as long as you don't try to include a given flag more than once.)
+
+@end itemize
+
+@menu
+* Extended and quadruple precision in Fortran::
+@end menu
+
+@node Extended and quadruple precision in Fortran,  , Overview of Fortran interface, Overview of Fortran interface
+@subsection Extended and quadruple precision in Fortran
+@cindex precision
+
+If FFTW is compiled in @code{long double} (extended) precision
+(@pxref{Installation and Customization}), you may be able to call the
+resulting @code{fftwl_} routines (@pxref{Precision}) from Fortran if
+your compiler supports the @code{C_LONG_DOUBLE_COMPLEX} type code.
+
+Because some Fortran compilers do not support
+@code{C_LONG_DOUBLE_COMPLEX}, the @code{fftwl_} declarations are
+segregated into a separate interface file @code{fftw3l.f03}, which you
+should include @emph{in addition} to @code{fftw3.f03} (which declares
+precision-independent @samp{FFTW_} constants):
+
+@cindex iso_c_binding
+@example
+  use, intrinsic :: iso_c_binding 
+  include 'fftw3.f03'
+  include 'fftw3l.f03'
+@end example
+
+We also support using the nonstandard @code{__float128}
+quadruple-precision type provided by recent versions of @code{gcc} on
+32- and 64-bit x86 hardware (@pxref{Installation and Customization}),
+using the corresponding @code{real(16)} and @code{complex(16)} types
+supported by @code{gfortran}.  The quadruple-precision @samp{fftwq_}
+functions (@pxref{Precision}) are declared in a @code{fftw3q.f03}
+interface file, which should be included in addition to
+@code{fftw3.f03}, as above.  You should also link with
+@code{-lfftw3q -lquadmath -lm} as in C.
+
+@c -------------------------------------------------------
+@node Reversing array dimensions, FFTW Fortran type reference, Overview of Fortran interface, Calling FFTW from Modern Fortran
+@section Reversing array dimensions
+
+@cindex row-major
+@cindex column-major
+A minor annoyance in calling FFTW from Fortran is that FFTW's array
+dimensions are defined in the C convention (row-major order), while
+Fortran's array dimensions are the opposite convention (column-major
+order). @xref{Multi-dimensional Array Format}.  This is just a
+bookkeeping difference, with no effect on performance.  The only
+consequence of this is that, whenever you create an FFTW plan for a
+multi-dimensional transform, you must always @emph{reverse the
+ordering of the dimensions}.
+
+For example, consider the three-dimensional (@threedims{L,M,N}) arrays:
+
+@example
+  complex(C_DOUBLE_COMPLEX), dimension(L,M,N) :: in, out
+@end example
+
+To plan a DFT for these arrays using @code{fftw_plan_dft_3d}, you could do:
+
+@findex fftw_plan_dft_3d
+@example
+  plan = fftw_plan_dft_3d(N,M,L, in,out, FFTW_FORWARD,FFTW_ESTIMATE)
+@end example
+
+That is, from FFTW's perspective this is a @threedims{N,M,L} array.
+@emph{No data transposition need occur}, as this is @emph{only
+notation}.  Similarly, to use the more generic routine
+@code{fftw_plan_dft} with the same arrays, you could do:
+
+@example
+  integer(C_INT), dimension(3) :: n = [N,M,L]
+  plan = fftw_plan_dft_3d(3, n, in,out, FFTW_FORWARD,FFTW_ESTIMATE)
+@end example
+
+Note, by the way, that this is different from the legacy Fortran
+interface (@pxref{Fortran-interface routines}), which automatically
+reverses the order of the array dimension for you.  Here, you are
+calling the C interface directly, so there is no ``translation'' layer.
+
+@cindex r2c/c2r multi-dimensional array format
+An important thing to keep in mind is the implication of this for
+multidimensional real-to-complex transforms (@pxref{Multi-Dimensional
+DFTs of Real Data}).  In C, a multidimensional real-to-complex DFT
+chops the last dimension roughly in half (@threedims{N,M,L} real input
+goes to @threedims{N,M,L/2+1} complex output).  In Fortran, because
+the array dimension notation is reversed, the @emph{first} dimension of
+the complex data is chopped roughly in half.  For example consider the
+@samp{r2c} transform of @threedims{L,M,N} real input in Fortran:
+
+@findex fftw_plan_dft_r2c_3d
+@findex fftw_execute_dft_r2c
+@example
+  type(C_PTR) :: plan
+  real(C_DOUBLE), dimension(L,M,N) :: in
+  complex(C_DOUBLE_COMPLEX), dimension(L/2+1,M,N) :: out
+  plan = fftw_plan_dft_r2c_3d(N,M,L, in,out, FFTW_ESTIMATE)
+  ...
+  call fftw_execute_dft_r2c(plan, in, out)
+@end example
+
+@cindex in-place
+@cindex padding
+Alternatively, for an in-place r2c transform, as described in the C
+documentation we must @emph{pad} the @emph{first} dimension of the
+real input with an extra two entries (which are ignored by FFTW) so as
+to leave enough space for the complex output. The input is
+@emph{allocated} as a @threedims{2[L/2+1],M,N} array, even though only
+@threedims{L,M,N} of it is actually used.  In this example, we will
+allocate the array as a pointer type, using @samp{fftw_alloc} to
+ensure aligned memory for maximum performance (@pxref{Allocating
+aligned memory in Fortran}); this also makes it easy to reference the
+same memory as both a real array and a complex array.
+
+@findex fftw_alloc_complex
+@findex c_f_pointer
+@example
+  real(C_DOUBLE), pointer :: in(:,:,:)
+  complex(C_DOUBLE_COMPLEX), pointer :: out(:,:,:)
+  type(C_PTR) :: plan, data
+  data = fftw_alloc_complex(int((L/2+1) * M * N, C_SIZE_T))
+  call c_f_pointer(data, in, [2*(L/2+1),M,N])
+  call c_f_pointer(data, out, [L/2+1,M,N])
+  plan = fftw_plan_dft_r2c_3d(N,M,L, in,out, FFTW_ESTIMATE)
+  ...
+  call fftw_execute_dft_r2c(plan, in, out)
+  ...
+  call fftw_destroy_plan(plan)
+  call fftw_free(data)
+@end example
+
+@c -------------------------------------------------------
+@node FFTW Fortran type reference, Plan execution in Fortran, Reversing array dimensions, Calling FFTW from Modern Fortran
+@section FFTW Fortran type reference
+
+The following are the most important type correspondences between the
+C interface and Fortran:
+
+@itemize @bullet
+
+@item
+@tindex fftw_plan
+Plans (@code{fftw_plan} and variants) are @code{type(C_PTR)} (i.e. an
+opaque pointer).
+
+@item
+@tindex fftw_complex
+@cindex precision
+@ctindex C_DOUBLE
+@ctindex C_FLOAT
+@ctindex C_LONG_DOUBLE
+@ctindex C_DOUBLE_COMPLEX
+@ctindex C_FLOAT_COMPLEX
+@ctindex C_LONG_DOUBLE_COMPLEX
+The C floating-point types @code{double}, @code{float}, and @code{long
+double} correspond to @code{real(C_DOUBLE)}, @code{real(C_FLOAT)}, and
+@code{real(C_LONG_DOUBLE)}, respectively.  The C complex types
+@code{fftw_complex}, @code{fftwf_complex}, and @code{fftwl_complex}
+correspond in Fortran to @code{complex(C_DOUBLE_COMPLEX)},
+@code{complex(C_FLOAT_COMPLEX)}, and
+@code{complex(C_LONG_DOUBLE_COMPLEX)}, respectively.  
+Just as in C
+(@pxref{Precision}), the FFTW subroutines and types are prefixed with
+@samp{fftw_}, @code{fftwf_}, and @code{fftwl_} for the different precisions, and link to different libraries (@code{-lfftw3}, @code{-lfftw3f}, and @code{-lfftw3l} on Unix), but use the @emph{same} include file @code{fftw3.f03} and the @emph{same} constants (all of which begin with @samp{FFTW_}).  The exception is @code{long double} precision, for which you should @emph{also} include @code{fftw3l.f03} (@pxref{Extended and quadruple precision in Fortran}).
+
+@item
+@tindex ptrdiff_t
+@ctindex C_INT
+@ctindex C_INTPTR_T
+@ctindex C_SIZE_T
+@findex fftw_malloc
+The C integer types @code{int} and @code{unsigned} (used for planner
+flags) become @code{integer(C_INT)}.  The C integer type @code{ptrdiff_t} (e.g. in the @ref{64-bit Guru Interface}) becomes @code{integer(C_INTPTR_T)}, and @code{size_t} (in @code{fftw_malloc} etc.) becomes @code{integer(C_SIZE_T)}.
+
+@item
+@tindex fftw_r2r_kind
+@ctindex C_FFTW_R2R_KIND
+The @code{fftw_r2r_kind} type (@pxref{Real-to-Real Transform Kinds})
+becomes @code{integer(C_FFTW_R2R_KIND)}.  The various constant values
+of the C enumerated type (@code{FFTW_R2HC} etc.) become simply integer
+constants of the same names in Fortran.
+
+@item
+@ctindex FFTW_DESTROY_INPUT
+@cindex in-place
+@findex fftw_flops
+Numeric array pointer arguments (e.g. @code{double *})
+become @code{dimension(*), intent(out)} arrays of the same type, or
+@code{dimension(*), intent(in)} if they are pointers to constant data
+(e.g. @code{const int *}).  There are a few exceptions where numeric
+pointers refer to scalar outputs (e.g. for @code{fftw_flops}), in which
+case they are @code{intent(out)} scalar arguments in Fortran too.
+For the new-array execute functions (@pxref{New-array Execute Functions}),
+the input arrays are declared @code{dimension(*), intent(inout)}, since
+they can be modified in the case of in-place or @code{FFTW_DESTROY_INPUT}
+transforms.
+
+@item
+@findex fftw_alloc_real
+@findex c_f_pointer
+Pointer @emph{return} values (e.g @code{double *}) become
+@code{type(C_PTR)}.  (If they are pointers to arrays, as for
+@code{fftw_alloc_real}, you can convert them back to Fortran array
+pointers with the standard intrinsic function @code{c_f_pointer}.)
+
+@item
+@cindex guru interface
+@tindex fftw_iodim
+@tindex fftw_iodim64
+@cindex 64-bit architecture
+The @code{fftw_iodim} type in the guru interface (@pxref{Guru vector
+and transform sizes}) becomes @code{type(fftw_iodim)} in Fortran, a
+derived data type (the Fortran analogue of C's @code{struct}) with
+three @code{integer(C_INT)} components: @code{n}, @code{is}, and
+@code{os}, with the same meanings as in C.  The @code{fftw_iodim64} type in the 64-bit guru interface (@pxref{64-bit Guru Interface}) is the same, except that its components are of type @code{integer(C_INTPTR_T)}.
+
+@item
+@ctindex C_FUNPTR
+Using the wisdom import/export functions from Fortran is a bit tricky,
+and is discussed in @ref{Accessing the wisdom API from Fortran}.  In
+brief, the @code{FILE *} arguments map to @code{type(C_PTR)}, @code{const char *} to @code{character(C_CHAR), dimension(*), intent(in)} (null-terminated!), and the generic read-char/write-char functions map to @code{type(C_FUNPTR)}.
+
+@end itemize
+
+@cindex portability
+You may be wondering if you need to search-and-replace
+@code{real(kind(0.0d0))} (or whatever your favorite Fortran spelling
+of ``double precision'' is) with @code{real(C_DOUBLE)} everywhere in
+your program, and similarly for @code{complex} and @code{integer}
+types.  The answer is no; you can still use your existing types.  As
+long as these types match their C counterparts, things should work
+without a hitch.  The worst that can happen, e.g. in the (unlikely)
+event of a system where @code{real(kind(0.0d0))} is different from
+@code{real(C_DOUBLE)}, is that the compiler will give you a
+type-mismatch error.  That is, if you don't use the
+@code{iso_c_binding} kinds you need to accept at least the theoretical
+possibility of having to change your code in response to compiler
+errors on some future machine, but you don't need to worry about
+silently compiling incorrect code that yields runtime errors.
+
+@c -------------------------------------------------------
+@node Plan execution in Fortran, Allocating aligned memory in Fortran, FFTW Fortran type reference, Calling FFTW from Modern Fortran
+@section Plan execution in Fortran
+
+In C, in order to use a plan, one normally calls @code{fftw_execute},
+which executes the plan to perform the transform on the input/output
+arrays passed when the plan was created (@pxref{Using Plans}).  The
+corresponding subroutine call in modern Fortran is:
+@example
+ call fftw_execute(plan)
+@end example
+@findex fftw_execute
+
+However, we have had reports that this causes problems with some
+recent optimizing Fortran compilers.  The problem is, because the
+input/output arrays are not passed as explicit arguments to
+@code{fftw_execute}, the semantics of Fortran (unlike C) allow the
+compiler to assume that the input/output arrays are not changed by
+@code{fftw_execute}.  As a consequence, certain compilers end up
+repositioning the call to @code{fftw_execute}, assuming incorrectly
+that it does nothing to the arrays.
+
+There are various workarounds to this, but the safest and simplest
+thing is to not use @code{fftw_execute} in Fortran.  Instead, use the
+functions described in @ref{New-array Execute Functions}, which take
+the input/output arrays as explicit arguments.  For example, if the
+plan is for a complex-data DFT and was created for the arrays
+@code{in} and @code{out}, you would do:
+@example
+ call fftw_execute_dft(plan, in, out)
+@end example
+@findex fftw_execute_dft
+
+There are a few things to be careful of, however:
+
+@itemize @bullet
+
+@item
+@findex fftw_execute_dft_r2c
+@findex fftw_execute_dft_c2r
+@findex fftw_execute_r2r
+You must use the correct type of execute function, matching the way
+the plan was created.  Complex DFT plans should use
+@code{fftw_execute_dft}, Real-input (r2c) DFT plans should use use
+@code{fftw_execute_dft_r2c}, and real-output (c2r) DFT plans should
+use @code{fftw_execute_dft_c2r}.  The various r2r plans should use
+@code{fftw_execute_r2r}.  Fortunately, if you use the wrong one you
+will get a compile-time type-mismatch error (unlike legacy Fortran).
+
+@item
+You should normally pass the same input/output arrays that were used when
+creating the plan.  This is always safe.
+
+@item
+@emph{If} you pass @emph{different} input/output arrays compared to
+those used when creating the plan, you must abide by all the
+restrictions of the new-array execute functions (@pxref{New-array
+Execute Functions}).  The most tricky of these is the
+requirement that the new arrays have the same alignment as the
+original arrays; the best (and possibly only) way to guarantee this
+is to use the @samp{fftw_alloc} functions to allocate your arrays (@pxref{Allocating aligned memory in Fortran}). Alternatively, you can
+use the @code{FFTW_UNALIGNED} flag when creating the
+plan, in which case the plan does not depend on the alignment, but
+this may sacrifice substantial performance on architectures (like x86)
+with SIMD instructions (@pxref{SIMD alignment and fftw_malloc}).
+@ctindex FFTW_UNALIGNED
+
+@end itemize
+
+@c -------------------------------------------------------
+@node Allocating aligned memory in Fortran, Accessing the wisdom API from Fortran, Plan execution in Fortran, Calling FFTW from Modern Fortran
+@section Allocating aligned memory in Fortran
+
+@cindex alignment
+@findex fftw_alloc_real
+@findex fftw_alloc_complex
+In order to obtain maximum performance in FFTW, you should store your
+data in arrays that have been specially aligned in memory (@pxref{SIMD
+alignment and fftw_malloc}).  Enforcing alignment also permits you to
+safely use the new-array execute functions (@pxref{New-array Execute
+Functions}) to apply a given plan to more than one pair of in/out
+arrays.  Unfortunately, standard Fortran arrays do @emph{not} provide
+any alignment guarantees.  The @emph{only} way to allocate aligned
+memory in standard Fortran is to allocate it with an external C
+function, like the @code{fftw_alloc_real} and
+@code{fftw_alloc_complex} functions.  Fortunately, Fortran 2003 provides
+a simple way to associate such allocated memory with a standard Fortran
+array pointer that you can then use normally.
+
+We therefore recommend allocating all your input/output arrays using
+the following technique:
+
+@enumerate
+
+@item
+Declare a @code{pointer}, @code{arr}, to your array of the desired type
+and dimensions.  For example, @code{real(C_DOUBLE), pointer :: a(:,:)}
+for a 2d real array, or @code{complex(C_DOUBLE_COMPLEX), pointer ::
+a(:,:,:)} for a 3d complex array.
+
+@item
+The number of elements to allocate must be an
+@code{integer(C_SIZE_T)}.  You can either declare a variable of this
+type, e.g. @code{integer(C_SIZE_T) :: sz}, to store the number of
+elements to allocate, or you can use the @code{int(..., C_SIZE_T)}
+intrinsic function. e.g. set @code{sz = L * M * N} or use
+@code{int(L * M * N, C_SIZE_T)} for an @threedims{L,M,N} array.
+
+@item
+Declare a @code{type(C_PTR) :: p} to hold the return value from
+FFTW's allocation routine.  Set @code{p = fftw_alloc_real(sz)} for a real array, or @code{p = fftw_alloc_complex(sz)} for a complex array.
+
+@item
+@findex c_f_pointer
+Associate your pointer @code{arr} with the allocated memory @code{p}
+using the standard @code{c_f_pointer} subroutine: @code{call
+c_f_pointer(p, arr, [...dimensions...])}, where
+@code{[...dimensions...])} are an array of the dimensions of the array
+(in the usual Fortran order). e.g. @code{call c_f_pointer(p, arr,
+[L,M,N])} for an @threedims{L,M,N} array.  (Alternatively, you can
+omit the dimensions argument if you specified the shape explicitly
+when declaring @code{arr}.)  You can now use @code{arr} as a usual
+multidimensional array.
+
+@item
+When you are done using the array, deallocate the memory by @code{call
+fftw_free(p)} on @code{p}.
+
+@end enumerate
+
+For example, here is how we would allocate an @twodims{L,M} 2d real array:
+
+@example
+  real(C_DOUBLE), pointer :: arr(:,:)
+  type(C_PTR) :: p
+  p = fftw_alloc_real(int(L * M, C_SIZE_T))
+  call c_f_pointer(p, arr, [L,M])
+  @emph{...use arr and arr(i,j) as usual...}
+  call fftw_free(p)
+@end example
+
+and here is an @threedims{L,M,N} 3d complex array:
+
+@example
+  complex(C_DOUBLE_COMPLEX), pointer :: arr(:,:,:)
+  type(C_PTR) :: p
+  p = fftw_alloc_complex(int(L * M * N, C_SIZE_T))
+  call c_f_pointer(p, arr, [L,M,N])
+  @emph{...use arr and arr(i,j,k) as usual...}
+  call fftw_free(p)
+@end example
+
+See @ref{Reversing array dimensions} for an example allocating a
+single array and associating both real and complex array pointers with
+it, for in-place real-to-complex transforms.
+
+@c -------------------------------------------------------
+@node Accessing the wisdom API from Fortran, Defining an FFTW module, Allocating aligned memory in Fortran, Calling FFTW from Modern Fortran
+@section Accessing the wisdom API from Fortran
+@cindex wisdom
+@cindex saving plans to disk
+
+As explained in @ref{Words of Wisdom-Saving Plans}, FFTW provides a
+``wisdom'' API for saving plans to disk so that they can be recreated
+quickly.  The C API for exporting (@pxref{Wisdom Export}) and
+importing (@pxref{Wisdom Import}) wisdom is somewhat tricky to use
+from Fortran, however, because of differences in file I/O and string
+types between C and Fortran.
+
+@menu
+* Wisdom File Export/Import from Fortran::
+* Wisdom String Export/Import from Fortran::
+* Wisdom Generic Export/Import from Fortran::
+@end menu
+
+@c =========>
+@node Wisdom File Export/Import from Fortran, Wisdom String Export/Import from Fortran, Accessing the wisdom API from Fortran, Accessing the wisdom API from Fortran
+@subsection Wisdom File Export/Import from Fortran
+
+@findex fftw_import wisdom_from_filename
+@findex fftw_export_wisdom_to_filename
+The easiest way to export and import wisdom is to do so using
+@code{fftw_export_wisdom_to_filename} and
+@code{fftw_wisdom_from_filename}.  The only trick is that these
+require you to pass a C string, which is an array of type
+@code{CHARACTER(C_CHAR)} that is terminated by @code{C_NULL_CHAR}.
+You can call them like this:
+
+@example
+  integer(C_INT) :: ret
+  ret = fftw_export_wisdom_to_filename(C_CHAR_'my_wisdom.dat' // C_NULL_CHAR)
+  if (ret .eq. 0) stop 'error exporting wisdom to file'
+  ret = fftw_import_wisdom_from_filename(C_CHAR_'my_wisdom.dat' // C_NULL_CHAR)
+  if (ret .eq. 0) stop 'error importing wisdom from file'
+@end example
+
+Note that prepending @samp{C_CHAR_} is needed to specify that the
+literal string is of kind @code{C_CHAR}, and we null-terminate the
+string by appending @samp{// C_NULL_CHAR}.  These functions return an
+@code{integer(C_INT)} (@code{ret}) which is @code{0} if an error
+occurred during export/import and nonzero otherwise.
+
+It is also possible to use the lower-level routines
+@code{fftw_export_wisdom_to_file} and
+@code{fftw_import_wisdom_from_file}, which accept parameters of the C
+type @code{FILE*}, expressed in Fortran as @code{type(C_PTR)}.
+However, you are then responsible for creating the @code{FILE*}
+yourself.  You can do this by using @code{iso_c_binding} to define
+Fortran intefaces for the C library functions @code{fopen} and
+@code{fclose}, which is a bit strange in Fortran but workable.
+
+@c =========>
+@node Wisdom String Export/Import from Fortran, Wisdom Generic Export/Import from Fortran, Wisdom File Export/Import from Fortran, Accessing the wisdom API from Fortran
+@subsection Wisdom String Export/Import from Fortran
+
+@findex fftw_export_wisdom_to_string
+Dealing with FFTW's C string export/import is a bit more painful.  In
+particular, the @code{fftw_export_wisdom_to_string} function requires
+you to deal with a dynamically allocated C string.  To get its length,
+you must define an interface to the C @code{strlen} function, and to
+deallocate it you must define an interface to C @code{free}:
+
+@example
+  use, intrinsic :: iso_c_binding
+  interface
+    integer(C_INT) function strlen(s) bind(C, name='strlen')
+      import
+      type(C_PTR), value :: s
+    end function strlen
+    subroutine free(p) bind(C, name='free')
+      import
+      type(C_PTR), value :: p
+    end subroutine free
+  end interface
+@end example
+
+Given these definitions, you can then export wisdom to a Fortran
+character array:
+
+@example
+  character(C_CHAR), pointer :: s(:)
+  integer(C_SIZE_T) :: slen
+  type(C_PTR) :: p
+  p = fftw_export_wisdom_to_string()
+  if (.not. c_associated(p)) stop 'error exporting wisdom'
+  slen = strlen(p)
+  call c_f_pointer(p, s, [slen+1])
+  ...
+  call free(p)
+@end example
+@findex c_associated
+@findex c_f_pointer
+
+Note that @code{slen} is the length of the C string, but the length of
+the array is @code{slen+1} because it includes the terminating null
+character.  (You can omit the @samp{+1} if you don't want Fortran to
+know about the null character.) The standard @code{c_associated} function
+checks whether @code{p} is a null pointer, which is returned by
+@code{fftw_export_wisdom_to_string} if there was an error.
+
+@findex fftw_import_wisdom_from_string
+To import wisdom from a string, use
+@code{fftw_import_wisdom_from_string} as usual; note that the argument
+of this function must be a @code{character(C_CHAR)} that is terminated
+by the @code{C_NULL_CHAR} character, like the @code{s} array above.
+
+@c =========>
+@node Wisdom Generic Export/Import from Fortran,  , Wisdom String Export/Import from Fortran, Accessing the wisdom API from Fortran
+@subsection Wisdom Generic Export/Import from Fortran
+
+The most generic wisdom export/import functions allow you to provide
+an arbitrary callback function to read/write one character at a time
+in any way you want.  However, your callback function must be written
+in a special way, using the @code{bind(C)} attribute to be passed to a
+C interface.
+
+@findex fftw_export_wisdom
+In particular, to call the generic wisdom export function
+@code{fftw_export_wisdom}, you would write a callback subroutine of the form:
+
+@example
+  subroutine my_write_char(c, p) bind(C)
+    use, intrinsic :: iso_c_binding
+    character(C_CHAR), value :: c
+    type(C_PTR), value :: p
+    @emph{...write c...}
+  end subroutine my_write_char
+@end example
+
+Given such a subroutine (along with the corresponding interface definition), you could then export wisdom using:
+
+@findex c_funloc
+@example
+  call fftw_export_wisdom(c_funloc(my_write_char), p)
+@end example
+
+@findex c_loc
+@findex c_f_pointer
+The standard @code{c_funloc} intrinsic converts a Fortran
+@code{bind(C)} subroutine into a C function pointer.  The parameter
+@code{p} is a @code{type(C_PTR)} to any arbitrary data that you want
+to pass to @code{my_write_char} (or @code{C_NULL_PTR} if none).  (Note
+that you can get a C pointer to Fortran data using the intrinsic
+@code{c_loc}, and convert it back to a Fortran pointer in
+@code{my_write_char} using @code{c_f_pointer}.)
+
+Similarly, to use the generic @code{fftw_import_wisdom}, you would
+define a callback function of the form:
+
+@findex fftw_import_wisdom
+@example
+  integer(C_INT) function my_read_char(p) bind(C)
+    use, intrinsic :: iso_c_binding
+    type(C_PTR), value :: p
+    character :: c
+    @emph{...read a character c...}
+    my_read_char = ichar(c, C_INT)
+  end function my_read_char
+
+  ....
+
+  integer(C_INT) :: ret
+  ret = fftw_import_wisdom(c_funloc(my_read_char), p)
+  if (ret .eq. 0) stop 'error importing wisdom'
+@end example
+
+Your function can return @code{-1} if the end of the input is reached.
+Again, @code{p} is an arbitrary @code{type(C_PTR} that is passed
+through to your function.  @code{fftw_import_wisdom} returns @code{0}
+if an error occurred and nonzero otherwise.
+
+@c -------------------------------------------------------
+@node Defining an FFTW module,  , Accessing the wisdom API from Fortran, Calling FFTW from Modern Fortran
+@section Defining an FFTW module
+
+Rather than using the @code{include} statement to include the
+@code{fftw3.f03} interface file in any subroutine where you want to
+use FFTW, you might prefer to define an FFTW Fortran module.  FFTW
+does not install itself as a module, primarily because
+@code{fftw3.f03} can be shared between different Fortran compilers while
+modules (in general) cannot.  However, it is trivial to define your
+own FFTW module if you want.  Just create a file containing:
+
+@example
+  module FFTW3
+    use, intrinsic :: iso_c_binding
+    include 'fftw3.f03'
+  end module
+@end example
+
+Compile this file into a module as usual for your compiler (e.g. with
+@code{gfortran -c} you will get a file @code{fftw3.mod}).  Now,
+instead of @code{include 'fftw3.f03'}, whenever you want to use FFTW
+routines you can just do:
+
+@example
+  use FFTW3
+@end example
+
+as usual for Fortran modules.  (You still need to link to the FFTW
+library, of course.)

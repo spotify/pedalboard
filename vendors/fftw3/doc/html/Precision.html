@@ -1,0 +1,113 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Precision (FFTW 3.3.10)</title>
+
+<meta name="description" content="Precision (FFTW 3.3.10)">
+<meta name="keywords" content="Precision (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Data-Types-and-Files.html" rel="up" title="Data Types and Files">
+<link href="Memory-Allocation.html" rel="next" title="Memory Allocation">
+<link href="Complex-numbers.html" rel="prev" title="Complex numbers">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Precision"></span><div class="header">
+<p>
+Next: <a href="Memory-Allocation.html" accesskey="n" rel="next">Memory Allocation</a>, Previous: <a href="Complex-numbers.html" accesskey="p" rel="prev">Complex numbers</a>, Up: <a href="Data-Types-and-Files.html" accesskey="u" rel="up">Data Types and Files</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Precision-1"></span><h4 class="subsection">4.1.2 Precision</h4>
+<span id="index-precision-3"></span>
+
+<p>You can install single and long-double precision versions of FFTW,
+which replace <code>double</code> with <code>float</code> and <code>long double</code>,
+respectively (see <a href="Installation-and-Customization.html">Installation and Customization</a>).  To use these
+interfaces, you:
+</p>
+<ul>
+<li> Link to the single/long-double libraries; on Unix, <code>-lfftw3f</code> or
+<code>-lfftw3l</code> instead of (or in addition to) <code>-lfftw3</code>.  (You
+can link to the different-precision libraries simultaneously.)
+
+</li><li> Include the <em>same</em> <code>&lt;fftw3.h&gt;</code> header file.
+
+</li><li> Replace all lowercase instances of &lsquo;<samp>fftw_</samp>&rsquo; with &lsquo;<samp>fftwf_</samp>&rsquo; or
+&lsquo;<samp>fftwl_</samp>&rsquo; for single or long-double precision, respectively.
+(<code>fftw_complex</code> becomes <code>fftwf_complex</code>, <code>fftw_execute</code>
+becomes <code>fftwf_execute</code>, etcetera.)
+
+</li><li> Uppercase names, i.e. names beginning with &lsquo;<samp>FFTW_</samp>&rsquo;, remain the
+same.
+
+</li><li> Replace <code>double</code> with <code>float</code> or <code>long double</code> for
+subroutine parameters.
+
+</li></ul>
+
+<p>Depending upon your compiler and/or hardware, <code>long double</code> may not
+be any more precise than <code>double</code> (or may not be supported at all,
+although it is standard in C99).
+<span id="index-C99-2"></span>
+</p>
+
+<p>We also support using the nonstandard <code>__float128</code>
+quadruple-precision type provided by recent versions of <code>gcc</code> on
+32- and 64-bit x86 hardware (see <a href="Installation-and-Customization.html">Installation and Customization</a>).
+To use this type, link with <code>-lfftw3q -lquadmath -lm</code> (the
+<code>libquadmath</code> library provided by <code>gcc</code> is needed for
+quadruple-precision trigonometric functions) and use &lsquo;<samp>fftwq_</samp>&rsquo;
+identifiers.
+</p>
+
+
+
+</body>
+</html>

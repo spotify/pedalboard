@@ -1,0 +1,91 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Multi-dimensional Array Format (FFTW 3.3.10)</title>
+
+<meta name="description" content="Multi-dimensional Array Format (FFTW 3.3.10)">
+<meta name="keywords" content="Multi-dimensional Array Format (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Other-Important-Topics.html" rel="up" title="Other Important Topics">
+<link href="Row_002dmajor-Format.html" rel="next" title="Row-major Format">
+<link href="SIMD-alignment-and-fftw_005fmalloc.html" rel="prev" title="SIMD alignment and fftw_malloc">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Multi_002ddimensional-Array-Format"></span><div class="header">
+<p>
+Next: <a href="Words-of-Wisdom_002dSaving-Plans.html" accesskey="n" rel="next">Words of Wisdom-Saving Plans</a>, Previous: <a href="SIMD-alignment-and-fftw_005fmalloc.html" accesskey="p" rel="prev">SIMD alignment and fftw_malloc</a>, Up: <a href="Other-Important-Topics.html" accesskey="u" rel="up">Other Important Topics</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Multi_002ddimensional-Array-Format-1"></span><h3 class="section">3.2 Multi-dimensional Array Format</h3>
+
+<p>This section describes the format in which multi-dimensional arrays
+are stored in FFTW.  We felt that a detailed discussion of this topic
+was necessary.  Since several different formats are common, this topic
+is often a source of confusion.
+</p>
+<table class="menu" border="0" cellspacing="0">
+<tr><td align="left" valign="top">&bull; <a href="Row_002dmajor-Format.html" accesskey="1">Row-major Format</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Column_002dmajor-Format.html" accesskey="2">Column-major Format</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Fixed_002dsize-Arrays-in-C.html" accesskey="3">Fixed-size Arrays in C</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Dynamic-Arrays-in-C.html" accesskey="4">Dynamic Arrays in C</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Dynamic-Arrays-in-C_002dThe-Wrong-Way.html" accesskey="5">Dynamic Arrays in C-The Wrong Way</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+</table>
+
+
+
+
+</body>
+</html>

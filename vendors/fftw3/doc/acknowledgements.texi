@@ -1,0 +1,89 @@
+@node Acknowledgments, License and Copyright, Installation and Customization, Top
+@chapter Acknowledgments
+
+Matteo Frigo was supported in part by the Special Research Program SFB
+F011 ``AURORA'' of the Austrian Science Fund FWF and by MIT Lincoln
+Laboratory.  For previous versions of FFTW, he was supported in part by the
+Defense Advanced Research Projects Agency (DARPA), under Grants
+N00014-94-1-0985 and F30602-97-1-0270, and by a Digital Equipment
+Corporation Fellowship.  
+
+Steven G. Johnson was supported in part by a Dept.@ of Defense NDSEG
+Fellowship, an MIT Karl Taylor Compton Fellowship, and by the Materials
+Research Science and Engineering Center program of the National Science
+Foundation under award DMR-9400334.
+
+Code for the Cell Broadband Engine was graciously donated to the FFTW
+project by the IBM Austin Research Lab and included in fftw-3.2.  (This
+code was removed in fftw-3.3.)
+
+Code for the MIPS paired-single SIMD support was graciously donated to
+the FFTW project by CodeSourcery, Inc.
+
+We are grateful to Sun Microsystems Inc.@ for its donation of a
+cluster of 9 8-processor Ultra HPC 5000 SMPs (24 Gflops peak). These
+machines served as the primary platform for the development of early
+versions of FFTW.
+
+We thank Intel Corporation for donating a four-processor Pentium Pro
+machine.  We thank the GNU/Linux community for giving us a decent OS to
+run on that machine.
+
+We are thankful to the AMD corporation for donating an AMD Athlon XP 1700+
+computer to the FFTW project.
+
+We thank the Compaq/HP testdrive program and VA Software Corporation
+(SourceForge.net) for providing remote access to machines that were used
+to test FFTW.
+
+The @code{genfft} suite of code generators was written using Objective
+Caml, a dialect of ML.  Objective Caml is a small and elegant language
+developed by Xavier Leroy.  The implementation is available from
+@uref{http://caml.inria.fr/, @code{http://caml.inria.fr/}}.  In previous
+releases of FFTW, @code{genfft} was written in Caml Light, by the same
+authors.  An even earlier implementation of @code{genfft} was written in
+Scheme, but Caml is definitely better for this kind of application.
+@cindex Caml
+@cindex LISP
+
+
+FFTW uses many tools from the GNU project, including @code{automake},
+@code{texinfo}, and @code{libtool}.
+
+Prof.@ Charles E.@ Leiserson of MIT provided continuous support and
+encouragement.  This program would not exist without him.  Charles also
+proposed the name ``codelets'' for the basic FFT blocks.
+@cindex codelet
+
+
+Prof.@ John D.@ Joannopoulos of MIT demonstrated continuing tolerance of
+Steven's ``extra-curricular'' computer-science activities, as well as
+remarkable creativity in working them into his grant proposals.
+Steven's physics degree would not exist without him.
+
+Franz Franchetti wrote SIMD extensions to FFTW 2, which eventually
+led to the SIMD support in FFTW 3.
+
+Stefan Kral wrote most of the K7 code generator distributed with FFTW
+3.0.x and 3.1.x.
+
+Andrew Sterian contributed the Windows timing code in FFTW 2.  
+
+Didier Miras reported a bug in the test procedure used in FFTW 1.2.  We
+now use a completely different test algorithm by Funda Ergun that does
+not require a separate FFT program to compare against.
+
+Wolfgang Reimer contributed the Pentium cycle counter and a few fixes
+that help portability.
+
+Ming-Chang Liu uncovered a well-hidden bug in the complex transforms of
+FFTW 2.0 and supplied a patch to correct it.
+
+The FFTW FAQ was written in @code{bfnn} (Bizarre Format With No Name)
+and formatted using the tools developed by Ian Jackson for the Linux
+FAQ.
+
+@emph{We are especially thankful to all of our users for their
+continuing support, feedback, and interest during our development of
+FFTW.}
+

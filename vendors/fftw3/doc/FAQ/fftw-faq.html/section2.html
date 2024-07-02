@@ -1,0 +1,285 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head><title>
+FFTW FAQ - Section 2
+</title>
+<link rev="made" href="mailto:fftw@fftw.org">
+<link rel="Contents" href="index.html">
+<link rel="Start" href="index.html">
+<link rel="Next" href="section3.html"><link rel="Previous" href="section1.html"><link rel="Bookmark" title="FFTW FAQ" href="index.html">
+</head><body text="#000000" bgcolor="#FFFFFF"><h1>
+FFTW FAQ - Section 2 <br>
+Installing FFTW
+</h1>
+
+<ul>
+<li><a href="#systems" rel=subdocument>Q2.1. Which systems does FFTW run on?</a>
+<li><a href="#runOnWindows" rel=subdocument>Q2.2. Does FFTW run on Windows?</a>
+<li><a href="#compilerCrashes" rel=subdocument>Q2.3. My compiler has trouble with FFTW.</a>
+<li><a href="#solarisSucks" rel=subdocument>Q2.4. FFTW does not compile on Solaris, complaining about
+<code>const</code>.</a>
+<li><a href="#3dnow" rel=subdocument>Q2.5. What's the difference between <code>--enable-3dnow</code> and <code>--enable-k7</code>?</a>
+<li><a href="#fma" rel=subdocument>Q2.6. What's the difference between the fma and the non-fma
+versions?</a>
+<li><a href="#languages" rel=subdocument>Q2.7. Which language is FFTW written in?</a>
+<li><a href="#fortran" rel=subdocument>Q2.8. Can I call FFTW from Fortran?</a>
+<li><a href="#cplusplus" rel=subdocument>Q2.9. Can I call FFTW from C++?</a>
+<li><a href="#whynotfortran" rel=subdocument>Q2.10. Why isn't FFTW written in Fortran/C++?</a>
+<li><a href="#singleprec" rel=subdocument>Q2.11. How do I compile FFTW to run in single precision?</a>
+<li><a href="#64bitk7" rel=subdocument>Q2.12. --enable-k7 does not work on x86-64</a>
+</ul><hr>
+
+<h2><A name="systems">
+Question 2.1.  Which systems does FFTW run
+on?
+</A></h2>
+
+FFTW is written in ANSI C, and should work on any system with a decent
+C compiler.  (See also <A href="#runOnWindows">Q2.2 `Does FFTW run on Windows?'</A>, <A href="#compilerCrashes">Q2.3 `My compiler has trouble with FFTW.'</A>.) FFTW can also take advantage of certain hardware-specific features,
+such as cycle counters and SIMD instructions, but this is optional. 
+
+<h2><A name="runOnWindows">
+Question 2.2.  Does FFTW run on Windows?
+</A></h2>
+
+Yes, many people have reported successfully using FFTW on Windows with
+various compilers.  FFTW was not developed on Windows, but the source
+code is essentially straight ANSI C.  See also the
+<A href="http://www.fftw.org/install/windows.html">FFTW Windows installation notes</A>, <A href="#compilerCrashes">Q2.3 `My compiler has trouble with FFTW.'</A>, and <A href="section3.html#vbetalia">Q3.18 `How do I call FFTW from the Microsoft language du
+jour?'</A>.  
+<h2><A name="compilerCrashes">
+Question 2.3.  My compiler has trouble with
+FFTW.
+</A></h2>
+
+Complain fiercely to the vendor of the compiler. 
+
+<p>
+We have successfully used <code>gcc</code> 3.2.x on x86 and PPC, a recent Compaq C compiler for Alpha, version 6 of IBM's
+<code>xlc</code> compiler for AIX, Intel's <code>icc</code> versions 5-7, and Sun WorkShop <code>cc</code> version 6.   
+<p>
+FFTW is likely to push compilers to their limits, however, and several
+compiler bugs have been exposed by FFTW.  A partial list follows. 
+
+<p>
+<code>gcc</code> 2.95.x for Solaris/SPARC produces incorrect code for
+the test program (workaround: recompile the
+<code>libbench2</code> directory with <code>-O2</code>).  
+<p>
+NetBSD/macppc 1.6 comes with a <code>gcc</code> version that also miscompiles the test program. (Please report a workaround if you know
+one.) 
+<p>
+<code>gcc</code> 3.2.3 for ARM reportedly crashes during compilation. 
+This bug is reportedly fixed in later versions of
+<code>gcc</code>.  
+<p>
+Versions 8.0 and 8.1 of Intel's <code>icc</code> falsely claim to be <code>gcc</code>, so you should specify <code>CC=&quot;icc -no-gcc&quot;</code>; this is automatic in FFTW 3.1.  <code>icc-8.0.066</code> reportely produces incorrect code for FFTW 2.1.5, but is fixed in version 8.1. 
+<code>icc-7.1</code> compiler build 20030402Z appears to produce
+incorrect dependencies, causing the compilation to fail. 
+<code>icc-7.1</code> build 20030307Z appears to work fine.  (Use
+<code>icc -V</code> to check which build you have.)  As of 2003/04/18,
+build 20030402Z appears not to be available any longer on Intel's
+website, whereas the older build 20030307Z is available. 
+
+<p>
+<code>ranlib</code> of GNU <code>binutils</code> 2.9.1 on Irix has been observed to corrupt the FFTW libraries, causing a link failure when
+FFTW is compiled.  Since <code>ranlib</code> is completely superfluous on Irix, we suggest deleting it from your system and replacing it with
+a symbolic link to <code>/bin/echo</code>.  
+<p>
+If support for SIMD instructions is enabled in FFTW, further compiler
+problems may appear: 
+<p>
+<code>gcc</code> 3.4.[0123] for x86 produces incorrect SSE2 code for
+FFTW when <code>-O2</code> (the best choice for FFTW) is used, causing
+FFTW to crash (<code>make check</code> crashes).  This bug is fixed in <code>gcc</code> 3.4.4.  On x86_64 (amd64/em64t), <code>gcc</code> 3.4.4 reportedly still has a similar problem, but this is fixed as of
+<code>gcc</code> 3.4.6.  
+<p>
+<code>gcc-3.2</code> for x86 produces incorrect SIMD code if
+<code>-O3</code> is used.  The same compiler produces incorrect SIMD
+code if no optimization is used, too.  When using
+<code>gcc-3.2</code>, it is a good idea not to change the default
+<code>CFLAGS</code> selected by the <code>configure</code> script.  
+<p>
+Some 3.0.x and 3.1.x versions of <code>gcc</code> on <code>x86</code> may crash.  <code>gcc</code> so-called 2.96 shipping with RedHat 7.3 crashes
+when compiling SIMD code.  In both cases, please upgrade to
+<code>gcc-3.2</code> or later.  
+<p>
+Intel's <code>icc</code> 6.0 misaligns SSE constants, but FFTW has a
+workaround. <code>icc</code> 8.x fails to compile FFTW 3.0.x because it
+falsely claims to be <code>gcc</code>; we believe this to be a bug in <code>icc</code>, but FFTW 3.1 has a workaround.  
+<p>
+Visual C++ 2003 reportedly produces incorrect code for SSE/SSE2 when
+compiling FFTW.  This bug was reportedly fixed in VC++ 2005;
+alternatively, you could switch to the Intel compiler. VC++ 6.0 also
+reportedly produces incorrect code for the file
+<code>reodft11e-r2hc-odd.c</code> unless optimizations are disabled for that file.  
+<p>
+<code>gcc</code> 2.95 on MacOS X miscompiles AltiVec code (fixed in
+later versions).  <code>gcc</code> 3.2.x miscompiles AltiVec permutations, but FFTW has a workaround. 
+<code>gcc</code> 4.0.1 on MacOS for Intel crashes when compiling FFTW; a workaround is to
+compile one file without optimization: <code>cd kernel; make CFLAGS=&quot; &quot; trig.lo</code>.  
+<p>
+<code>gcc</code> 4.1.1 reportedly crashes when compiling FFTW for MIPS;
+the workaround is to compile the file it crashes on
+(<code>t2_64.c</code>) with a lower optimization level.  
+<p>
+<code>gcc</code> versions 4.1.2 to 4.2.0 for x86 reportedly miscompile
+FFTW 3.1's test program, causing <code>make check</code> to crash (<code>gcc</code> bug #26528).  The bug was reportedly fixed in
+<code>gcc</code> version 4.2.1 and later.  A workaround is to compile
+<code>libbench2/verify-lib.c</code> without optimization.  
+<h2><A name="solarisSucks">
+Question 2.4.  FFTW does not compile on Solaris, complaining about
+<code>const</code>.
+</A></h2>
+
+We know that at least on Solaris 2.5.x with Sun's compilers 4.2 you
+might get error messages from <code>make</code> such as 
+<p>
+<code>&quot;./fftw.h&quot;, line 88: warning: const is a keyword in ANSI
+C</code> 
+<p>
+This is the case when the <code>configure</code> script reports that <code>const</code> does not work: 
+<p>
+<code>checking for working const... (cached) no</code> 
+<p>
+You should be aware that Solaris comes with two compilers, namely,
+<code>/opt/SUNWspro/SC4.2/bin/cc</code> and <code>/usr/ucb/cc</code>.  The latter compiler is non-ANSI.  Indeed, it is a perverse shell script
+that calls the real compiler in non-ANSI mode.  In order
+to compile FFTW, change your path so that the right
+<code>cc</code> is used.  
+<p>
+To know whether your compiler is the right one,  type
+<code>cc -V</code>.  If the compiler prints ``<code>ucbcc</code>'', as in  
+<p>
+<code>ucbcc: WorkShop Compilers 4.2 30 Oct 1996 C
+4.2</code> 
+<p>
+then the compiler is wrong.  The right message is something like
+
+<p>
+<code>cc: WorkShop Compilers 4.2 30 Oct 1996 C
+4.2</code> 
+<h2><A name="3dnow">
+Question 2.5.  What's the difference between
+<code>--enable-3dnow</code> and <code>--enable-k7</code>?
+</A></h2>
+
+<code>--enable-k7</code> enables 3DNow! instructions on K7 processors
+(AMD Athlon and its variants).  K7 support is provided by assembly
+routines generated by a special purpose compiler. 
+As of fftw-3.2, --enable-k7 is no longer supported. 
+
+<p>
+<code>--enable-3dnow</code> enables generic 3DNow! support using <code>gcc</code> builtin functions.  This works on earlier AMD
+processors, but it is not as fast as our special assembly routines. 
+As of fftw-3.1, --enable-3dnow is no longer supported. 
+
+<h2><A name="fma">
+Question 2.6.  What's the difference between the fma and the non-fma
+versions?
+</A></h2>
+
+The fma version tries to exploit the fused multiply-add instructions
+implemented in many processors such as PowerPC, ia-64, and MIPS.  The
+two FFTW packages are otherwise identical.  In FFTW 3.1, the fma and
+non-fma versions were merged together into a single package, and the
+<code>configure</code> script attempts to automatically guess which
+version to use.   
+<p>
+The FFTW 3.1 <code>configure</code> script enables fma by default on PowerPC, Itanium, and PA-RISC, and disables it otherwise.  You can
+force one or the other by using the <code>--enable-fma</code> or <code>--disable-fma</code> flag for <code>configure</code>.  
+<p>
+Definitely use fma if you have a PowerPC-based system with
+<code>gcc</code> (or IBM <code>xlc</code>).  This includes all GNU/Linux systems for PowerPC and the older PowerPC-based MacOS systems.  Also
+use it on PA-RISC and Itanium with the HP/UX compiler. 
+
+<p>
+Definitely do not use the fma version if you have an ia-32 processor
+(Intel, AMD, MacOS on Intel, etcetera). 
+
+<p>
+For other architectures/compilers, the situation is not so clear.  For
+example, ia-64 has the fma instruction, but
+<code>gcc-3.2</code> appears not to exploit it correctly.  Other compilers may do the right thing,
+but we have not tried them.  Please send us your feedback so that we
+can update this FAQ entry.  
+<h2><A name="languages">
+Question 2.7.  Which language is FFTW written
+in?
+</A></h2>
+
+FFTW is written in ANSI C.  Most of the code, however, was
+automatically generated by a program called
+<code>genfft</code>, written in the Objective Caml dialect of ML.  You do not need to know ML or to
+have an Objective Caml compiler in order to use FFTW. 
+
+<p>
+<code>genfft</code> is provided with the FFTW sources, which means that
+you can play with the code generator if you want.  In this case, you
+need a working Objective Caml system.  Objective Caml is available
+from <A href="http://caml.inria.fr">the Caml web page</A>.  
+<h2><A name="fortran">
+Question 2.8.  Can I call FFTW from Fortran?
+</A></h2>
+
+Yes, FFTW (versions 1.3 and higher) contains a Fortran-callable
+interface, documented in the FFTW manual. 
+
+<p>
+By default, FFTW configures its Fortran interface to work with the
+first compiler it finds, e.g. <code>g77</code>.  To configure for a different, incompatible Fortran compiler
+<code>foobar</code>, use <code>./configure F77=foobar</code> when installing FFTW.  (In the case of <code>g77</code>, however, FFTW 3.x also includes an extra set of
+Fortran-callable routines with one less underscore at the end of
+identifiers, which should cover most other Fortran compilers on Linux
+at least.) 
+<h2><A name="cplusplus">
+Question 2.9.  Can I call FFTW from C++?
+</A></h2>
+
+Most definitely.  FFTW should compile and/or link under any C++
+compiler.  Moreover, it is likely that the C++
+<code>&lt;complex&gt;</code> template class is bit-compatible with FFTW's complex-number format
+(see the FFTW manual for more details). 
+
+<h2><A name="whynotfortran">
+Question 2.10.  Why isn't FFTW written in
+Fortran/C++?
+</A></h2>
+
+Because we don't like those languages, and neither approaches the
+portability of C.  
+<h2><A name="singleprec">
+Question 2.11.  How do I compile FFTW to run in single
+precision?
+</A></h2>
+
+On a Unix system: <code>configure --enable-float</code>.  On a non-Unix system: edit <code>config.h</code> to <code>#define</code> the symbol <code>FFTW_SINGLE</code> (for FFTW 3.x).  In both cases, you must then
+recompile FFTW.  In FFTW 3, all FFTW identifiers will then begin with
+<code>fftwf_</code> instead of <code>fftw_</code>.  
+<h2><A name="64bitk7">
+Question 2.12.  --enable-k7 does not work on
+x86-64
+</A></h2>
+
+Support for --enable-k7 was discontinued in fftw-3.2. 
+
+<p>
+The fftw-3.1 release supports --enable-k7.  This option only works on
+32-bit x86 machines that implement 3DNow!, including the AMD Athlon
+and the AMD Opteron in 32-bit mode.  --enable-k7 does not work on AMD
+Opteron in 64-bit mode.  Use --enable-sse for x86-64 machines. 
+
+<p>
+FFTW supports 3DNow! by means of assembly code generated by a
+special-purpose compiler.  It is hard to produce assembly code that
+works in both 32-bit and 64-bit mode.  <hr>
+Next: <a href="section3.html" rel=precedes>Using FFTW</a>.<br>
+Back: <a href="section1.html" rev=precedes>Introduction and General Information</a>.<br>
+<a href="index.html" rev=subdocument>Return to contents</a>.<p>
+<address>
+<A href="http://www.fftw.org">Matteo Frigo and Steven G. Johnson</A> / <A href="mailto:fftw@fftw.org">fftw@fftw.org</A>
+- 14 September 2021
+</address><br>
+Extracted from FFTW Frequently Asked Questions with Answers,
+Copyright &copy; 2021 Matteo Frigo and Massachusetts Institute of Technology.
+</body></html>

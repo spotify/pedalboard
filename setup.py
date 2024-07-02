@@ -100,11 +100,130 @@ if "musllinux" in os.getenv("CIBW_BUILD", ""):
 ALL_CPPFLAGS.extend(
     [
         "-DUSE_BQRESAMPLER=1",
-        "-DNO_THREADING=1",
         "-D_HAS_STD_BYTE=0",
         "-DNOMINMAX",
+        "-DALREADY_CONFIGURED",
     ]
 )
+
+
+def ignore_files_matching(files, *matches):
+    matches = set(matches)
+    for match in matches:
+        new_files = []
+        for file in files:
+            if match in str(file):
+                # print(f"Skipping compilation of: {file}")
+                pass
+            else:
+                new_files.append(file)
+        files = new_files
+    return files
+
+
+# Platform-specific FFT speedup flags:
+if platform.system() == "Windows":
+    ALL_CPPFLAGS.append("-DUSE_BUILTIN_FFT")
+    ALL_CPPFLAGS.append("-DNO_THREADING")
+elif platform.system() == "Darwin":
+    # No need for any threading code on MacOS;
+    # vDSP does all of this for us and these code paths are redundant.
+    ALL_CPPFLAGS.append("-DNO_THREADING")
+elif platform.system() == "Linux":
+    # Use FFTW3 for FFTs on Linux, which should speed up Rubberband by 3-4x:
+    ALL_CPPFLAGS.extend(
+        [
+            "-DHAVE_FFTW3=1",
+            "-DLACK_SINCOS=1",
+            "-DFFTW_DOUBLE_ONLY=1",
+            "-DUSE_PTHREADS",
+        ]
+    )
+    ALL_INCLUDES += ["vendors/fftw3/api/", "vendors/fftw3/"]
+    fftw_paths = list(Path("vendors/fftw3/").glob("**/*.c"))
+    fftw_paths = ignore_files_matching(
+        fftw_paths,
+        # Don't bother compiling in Altivec or VSX (PowerPC) support;
+        # it's 2024, not 2004 (although RIP my G5 cheese grater)
+        "altivec",
+        "vsx",
+        # We're not using FFTW in multi-threaded mode:
+        "mpi",
+        "threads",
+        # No need for tests, tools, or support code:
+        "tests",
+        "tools",
+        "/support",
+        "common/",
+        "libbench",
+        # Ignore SSE, AVX2, AVX128, and AVX512 SIMD code;
+        # For Rubber Band's usage, just AVX gives us the
+        # largest speedup without bloating the binary
+        "sse2",
+        "avx2",
+        "avx512",
+        "kcvi",
+        "avx-128-fma",
+        "generic-simd",
+    )
+
+    # On ARM, ignore the X86-specific SIMD code:
+    if "arm" in platform.processor() or "aarch64" in platform.processor():
+        fftw_paths = ignore_files_matching(fftw_paths, "avx", "/sse")
+        ALL_CFLAGS.append("-DHAVE_NEON=1")
+    else:
+        # And on x86, ignore the ARM-specific SIMD code (and KCVI; not GCC or Clang compatible).
+        fftw_paths = ignore_files_matching(fftw_paths, "neon")
+        ALL_CFLAGS.append("-march=native")
+        # Enable SIMD instructions:
+        ALL_CFLAGS.extend(
+            [
+                # "-DHAVE_SSE2",
+                "-DHAVE_AVX",  # Testing shows this is all we need!
+                # "-DHAVE_AVX_128_FMA", # AMD only
+                # "-DHAVE_AVX2",
+                # "-DHAVE_AVX512", # No measurable speed difference
+                # "-DHAVE_GENERIC_SIMD128", # Crashes!
+                # "-DHAVE_GENERIC_SIMD256", # Also crashes!
+            ]
+        )
+
+    ALL_SOURCE_PATHS += fftw_paths
+
+    ALL_CFLAGS.extend(
+        [
+            "-DHAVE_UINTPTR_T",
+            '-DPACKAGE="FFTW"',
+            '-DVERSION="0"',
+            '-DPACKAGE_VERSION="00000"',
+            '-DFFTW_CC="clang"',
+            "-includestring.h",
+            "-includestdint.h",
+            "-includevendors/fftw3/dft/codelet-dft.h",
+            "-includevendors/fftw3/rdft/codelet-rdft.h",
+            "-DHAVE_INTTYPES_H",
+            "-DHAVE_STDINT_H",
+            "-DHAVE_STDLIB_H",
+            "-DHAVE_STRING_H",
+            "-DHAVE_TIME_H",
+            "-DHAVE_UNISTD_H",
+            "-DHAVE_DECL_DRAND48",
+            "-DHAVE_DECL_SRAND48",
+            "-DHAVE_DECL_COSL",
+            "-DHAVE_DECL_SINL",
+            "-DHAVE_DECL_POSIX_MEMALIGN",
+            "-DHAVE_DRAND48",
+            "-DHAVE_SRAND48",
+            "-DHAVE_POSIX_MEMALIGN",
+            "-DHAVE_ISNAN",
+            "-DHAVE_SNPRINTF",
+            "-DHAVE_STRCHR",
+            "-DHAVE_SYSCTL",
+        ]
+    )
+    if platform.system() == "Linux":
+        ALL_CFLAGS.append("-DHAVE_GETTIMEOFDAY")
+
 ALL_SOURCE_PATHS += list(Path("vendors/rubberband/single").glob("*.cpp"))
 
 ALL_SOURCE_PATHS += list(Path("vendors").glob("*.c"))
@@ -142,6 +261,7 @@ if platform.system() == "Darwin":
         ALL_LINK_ARGS.append("-flto=thin")
     ALL_LINK_ARGS.append("-fvisibility=hidden")
     ALL_CPPFLAGS.append("-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1")
+    ALL_CFLAGS += ["-Wno-comment"]
 elif platform.system() == "Linux":
     ALL_CPPFLAGS.append("-DLINUX=1")
     # We use GCC on Linux, which doesn't take a value for the -flto flag:
@@ -149,6 +269,7 @@ elif platform.system() == "Linux":
         ALL_CPPFLAGS.append("-flto")
         ALL_LINK_ARGS.append("-flto")
     ALL_LINK_ARGS.append("-fvisibility=hidden")
+    ALL_CFLAGS += ["-Wno-comment"]
 elif platform.system() == "Windows":
     ALL_CPPFLAGS.append("-DWINDOWS=1")
     ALL_CPPFLAGS.append("-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1")

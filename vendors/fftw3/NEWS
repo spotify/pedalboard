@@ -1,0 +1,681 @@
+FFTW 3.3.10:
+
+* Fix bug that would cause 2-way SIMD (notably SSE2 in double precision)
+  to attempt unaligned accesses in certain obscure cases, causing
+  segfaults.
+  
+  The following test triggers the bug (SSE2, double precision):
+
+    ./tests/bench -oexhaustive r4*2:5:3
+
+  This test computes a pair of length-4 real->complex transforms where
+  the second input is 5 real numbers away from the first input.  That
+  is, there is a gap of one real number between the first and second
+  input array.  The -oexhaustive level allow FFTW to attempt to
+  compute this transform by reducing it to a pair of complex
+  transforms of length 2, but now the second input is not aligned to a
+  complex-number boundary.  The fact that 5 is odd is the problem.
+
+  The bug cannot occur in complex->complex transforms because the
+  complex interface accepts strides in units of complex numbers, so
+  strides are aligned by construction.
+  
+  This bug has been around at least since fftw-3.1.2 (July 2006), and
+  probably since fftw-3.0 (2003).
+
+FFTW 3.3.9:
+
+* New API fftw_planner_nthreads() returns the number of threads
+  currently being used by the planner.
+
+* Fix incorrect math in 128-bit generic SIMD
+
+* Fix wisdom for avx512.
+
+  The avx512 alignment requirement was set to 64 bytes, but this is
+  wrong.  Alignment requirements are a property of the platform (e.g.,
+  x86) and not of the instruction set (e.g., AVX).  Among other
+  things, this broke wisdom with avx512.
+
+  Note that avx512 support is still experimental because the FFTW
+  authors have no avx512 hardware available for testing.
+
+* fftw_threads_set_callback function to change the threading backend at runtime.
+
+FFTW 3.3.8:
+
+* Fixed AVX, AVX2 for gcc-8.
+
+  By default, FFTW 3.3.7 was broken with gcc-8.  AVX and AVX2 code
+  assumed that the compiler honors the distinction between +0 and -0,
+  but gcc-8 -ffast-math does not.  The default CFLAGS included -ffast-math.
+  This release ensures that FFTW works with gcc-8 -ffast-math, and
+  removes -ffast-math from the default CFLAGS for good measure.
+
+FFTW 3.3.7:
+
+* Experimental support for CMake.
+
+  The primary build mechanism for FFTW remains GNU autoconf/automake.
+  CMake support is meant to offer an easy way to compile FFTW on
+  Windows, and as such it does not cover all the features of the
+  automake build system, such as exotic cycle counters,
+  cross-compiling, or build of binaries for a mixture of ISA's
+  (e.g., amd64 vs amd64+avx vs amd64+avx2).  Patches are welcome.
+
+* Fixes for armv7a cycle counter.
+* Official support for aarch64, now that we have hardware to test it.
+* Tweak usage of FMA instructions in a way that favors newer processors
+  (Skylake and Ryzen) over older processors (Haswell).
+* tests/bench: use 64-bit precision to compute mflops.
+
+FFTW 3.3.6-pl2:
+
+* Bugfix: MPI Fortran-03 headers were missing in FFTW 3.3.6-pl1.
+
+FFTW 3.3.6-pl1:
+
+* Bugfix: FFTW 3.3.6 had the wrong libtool version number, and generated
+  shared libraries of the form libfftw3.so.2.6.6 instead of
+  libfftw3.so.3.*.
+
+FFTW 3.3.6:
+
+* The fftw_make_planner_thread_safe() API introduced in 3.3.5 didn't
+  work, and this 3.3.6 fixes it.  Sorry about that.
+* compilation fixes for IBM XLC
+* compilation fixes for threads on Windows
+* fix SIMD autodetection on amd64 when (_MSC_VER > 1500)
+
+FFTW 3.3.5:
+
+* New SIMD support:
+  - Power8 VSX instructions in single and double precision.
+    To use, add --enable-vsx to configure.
+  - Support for AVX2 (256-bit FMA instructions).
+    To use, add --enable-avx2 to configure.
+  - Experimental support for AVX512 and KCVI. (--enable-avx512, --enable-kcvi)
+    This code is expected to work but the FFTW maintainers do not have
+    hardware to test it.
+  - Support for AVX128/FMA (for some AMD machines) (--enable-avx128-fma)
+  - Double precision Neon SIMD for aarch64.
+    This code is expected to work but the FFTW maintainers do not have
+    hardware to test it.
+  - generic SIMD support using gcc vector intrinsics
+* Add fftw_make_planner_thread_safe() API
+* fix #18 (disable float128 for CUDACC)
+* fix #19: missing Fortran interface for fftwq_alloc_real
+* fix #21 (don't use float128 on Portland compilers, which pretend to be gcc)
+* fix: Avoid segfaults due to double free in MPI transpose
+
+* Special note for distribution maintainers: Although FFTW supports a
+  zillion SIMD instruction sets, enabling them all at the same time is
+  a bad idea, because it increases the planning time for minimal gain.
+  We recommend that general-purpose x86 distributions only enable SSE2
+  and perhaps AVX.  Users who care about the last ounce of performance
+  should recompile FFTW themselves.
+
+FFTW 3.3.4
+
+* New functions fftw_alignment_of (to check whether two arrays are
+  equally aligned for the purposes of applying a plan) and fftw_sprint_plan
+  (to output a description of plan to a string).
+
+* Bugfix in fftw-wisdom-to-conf; thanks to Florian Oppermann for the
+  bug report.
+
+* Fixed manual to work with texinfo-5.
+
+* Increased timing interval on x86_64 to reduce timing errors.
+
+* Default to Win32 threads, not pthreads, if both are present.
+
+* Various build-script fixes.
+
+FFTW 3.3.3
+
+* Fix deadlock bug in MPI transforms (thanks to Michael Pippig for the
+  bug report and patch, and to Graham Dennis for the bug report).
+
+* Use 128-bit ARM NEON instructions instead of 64-bits.  This change
+  appears to speed up even ARM processors with a 64-bit NEON pipe.
+
+* Speed improvements for single-precision AVX.
+
+* Speed up planner on machines without "official" cycle counters, such as ARM.
+
+FFTW 3.3.2
+
+* Removed an archaic stack-alignment hack that was failing with
+  gcc-4.7/i386.
+
+* Added stack-alignment hack necessary for gcc on Windows/i386.  We
+  will regret this in ten years (see previous change).
+
+* Fix incompatibility with Intel icc which pretends to be gcc
+  but does not support quad precision.
+
+* make libfftw{threads,mpi} depend upon libfftw when using libtool;
+  this is consistent with most other libraries and simplifies the life
+  of various distributors of GNU/Linux.
+
+FFTW 3.3.1
+
+* Changes since 3.3.1-beta1:
+
+  - Reduced planning time in estimate mode for sizes with large
+    prime factors.
+
+  - Added AVX autodetection under Visual Studio.  Thanks Carsten
+    Steger for submitting the necessary code.
+
+  - Modern Fortran interface now uses a separate fftw3l.f03 interface
+    file for the long double interface, which is not supported by
+    some Fortran compilers.  Provided new fftw3q.f03 interface file
+    to access the quadruple-precision FFTW routines with recent
+    versions of gcc/gfortran.
+
+* Added support for the NEON extensions to the ARM ISA.  (Note to beta
+  users: an ARM cycle counter is not yet implemented; please contact
+  fftw@fftw.org if you know how to do it right.)
+
+* MPI code now compiles even if mpicc is a C++ compiler; thanks to
+  Kyle Spyksma for the bug report.
+
+FFTW 3.3
+
+* Changes since 3.3-beta1:
+
+  - Compiling OpenMP support (--enable-openmp) now installs a
+    fftw3_omp library, instead of fftw3_threads, so that OpenMP
+    and POSIX threads (--enable-threads) libraries can be built
+    and installed at the same time.
+
+  - Various minor compilation fixes, corrections of manual typos, and
+    improvements to the benchmark test program.
+
+* Add support for the AVX extensions to x86 and x86-64.  The AVX code
+  works with 16-byte alignment (as opposed to 32-byte alignment),
+  so there is no ABI change compared to FFTW 3.2.2.
+
+* Added Fortran 2003 interface, which should be usable on most modern
+  Fortran compilers (e.g. gfortran) and provides type-checked access
+  to the the C FFTW interface.  (The legacy Fortran-77 interface is
+  still included also.)
+
+* Added MPI distributed-memory transforms.  Compared to 3.3alpha,
+  the major changes in the MPI transforms are:
+    - Fixed some deadlock and crashing bugs.
+    - Added Fortran 2003 interface.
+    - Added new-array execute functions for MPI plans.
+    - Eliminated use of large MPI tags, since Cray MPI requires tags < 2^24;
+      thanks to Jonathan Bentz for the bug report.
+    - Expanded documentation.
+    - 'make check' now runs MPI tests
+    - Some ABI changes - not binary-compatible with 3.3alpha MPI.
+
+* Add support for quad-precision __float128 in gcc 4.6 or later (on x86.
+  x86-64, and Itanium).  The new routines use the fftwq_ prefix.
+
+* Removed support for MIPS paired-single instructions due to lack of
+  available hardware for testing.  Users who want this functionality
+  should continue using FFTW 3.2.x.  (Note that FFTW 3.3 still works
+  on MIPS; this only concerns special instructions available on some
+  MIPS chips.)
+
+* Removed support for the Cell Broadband Engine.  Cell users should
+  use FFTW 3.2.x.
+
+* New convenience functions fftw_alloc_real and fftw_alloc_complex
+  to use fftw_malloc for real and complex arrays without typecasts
+  or sizeof.
+
+* New convenience functions fftw_export_wisdom_to_filename and
+  fftw_import_wisdom_from_filename that export/import wisdom
+  to a file, which don't require you to open/close the file yourself.
+
+* New function fftw_cost to return FFTW's internal cost metric for
+  a given plan; thanks to Rhys Ulerich and Nathanael Schaeffer for the
+  suggestion.
+
+* The --enable-sse2 configure flag now works in both double and single
+  precision (and is equivalent to --enable-sse in the latter case).
+
+* Remove --enable-portable-binary flag: we new produce portable binaries
+  by default.
+
+* Remove the automatic detection of native architecture flag for gcc
+  which was introduced in fftw-3.1, since new gcc supports -mtune=native.
+  Remove the --with-gcc-arch flag; if you want to specify a particlar
+  arch to configure, use ./configure CC="gcc -mtune=...".
+
+* --with-our-malloc16 configure flag is now renamed --with-our-malloc.
+
+* Fixed build problem failure when srand48 declaration is missing;
+  thanks to Ralf Wildenhues for the bug report.
+
+* Fixed bug in fftw_set_timelimit: ensure that a negative timelimit
+  is equivalent to no timelimit in all cases.  Thanks to William Andrew
+  Burnson for the bug report.
+
+* Fixed stack-overflow problem on OpenBSD caused by using alloca with
+  too large a buffer.
+
+FFTW 3.2.2
+
+* Improve performance of some copy operations of complex arrays on
+  x86 machines.
+
+* Add configure flag to disable alloca(), which is broken in mingw64.
+
+* Planning in FFTW_ESTIMATE mode for r2r transforms became slower
+  between fftw-3.1.3 and 3.2.  This regression has now been fixed.
+
+FFTW 3.2.1
+
+* Performance improvements for some multidimensional r2c/c2r transforms;
+  thanks to Eugene Miloslavsky for his benchmark reports.
+
+* Compile with icc on MacOS X, use better icc compiler flags.
+
+* Compilation fixes for systems where snprintf is defined as a macro;
+  thanks to Marcus Mae for the bug report.
+
+* Fortran documentation now recommends not using dfftw_execute,
+  because of reports of problems with various Fortran compilers;
+  it is better to use dfftw_execute_dft etcetera.
+
+* Some documentation clarifications, e.g. of fact that --enable-openmp
+  and --enable-threads are mutually exclusive (thanks to Long To),
+  and document slightly odd behavior of plan_guru_r2r in Fortran
+  (thanks to Alexander Pozdneev).
+
+* FAQ was accidentally omitted from 3.2 tarball.
+
+* Remove some extraneous (harmless) files accidentally included in
+  a subdirectory of the 3.2 tarball.
+
+FFTW 3.2
+
+* Worked around apparent glibc bug that leads to rare hangs when freeing
+  semaphores.
+
+* Fixed segfault due to unaligned access in certain obscure problems
+  that use SSE and multiple threads.
+
+* MPI transforms not included, as they are still in alpha; the alpha
+  versions of the MPI transforms have been moved to FFTW 3.3alpha1.
+
+FFTW 3.2alpha3
+
+* Performance improvements for sizes with factors of 5 and 10.
+
+* Documented FFTW_WISDOM_ONLY flag, at the suggestion of Mario
+  Emmenlauer and Phil Dumont.
+
+* Port Cell code to SDK2.1 (libspe2), as opposed to the old libspe1 code.
+
+* Performance improvements in Cell code for N < 32k, thanks to Jan Wagner
+  for the suggestions.
+
+* Cycle counter for Sun x86_64 compiler, and compilation fix in cycle
+  counter for AIX/xlc (thanks to Jeff Haferman for the bug report).
+
+* Fixed incorrect type prefix in MPI code that prevented wisdom routines
+  from working in single precision (thanks to Eric A. Borisch for the report).
+
+* Added 'make check' for MPI code (which still fails in a couple corner
+  cases, but should be much better than in alpha2).
+
+* Many other small fixes.
+
+FFTW 3.2alpha2
+
+* Support for the Cell processor, donated by IBM Research; see README.Cell
+  and the Cell section of the manual.
+
+* New 64-bit API: for every "plan_guru" function there is a new "plan_guru64"
+  function with the same semantics, but which takes fftw_iodim64 instead of
+  fftw_iodim.  fftw_iodim64 is the same as fftw_iodim, except that it takes
+  ptrdiff_t integer types as parameters, which is a 64-bit type on
+  64-bit machines.  This is only useful for specifying very large transforms
+  on 64-bit machines.  (Internally, FFTW uses ptrdiff_t everywhere
+  regardless of what API you choose.)
+
+* Experimental MPI support.  Complex one- and multi-dimensional FFTs,
+  multi-dimensional r2r, multi-dimensional r2c/c2r transforms, and
+  distributed transpose operations, with 1d block distributions.
+  (This is an alpha preview: routines have not been exhaustively
+  tested, documentation is incomplete, and some functionality is
+  missing, e.g. Fortran support.)  See mpi/README and also the MPI
+  section of the manual.
+
+* Significantly faster r2c/c2r transforms, especially on machines with SIMD.
+
+* Rewritten multi-threaded support for better performance by
+  re-using a fixed pool of threads rather than continually
+  respawning and joining (which nowadays is much slower).
+
+* Support for MIPS paired-single SIMD instructions, donated by
+  Codesourcery.
+
+* FFTW_WISDOM_ONLY planner flag, to create plan only if wisdom is
+  available and return NULL otherwise.
+
+* Removed k7 support, which only worked in 32-bit mode and is
+  becoming obsolete.  Use --enable-sse instead.
+
+* Added --with-g77-wrappers configure option to force inclusion
+  of g77 wrappers, in addition to whatever is needed for the
+  detected Fortran compilers.  This is mainly intended for GNU/Linux
+  distros switching to gfortran that wish to include both
+  gfortran and g77 support in FFTW.
+
+* In manual, renamed "guru execute" functions to "new-array execute"
+  functions, to reduce confusion with the guru planner interface.
+  (The programming interface is unchanged.)
+
+* Add missing __declspec attribute to threads API functions when compiling
+  for Windows; thanks to Robert O. Morris for the bug report.
+
+* Fixed missing return value from dfftw_init_threads in Fortran;
+  thanks to Markus Wetzstein for the bug report.
+
+FFTW 3.1.3
+
+* Bug fix: FFTW computes incorrect results when the user plans both
+  REDFT11 and RODFT11 transforms of certain sizes.  The bug is caused
+  by incorrect sharing of twiddle-factor tables between the two
+  transforms, and only occurs when both are used.  Thanks to Paul
+  A. Valiant for the bug report.
+
+FFTW 3.1.2
+
+* Correct bug in configure script: --enable-portable-binary option was ignored!
+  Thanks to Andrew Salamon for the bug report.
+
+* Threads compilation fix on AIX: prefer xlc_r to cc_r, and don't use
+  either if we are using gcc.  Thanks to Guy Moebs for the bug report.
+
+* Updated FAQ to note that Apple gcc 4.0.1 on MacOS/Intel is broken,
+  and suggest a workaround.  configure script now detects Core/Duo arch.
+
+* Use -maltivec when checking for altivec.h.  Fixes Gentoo bug #129304,
+  thanks to Markus Dittrich.
+
+FFTW 3.1.1
+
+* Performance improvements for Intel EMT64.
+
+* Performance improvements for large-size transforms with SIMD.
+
+* Cycle counter support for Intel icc and Visual C++ on x86-64.
+
+* In fftw-wisdom tool, replaced obsolete --impatient with --measure.
+
+* Fixed compilation failure with AIX/xlc; thanks to Joseph Thomas.
+
+* Windows DLL support for Fortran API (added missing __declspec(dllexport)).
+
+* SSE/SSE2 code works properly (i.e. disables itself) on older 386 and 486
+  CPUs lacking a CPUID instruction; thanks to Eric Korpela.
+
+FFTW 3.1
+
+* Faster FFTW_ESTIMATE planner.
+
+* New (faster) algorithm for REDFT00/RODFT00 (type-I DCT/DST) of odd size.
+
+* "4-step" algorithm for faster FFTs of very large sizes (> 2^18).
+
+* Faster in-place real-data DFTs (for R2HC and HC2R r2r formats).
+
+* Faster in-place non-square transpositions (FFTW uses these internally
+  for in-place FFTs, and you can also perform them explicitly using
+  the guru interface).
+
+* Faster prime-size DFTs: implemented Bluestein's algorithm, as well
+  as a zero-padded Rader variant to limit recursive use of Rader's algorithm.
+
+* SIMD support for split complex arrays.
+
+* Much faster Altivec/VMX performance.
+
+* New fftw_set_timelimit function to specify a (rough) upper bound to the
+  planning time (does not affect ESTIMATE mode).
+
+* Removed --enable-3dnow support; use --enable-k7 instead.
+
+* FMA (fused multiply-add) version is now included in "standard" FFTW,
+  and is enabled with --enable-fma (the default on PowerPC and Itanium).
+
+* Automatic detection of native architecture flag for gcc.  New
+  configure options: --enable-portable-binary and --with-gcc-arch=<arch>,
+  for people distributing compiled binaries of FFTW (see manual).
+
+* Automatic detection of Altivec under Linux with gcc 3.4 (so that
+  same binary should work on both Altivec and non-Altivec PowerPCs).
+
+* Compiler-specific tweaks/flags/workarounds for gcc 3.4, xlc, HP/UX,
+  Solaris/Intel.
+
+* Various documentation clarifications.
+
+* 64-bit clean.  (Fixes a bug affecting the split guru planner on
+  64-bit machines, reported by David Necas.)
+
+* Fixed Debian bug #259612: inadvertent use of SSE instructions on
+  non-SSE machines (causing a crash) for --enable-sse binaries.
+
+* Fixed bug that caused HC2R transforms to destroy the input in
+  certain cases, even if the user specified FFTW_PRESERVE_INPUT.
+
+* Fixed bug where wisdom would be lost under rare circumstances,
+  causing excessive planning time.
+
+* FAQ notes bug in gcc-3.4.[1-3] that causes FFTW to crash with SSE/SSE2.
+
+* Fixed accidentally exported symbol that prohibited simultaneous
+  linking to double/single multithreaded FFTW (thanks to Alessio Massaro).
+
+* Support Win32 threads under MinGW (thanks to Alessio Massaro).
+
+* Fixed problem with building DLL under Cygwin; thanks to Stephane Fillod.
+
+* Fix build failure if no Fortran compiler is found (thanks to Charles
+  Radley for the bug report).
+
+* Fixed compilation failure with icc 8.0 and SSE/SSE2.  Automatic
+  detection of icc architecture flag (e.g. -xW).
+
+* Fixed compilation with OpenMP on AIX (thanks to Greg Bauer).
+
+* Fixed compilation failure on x86-64 with gcc (thanks to Orion Poplawski).
+
+* Incorporated patch from FreeBSD ports (FreeBSD does not have memalign,
+  but its malloc is 16-byte aligned).
+
+* Cycle-counter compilation fixes for Itanium, Alpha, x86-64, Sparc,
+  MacOS (thanks to Matt Boman, John Bowman, and James A. Treacy for
+  reports/fixes).  Added x86-64 cycle counter for PGI compilers,
+  courtesy Cristiano Calonaci.
+
+* Fix compilation problem in test program due to C99 conflict.
+
+* Portability fix for import_system_wisdom with djgpp (thanks to Juan
+  Manuel Guerrero).
+
+* Fixed compilation failure on MacOS 10.3 due to getopt conflict.
+
+* Work around Visual C++ (version 6/7) bug in SSE compilation;
+  thanks to Eddie Yee for his detailed report.
+
+Changes from FFTW 3.1 beta 2:
+
+* Several minor compilation fixes.
+
+* Eliminate FFTW_TIMELIMIT flag and replace fftw_timelimit global with
+  fftw_set_timelimit function.  Make wisdom work with time-limited plans.
+
+Changes from FFTW 3.1 beta 1:
+
+* Fixes for creating DLLs under Windows; thanks to John Pavel for his feedback.
+
+* Fixed more 64-bit problems, thanks to John Pavel for the bug report.
+
+* Further speed improvements for Altivec/VMX.
+
+* Further speed improvements for non-square transpositions.
+
+* Many minor tweaks.
+
+FFTW 3.0.1
+
+* Some speed improvements in SIMD code.
+
+* --without-cycle-counter option is removed.  If no cycle counter is found,
+  then the estimator is always used.  A --with-slow-timer option is provided
+  to force the use of lower-resolution timers.
+
+* Several fixes for compilation under Visual C++, with help from Stefane Ruel.
+
+* Added x86 cycle counter for Visual C++, with help from Morten Nissov.
+
+* Added S390 cycle counter, courtesy of James Treacy.
+
+* Added missing static keyword that prevented simultaneous linkage
+  of different-precision versions; thanks to Rasmus Larsen for the bug report.
+
+* Corrected accidental omission of f77_wisdom.f file; thanks to Alan Watson.
+
+* Support -xopenmp flag for SunOS; thanks to John Lou for the bug report.
+
+* Compilation with HP/UX cc requires -Wp,-H128000 flag to increase
+  preprocessor limits; thanks to Peter Vouras for the bug report.
+
+* Removed non-portable use of 'tempfile' in fftw-wisdom-to-conf script;
+  thanks to Nicolas Decoster for the patch.
+
+* Added 'make smallcheck' target in tests/ directory, at the request of
+  James Treacy.
+
+FFTW 3.0
+
+Major goals of this release:
+
+* Speed: often 20% or more faster than FFTW 2.x, even without SIMD (see below).
+
+* Complete rewrite, to make it easier to add new algorithms and transforms.
+
+* New API, to support more general semantics.
+
+Other enhancements:
+
+* SIMD acceleration on supporting CPUs (SSE, SSE2, 3DNow!, and AltiVec).
+ (With special thanks to Franz Franchetti for many experimental prototypes
+  and to Stefan Kral for the vectorizing generator from fftwgel.)
+
+* True in-place 1d transforms of large sizes (as well as compressed
+  twiddle tables for additional memory/cache savings).
+
+* More arbitrary placement of real & imaginary data, e.g. including
+  interleaved (as in FFTW 2.x) as well as separate real/imag arrays.
+
+* Efficient prime-size transforms of real data.
+
+* Multidimensional transforms can operate on a subset of a larger matrix,
+  and/or transform selected dimensions of a multidimensional array.
+
+* By popular demand, simultaneous linking to double precision (fftw),
+  single precision (fftwf), and long-double precision (fftwl) versions
+  of FFTW is now supported.
+
+* Cycle counters (on all modern CPUs) are exploited to speed planning.
+
+* Efficient transforms of real even/odd arrays, a.k.a. discrete
+  cosine/sine transforms (types I-IV).  (Currently work via pre/post
+  processing of real transforms, ala FFTPACK, so are not optimal.)
+
+* DHTs (Discrete Hartley Transforms), again via post-processing
+  of real transforms (and thus suboptimal, for now).
+
+* Support for linking to just those parts of FFTW that you need,
+  greatly reducing the size of statically linked programs when
+  only a limited set of transform sizes/types are required.
+
+* Canonical global wisdom file (/etc/fftw/wisdom) on Unix, along
+  with a command-line tool (fftw-wisdom) to generate/update it.
+
+* Fortran API can be used with both g77 and non-g77 compilers
+  simultaneously.
+
+* Multi-threaded version has optional OpenMP support.
+
+* Authors' good looks have greatly improved with age.
+
+Changes from 3.0beta3:
+
+* Separate FMA distribution to better exploit fused multiply-add instructions
+  on PowerPC (and possibly other) architectures.
+
+* Performance improvements via some inlining tweaks.
+
+* fftw_flops now returns double arguments, not int, to avoid overflows
+  for large sizes.
+
+* Workarounds for automake bugs.
+
+Changes from 3.0beta2:
+
+* The standard REDFT00/RODFT00 (DCT-I/DST-I) algorithm (used in
+  FFTPACK, NR, etcetera) turns out to have poor numerical accuracy, so
+  we replaced it with a slower routine that is more accurate.
+
+* The guru planner and execute functions now have two variants, one that
+  takes complex arguments and one that takes separate real/imag pointers.
+
+* Execute and planner routines now automatically align the stack on x86,
+  in case the calling program is misaligned.
+
+* README file for test program.
+
+* Fixed bugs in the combination of SIMD with multi-threaded transforms.
+
+* Eliminated internal fftw_threads_init function, which some people were
+  calling accidentally instead of the fftw_init_threads API function.
+
+* Check for -openmp flag (Intel C compiler) when --enable-openmp is used.
+
+* Support AMD x86-64 SIMD and cycle counter.
+
+* Support SSE2 intrinsics in forthcoming gcc 3.3.
+
+Changes from 3.0beta1:
+
+* Faster in-place 1d transforms of non-power-of-two sizes.
+
+* SIMD improvements for in-place, multi-dimensional, and/or non-FFTW_PATIENT
+  transforms.
+
+* Added support for hard-coded DCT/DST/DHT codelets of small sizes; the
+  default distribution only includes hard-coded size-8 DCT-II/III, however.
+
+* Many minor improvements to the manual.  Added section on using the
+  codelet generator to customize and enhance FFTW.
+
+* The default 'make check' should now only take a few minutes; for more
+  strenuous tests (which may take a day or so), do 'cd tests; make bigcheck'.
+
+* fftw_print_plan is split into fftw_fprint_plan and fftw_print_plan, where
+  the latter uses stdout.
+
+* Fixed ability to compile with a C++ compiler.
+
+* Fixed support for C99 complex type under glibc.
+
+* Fixed problems with alloca under MinGW, AIX.
+
+* Workaround for gcc/SPARC bug.
+
+* Fixed multi-threaded initialization failure on IRIX due to lack of
+  user-accessible PTHREAD_SCOPE_SYSTEM there.

@@ -1,0 +1,127 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>An improved replacement for MPI_Alltoall (FFTW 3.3.10)</title>
+
+<meta name="description" content="An improved replacement for MPI_Alltoall (FFTW 3.3.10)">
+<meta name="keywords" content="An improved replacement for MPI_Alltoall (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="FFTW-MPI-Transposes.html" rel="up" title="FFTW MPI Transposes">
+<link href="FFTW-MPI-Wisdom.html" rel="next" title="FFTW MPI Wisdom">
+<link href="Advanced-distributed_002dtranspose-interface.html" rel="prev" title="Advanced distributed-transpose interface">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="An-improved-replacement-for-MPI_005fAlltoall"></span><div class="header">
+<p>
+Previous: <a href="Advanced-distributed_002dtranspose-interface.html" accesskey="p" rel="prev">Advanced distributed-transpose interface</a>, Up: <a href="FFTW-MPI-Transposes.html" accesskey="u" rel="up">FFTW MPI Transposes</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="An-improved-replacement-for-MPI_005fAlltoall-1"></span><h4 class="subsection">6.7.3 An improved replacement for MPI_Alltoall</h4>
+
+<p>We close this section by noting that FFTW&rsquo;s MPI transpose routines can
+be thought of as a generalization for the <code>MPI_Alltoall</code> function
+(albeit only for floating-point types), and in some circumstances can
+function as an improved replacement.
+<span id="index-MPI_005fAlltoall"></span>
+</p>
+
+<p><code>MPI_Alltoall</code> is defined by the MPI standard as:
+</p>
+<div class="example">
+<pre class="example">int MPI_Alltoall(void *sendbuf, int sendcount, MPI_Datatype sendtype, 
+                 void *recvbuf, int recvcnt, MPI_Datatype recvtype, 
+                 MPI_Comm comm);
+</pre></div>
+
+<p>In particular, for <code>double*</code> arrays <code>in</code> and <code>out</code>,
+consider the call:
+</p>
+<div class="example">
+<pre class="example">MPI_Alltoall(in, howmany, MPI_DOUBLE, out, howmany MPI_DOUBLE, comm);
+</pre></div>
+
+<p>This is completely equivalent to:
+</p>
+<div class="example">
+<pre class="example">MPI_Comm_size(comm, &amp;P);
+plan = fftw_mpi_plan_many_transpose(P, P, howmany, 1, 1, in, out, comm, FFTW_ESTIMATE);
+fftw_execute(plan);
+fftw_destroy_plan(plan);
+</pre></div>
+
+<p>That is, computing a P&nbsp;&times;&nbsp;P
+ transpose on <code>P</code> processes,
+with a block size of 1, is just a standard all-to-all communication.
+</p>
+<p>However, using the FFTW routine instead of <code>MPI_Alltoall</code> may
+have certain advantages.  First of all, FFTW&rsquo;s routine can operate
+in-place (<code>in == out</code>) whereas <code>MPI_Alltoall</code> can only
+operate out-of-place.
+<span id="index-in_002dplace-8"></span>
+</p>
+
+<p>Second, even for out-of-place plans, FFTW&rsquo;s routine may be faster,
+especially if you need to perform the all-to-all communication many
+times and can afford to use <code>FFTW_MEASURE</code> or
+<code>FFTW_PATIENT</code>.  It should certainly be no slower, not including
+the time to create the plan, since one of the possible algorithms that
+FFTW uses for an out-of-place transpose <em>is</em> simply to call
+<code>MPI_Alltoall</code>.  However, FFTW also considers several other
+possible algorithms that, depending on your MPI implementation and
+your hardware, may be faster.
+<span id="index-FFTW_005fMEASURE-3"></span>
+<span id="index-FFTW_005fPATIENT-4"></span>
+</p>
+
+
+
+</body>
+</html>

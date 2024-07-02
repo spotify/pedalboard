@@ -1,0 +1,134 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>FFTW Execution in Fortran (FFTW 3.3.10)</title>
+
+<meta name="description" content="FFTW Execution in Fortran (FFTW 3.3.10)">
+<meta name="keywords" content="FFTW Execution in Fortran (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Calling-FFTW-from-Legacy-Fortran.html" rel="up" title="Calling FFTW from Legacy Fortran">
+<link href="Fortran-Examples.html" rel="next" title="Fortran Examples">
+<link href="FFTW-Constants-in-Fortran.html" rel="prev" title="FFTW Constants in Fortran">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="FFTW-Execution-in-Fortran"></span><div class="header">
+<p>
+Next: <a href="Fortran-Examples.html" accesskey="n" rel="next">Fortran Examples</a>, Previous: <a href="FFTW-Constants-in-Fortran.html" accesskey="p" rel="prev">FFTW Constants in Fortran</a>, Up: <a href="Calling-FFTW-from-Legacy-Fortran.html" accesskey="u" rel="up">Calling FFTW from Legacy Fortran</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="FFTW-Execution-in-Fortran-1"></span><h3 class="section">8.3 FFTW Execution in Fortran</h3>
+
+<p>In C, in order to use a plan, one normally calls <code>fftw_execute</code>,
+which executes the plan to perform the transform on the input/output
+arrays passed when the plan was created (see <a href="Using-Plans.html">Using Plans</a>).  The
+corresponding subroutine call in legacy Fortran is:
+</p><div class="example">
+<pre class="example">        call dfftw_execute(plan)
+</pre></div>
+<span id="index-dfftw_005fexecute"></span>
+
+<p>However, we have had reports that this causes problems with some
+recent optimizing Fortran compilers.  The problem is, because the
+input/output arrays are not passed as explicit arguments to
+<code>dfftw_execute</code>, the semantics of Fortran (unlike C) allow the
+compiler to assume that the input/output arrays are not changed by
+<code>dfftw_execute</code>.  As a consequence, certain compilers end up
+optimizing out or repositioning the call to <code>dfftw_execute</code>,
+assuming incorrectly that it does nothing.
+</p>
+<p>There are various workarounds to this, but the safest and simplest
+thing is to not use <code>dfftw_execute</code> in Fortran.  Instead, use the
+functions described in <a href="New_002darray-Execute-Functions.html">New-array Execute Functions</a>, which take
+the input/output arrays as explicit arguments.  For example, if the
+plan is for a complex-data DFT and was created for the arrays
+<code>in</code> and <code>out</code>, you would do:
+</p><div class="example">
+<pre class="example">        call dfftw_execute_dft(plan, in, out)
+</pre></div>
+<span id="index-dfftw_005fexecute_005fdft"></span>
+
+<p>There are a few things to be careful of, however:
+</p>
+<ul>
+<li> You must use the correct type of execute function, matching the way
+the plan was created.  Complex DFT plans should use
+<code>dfftw_execute_dft</code>, Real-input (r2c) DFT plans should use use
+<code>dfftw_execute_dft_r2c</code>, and real-output (c2r) DFT plans should
+use <code>dfftw_execute_dft_c2r</code>.  The various r2r plans should use
+<code>dfftw_execute_r2r</code>.
+
+</li><li> You should normally pass the same input/output arrays that were used when
+creating the plan.  This is always safe.
+
+</li><li> <em>If</em> you pass <em>different</em> input/output arrays compared to
+those used when creating the plan, you must abide by all the
+restrictions of the new-array execute functions (see <a href="New_002darray-Execute-Functions.html">New-array Execute Functions</a>).  The most difficult of these, in Fortran, is the
+requirement that the new arrays have the same alignment as the
+original arrays, because there seems to be no way in legacy Fortran to obtain
+guaranteed-aligned arrays (analogous to <code>fftw_malloc</code> in C).  You
+can, of course, use the <code>FFTW_UNALIGNED</code> flag when creating the
+plan, in which case the plan does not depend on the alignment, but
+this may sacrifice substantial performance on architectures (like x86)
+with SIMD instructions (see <a href="SIMD-alignment-and-fftw_005fmalloc.html">SIMD alignment and fftw_malloc</a>).
+<span id="index-FFTW_005fUNALIGNED-3"></span>
+
+</li></ul>
+
+<hr>
+<div class="header">
+<p>
+Next: <a href="Fortran-Examples.html" accesskey="n" rel="next">Fortran Examples</a>, Previous: <a href="FFTW-Constants-in-Fortran.html" accesskey="p" rel="prev">FFTW Constants in Fortran</a>, Up: <a href="Calling-FFTW-from-Legacy-Fortran.html" accesskey="u" rel="up">Calling FFTW from Legacy Fortran</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

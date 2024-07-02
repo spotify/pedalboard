@@ -1,0 +1,334 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head><title>
+FFTW FAQ - Section 3
+</title>
+<link rev="made" href="mailto:fftw@fftw.org">
+<link rel="Contents" href="index.html">
+<link rel="Start" href="index.html">
+<link rel="Next" href="section4.html"><link rel="Previous" href="section2.html"><link rel="Bookmark" title="FFTW FAQ" href="index.html">
+</head><body text="#000000" bgcolor="#FFFFFF"><h1>
+FFTW FAQ - Section 3 <br>
+Using FFTW
+</h1>
+
+<ul>
+<li><a href="#fftw2to3" rel=subdocument>Q3.1. Why not support the FFTW 2 interface in FFTW
+3?</a>
+<li><a href="#planperarray" rel=subdocument>Q3.2. Why do FFTW 3 plans encapsulate the input/output arrays and not just
+the algorithm?</a>
+<li><a href="#slow" rel=subdocument>Q3.3. FFTW seems really slow.</a>
+<li><a href="#slows" rel=subdocument>Q3.4. FFTW slows down after repeated calls.</a>
+<li><a href="#segfault" rel=subdocument>Q3.5. An FFTW routine is crashing when I call it.</a>
+<li><a href="#fortran64" rel=subdocument>Q3.6. My Fortran program crashes when calling FFTW.</a>
+<li><a href="#conventions" rel=subdocument>Q3.7. FFTW gives results different from my old
+FFT.</a>
+<li><a href="#nondeterministic" rel=subdocument>Q3.8. FFTW gives different results between runs</a>
+<li><a href="#savePlans" rel=subdocument>Q3.9. Can I save FFTW's plans?</a>
+<li><a href="#whyscaled" rel=subdocument>Q3.10. Why does your inverse transform return a scaled
+result?</a>
+<li><a href="#centerorigin" rel=subdocument>Q3.11. How can I make FFTW put the origin (zero frequency) at the center of
+its output?</a>
+<li><a href="#imageaudio" rel=subdocument>Q3.12. How do I FFT an image/audio file in <i>foobar</i> format?</a>
+<li><a href="#linkfails" rel=subdocument>Q3.13. My program does not link (on Unix).</a>
+<li><a href="#linkheader" rel=subdocument>Q3.14. I included your header, but linking still
+fails.</a>
+<li><a href="#nostack" rel=subdocument>Q3.15. My program crashes, complaining about stack
+space.</a>
+<li><a href="#leaks" rel=subdocument>Q3.16. FFTW seems to have a memory leak.</a>
+<li><a href="#allzero" rel=subdocument>Q3.17. The output of FFTW's transform is all zeros.</a>
+<li><a href="#vbetalia" rel=subdocument>Q3.18. How do I call FFTW from the Microsoft language du
+jour?</a>
+<li><a href="#pruned" rel=subdocument>Q3.19. Can I compute only a subset of the DFT outputs?</a>
+<li><a href="#transpose" rel=subdocument>Q3.20. Can I use FFTW's routines for in-place and out-of-place matrix
+transposition?</a>
+</ul><hr>
+
+<h2><A name="fftw2to3">
+Question 3.1.  Why not support the FFTW 2 interface in FFTW
+3?
+</A></h2>
+
+FFTW 3 has semantics incompatible with earlier versions: its plans can
+only be used for a given stride, multiplicity, and other
+characteristics of the input and output arrays; these stronger
+semantics are necessary for performance reasons.  Thus, it is
+impossible to efficiently emulate the older interface (whose plans can
+be used for any transform of the same size).  We believe that it
+should be possible to upgrade most programs without any difficulty,
+however.  
+<h2><A name="planperarray">
+Question 3.2.  Why do FFTW 3 plans encapsulate the input/output arrays
+and not just the algorithm?
+</A></h2>
+
+There are several reasons: 
+<ul>
+<li>It was important for performance reasons that the plan be specific to
+array characteristics like the stride (and alignment, for SIMD), and
+requiring that the user maintain these invariants is error prone. 
+
+<li>In most high-performance applications, as far as we can tell, you are
+usually transforming the same array over and over, so FFTW's semantics
+should not be a burden.  
+<li>If you need to transform another array of the same size, creating a
+new plan once the first exists is a cheap operation. 
+
+<li>If you need to transform many arrays of the same size at once, you
+should really use the <code>plan_many</code> routines in FFTW's &quot;advanced&quot;
+interface.  
+<li>If the abovementioned array characteristics are the same, you are
+willing to pay close attention to the documentation, and you really
+need to, we provide a &quot;new-array execution&quot; interface to
+apply a plan to a new array.  
+</ul>
+
+<h2><A name="slow">
+Question 3.3.  FFTW seems really slow.
+</A></h2>
+
+You are probably recreating the plan before every transform, rather
+than creating it once and reusing it for all transforms of the same
+size.  FFTW is designed to be used in the following way:
+
+<ul>
+<li>First, you create a plan.  This will take several seconds. 
+
+<li>Then, you reuse the plan many times to perform FFTs.  These are fast. 
+
+</ul>
+If you don't need to compute many transforms and the time for the
+planner is significant, you have two options.  First, you can use the
+<code>FFTW_ESTIMATE</code> option in the planner, which uses heuristics
+instead of runtime measurements and produces a good plan in a short
+time.  Second, you can use the wisdom feature to precompute the plan;
+see <A href="#savePlans">Q3.9 `Can I save FFTW's plans?'</A> 
+<h2><A name="slows">
+Question 3.4.  FFTW slows down after repeated
+calls.
+</A></h2>
+
+Probably, NaNs or similar are creeping into your data, and the
+slowdown is due to the resulting floating-point exceptions.  For
+example, be aware that repeatedly FFTing the same array is a diverging
+process (because FFTW computes the unnormalized transform). 
+
+<h2><A name="segfault">
+Question 3.5.  An FFTW routine is crashing when I call
+it.
+</A></h2>
+
+Did the FFTW test programs pass (<code>make check</code>, or <code>cd tests; make bigcheck</code> if you want to be paranoid)?  If so, you almost
+certainly have a bug in your own code.  For example, you could be
+passing invalid arguments (such as wrongly-sized arrays) to FFTW, or
+you could simply have memory corruption elsewhere in your program that
+causes random crashes later on.  Please don't complain to us unless
+you can come up with a minimal self-contained program (preferably
+under 30 lines) that illustrates the problem. 
+
+<h2><A name="fortran64">
+Question 3.6.  My Fortran program crashes when calling
+FFTW.
+</A></h2>
+
+As described in the manual, on 64-bit machines you must store the
+plans in variables large enough to hold a pointer, for example
+<code>integer*8</code>.  We recommend using <code>integer*8</code> on 32-bit machines as well, to simplify porting. 
+
+<h2><A name="conventions">
+Question 3.7.  FFTW gives results different from my old
+FFT.
+</A></h2>
+
+People follow many different conventions for the DFT, and you should
+be sure to know the ones that we use (described in the FFTW manual). 
+In particular, you should be aware that the
+<code>FFTW_FORWARD</code>/<code>FFTW_BACKWARD</code> directions correspond to signs of -1/+1 in the exponent of the DFT definition. 
+(<i>Numerical Recipes</i> uses the opposite convention.)   
+<p>
+You should also know that we compute an unnormalized transform.  In
+contrast, Matlab is an example of program that computes a normalized
+transform.  See <A href="#whyscaled">Q3.10 `Why does your inverse transform return a scaled
+result?'</A>.  
+<p>
+Finally, note that floating-point arithmetic is not exact, so
+different FFT algorithms will give slightly different results (on the
+order of the numerical accuracy; typically a fractional difference of
+1e-15 or so in double precision).  
+<h2><A name="nondeterministic">
+Question 3.8.  FFTW gives different results between
+runs
+</A></h2>
+
+If you use <code>FFTW_MEASURE</code> or <code>FFTW_PATIENT</code> mode, then the algorithm FFTW employs is not deterministic: it depends on
+runtime performance measurements.  This will cause the results to vary
+slightly from run to run.  However, the differences should be slight,
+on the order of the floating-point precision, and therefore should
+have no practical impact on most applications. 
+
+<p>
+If you use saved plans (wisdom) or <code>FFTW_ESTIMATE</code> mode, however, then the algorithm is deterministic and the results should be
+identical between runs.  
+<h2><A name="savePlans">
+Question 3.9.  Can I save FFTW's plans?
+</A></h2>
+
+Yes. Starting with version 1.2, FFTW provides the
+<code>wisdom</code> mechanism for saving plans; see the FFTW manual. 
+
+<h2><A name="whyscaled">
+Question 3.10.  Why does your inverse transform return a scaled
+result?
+</A></h2>
+
+Computing the forward transform followed by the backward transform (or
+vice versa) yields the original array scaled by the size of the array.
+ (For multi-dimensional transforms, the size of the array is the
+product of the dimensions.)  We could, instead, have chosen a
+normalization that would have returned the unscaled array. Or, to
+accomodate the many conventions in this matter, the transform routines
+could have accepted a &quot;scale factor&quot; parameter. We did not
+do this, however, for two reasons. First, we didn't want to sacrifice
+performance in the common case where the scale factor is 1. Second, in
+real applications the FFT is followed or preceded by some computation
+on the data, into which the scale factor can typically be absorbed at
+little or no cost.  
+<h2><A name="centerorigin">
+Question 3.11.  How can I make FFTW put the origin (zero frequency) at
+the center of its output?
+</A></h2>
+
+For human viewing of a spectrum, it is often convenient to put the
+origin in frequency space at the center of the output array, rather
+than in the zero-th element (the default in FFTW).  If all of the
+dimensions of your array are even, you can accomplish this by simply
+multiplying each element of the input array by (-1)^(i + j + ...),
+where i, j, etcetera are the indices of the element.  (This trick is a
+general property of the DFT, and is not specific to FFTW.)
+
+<h2><A name="imageaudio">
+Question 3.12.  How do I FFT an image/audio file in
+<i>foobar</i> format?
+</A></h2>
+
+FFTW performs an FFT on an array of floating-point values.  You can
+certainly use it to compute the transform of an image or audio stream,
+but you are responsible for figuring out your data format and
+converting it to the form FFTW requires. 
+
+<h2><A name="linkfails">
+Question 3.13.  My program does not link (on
+Unix).
+</A></h2>
+
+The libraries must be listed in the correct order
+(<code>-lfftw3 -lm</code> for FFTW 3.x) and <i>after</i> your program sources/objects.  (The general rule is that if <i>A</i> uses <i>B</i>, then <i>A</i> must be listed before <i>B</i> in the link command.).  
+<h2><A name="linkheader">
+Question 3.14.  I included your header, but linking still
+fails.
+</A></h2>
+
+You're a C++ programmer, aren't you?  You have to compile the FFTW
+library and link it into your program, not just
+<code>#include &lt;fftw3.h&gt;</code>.  (Yes, this is really a FAQ.) 
+<h2><A name="nostack">
+Question 3.15.  My program crashes, complaining about stack
+space.
+</A></h2>
+
+You cannot declare large arrays with automatic storage (e.g. via
+<code>fftw_complex array[N]</code>); you should use <code>fftw_malloc</code> (or equivalent) to allocate the arrays you want
+to transform if they are larger than a few hundred elements. 
+
+<h2><A name="leaks">
+Question 3.16.  FFTW seems to have a memory
+leak.
+</A></h2>
+
+After you create a plan, FFTW caches the information required to
+quickly recreate the plan.  (See <A href="#savePlans">Q3.9 `Can I save FFTW's plans?'</A>) It also maintains a small amount of other persistent memory.  You can deallocate all of
+FFTW's internally allocated memory, if you wish, by calling
+<code>fftw_cleanup()</code>, as documented in the manual.  
+<h2><A name="allzero">
+Question 3.17.  The output of FFTW's transform is all
+zeros.
+</A></h2>
+
+You should initialize your input array <i>after</i> creating the plan, unless you use <code>FFTW_ESTIMATE</code>: planning with <code>FFTW_MEASURE</code> or <code>FFTW_PATIENT</code> overwrites the input/output arrays, as described in the manual. 
+
+<h2><A name="vbetalia">
+Question 3.18.  How do I call FFTW from the Microsoft language du
+jour?
+</A></h2>
+
+Please <i>do not</i> ask us Windows-specific questions.  We do not
+use Windows.  We know nothing about Visual Basic, Visual C++, or .NET.
+ Please find the appropriate Usenet discussion group and ask your
+question there.  See also <A href="section2.html#runOnWindows">Q2.2 `Does FFTW run on Windows?'</A>.  
+<h2><A name="pruned">
+Question 3.19.  Can I compute only a subset of the DFT
+outputs?
+</A></h2>
+
+In general, no, an FFT intrinsically computes all outputs from all
+inputs.  In principle, there is something called a
+<i>pruned FFT</i> that can do what you want, but to compute K outputs out of N the
+complexity is in general O(N log K) instead of O(N log N), thus saving
+only a small additive factor in the log.  (The same argument holds if
+you instead have only K nonzero inputs.)
+
+<p>
+There are some specific cases in which you can get the O(N log K)
+performance benefits easily, however, by combining a few ordinary
+FFTs.  In particular, the case where you want the first K outputs,
+where K divides N, can be handled by performing N/K transforms of size
+K and then summing the outputs multiplied by appropriate phase
+factors.  For more details, see <A href="http://www.fftw.org/pruned.html">pruned FFTs with FFTW</A>.  
+<p>
+There are also some algorithms that compute pruned transforms
+<i>approximately</i>, but they are beyond the scope of this FAQ. 
+
+<h2><A name="transpose">
+Question 3.20.  Can I use FFTW's routines for in-place and
+out-of-place matrix transposition?
+</A></h2>
+
+You can use the FFTW guru interface to create a rank-0 transform of
+vector rank 2 where the vector strides are transposed.  (A rank-0
+transform is equivalent to a 1D transform of size 1, which.  just
+copies the input into the output.)  Specifying the same location for
+the input and output makes the transpose in-place. 
+
+<p>
+For double-valued data stored in row-major format, plan creation looks
+like this: <pre>
+fftw_plan plan_transpose(int rows, int cols, double *in, double *out)
+{
+    const unsigned flags = FFTW_ESTIMATE; /* other flags are possible */
+    fftw_iodim howmany_dims[2];
+
+    howmany_dims[0].n  = rows;
+    howmany_dims[0].is = cols;
+    howmany_dims[0].os = 1;
+
+    howmany_dims[1].n  = cols;
+    howmany_dims[1].is = 1;
+    howmany_dims[1].os = rows;
+
+    return fftw_plan_guru_r2r(/*rank=*/ 0, /*dims=*/ NULL,
+                              /*howmany_rank=*/ 2, howmany_dims,
+                              in, out, /*kind=*/ NULL, flags);
+}
+</pre>
+(This entry was written by Rhys Ulerich.)
+<hr>
+Next: <a href="section4.html" rel=precedes>Internals of FFTW</a>.<br>
+Back: <a href="section2.html" rev=precedes>Installing FFTW</a>.<br>
+<a href="index.html" rev=subdocument>Return to contents</a>.<p>
+<address>
+<A href="http://www.fftw.org">Matteo Frigo and Steven G. Johnson</A> / <A href="mailto:fftw@fftw.org">fftw@fftw.org</A>
+- 14 September 2021
+</address><br>
+Extracted from FFTW Frequently Asked Questions with Answers,
+Copyright &copy; 2021 Matteo Frigo and Massachusetts Institute of Technology.
+</body></html>

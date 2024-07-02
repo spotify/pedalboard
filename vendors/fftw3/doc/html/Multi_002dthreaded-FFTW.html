@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Multi-threaded FFTW (FFTW 3.3.10)</title>
+
+<meta name="description" content="Multi-threaded FFTW (FFTW 3.3.10)">
+<meta name="keywords" content="Multi-threaded FFTW (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Installation-and-Supported-Hardware_002fSoftware.html" rel="next" title="Installation and Supported Hardware/Software">
+<link href="Multi_002ddimensional-Transforms.html" rel="prev" title="Multi-dimensional Transforms">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Multi_002dthreaded-FFTW"></span><div class="header">
+<p>
+Next: <a href="Distributed_002dmemory-FFTW-with-MPI.html" accesskey="n" rel="next">Distributed-memory FFTW with MPI</a>, Previous: <a href="FFTW-Reference.html" accesskey="p" rel="prev">FFTW Reference</a>, Up: <a href="index.html" accesskey="u" rel="up">Top</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Multi_002dthreaded-FFTW-1"></span><h2 class="chapter">5 Multi-threaded FFTW</h2>
+
+<span id="index-parallel-transform"></span>
+<p>In this chapter we document the parallel FFTW routines for
+shared-memory parallel hardware.  These routines, which support
+parallel one- and multi-dimensional transforms of both real and
+complex data, are the easiest way to take advantage of multiple
+processors with FFTW.  They work just like the corresponding
+uniprocessor transform routines, except that you have an extra
+initialization routine to call, and there is a routine to set the
+number of threads to employ.  Any program that uses the uniprocessor
+FFTW can therefore be trivially modified to use the multi-threaded
+FFTW.
+</p>
+<p>A shared-memory machine is one in which all CPUs can directly access
+the same main memory, and such machines are now common due to the
+ubiquity of multi-core CPUs.  FFTW&rsquo;s multi-threading support allows
+you to utilize these additional CPUs transparently from a single
+program.  However, this does not necessarily translate into
+performance gains&mdash;when multiple threads/CPUs are employed, there is
+an overhead required for synchronization that may outweigh the
+computatational parallelism.  Therefore, you can only benefit from
+threads if your problem is sufficiently large.
+<span id="index-shared_002dmemory"></span>
+<span id="index-threads"></span>
+</p>
+<table class="menu" border="0" cellspacing="0">
+<tr><td align="left" valign="top">&bull; <a href="Installation-and-Supported-Hardware_002fSoftware.html" accesskey="1">Installation and Supported Hardware/Software</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Usage-of-Multi_002dthreaded-FFTW.html" accesskey="2">Usage of Multi-threaded FFTW</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="How-Many-Threads-to-Use_003f.html" accesskey="3">How Many Threads to Use?</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Thread-safety.html" accesskey="4">Thread safety</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+</table>
+
+
+
+
+</body>
+</html>

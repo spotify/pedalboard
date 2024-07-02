@@ -1,0 +1,399 @@
+@node Other Important Topics, FFTW Reference, Tutorial, Top
+@chapter Other Important Topics
+@menu
+* SIMD alignment and fftw_malloc::
+* Multi-dimensional Array Format::
+* Words of Wisdom-Saving Plans::
+* Caveats in Using Wisdom::
+@end menu
+
+@c ------------------------------------------------------------
+@node SIMD alignment and fftw_malloc, Multi-dimensional Array Format, Other Important Topics, Other Important Topics
+@section SIMD alignment and fftw_malloc
+
+SIMD, which stands for ``Single Instruction Multiple Data,'' is a set of
+special operations supported by some processors to perform a single
+operation on several numbers (usually 2 or 4) simultaneously.  SIMD
+floating-point instructions are available on several popular CPUs:
+SSE/SSE2/AVX/AVX2/AVX512/KCVI on some x86/x86-64 processors, AltiVec and
+VSX on some POWER/PowerPCs, NEON on some ARM models.  FFTW can be
+compiled to support the SIMD instructions on any of these systems.
+@cindex SIMD
+@cindex SSE
+@cindex SSE2
+@cindex AVX
+@cindex AVX2
+@cindex AVX512
+@cindex AltiVec
+@cindex VSX
+@cindex precision
+
+
+A program linking to an FFTW library compiled with SIMD support can
+obtain a nonnegligible speedup for most complex and r2c/c2r
+transforms.  In order to obtain this speedup, however, the arrays of
+complex (or real) data passed to FFTW must be specially aligned in
+memory (typically 16-byte aligned), and often this alignment is more
+stringent than that provided by the usual @code{malloc} (etc.)
+allocation routines.
+
+@cindex portability
+In order to guarantee proper alignment for SIMD, therefore, in case
+your program is ever linked against a SIMD-using FFTW, we recommend
+allocating your transform data with @code{fftw_malloc} and
+de-allocating it with @code{fftw_free}.
+@findex fftw_malloc
+@findex fftw_free
+These have exactly the same interface and behavior as
+@code{malloc}/@code{free}, except that for a SIMD FFTW they ensure
+that the returned pointer has the necessary alignment (by calling
+@code{memalign} or its equivalent on your OS).
+
+You are not @emph{required} to use @code{fftw_malloc}.  You can
+allocate your data in any way that you like, from @code{malloc} to
+@code{new} (in C++) to a fixed-size array declaration.  If the array
+happens not to be properly aligned, FFTW will not use the SIMD
+extensions.
+@cindex C++
+
+@findex fftw_alloc_real
+@findex fftw_alloc_complex
+Since @code{fftw_malloc} only ever needs to be used for real and
+complex arrays, we provide two convenient wrapper routines
+@code{fftw_alloc_real(N)} and @code{fftw_alloc_complex(N)} that are
+equivalent to @code{(double*)fftw_malloc(sizeof(double) * N)} and
+@code{(fftw_complex*)fftw_malloc(sizeof(fftw_complex) * N)},
+respectively (or their equivalents in other precisions).
+
+@c ------------------------------------------------------------
+@node Multi-dimensional Array Format, Words of Wisdom-Saving Plans, SIMD alignment and fftw_malloc, Other Important Topics
+@section Multi-dimensional Array Format
+
+This section describes the format in which multi-dimensional arrays
+are stored in FFTW.  We felt that a detailed discussion of this topic
+was necessary.  Since several different formats are common, this topic
+is often a source of confusion.
+
+@menu
+* Row-major Format::
+* Column-major Format::
+* Fixed-size Arrays in C::
+* Dynamic Arrays in C::
+* Dynamic Arrays in C-The Wrong Way::
+@end menu
+
+@c =========>
+@node Row-major Format, Column-major Format, Multi-dimensional Array Format, Multi-dimensional Array Format
+@subsection Row-major Format
+@cindex row-major
+
+The multi-dimensional arrays passed to @code{fftw_plan_dft} etcetera
+are expected to be stored as a single contiguous block in
+@dfn{row-major} order (sometimes called ``C order'').  Basically, this
+means that as you step through adjacent memory locations, the first
+dimension's index varies most slowly and the last dimension's index
+varies most quickly.
+
+To be more explicit, let us consider an array of rank @math{d} whose
+dimensions are @ndims{}. Now, we specify a location in the array by a
+sequence of @math{d} (zero-based) indices, one for each dimension:
+@tex
+$(i_0, i_1, i_2, \ldots, i_{d-1})$.
+@end tex
+@ifinfo
+(i[0], i[1], ..., i[d-1]).
+@end ifinfo
+@html
+(i<sub>0</sub>, i<sub>1</sub>, i<sub>2</sub>,..., i<sub>d-1</sub>).
+@end html
+If the array is stored in row-major
+order, then this element is located at the position
+@tex
+$i_{d-1} + n_{d-1} (i_{d-2} + n_{d-2} (\ldots + n_1 i_0))$.
+@end tex
+@ifinfo
+i[d-1] + n[d-1] * (i[d-2] + n[d-2] * (... + n[1] * i[0])).
+@end ifinfo
+@html
+i<sub>d-1</sub> + n<sub>d-1</sub> * (i<sub>d-2</sub> + n<sub>d-2</sub> * (... + n<sub>1</sub> * i<sub>0</sub>)).
+@end html
+
+Note that, for the ordinary complex DFT, each element of the array
+must be of type @code{fftw_complex}; i.e. a (real, imaginary) pair of
+(double-precision) numbers. 
+
+In the advanced FFTW interface, the physical dimensions @math{n} from
+which the indices are computed can be different from (larger than)
+the logical dimensions of the transform to be computed, in order to
+transform a subset of a larger array.
+@cindex advanced interface
+Note also that, in the advanced interface, the expression above is
+multiplied by a @dfn{stride} to get the actual array index---this is
+useful in situations where each element of the multi-dimensional array
+is actually a data structure (or another array), and you just want to
+transform a single field. In the basic interface, however, the stride
+is 1.
+@cindex stride
+
+@c =========>
+@node Column-major Format, Fixed-size Arrays in C, Row-major Format, Multi-dimensional Array Format
+@subsection Column-major Format
+@cindex column-major
+
+Readers from the Fortran world are used to arrays stored in
+@dfn{column-major} order (sometimes called ``Fortran order'').  This is
+essentially the exact opposite of row-major order in that, here, the
+@emph{first} dimension's index varies most quickly.
+
+If you have an array stored in column-major order and wish to
+transform it using FFTW, it is quite easy to do.  When creating the
+plan, simply pass the dimensions of the array to the planner in
+@emph{reverse order}.  For example, if your array is a rank three
+@code{N x M x L} matrix in column-major order, you should pass the
+dimensions of the array as if it were an @code{L x M x N} matrix
+(which it is, from the perspective of FFTW).  This is done for you
+@emph{automatically} by the FFTW legacy-Fortran interface
+(@pxref{Calling FFTW from Legacy Fortran}), but you must do it
+manually with the modern Fortran interface (@pxref{Reversing array
+dimensions}).
+@cindex Fortran interface
+
+@c =========>
+@node Fixed-size Arrays in C, Dynamic Arrays in C, Column-major Format, Multi-dimensional Array Format
+@subsection Fixed-size Arrays in C
+@cindex C multi-dimensional arrays
+
+A multi-dimensional array whose size is declared at compile time in C
+is @emph{already} in row-major order.  You don't have to do anything
+special to transform it.  For example:
+
+@example
+@{
+     fftw_complex data[N0][N1][N2];
+     fftw_plan plan;
+     ...
+     plan = fftw_plan_dft_3d(N0, N1, N2, &data[0][0][0], &data[0][0][0],
+                             FFTW_FORWARD, FFTW_ESTIMATE);
+     ...
+@}
+@end example
+
+This will plan a 3d in-place transform of size @code{N0 x N1 x N2}.
+Notice how we took the address of the zero-th element to pass to the
+planner (we could also have used a typecast).
+
+However, we tend to @emph{discourage} users from declaring their
+arrays in this way, for two reasons.  First, this allocates the array
+on the stack (``automatic'' storage), which has a very limited size on
+most operating systems (declaring an array with more than a few
+thousand elements will often cause a crash).  (You can get around this
+limitation on many systems by declaring the array as
+@code{static} and/or global, but that has its own drawbacks.)
+Second, it may not optimally align the array for use with a SIMD
+FFTW (@pxref{SIMD alignment and fftw_malloc}).  Instead, we recommend
+using @code{fftw_malloc}, as described below.
+
+@c =========>
+@node Dynamic Arrays in C, Dynamic Arrays in C-The Wrong Way, Fixed-size Arrays in C, Multi-dimensional Array Format
+@subsection Dynamic Arrays in C
+
+We recommend allocating most arrays dynamically, with
+@code{fftw_malloc}.  This isn't too hard to do, although it is not as
+straightforward for multi-dimensional arrays as it is for
+one-dimensional arrays.
+
+Creating the array is simple: using a dynamic-allocation routine like
+@code{fftw_malloc}, allocate an array big enough to store N
+@code{fftw_complex} values (for a complex DFT), where N is the product
+of the sizes of the array dimensions (i.e. the total number of complex
+values in the array).  For example, here is code to allocate a
+@threedims{5,12,27} rank-3 array:
+@findex fftw_malloc
+
+@example
+fftw_complex *an_array;
+an_array = (fftw_complex*) fftw_malloc(5*12*27 * sizeof(fftw_complex));
+@end example
+
+Accessing the array elements, however, is more tricky---you can't
+simply use multiple applications of the @samp{[]} operator like you
+could for fixed-size arrays.  Instead, you have to explicitly compute
+the offset into the array using the formula given earlier for
+row-major arrays.  For example, to reference the @math{(i,j,k)}-th
+element of the array allocated above, you would use the expression
+@code{an_array[k + 27 * (j + 12 * i)]}.
+
+This pain can be alleviated somewhat by defining appropriate macros,
+or, in C++, creating a class and overloading the @samp{()} operator.
+The recent C99 standard provides a way to reinterpret the dynamic
+array as a ``variable-length'' multi-dimensional array amenable to
+@samp{[]}, but this feature is not yet widely supported by compilers.
+@cindex C99
+@cindex C++
+
+@c =========>
+@node Dynamic Arrays in C-The Wrong Way,  , Dynamic Arrays in C, Multi-dimensional Array Format
+@subsection Dynamic Arrays in C---The Wrong Way
+
+A different method for allocating multi-dimensional arrays in C is
+often suggested that is incompatible with FFTW: @emph{using it will
+cause FFTW to die a painful death}.  We discuss the technique here,
+however, because it is so commonly known and used.  This method is to
+create arrays of pointers of arrays of pointers of @dots{}etcetera.
+For example, the analogue in this method to the example above is:
+
+@example
+int i,j;
+fftw_complex ***a_bad_array;  /* @r{another way to make a 5x12x27 array} */
+
+a_bad_array = (fftw_complex ***) malloc(5 * sizeof(fftw_complex **));
+for (i = 0; i < 5; ++i) @{
+     a_bad_array[i] = 
+        (fftw_complex **) malloc(12 * sizeof(fftw_complex *));
+     for (j = 0; j < 12; ++j)
+          a_bad_array[i][j] =
+                (fftw_complex *) malloc(27 * sizeof(fftw_complex));
+@}
+@end example
+
+As you can see, this sort of array is inconvenient to allocate (and
+deallocate).  On the other hand, it has the advantage that the
+@math{(i,j,k)}-th element can be referenced simply by
+@code{a_bad_array[i][j][k]}.
+
+If you like this technique and want to maximize convenience in accessing
+the array, but still want to pass the array to FFTW, you can use a
+hybrid method.  Allocate the array as one contiguous block, but also
+declare an array of arrays of pointers that point to appropriate places
+in the block.  That sort of trick is beyond the scope of this
+documentation; for more information on multi-dimensional arrays in C,
+see the @code{comp.lang.c}
+@uref{http://c-faq.com/aryptr/dynmuldimary.html, FAQ}.
+
+@c ------------------------------------------------------------
+@node Words of Wisdom-Saving Plans, Caveats in Using Wisdom, Multi-dimensional Array Format, Other Important Topics
+@section Words of Wisdom---Saving Plans
+@cindex wisdom
+@cindex saving plans to disk
+
+FFTW implements a method for saving plans to disk and restoring them.
+In fact, what FFTW does is more general than just saving and loading
+plans.  The mechanism is called @dfn{wisdom}.  Here, we describe
+this feature at a high level. @xref{FFTW Reference}, for a less casual
+but more complete discussion of how to use wisdom in FFTW.
+
+Plans created with the @code{FFTW_MEASURE}, @code{FFTW_PATIENT}, or
+@code{FFTW_EXHAUSTIVE} options produce near-optimal FFT performance,
+but may require a long time to compute because FFTW must measure the
+runtime of many possible plans and select the best one.  This setup is
+designed for the situations where so many transforms of the same size
+must be computed that the start-up time is irrelevant.  For short
+initialization times, but slower transforms, we have provided
+@code{FFTW_ESTIMATE}.  The @code{wisdom} mechanism is a way to get the
+best of both worlds: you compute a good plan once, save it to
+disk, and later reload it as many times as necessary.  The wisdom
+mechanism can actually save and reload many plans at once, not just
+one.
+@ctindex FFTW_MEASURE
+@ctindex FFTW_PATIENT
+@ctindex FFTW_EXHAUSTIVE
+@ctindex FFTW_ESTIMATE
+
+
+Whenever you create a plan, the FFTW planner accumulates wisdom, which
+is information sufficient to reconstruct the plan.  After planning,
+you can save this information to disk by means of the function:
+@example
+int fftw_export_wisdom_to_filename(const char *filename);
+@end example
+@findex fftw_export_wisdom_to_filename
+(This function returns non-zero on success.)
+
+The next time you run the program, you can restore the wisdom with
+@code{fftw_import_wisdom_from_filename} (which also returns non-zero on success),
+and then recreate the plan using the same flags as before.
+@example
+int fftw_import_wisdom_from_filename(const char *filename);
+@end example
+@findex fftw_import_wisdom_from_filename
+
+Wisdom is automatically used for any size to which it is applicable, as
+long as the planner flags are not more ``patient'' than those with which
+the wisdom was created.  For example, wisdom created with
+@code{FFTW_MEASURE} can be used if you later plan with
+@code{FFTW_ESTIMATE} or @code{FFTW_MEASURE}, but not with
+@code{FFTW_PATIENT}.
+
+The @code{wisdom} is cumulative, and is stored in a global, private
+data structure managed internally by FFTW.  The storage space required
+is minimal, proportional to the logarithm of the sizes the wisdom was
+generated from.  If memory usage is a concern, however, the wisdom can
+be forgotten and its associated memory freed by calling:
+@example
+void fftw_forget_wisdom(void);
+@end example
+@findex fftw_forget_wisdom
+
+Wisdom can be exported to a file, a string, or any other medium.
+For details, see @ref{Wisdom}.
+
+@node Caveats in Using Wisdom,  , Words of Wisdom-Saving Plans, Other Important Topics
+@section Caveats in Using Wisdom
+@cindex wisdom, problems with
+
+@quotation
+@html
+<i>
+@end html
+For in much wisdom is much grief, and he that increaseth knowledge
+increaseth sorrow.
+@html
+</i>
+@end html
+[Ecclesiastes 1:18]
+@cindex Ecclesiastes
+@end quotation
+@iftex
+@medskip
+@end iftex
+
+@cindex portability
+There are pitfalls to using wisdom, in that it can negate FFTW's
+ability to adapt to changing hardware and other conditions. For
+example, it would be perfectly possible to export wisdom from a
+program running on one processor and import it into a program running
+on another processor.  Doing so, however, would mean that the second
+program would use plans optimized for the first processor, instead of
+the one it is running on.
+
+It should be safe to reuse wisdom as long as the hardware and program
+binaries remain unchanged. (Actually, the optimal plan may change even
+between runs of the same binary on identical hardware, due to
+differences in the virtual memory environment, etcetera.  Users
+seriously interested in performance should worry about this problem,
+too.)  It is likely that, if the same wisdom is used for two
+different program binaries, even running on the same machine, the
+plans may be sub-optimal because of differing code alignments.  It is
+therefore wise to recreate wisdom every time an application is
+recompiled.  The more the underlying hardware and software changes
+between the creation of wisdom and its use, the greater grows
+the risk of sub-optimal plans.
+
+Nevertheless, if the choice is between using @code{FFTW_ESTIMATE} or
+using possibly-suboptimal wisdom (created on the same machine, but for a
+different binary), the wisdom is likely to be better.  For this reason,
+we provide a function to import wisdom from a standard system-wide
+location (@code{/etc/fftw/wisdom} on Unix):
+@cindex wisdom, system-wide
+
+@example
+int fftw_import_system_wisdom(void);
+@end example
+@findex fftw_import_system_wisdom
+
+FFTW also provides a standalone program, @code{fftw-wisdom} (described
+by its own @code{man} page on Unix) with which users can create wisdom,
+e.g. for a canonical set of sizes to store in the system wisdom file.
+@xref{Wisdom Utilities}.
+@cindex fftw-wisdom utility
+

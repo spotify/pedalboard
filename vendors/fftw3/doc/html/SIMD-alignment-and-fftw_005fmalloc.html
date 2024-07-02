@@ -1,0 +1,132 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>SIMD alignment and fftw_malloc (FFTW 3.3.10)</title>
+
+<meta name="description" content="SIMD alignment and fftw_malloc (FFTW 3.3.10)">
+<meta name="keywords" content="SIMD alignment and fftw_malloc (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Other-Important-Topics.html" rel="up" title="Other Important Topics">
+<link href="Multi_002ddimensional-Array-Format.html" rel="next" title="Multi-dimensional Array Format">
+<link href="Other-Important-Topics.html" rel="prev" title="Other Important Topics">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="SIMD-alignment-and-fftw_005fmalloc"></span><div class="header">
+<p>
+Next: <a href="Multi_002ddimensional-Array-Format.html" accesskey="n" rel="next">Multi-dimensional Array Format</a>, Previous: <a href="Other-Important-Topics.html" accesskey="p" rel="prev">Other Important Topics</a>, Up: <a href="Other-Important-Topics.html" accesskey="u" rel="up">Other Important Topics</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="SIMD-alignment-and-fftw_005fmalloc-1"></span><h3 class="section">3.1 SIMD alignment and fftw_malloc</h3>
+
+<p>SIMD, which stands for &ldquo;Single Instruction Multiple Data,&rdquo; is a set of
+special operations supported by some processors to perform a single
+operation on several numbers (usually 2 or 4) simultaneously.  SIMD
+floating-point instructions are available on several popular CPUs:
+SSE/SSE2/AVX/AVX2/AVX512/KCVI on some x86/x86-64 processors, AltiVec and
+VSX on some POWER/PowerPCs, NEON on some ARM models.  FFTW can be
+compiled to support the SIMD instructions on any of these systems.
+<span id="index-SIMD-1"></span>
+<span id="index-SSE"></span>
+<span id="index-SSE2"></span>
+<span id="index-AVX"></span>
+<span id="index-AVX2"></span>
+<span id="index-AVX512"></span>
+<span id="index-AltiVec"></span>
+<span id="index-VSX"></span>
+<span id="index-precision-2"></span>
+</p>
+
+<p>A program linking to an FFTW library compiled with SIMD support can
+obtain a nonnegligible speedup for most complex and r2c/c2r
+transforms.  In order to obtain this speedup, however, the arrays of
+complex (or real) data passed to FFTW must be specially aligned in
+memory (typically 16-byte aligned), and often this alignment is more
+stringent than that provided by the usual <code>malloc</code> (etc.)
+allocation routines.
+</p>
+<span id="index-portability"></span>
+<p>In order to guarantee proper alignment for SIMD, therefore, in case
+your program is ever linked against a SIMD-using FFTW, we recommend
+allocating your transform data with <code>fftw_malloc</code> and
+de-allocating it with <code>fftw_free</code>.
+<span id="index-fftw_005fmalloc-1"></span>
+<span id="index-fftw_005ffree-1"></span>
+These have exactly the same interface and behavior as
+<code>malloc</code>/<code>free</code>, except that for a SIMD FFTW they ensure
+that the returned pointer has the necessary alignment (by calling
+<code>memalign</code> or its equivalent on your OS).
+</p>
+<p>You are not <em>required</em> to use <code>fftw_malloc</code>.  You can
+allocate your data in any way that you like, from <code>malloc</code> to
+<code>new</code> (in C++) to a fixed-size array declaration.  If the array
+happens not to be properly aligned, FFTW will not use the SIMD
+extensions.
+<span id="index-C_002b_002b-1"></span>
+</p>
+<span id="index-fftw_005falloc_005freal"></span>
+<span id="index-fftw_005falloc_005fcomplex-1"></span>
+<p>Since <code>fftw_malloc</code> only ever needs to be used for real and
+complex arrays, we provide two convenient wrapper routines
+<code>fftw_alloc_real(N)</code> and <code>fftw_alloc_complex(N)</code> that are
+equivalent to <code>(double*)fftw_malloc(sizeof(double) * N)</code> and
+<code>(fftw_complex*)fftw_malloc(sizeof(fftw_complex) * N)</code>,
+respectively (or their equivalents in other precisions).
+</p>
+<hr>
+<div class="header">
+<p>
+Next: <a href="Multi_002ddimensional-Array-Format.html" accesskey="n" rel="next">Multi-dimensional Array Format</a>, Previous: <a href="Other-Important-Topics.html" accesskey="p" rel="prev">Other Important Topics</a>, Up: <a href="Other-Important-Topics.html" accesskey="u" rel="up">Other Important Topics</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Advanced Real-data DFTs (FFTW 3.3.10)</title>
+
+<meta name="description" content="Advanced Real-data DFTs (FFTW 3.3.10)">
+<meta name="keywords" content="Advanced Real-data DFTs (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Advanced-Interface.html" rel="up" title="Advanced Interface">
+<link href="Advanced-Real_002dto_002dreal-Transforms.html" rel="next" title="Advanced Real-to-real Transforms">
+<link href="Advanced-Complex-DFTs.html" rel="prev" title="Advanced Complex DFTs">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Advanced-Real_002ddata-DFTs"></span><div class="header">
+<p>
+Next: <a href="Advanced-Real_002dto_002dreal-Transforms.html" accesskey="n" rel="next">Advanced Real-to-real Transforms</a>, Previous: <a href="Advanced-Complex-DFTs.html" accesskey="p" rel="prev">Advanced Complex DFTs</a>, Up: <a href="Advanced-Interface.html" accesskey="u" rel="up">Advanced Interface</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Advanced-Real_002ddata-DFTs-1"></span><h4 class="subsection">4.4.2 Advanced Real-data DFTs</h4>
+
+<div class="example">
+<pre class="example">fftw_plan fftw_plan_many_dft_r2c(int rank, const int *n, int howmany,
+                                 double *in, const int *inembed,
+                                 int istride, int idist,
+                                 fftw_complex *out, const int *onembed,
+                                 int ostride, int odist,
+                                 unsigned flags);
+fftw_plan fftw_plan_many_dft_c2r(int rank, const int *n, int howmany,
+                                 fftw_complex *in, const int *inembed,
+                                 int istride, int idist,
+                                 double *out, const int *onembed,
+                                 int ostride, int odist,
+                                 unsigned flags);
+</pre></div>
+<span id="index-fftw_005fplan_005fmany_005fdft_005fr2c"></span>
+<span id="index-fftw_005fplan_005fmany_005fdft_005fc2r"></span>
+
+<p>Like <code>fftw_plan_many_dft</code>, these two functions add <code>howmany</code>,
+<code>nembed</code>, <code>stride</code>, and <code>dist</code> parameters to the
+<code>fftw_plan_dft_r2c</code> and <code>fftw_plan_dft_c2r</code> functions, but
+otherwise behave the same as the basic interface.
+</p>
+<p>The interpretation of <code>howmany</code>, <code>stride</code>, and <code>dist</code> are
+the same as for <code>fftw_plan_many_dft</code>, above.  Note that the
+<code>stride</code> and <code>dist</code> for the real array are in units of
+<code>double</code>, and for the complex array are in units of
+<code>fftw_complex</code>.
+</p>
+<p>If an <code>nembed</code> parameter is <code>NULL</code>, it is interpreted as what
+it would be in the basic interface, as described in <a href="Real_002ddata-DFT-Array-Format.html">Real-data DFT Array Format</a>.  That is, for the complex array the size is assumed to be
+the same as <code>n</code>, but with the last dimension cut roughly in half.
+For the real array, the size is assumed to be <code>n</code> if the transform
+is out-of-place, or <code>n</code> with the last dimension &ldquo;padded&rdquo; if the
+transform is in-place.
+</p>
+<p>If an <code>nembed</code> parameter is non-<code>NULL</code>, it is interpreted as
+the physical size of the corresponding array, in row-major order, just
+as for <code>fftw_plan_many_dft</code>.  In this case, each dimension of
+<code>nembed</code> should be <code>&gt;=</code> what it would be in the basic
+interface (e.g. the halved or padded <code>n</code>).
+</p>
+<p>Arrays <code>n</code>, <code>inembed</code>, and <code>onembed</code> are not used after
+this function returns.  You can safely free or reuse them.
+</p>
+<hr>
+<div class="header">
+<p>
+Next: <a href="Advanced-Real_002dto_002dreal-Transforms.html" accesskey="n" rel="next">Advanced Real-to-real Transforms</a>, Previous: <a href="Advanced-Complex-DFTs.html" accesskey="p" rel="prev">Advanced Complex DFTs</a>, Up: <a href="Advanced-Interface.html" accesskey="u" rel="up">Advanced Interface</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

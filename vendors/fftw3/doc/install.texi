@@ -1,0 +1,361 @@
+@node Installation and Customization, Acknowledgments, Upgrading from FFTW version 2, Top
+@chapter Installation and Customization
+@cindex installation
+
+This chapter describes the installation and customization of FFTW, the
+latest version of which may be downloaded from
+@uref{http://www.fftw.org, the FFTW home page}.
+
+In principle, FFTW should work on any system with an ANSI C compiler
+(@code{gcc} is fine).  However, planner time is drastically reduced if
+FFTW can exploit a hardware cycle counter; FFTW comes with cycle-counter
+support for all modern general-purpose CPUs, but you may need to add a
+couple of lines of code if your compiler is not yet supported
+(@pxref{Cycle Counters}).  (On Unix, there will be a warning at the end
+of the @code{configure} output if no cycle counter is found.)
+@cindex cycle counter
+@cindex compiler
+@cindex portability
+
+
+Installation of FFTW is simplest if you have a Unix or a GNU system,
+such as GNU/Linux, and we describe this case in the first section below,
+including the use of special configuration options to e.g. install
+different precisions or exploit optimizations for particular
+architectures (e.g. SIMD).  Compilation on non-Unix systems is a more
+manual process, but we outline the procedure in the second section.  It
+is also likely that pre-compiled binaries will be available for popular
+systems.
+
+Finally, we describe how you can customize FFTW for particular needs by
+generating @emph{codelets} for fast transforms of sizes not supported
+efficiently by the standard FFTW distribution.
+@cindex codelet
+
+@menu
+* Installation on Unix::
+* Installation on non-Unix systems::
+* Cycle Counters::
+* Generating your own code::
+@end menu
+
+@c ------------------------------------------------------------
+
+@node Installation on Unix, Installation on non-Unix systems, Installation and Customization, Installation and Customization
+@section Installation on Unix
+
+FFTW comes with a @code{configure} program in the GNU style.
+Installation can be as simple as:
+@fpindex configure
+
+@example
+./configure
+make
+make install
+@end example
+
+This will build the uniprocessor complex and real transform libraries
+along with the test programs.  (We recommend that you use GNU
+@code{make} if it is available; on some systems it is called
+@code{gmake}.)  The ``@code{make install}'' command installs the fftw
+and rfftw libraries in standard places, and typically requires root
+privileges (unless you specify a different install directory with the
+@code{--prefix} flag to @code{configure}).  You can also type
+``@code{make check}'' to put the FFTW test programs through their paces.
+If you have problems during configuration or compilation, you may want
+to run ``@code{make distclean}'' before trying again; this ensures that
+you don't have any stale files left over from previous compilation
+attempts.
+
+The @code{configure} script chooses the @code{gcc} compiler by default,
+if it is available; you can select some other compiler with:
+@example
+./configure CC="@r{@i{<the name of your C compiler>}}"
+@end example
+
+The @code{configure} script knows good @code{CFLAGS} (C compiler flags)
+@cindex compiler flags
+for a few systems.  If your system is not known, the @code{configure}
+script will print out a warning.  In this case, you should re-configure
+FFTW with the command
+@example
+./configure CFLAGS="@r{@i{<write your CFLAGS here>}}"
+@end example
+and then compile as usual.  If you do find an optimal set of
+@code{CFLAGS} for your system, please let us know what they are (along
+with the output of @code{config.guess}) so that we can include them in
+future releases.
+
+@code{configure} supports all the standard flags defined by the GNU
+Coding Standards; see the @code{INSTALL} file in FFTW or
+@uref{http://www.gnu.org/prep/standards/html_node/index.html, the GNU web page}.
+Note especially @code{--help} to list all flags and
+@code{--enable-shared} to create shared, rather than static, libraries.
+@code{configure} also accepts a few FFTW-specific flags, particularly:
+
+@itemize @bullet
+
+@item
+@cindex precision
+@code{--enable-float}: Produces a single-precision version of FFTW
+(@code{float}) instead of the default double-precision (@code{double}).
+@xref{Precision}.
+
+@item
+@cindex precision
+@code{--enable-long-double}: Produces a long-double precision version of
+FFTW (@code{long double}) instead of the default double-precision
+(@code{double}).  The @code{configure} script will halt with an error
+message if @code{long double} is the same size as @code{double} on your
+machine/compiler.  @xref{Precision}.
+
+@item
+@cindex precision
+@code{--enable-quad-precision}: Produces a quadruple-precision version
+of FFTW using the nonstandard @code{__float128} type provided by
+@code{gcc} 4.6 or later on x86, x86-64, and Itanium architectures,
+instead of the default double-precision (@code{double}).  The
+@code{configure} script will halt with an error message if the
+compiler is not @code{gcc} version 4.6 or later or if @code{gcc}'s
+@code{libquadmath} library is not installed.  @xref{Precision}.
+
+@item
+@cindex threads
+@code{--enable-threads}: Enables compilation and installation of the
+FFTW threads library (@pxref{Multi-threaded FFTW}), which provides a
+simple interface to parallel transforms for SMP systems.  By default,
+the threads routines are not compiled.
+
+@item
+@code{--enable-openmp}: Like @code{--enable-threads}, but using OpenMP
+compiler directives in order to induce parallelism rather than
+spawning its own threads directly, and installing an @samp{fftw3_omp} library
+rather than an @samp{fftw3_threads} library (@pxref{Multi-threaded           
+FFTW}).  You can use both @code{--enable-openmp} and @code{--enable-threads}
+since they compile/install libraries with different names.  By default,
+the OpenMP routines are not compiled.
+
+@item
+@code{--with-combined-threads}: By default, if @code{--enable-threads}
+is used, the threads support is compiled into a separate library that
+must be linked in addition to the main FFTW library.  This is so that
+users of the serial library do not need to link the system threads
+libraries.  If @code{--with-combined-threads} is specified, however,
+then no separate threads library is created, and threads are included
+in the main FFTW library.  This is mainly useful under Windows, where
+no system threads library is required and inter-library dependencies
+are problematic.
+
+@item
+@cindex MPI
+@code{--enable-mpi}: Enables compilation and installation of the FFTW
+MPI library (@pxref{Distributed-memory FFTW with MPI}), which provides
+parallel transforms for distributed-memory systems with MPI.  (By
+default, the MPI routines are not compiled.)  @xref{FFTW MPI
+Installation}.
+
+@item
+@cindex Fortran-callable wrappers
+@code{--disable-fortran}: Disables inclusion of legacy-Fortran
+wrapper routines (@pxref{Calling FFTW from Legacy Fortran}) in the standard
+FFTW libraries.  These wrapper routines increase the library size by
+only a negligible amount, so they are included by default as long as
+the @code{configure} script finds a Fortran compiler on your system.
+(To specify a particular Fortran compiler @i{foo}, pass
+@code{F77=}@i{foo} to @code{configure}.)
+
+@item
+@code{--with-g77-wrappers}: By default, when Fortran wrappers are
+included, the wrappers employ the linking conventions of the Fortran
+compiler detected by the @code{configure} script.  If this compiler is
+GNU @code{g77}, however, then @emph{two} versions of the wrappers are
+included: one with @code{g77}'s idiosyncratic convention of appending
+two underscores to identifiers, and one with the more common
+convention of appending only a single underscore.  This way, the same
+FFTW library will work with both @code{g77} and other Fortran
+compilers, such as GNU @code{gfortran}.  However, the converse is not
+true: if you configure with a different compiler, then the
+@code{g77}-compatible wrappers are not included.  By specifying
+@code{--with-g77-wrappers}, the @code{g77}-compatible wrappers are
+included in addition to wrappers for whatever Fortran compiler
+@code{configure} finds.
+@fpindex g77
+
+@item
+@code{--with-slow-timer}: Disables the use of hardware cycle counters,
+and falls back on @code{gettimeofday} or @code{clock}.  This greatly
+worsens performance, and should generally not be used (unless you don't
+have a cycle counter but still really want an optimized plan regardless
+of the time).  @xref{Cycle Counters}.
+
+@item
+@code{--enable-sse} (single precision),
+@code{--enable-sse2} (single, double),
+@code{--enable-avx} (single, double),
+@code{--enable-avx2} (single, double),
+@code{--enable-avx512} (single, double),
+@code{--enable-avx-128-fma},
+@code{--enable-kcvi} (single),
+@code{--enable-altivec} (single),
+@code{--enable-vsx} (single, double),
+@code{--enable-neon} (single, double on aarch64),
+@code{--enable-generic-simd128},
+and
+@code{--enable-generic-simd256}:
+
+Enable various SIMD instruction sets.  You need compiler that supports
+the given SIMD extensions, but FFTW will try to detect at runtime
+whether the CPU supports these extensions.  That is, you can compile
+with@code{--enable-avx} and the code will still run on a CPU without AVX
+support.
+
+@itemize @minus
+@item
+These options require a compiler supporting SIMD extensions, and
+compiler support is always a bit flaky: see the FFTW FAQ for a list of
+compiler versions that have problems compiling FFTW.
+@item
+Because of the large variety of ARM processors and ABIs, FFTW
+does not attempt to guess the correct @code{gcc} flags for generating
+NEON code.  In general, you will have to provide them on the command line.
+This command line is known to have worked at least once:
+@example
+./configure --with-slow-timer --host=arm-linux-gnueabi \
+  --enable-single --enable-neon \
+  "CC=arm-linux-gnueabi-gcc -march=armv7-a -mfloat-abi=softfp"
+@end example
+@end itemize
+
+@end itemize
+
+@cindex compiler
+To force @code{configure} to use a particular C compiler @i{foo}
+(instead of the default, usually @code{gcc}), pass @code{CC=}@i{foo} to the 
+@code{configure} script; you may also need to set the flags via the variable
+@code{CFLAGS} as described above.
+@cindex compiler flags
+
+@c ------------------------------------------------------------
+@node Installation on non-Unix systems, Cycle Counters, Installation on Unix, Installation and Customization
+@section Installation on non-Unix systems
+
+It should be relatively straightforward to compile FFTW even on non-Unix
+systems lacking the niceties of a @code{configure} script.  Basically,
+you need to edit the @code{config.h} header (copy it from
+@code{config.h.in}) to @code{#define} the various options and compiler
+characteristics, and then compile all the @samp{.c} files in the
+relevant directories.  
+
+The @code{config.h} header contains about 100 options to set, each one
+initially an @code{#undef}, each documented with a comment, and most of
+them fairly obvious.  For most of the options, you should simply
+@code{#define} them to @code{1} if they are applicable, although a few
+options require a particular value (e.g. @code{SIZEOF_LONG_LONG} should
+be defined to the size of the @code{long long} type, in bytes, or zero
+if it is not supported).  We will likely post some sample
+@code{config.h} files for various operating systems and compilers for
+you to use (at least as a starting point).  Please let us know if you
+have to hand-create a configuration file (and/or a pre-compiled binary)
+that you want to share.
+
+To create the FFTW library, you will then need to compile all of the
+@samp{.c} files in the @code{kernel}, @code{dft}, @code{dft/scalar},
+@code{dft/scalar/codelets}, @code{rdft}, @code{rdft/scalar},
+@code{rdft/scalar/r2cf}, @code{rdft/scalar/r2cb},
+@code{rdft/scalar/r2r}, @code{reodft}, and @code{api} directories.
+If you are compiling with SIMD support (e.g. you defined
+@code{HAVE_SSE2} in @code{config.h}), then you also need to compile
+the @code{.c} files in the @code{simd-support},
+@code{@{dft,rdft@}/simd}, @code{@{dft,rdft@}/simd/*} directories.
+
+Once these files are all compiled, link them into a library, or a shared
+library, or directly into your program.
+
+To compile the FFTW test program, additionally compile the code in the
+@code{libbench2/} directory, and link it into a library.  Then compile
+the code in the @code{tests/} directory and link it to the
+@code{libbench2} and FFTW libraries.  To compile the @code{fftw-wisdom}
+(command-line) tool (@pxref{Wisdom Utilities}), compile
+@code{tools/fftw-wisdom.c} and link it to the @code{libbench2} and FFTW
+libraries
+
+@c ------------------------------------------------------------
+@node Cycle Counters, Generating your own code, Installation on non-Unix systems, Installation and Customization
+@section Cycle Counters
+@cindex cycle counter
+
+FFTW's planner actually executes and times different possible FFT
+algorithms in order to pick the fastest plan for a given @math{n}.  In
+order to do this in as short a time as possible, however, the timer must
+have a very high resolution, and to accomplish this we employ the
+hardware @dfn{cycle counters} that are available on most CPUs.
+Currently, FFTW supports the cycle counters on x86, PowerPC/POWER, Alpha,
+UltraSPARC (SPARC v9), IA64, PA-RISC, and MIPS processors.
+
+@cindex compiler
+Access to the cycle counters, unfortunately, is a compiler and/or
+operating-system dependent task, often requiring inline assembly
+language, and it may be that your compiler is not supported.  If you are
+@emph{not} supported, FFTW will by default fall back on its estimator
+(effectively using @code{FFTW_ESTIMATE} for all plans).
+@ctindex FFTW_ESTIMATE
+
+You can add support by editing the file @code{kernel/cycle.h}; normally,
+this will involve adapting one of the examples already present in order
+to use the inline-assembler syntax for your C compiler, and will only
+require a couple of lines of code.  Anyone adding support for a new
+system to @code{cycle.h} is encouraged to email us at @email{fftw@@fftw.org}.
+
+If a cycle counter is not available on your system (e.g. some embedded
+processor), and you don't want to use estimated plans, as a last resort
+you can use the @code{--with-slow-timer} option to @code{configure} (on
+Unix) or @code{#define WITH_SLOW_TIMER} in @code{config.h} (elsewhere).
+This will use the much lower-resolution @code{gettimeofday} function, or even
+@code{clock} if the former is unavailable, and planning will be
+extremely slow.
+
+@c ------------------------------------------------------------
+@node Generating your own code,  , Cycle Counters, Installation and Customization
+@section Generating your own code
+@cindex code generator
+
+The directory @code{genfft} contains the programs that were used to
+generate FFTW's ``codelets,'' which are hard-coded transforms of small
+sizes.
+@cindex codelet
+We do not expect casual users to employ the generator, which is a rather
+sophisticated program that generates directed acyclic graphs of FFT
+algorithms and performs algebraic simplifications on them.  It was
+written in Objective Caml, a dialect of ML, which is available at
+@uref{http://caml.inria.fr/ocaml/index.en.html}.
+@cindex Caml
+
+
+If you have Objective Caml installed (along with recent versions of
+GNU @code{autoconf}, @code{automake}, and @code{libtool}), then you
+can change the set of codelets that are generated or play with the
+generation options.  The set of generated codelets is specified by the
+@code{@{dft,rdft@}/@{codelets,simd@}/*/Makefile.am} files.  For example, you can add
+efficient REDFT codelets of small sizes by modifying
+@code{rdft/codelets/r2r/Makefile.am}.
+@cindex REDFT
+After you modify any @code{Makefile.am} files, you can type @code{sh
+bootstrap.sh} in the top-level directory followed by @code{make} to
+re-generate the files.
+
+We do not provide more details about the code-generation process, since
+we do not expect that most users will need to generate their own code.
+However, feel free to contact us at @email{fftw@@fftw.org} if
+you are interested in the subject.
+
+@cindex monadic programming
+You might find it interesting to learn Caml and/or some modern
+programming techniques that we used in the generator (including monadic
+programming), especially if you heard the rumor that Java and
+object-oriented programming are the latest advancement in the field.
+The internal operation of the codelet generator is described in the
+paper, ``A Fast Fourier Transform Compiler,'' by M. Frigo, which is
+available from the @uref{http://www.fftw.org,FFTW home page} and also
+appeared in the @cite{Proceedings of the 1999 ACM SIGPLAN Conference on
+Programming Language Design and Implementation (PLDI)}.
+

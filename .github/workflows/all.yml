@@ -47,6 +47,7 @@ jobs:
         uses: jidicula/clang-format-action@v4.13.0
         with:
           clang-format-version: 14
+          exclude-regex: 'vendors/'
           fallback-style: LLVM
 
   # Build the native module with ccache enabled so we can share object files between builds:

@@ -1,0 +1,65 @@
+Code conventions used internally by fftw3 (not in API):
+
+LEARN FROM THE MASTERS: read Ken Thompson's C compiler in Plan 9.
+   Avoid learning from C++/Java programs.
+
+INDENTATION: K&R, 5 spaces/tab.  In case of doubt, indent -kr -i5.
+
+NAMES: keep them short.  Shorter than you think.  The Bible was written
+   without vowels.  Don't outsmart the Bible.
+
+   Common names:
+
+   R       : real type, aka fftw_real
+   E       : real type for local variables (possibly extra precision)
+   C       : complex type
+   sz      : size
+   vecsz   : vector size
+   is, os  : input/output stride
+   ri, ii  : real/imag input (complex data)
+   ro, io  : real/imag output (complex data)
+   I, O    : real input/output (real data)
+   A       : assert
+   CK      : check
+   S       : solver, defined internally to each solver file
+   P       : plan, defined internally to each solver file
+   k       : codelet
+   X(...)  : used for mangling of external names (see below)
+   K(...)  : floating-point constant, in E precision
+
+   If a name is used often and must have the form fftw_foo to avoid
+   namespace pollution, #define FOO fftw_foo and use the short name.
+
+   Leave that hungarian crap to MS.  foo_t counts as hungarian: use
+   foo instead.  foo is lowercase so that it does not look like a DOS
+   program. Exception: typedef struct foo_s {...} foo;  instead of
+   typedef struct foo {...} foo;  for C++ compatibility.
+
+NAME MANGLING: use X(foo) for external names instead of fftw_foo.
+    X(foo) expands to fftwf_foo or fftw_foo, depending on the
+    precision.  (Unfortunately, this is a ugly form of hungarian
+    notation.  Grrr...)  Names that are not exported do not need to be
+    mangled.
+
+REPEATED CODE: favor a table.  E.g., do not write
+
+    foo("xxx", 1);
+    foo("yyy", 2);
+    foo("zzz", -1);
+
+    Instead write
+
+      struct { const char *nam, int arg } footab[] = {
+	{ "xxx", 1 },
+	{ "yyy", 2 },
+	{ "zzz", -1 }
+      };
+
+    and loop over footab.  Rationale: it saves code space.
+    Similarly, replace a switch statement with a table whenever
+    possible.
+
+C++: The code should compile as a C++ program. Run the code through
+    gcc -xc++ .  The extra C++ restrictions are unnecessary, of
+    course, but this will save us from a flood of complaints when
+    we release the code.

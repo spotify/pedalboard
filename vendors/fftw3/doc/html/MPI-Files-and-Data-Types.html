@@ -1,0 +1,95 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>MPI Files and Data Types (FFTW 3.3.10)</title>
+
+<meta name="description" content="MPI Files and Data Types (FFTW 3.3.10)">
+<meta name="keywords" content="MPI Files and Data Types (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="FFTW-MPI-Reference.html" rel="up" title="FFTW MPI Reference">
+<link href="MPI-Initialization.html" rel="next" title="MPI Initialization">
+<link href="FFTW-MPI-Reference.html" rel="prev" title="FFTW MPI Reference">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="MPI-Files-and-Data-Types"></span><div class="header">
+<p>
+Next: <a href="MPI-Initialization.html" accesskey="n" rel="next">MPI Initialization</a>, Previous: <a href="FFTW-MPI-Reference.html" accesskey="p" rel="prev">FFTW MPI Reference</a>, Up: <a href="FFTW-MPI-Reference.html" accesskey="u" rel="up">FFTW MPI Reference</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="MPI-Files-and-Data-Types-1"></span><h4 class="subsection">6.12.1 MPI Files and Data Types</h4>
+
+<p>All programs using FFTW&rsquo;s MPI support should include its header file:
+</p>
+<div class="example">
+<pre class="example">#include &lt;fftw3-mpi.h&gt;
+</pre></div>
+
+<p>Note that this header file includes the serial-FFTW <code>fftw3.h</code>
+header file, and also the <code>mpi.h</code> header file for MPI, so you
+need not include those files separately.
+</p>
+<p>You must also link to <em>both</em> the FFTW MPI library and to the
+serial FFTW library.  On Unix, this means adding <code>-lfftw3_mpi
+-lfftw3 -lm</code> at the end of the link command.
+</p>
+<span id="index-precision-6"></span>
+<p>Different precisions are handled as in the serial interface:
+See <a href="Precision.html">Precision</a>.  That is, &lsquo;<samp>fftw_</samp>&rsquo; functions become
+<code>fftwf_</code> (in single precision) etcetera, and the libraries become
+<code>-lfftw3f_mpi -lfftw3f -lm</code> etcetera on Unix.  Long-double
+precision is supported in MPI, but quad precision (&lsquo;<samp>fftwq_</samp>&rsquo;) is
+not due to the lack of MPI support for this type.
+</p>
+
+
+
+</body>
+</html>

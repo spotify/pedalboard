@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>MPI Data Distribution (FFTW 3.3.10)</title>
+
+<meta name="description" content="MPI Data Distribution (FFTW 3.3.10)">
+<meta name="keywords" content="MPI Data Distribution (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Distributed_002dmemory-FFTW-with-MPI.html" rel="up" title="Distributed-memory FFTW with MPI">
+<link href="Basic-and-advanced-distribution-interfaces.html" rel="next" title="Basic and advanced distribution interfaces">
+<link href="2d-MPI-example.html" rel="prev" title="2d MPI example">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="MPI-Data-Distribution"></span><div class="header">
+<p>
+Next: <a href="Multi_002ddimensional-MPI-DFTs-of-Real-Data.html" accesskey="n" rel="next">Multi-dimensional MPI DFTs of Real Data</a>, Previous: <a href="2d-MPI-example.html" accesskey="p" rel="prev">2d MPI example</a>, Up: <a href="Distributed_002dmemory-FFTW-with-MPI.html" accesskey="u" rel="up">Distributed-memory FFTW with MPI</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="MPI-Data-Distribution-1"></span><h3 class="section">6.4 MPI Data Distribution</h3>
+<span id="index-data-distribution-2"></span>
+
+<p>The most important concept to understand in using FFTW&rsquo;s MPI interface
+is the data distribution.  With a serial or multithreaded FFT, all of
+the inputs and outputs are stored as a single contiguous chunk of
+memory.  With a distributed-memory FFT, the inputs and outputs are
+broken into disjoint blocks, one per process.
+</p>
+<p>In particular, FFTW uses a <em>1d block distribution</em> of the data,
+distributed along the <em>first dimension</em>.  For example, if you
+want to perform a 100&nbsp;&times;&nbsp;200
+ complex DFT, distributed over 4
+processes, each process will get a 25&nbsp;&times;&nbsp;200
+ slice of the data.
+That is, process 0 will get rows 0 through 24, process 1 will get rows
+25 through 49, process 2 will get rows 50 through 74, and process 3
+will get rows 75 through 99.  If you take the same array but
+distribute it over 3 processes, then it is not evenly divisible so the
+different processes will have unequal chunks.  FFTW&rsquo;s default choice
+in this case is to assign 34 rows to processes 0 and 1, and 32 rows to
+process 2.
+<span id="index-block-distribution"></span>
+</p>
+
+<p>FFTW provides several &lsquo;<samp>fftw_mpi_local_size</samp>&rsquo; routines that you can
+call to find out what portion of an array is stored on the current
+process.  In most cases, you should use the default block sizes picked
+by FFTW, but it is also possible to specify your own block size.  For
+example, with a 100&nbsp;&times;&nbsp;200
+ array on three processes, you can
+tell FFTW to use a block size of 40, which would assign 40 rows to
+processes 0 and 1, and 20 rows to process 2.  FFTW&rsquo;s default is to
+divide the data equally among the processes if possible, and as best
+it can otherwise.  The rows are always assigned in &ldquo;rank order,&rdquo;
+i.e. process 0 gets the first block of rows, then process 1, and so
+on.  (You can change this by using <code>MPI_Comm_split</code> to create a
+new communicator with re-ordered processes.)  However, you should
+always call the &lsquo;<samp>fftw_mpi_local_size</samp>&rsquo; routines, if possible,
+rather than trying to predict FFTW&rsquo;s distribution choices.
+</p>
+<p>In particular, it is critical that you allocate the storage size that
+is returned by &lsquo;<samp>fftw_mpi_local_size</samp>&rsquo;, which is <em>not</em>
+necessarily the size of the local slice of the array.  The reason is
+that intermediate steps of FFTW&rsquo;s algorithms involve transposing the
+array and redistributing the data, so at these intermediate steps FFTW
+may require more local storage space (albeit always proportional to
+the total size divided by the number of processes).  The
+&lsquo;<samp>fftw_mpi_local_size</samp>&rsquo; functions know how much storage is required
+for these intermediate steps and tell you the correct amount to
+allocate.
+</p>
+<table class="menu" border="0" cellspacing="0">
+<tr><td align="left" valign="top">&bull; <a href="Basic-and-advanced-distribution-interfaces.html" accesskey="1">Basic and advanced distribution interfaces</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Load-balancing.html" accesskey="2">Load balancing</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Transposed-distributions.html" accesskey="3">Transposed distributions</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="One_002ddimensional-distributions.html" accesskey="4">One-dimensional distributions</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+</table>
+
+<hr>
+<div class="header">
+<p>
+Next: <a href="Multi_002ddimensional-MPI-DFTs-of-Real-Data.html" accesskey="n" rel="next">Multi-dimensional MPI DFTs of Real Data</a>, Previous: <a href="2d-MPI-example.html" accesskey="p" rel="prev">2d MPI example</a>, Up: <a href="Distributed_002dmemory-FFTW-with-MPI.html" accesskey="u" rel="up">Distributed-memory FFTW with MPI</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

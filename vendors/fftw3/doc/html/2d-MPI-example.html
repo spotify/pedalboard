@@ -1,0 +1,183 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>2d MPI example (FFTW 3.3.10)</title>
+
+<meta name="description" content="2d MPI example (FFTW 3.3.10)">
+<meta name="keywords" content="2d MPI example (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Distributed_002dmemory-FFTW-with-MPI.html" rel="up" title="Distributed-memory FFTW with MPI">
+<link href="MPI-Data-Distribution.html" rel="next" title="MPI Data Distribution">
+<link href="Linking-and-Initializing-MPI-FFTW.html" rel="prev" title="Linking and Initializing MPI FFTW">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="g_t2d-MPI-example"></span><div class="header">
+<p>
+Next: <a href="MPI-Data-Distribution.html" accesskey="n" rel="next">MPI Data Distribution</a>, Previous: <a href="Linking-and-Initializing-MPI-FFTW.html" accesskey="p" rel="prev">Linking and Initializing MPI FFTW</a>, Up: <a href="Distributed_002dmemory-FFTW-with-MPI.html" accesskey="u" rel="up">Distributed-memory FFTW with MPI</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="g_t2d-MPI-example-1"></span><h3 class="section">6.3 2d MPI example</h3>
+
+<p>Before we document the FFTW MPI interface in detail, we begin with a
+simple example outlining how one would perform a two-dimensional
+<code>N0</code> by <code>N1</code> complex DFT. 
+</p>
+<div class="example">
+<pre class="example">#include &lt;fftw3-mpi.h&gt;
+
+int main(int argc, char **argv)
+{
+    const ptrdiff_t N0 = ..., N1 = ...;
+    fftw_plan plan;
+    fftw_complex *data;
+    ptrdiff_t alloc_local, local_n0, local_0_start, i, j;
+
+    MPI_Init(&amp;argc, &amp;argv);
+    fftw_mpi_init();
+
+    /* <span class="roman">get local data size and allocate</span> */
+    alloc_local = fftw_mpi_local_size_2d(N0, N1, MPI_COMM_WORLD,
+                                         &amp;local_n0, &amp;local_0_start);
+    data = fftw_alloc_complex(alloc_local);
+
+    /* <span class="roman">create plan for in-place forward DFT</span> */
+    plan = fftw_mpi_plan_dft_2d(N0, N1, data, data, MPI_COMM_WORLD,
+                                FFTW_FORWARD, FFTW_ESTIMATE);    
+
+    /* <span class="roman">initialize data to some function</span> my_function(x,y) */
+    for (i = 0; i &lt; local_n0; ++i) for (j = 0; j &lt; N1; ++j)
+       data[i*N1 + j] = my_function(local_0_start + i, j);
+
+    /* <span class="roman">compute transforms, in-place, as many times as desired</span> */
+    fftw_execute(plan);
+
+    fftw_destroy_plan(plan);
+
+    MPI_Finalize();
+}
+</pre></div>
+
+<p>As can be seen above, the MPI interface follows the same basic style
+of allocate/plan/execute/destroy as the serial FFTW routines.  All of
+the MPI-specific routines are prefixed with &lsquo;<samp>fftw_mpi_</samp>&rsquo; instead
+of &lsquo;<samp>fftw_</samp>&rsquo;.  There are a few important differences, however:
+</p>
+<p>First, we must call <code>fftw_mpi_init()</code> after calling
+<code>MPI_Init</code> (required in all MPI programs) and before calling any
+other &lsquo;<samp>fftw_mpi_</samp>&rsquo; routine.
+<span id="index-MPI_005fInit"></span>
+<span id="index-fftw_005fmpi_005finit-1"></span>
+</p>
+
+<p>Second, when we create the plan with <code>fftw_mpi_plan_dft_2d</code>,
+analogous to <code>fftw_plan_dft_2d</code>, we pass an additional argument:
+the communicator, indicating which processes will participate in the
+transform (here <code>MPI_COMM_WORLD</code>, indicating all processes).
+Whenever you create, execute, or destroy a plan for an MPI transform,
+you must call the corresponding FFTW routine on <em>all</em> processes
+in the communicator for that transform.  (That is, these are
+<em>collective</em> calls.)  Note that the plan for the MPI transform
+uses the standard <code>fftw_execute</code> and <code>fftw_destroy</code> routines
+(on the other hand, there are MPI-specific new-array execute functions
+documented below).
+<span id="index-collective-function"></span>
+<span id="index-fftw_005fmpi_005fplan_005fdft_005f2d"></span>
+<span id="index-MPI_005fCOMM_005fWORLD-1"></span>
+</p>
+
+<p>Third, all of the FFTW MPI routines take <code>ptrdiff_t</code> arguments
+instead of <code>int</code> as for the serial FFTW.  <code>ptrdiff_t</code> is a
+standard C integer type which is (at least) 32 bits wide on a 32-bit
+machine and 64 bits wide on a 64-bit machine.  This is to make it easy
+to specify very large parallel transforms on a 64-bit machine.  (You
+can specify 64-bit transform sizes in the serial FFTW, too, but only
+by using the &lsquo;<samp>guru64</samp>&rsquo; planner interface.  See <a href="64_002dbit-Guru-Interface.html">64-bit Guru Interface</a>.)
+<span id="index-ptrdiff_005ft-1"></span>
+<span id="index-64_002dbit-architecture-1"></span>
+</p>
+
+<p>Fourth, and most importantly, you don&rsquo;t allocate the entire
+two-dimensional array on each process.  Instead, you call
+<code>fftw_mpi_local_size_2d</code> to find out what <em>portion</em> of the
+array resides on each processor, and how much space to allocate.
+Here, the portion of the array on each process is a <code>local_n0</code> by
+<code>N1</code> slice of the total array, starting at index
+<code>local_0_start</code>.  The total number of <code>fftw_complex</code> numbers
+to allocate is given by the <code>alloc_local</code> return value, which
+<em>may</em> be greater than <code>local_n0 * N1</code> (in case some
+intermediate calculations require additional storage).  The data
+distribution in FFTW&rsquo;s MPI interface is described in more detail by
+the next section.
+<span id="index-fftw_005fmpi_005flocal_005fsize_005f2d"></span>
+<span id="index-data-distribution-1"></span>
+</p>
+
+<p>Given the portion of the array that resides on the local process, it
+is straightforward to initialize the data (here to a function
+<code>myfunction</code>) and otherwise manipulate it.  Of course, at the end
+of the program you may want to output the data somehow, but
+synchronizing this output is up to you and is beyond the scope of this
+manual.  (One good way to output a large multi-dimensional distributed
+array in MPI to a portable binary file is to use the free HDF5
+library; see the <a href="http://www.hdfgroup.org/">HDF home page</a>.)
+<span id="index-HDF5"></span>
+<span id="index-MPI-I_002fO"></span>
+</p>
+<hr>
+<div class="header">
+<p>
+Next: <a href="MPI-Data-Distribution.html" accesskey="n" rel="next">MPI Data Distribution</a>, Previous: <a href="Linking-and-Initializing-MPI-FFTW.html" accesskey="p" rel="prev">Linking and Initializing MPI FFTW</a>, Up: <a href="Distributed_002dmemory-FFTW-with-MPI.html" accesskey="u" rel="up">Distributed-memory FFTW with MPI</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

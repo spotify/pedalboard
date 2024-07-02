@@ -1,0 +1,102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Load balancing (FFTW 3.3.10)</title>
+
+<meta name="description" content="Load balancing (FFTW 3.3.10)">
+<meta name="keywords" content="Load balancing (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="MPI-Data-Distribution.html" rel="up" title="MPI Data Distribution">
+<link href="Transposed-distributions.html" rel="next" title="Transposed distributions">
+<link href="Basic-and-advanced-distribution-interfaces.html" rel="prev" title="Basic and advanced distribution interfaces">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Load-balancing"></span><div class="header">
+<p>
+Next: <a href="Transposed-distributions.html" accesskey="n" rel="next">Transposed distributions</a>, Previous: <a href="Basic-and-advanced-distribution-interfaces.html" accesskey="p" rel="prev">Basic and advanced distribution interfaces</a>, Up: <a href="MPI-Data-Distribution.html" accesskey="u" rel="up">MPI Data Distribution</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Load-balancing-1"></span><h4 class="subsection">6.4.2 Load balancing</h4>
+<span id="index-load-balancing"></span>
+
+<p>Ideally, when you parallelize a transform over some <em>P</em>
+processes, each process should end up with work that takes equal time.
+Otherwise, all of the processes end up waiting on whichever process is
+slowest.  This goal is known as &ldquo;load balancing.&rdquo;  In this section,
+we describe the circumstances under which FFTW is able to load-balance
+well, and in particular how you should choose your transform size in
+order to load balance.
+</p>
+<p>Load balancing is especially difficult when you are parallelizing over
+heterogeneous machines; for example, if one of your processors is a
+old 486 and another is a Pentium IV, obviously you should give the
+Pentium more work to do than the 486 since the latter is much slower.
+FFTW does not deal with this problem, however&mdash;it assumes that your
+processes run on hardware of comparable speed, and that the goal is
+therefore to divide the problem as equally as possible.
+</p>
+<p>For a multi-dimensional complex DFT, FFTW can divide the problem
+equally among the processes if: (i) the <em>first</em> dimension
+<code>n0</code> is divisible by <em>P</em>; and (ii), the <em>product</em> of
+the subsequent dimensions is divisible by <em>P</em>.  (For the advanced
+interface, where you can specify multiple simultaneous transforms via
+some &ldquo;vector&rdquo; length <code>howmany</code>, a factor of <code>howmany</code> is
+included in the product of the subsequent dimensions.)
+</p>
+<p>For a one-dimensional complex DFT, the length <code>N</code> of the data
+should be divisible by <em>P</em> <em>squared</em> to be able to divide
+the problem equally among the processes.
+</p>
+
+
+
+</body>
+</html>
