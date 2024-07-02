@@ -159,7 +159,7 @@ if platform.system() != "Darwin":
             [
                 "-DHAVE_SSE2",
                 "-DHAVE_AVX",
-                "-DHAVE_AVX_128_FMA",
+                # "-DHAVE_AVX_128_FMA",
                 "-DHAVE_AVX2",
                 # "-DHAVE_AVX512", # Not supported on GitHub Actions yet :(
                 "-DHAVE_GENERIC_SIMD128",
