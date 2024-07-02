@@ -156,26 +156,32 @@ elif platform.system() == "Linux":
         "/support",
         "common/",
         "libbench",
+        # Ignore SSE, AVX2, AVX128, and AVX512 SIMD code;
+        # For Rubber Band's usage, just AVX gives us the
+        # largest speedup without bloating the binary
+        "sse2",
+        "avx2",
         "avx512",
+        "kcvi",
         "avx-128-fma",
         "generic-simd",
     )
 
     # On ARM, ignore the X86-specific SIMD code:
     if "arm" in platform.processor() or "aarch64" in platform.processor():
-        fftw_paths = ignore_files_matching(fftw_paths, "avx", "/sse", "kcvi")
+        fftw_paths = ignore_files_matching(fftw_paths, "avx", "/sse")
         ALL_CFLAGS.append("-DHAVE_NEON=1")
     else:
         # And on x86, ignore the ARM-specific SIMD code (and KCVI; not GCC or Clang compatible).
-        fftw_paths = ignore_files_matching(fftw_paths, "neon", "kcvi")
+        fftw_paths = ignore_files_matching(fftw_paths, "neon")
         ALL_CFLAGS.append("-march=native")
         # Enable SIMD instructions:
         ALL_CFLAGS.extend(
             [
-                "-DHAVE_SSE2",
-                "-DHAVE_AVX",
+                # "-DHAVE_SSE2",
+                "-DHAVE_AVX",  # Testing shows this is all we need!
                 # "-DHAVE_AVX_128_FMA", # AMD only
-                "-DHAVE_AVX2",
+                # "-DHAVE_AVX2",
                 # "-DHAVE_AVX512", # No measurable speed difference
                 # "-DHAVE_GENERIC_SIMD128", # Crashes!
                 # "-DHAVE_GENERIC_SIMD256", # Also crashes!
