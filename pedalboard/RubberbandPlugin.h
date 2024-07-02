@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma once
 
 #include "../vendors/rubberband/rubberband/RubberBandStretcher.h"
 #include "Plugin.h"
@@ -21,6 +22,44 @@
 using namespace RubberBand;
 
 namespace Pedalboard {
+
+extern std::mutex rubberbandFFTMutex;
+
+// A wrapper class that extends RubberBandStretcher but wraps a
+// global mutex around its constructor if we're using FFTW3 as its FFT
+// library. This is because the RubberBandStretcher constructor calls
+// non-thread-safe FFTW3 methods.
+class ThreadSafeRubberBandStretcher : public RubberBandStretcher {
+public:
+  ThreadSafeRubberBandStretcher(
+      double sampleRate, int channels,
+      RubberBandStretcher::Options options = DefaultOptions,
+      double initialTimeRatio = 1.0, double initialPitchScale = 1.0) try
+      : RubberBandStretcher(takeLock(sampleRate), channels, options,
+                            initialTimeRatio, initialPitchScale) {
+    releaseLock();
+  } catch (...) {
+    releaseLock();
+    // Exception will automatically be rethrown.
+  }
+
+private:
+  // A nasty hack to ensure that the global mutex is locked before the
+  // superclass constructor is called.
+  static double takeLock(double sampleRate) {
+// We only need this thread safety if we're using FFTW3:
+#ifdef HAVE_FFTW3
+    rubberbandFFTMutex.lock();
+#endif
+    return sampleRate;
+  }
+
+  static void releaseLock() {
+#ifdef HAVE_FFTW3
+    rubberbandFFTMutex.unlock();
+#endif
+  }
+};
 
 /*
  * Base class for all Rubber Band-derived plugins.
@@ -39,7 +78,7 @@ public:
                               RubberBandStretcher::OptionThreadingNever |
                               RubberBandStretcher::OptionChannelsTogether |
                               RubberBandStretcher::OptionPitchHighQuality;
-      rbPtr = std::make_unique<RubberBandStretcher>(
+      rbPtr = std::make_unique<ThreadSafeRubberBandStretcher>(
           spec.sampleRate, spec.numChannels, stretcherOptions);
       rbPtr->setMaxProcessSize(spec.maximumBlockSize);
 
