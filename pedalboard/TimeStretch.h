@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "RubberbandPlugin.h"
+#include "../vendors/rubberband/rubberband/RubberBandStretcher.h"
 #include "StreamUtils.h"
 
 using namespace RubberBand;
@@ -222,7 +222,7 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
     options |= RubberBandStretcher::OptionProcessRealTime;
   }
 
-  ThreadSafeRubberBandStretcher rubberBandStretcher(
+  RubberBandStretcher rubberBandStretcher(
       sampleRate, input.getNumChannels(), options, 1.0 / initialStretchFactor,
       pow(2.0, (initialPitchShiftInSemitones / 12.0)));
 
