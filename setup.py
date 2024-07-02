@@ -103,7 +103,6 @@ ALL_CPPFLAGS.extend(
         "-D_HAS_STD_BYTE=0",
         "-DNOMINMAX",
         "-DALREADY_CONFIGURED",
-        "-DUSE_PTHREADS",
     ]
 )
 
@@ -122,11 +121,24 @@ def ignore_files_matching(files, *matches):
     return files
 
 
+# Platform-specific FFT speedup flags:
 if platform.system() == "Windows":
     ALL_CPPFLAGS.append("-DUSE_BUILTIN_FFT")
+    ALL_CPPFLAGS.append("-DNO_THREADING")
+elif platform.system() == "Darwin":
+    # No need for any threading code on MacOS;
+    # vDSP does all of this for us and these code paths are redundant.
+    ALL_CPPFLAGS.append("-DNO_THREADING")
 elif platform.system() == "Linux":
     # Use FFTW3 for FFTs on Linux, which should speed up Rubberband by 3-4x:
-    ALL_CPPFLAGS.extend(["-DHAVE_FFTW3=1", "-DLACK_SINCOS=1", "-DFFTW_DOUBLE_ONLY=1"])
+    ALL_CPPFLAGS.extend(
+        [
+            "-DHAVE_FFTW3=1",
+            "-DLACK_SINCOS=1",
+            "-DFFTW_DOUBLE_ONLY=1",
+            "-DUSE_PTHREADS",
+        ]
+    )
     ALL_INCLUDES += ["vendors/fftw3/api/", "vendors/fftw3/"]
     fftw_paths = list(Path("vendors/fftw3/").glob("**/*.c"))
     fftw_paths = ignore_files_matching(
