@@ -103,6 +103,7 @@ ALL_CPPFLAGS.extend(
         "-DNO_THREADING=0",
         "-D_HAS_STD_BYTE=0",
         "-DNOMINMAX",
+        "-DALREADY_CONFIGURED=1",
     ]
 )
 
