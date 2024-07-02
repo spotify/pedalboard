@@ -152,7 +152,7 @@ if platform.system() != "Darwin":
     else:
         # And on x86, ignore the ARM-specific SIMD code (and KCVI; not GCC or Clang compatible).
         fftw_paths = ignore_files_matching(fftw_paths, "neon", "kcvi")
-        ALL_CFLAGS.append("-march=broadwell")
+        ALL_CFLAGS.append("-march=native")
         # Enable SIMD instructions:
         ALL_CFLAGS.extend(
             [
