@@ -121,10 +121,17 @@ or buffer, set ``reset`` to ``False``.
         // type inference.
         return nullptr;
       }))
-      .def("reset", &Plugin::reset,
-           "Clear any internal state stored by this plugin (e.g.: reverb "
-           "tails, delay lines, LFO state, etc). The values of plugin "
-           "parameters will remain unchanged. ")
+      .def(
+          "reset",
+          [](std::shared_ptr<Plugin> self) {
+            self->reset();
+            // Only reset the last channel layout if the user explicitly calls
+            // reset from the Python side:
+            self->resetLastChannelLayout();
+          },
+          "Clear any internal state stored by this plugin (e.g.: reverb "
+          "tails, delay lines, LFO state, etc). The values of plugin "
+          "parameters will remain unchanged. ")
       .def(
           "process",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
@@ -154,12 +161,17 @@ processing begins, clearing any state from previous calls to ``process``.
 If calling ``process`` multiple times while processing the same audio file
 or buffer, set ``reset`` to ``False``.
 
+The layout of the provided ``input_array`` will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+:py:class:`Plugin` object will use the last-detected channel layout until
+:py:meth:`reset` is explicitly called (as of v0.9.9).
+
 .. note::
     The :py:meth:`process` method can also be used via :py:meth:`__call__`;
     i.e.: just calling this object like a function (``my_plugin(...)``) will
     automatically invoke :py:meth:`process` with the same arguments.
-
-          )",
+)",
           py::arg("input_array"), py::arg("sample_rate"),
           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
       .def(

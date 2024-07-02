@@ -114,12 +114,16 @@ class Plugin:
         If calling ``process`` multiple times while processing the same audio file
         or buffer, set ``reset`` to ``False``.
 
+        The layout of the provided ``input_array`` will be automatically detected,
+        assuming that the smaller dimension corresponds with the number of channels.
+        If the number of samples and the number of channels are the same, each
+        :py:class:`Plugin` object will use the last-detected channel layout until
+        :py:meth:`reset` is explicitly called (as of v0.9.9).
+
         .. note::
             The :py:meth:`process` method can also be used via :py:meth:`__call__`;
             i.e.: just calling this object like a function (``my_plugin(...)``) will
             automatically invoke :py:meth:`process` with the same arguments.
-
-
         """
 
     def reset(self) -> None:

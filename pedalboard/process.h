@@ -163,8 +163,42 @@ py::array_t<float>
 processFloat32(const py::array_t<float, py::array::c_style> inputArray,
                double sampleRate, std::vector<std::shared_ptr<Plugin>> plugins,
                unsigned int bufferSize, bool reset) {
-  const ChannelLayout inputChannelLayout = detectChannelLayout(inputArray);
-  juce::AudioBuffer<float> ioBuffer = copyPyArrayIntoJuceBuffer(inputArray);
+
+  ChannelLayout inputChannelLayout;
+  if (!plugins.empty()) {
+    inputChannelLayout = plugins[0]->parseAndCacheChannelLayout(inputArray);
+  } else {
+    inputChannelLayout = detectChannelLayout(inputArray);
+  }
+
+  juce::AudioBuffer<float> ioBuffer =
+      copyPyArrayIntoJuceBuffer(inputArray, {inputChannelLayout});
+
+  if (ioBuffer.getNumChannels() == 0) {
+    unsigned int numChannels = 0;
+    unsigned int numSamples = ioBuffer.getNumSamples();
+    // We have no channels to process; just return an empty output array with
+    // the same shape. Passing zero channels into JUCE breaks some assumptions
+    // all over the place.
+    py::array_t<float> outputArray;
+    if (inputArray.request().ndim == 2) {
+      switch (inputChannelLayout) {
+      case ChannelLayout::Interleaved:
+        outputArray = py::array_t<float>({numSamples, numChannels});
+        break;
+      case ChannelLayout::NotInterleaved:
+        outputArray = py::array_t<float>({numChannels, numSamples});
+        break;
+      default:
+        throw std::runtime_error(
+            "Internal error: got unexpected channel layout.");
+      }
+    } else {
+      outputArray = py::array_t<float>(0);
+    }
+    return outputArray;
+  }
+
   int totalOutputLatencySamples;
 
   {
