@@ -1,0 +1,164 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Acknowledgments (FFTW 3.3.10)</title>
+
+<meta name="description" content="Acknowledgments (FFTW 3.3.10)">
+<meta name="keywords" content="Acknowledgments (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="License-and-Copyright.html" rel="next" title="License and Copyright">
+<link href="Generating-your-own-code.html" rel="prev" title="Generating your own code">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Acknowledgments"></span><div class="header">
+<p>
+Next: <a href="License-and-Copyright.html" accesskey="n" rel="next">License and Copyright</a>, Previous: <a href="Installation-and-Customization.html" accesskey="p" rel="prev">Installation and Customization</a>, Up: <a href="index.html" accesskey="u" rel="up">Top</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Acknowledgments-1"></span><h2 class="chapter">11 Acknowledgments</h2>
+
+<p>Matteo Frigo was supported in part by the Special Research Program SFB
+F011 &ldquo;AURORA&rdquo; of the Austrian Science Fund FWF and by MIT Lincoln
+Laboratory.  For previous versions of FFTW, he was supported in part by the
+Defense Advanced Research Projects Agency (DARPA), under Grants
+N00014-94-1-0985 and F30602-97-1-0270, and by a Digital Equipment
+Corporation Fellowship.  
+</p>
+<p>Steven G. Johnson was supported in part by a Dept.&nbsp;of Defense NDSEG
+Fellowship, an MIT Karl Taylor Compton Fellowship, and by the Materials
+Research Science and Engineering Center program of the National Science
+Foundation under award DMR-9400334.
+</p>
+<p>Code for the Cell Broadband Engine was graciously donated to the FFTW
+project by the IBM Austin Research Lab and included in fftw-3.2.  (This
+code was removed in fftw-3.3.)
+</p>
+<p>Code for the MIPS paired-single SIMD support was graciously donated to
+the FFTW project by CodeSourcery, Inc.
+</p>
+<p>We are grateful to Sun Microsystems Inc.&nbsp;for its donation of a
+cluster of 9 8-processor Ultra HPC 5000 SMPs (24 Gflops peak). These
+machines served as the primary platform for the development of early
+versions of FFTW.
+</p>
+<p>We thank Intel Corporation for donating a four-processor Pentium Pro
+machine.  We thank the GNU/Linux community for giving us a decent OS to
+run on that machine.
+</p>
+<p>We are thankful to the AMD corporation for donating an AMD Athlon XP 1700+
+computer to the FFTW project.
+</p>
+<p>We thank the Compaq/HP testdrive program and VA Software Corporation
+(SourceForge.net) for providing remote access to machines that were used
+to test FFTW.
+</p>
+<p>The <code>genfft</code> suite of code generators was written using Objective
+Caml, a dialect of ML.  Objective Caml is a small and elegant language
+developed by Xavier Leroy.  The implementation is available from
+<a href="http://caml.inria.fr/"><code>http://caml.inria.fr/</code></a>.  In previous
+releases of FFTW, <code>genfft</code> was written in Caml Light, by the same
+authors.  An even earlier implementation of <code>genfft</code> was written in
+Scheme, but Caml is definitely better for this kind of application.
+<span id="index-Caml-1"></span>
+<span id="index-LISP"></span>
+</p>
+
+<p>FFTW uses many tools from the GNU project, including <code>automake</code>,
+<code>texinfo</code>, and <code>libtool</code>.
+</p>
+<p>Prof.&nbsp;Charles E.&nbsp;Leiserson of MIT provided continuous support and
+encouragement.  This program would not exist without him.  Charles also
+proposed the name &ldquo;codelets&rdquo; for the basic FFT blocks.
+<span id="index-codelet-3"></span>
+</p>
+
+<p>Prof.&nbsp;John D.&nbsp;Joannopoulos of MIT demonstrated continuing tolerance of
+Steven&rsquo;s &ldquo;extra-curricular&rdquo; computer-science activities, as well as
+remarkable creativity in working them into his grant proposals.
+Steven&rsquo;s physics degree would not exist without him.
+</p>
+<p>Franz Franchetti wrote SIMD extensions to FFTW 2, which eventually
+led to the SIMD support in FFTW 3.
+</p>
+<p>Stefan Kral wrote most of the K7 code generator distributed with FFTW
+3.0.x and 3.1.x.
+</p>
+<p>Andrew Sterian contributed the Windows timing code in FFTW 2.  
+</p>
+<p>Didier Miras reported a bug in the test procedure used in FFTW 1.2.  We
+now use a completely different test algorithm by Funda Ergun that does
+not require a separate FFT program to compare against.
+</p>
+<p>Wolfgang Reimer contributed the Pentium cycle counter and a few fixes
+that help portability.
+</p>
+<p>Ming-Chang Liu uncovered a well-hidden bug in the complex transforms of
+FFTW 2.0 and supplied a patch to correct it.
+</p>
+<p>The FFTW FAQ was written in <code>bfnn</code> (Bizarre Format With No Name)
+and formatted using the tools developed by Ian Jackson for the Linux
+FAQ.
+</p>
+<p><em>We are especially thankful to all of our users for their
+continuing support, feedback, and interest during our development of
+FFTW.</em>
+</p>
+<hr>
+<div class="header">
+<p>
+Next: <a href="License-and-Copyright.html" accesskey="n" rel="next">License and Copyright</a>, Previous: <a href="Installation-and-Customization.html" accesskey="p" rel="prev">Installation and Customization</a>, Up: <a href="index.html" accesskey="u" rel="up">Top</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

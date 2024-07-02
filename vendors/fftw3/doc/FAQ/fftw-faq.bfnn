@@ -1,0 +1,708 @@
+\comment This is the source for the FFTW FAQ list, in
+\comment the Bizarre Format With No Name.  It is turned into Lout
+\comment input, HTML, plain ASCII and an Info document by a Perl script.
+\comment
+\comment The format and scripts come from the Linux FAQ, by
+\comment Ian Jackson.
+\set brieftitle FFTW FAQ
+\set author     <A href="http://www.fftw.org">Matteo Frigo and Steven G. Johnson</A> / <A href="mailto:fftw@fftw.org">fftw@fftw.org</A>
+\set authormail fftw@fftw.org
+\set title      FFTW Frequently Asked Questions with Answers
+\set copyholder Matteo Frigo and Massachusetts Institute of Technology
+\call-html startup html.refs2
+\copyto ASCII
+            FFTW FREQUENTLY ASKED QUESTIONS WITH ANSWERS
+                            `date '+%d %h %Y'`
+			     Matteo Frigo
+			   Steven G. Johnson
+ 			    <fftw@fftw.org>
+
+\endcopy
+\copyto INFO
+INFO-DIR-SECTION Development
+START-INFO-DIR-ENTRY
+* FFTW FAQ: (fftw-faq). FFTW Frequently Asked Questions with Answers.
+END-INFO-DIR-ENTRY
+
+
+File: $prefix.info, Node: Top, Next: Question 1.1, Up: (dir)
+
+            FFTW FREQUENTLY ASKED QUESTIONS WITH ANSWERS
+                            `date '+%d %h %Y'`
+			     Matteo Frigo
+			   Steven G. Johnson
+			    <fftw@fftw.org>
+
+\endcopy
+
+This is the list of Frequently Asked Questions about FFTW, a
+collection of fast C routines for computing the Discrete Fourier
+Transform in one or more dimensions.
+
+\section  Index
+
+\index
+
+\comment ######################################################################
+
+\section  Introduction and General Information
+
+\question 26aug:whatisfftw  What is FFTW?
+
+FFTW is a free collection of fast C routines for computing the
+Discrete Fourier Transform in one or more dimensions.  It includes
+complex, real, symmetric, and parallel transforms, and can handle
+arbitrary array sizes efficiently.  FFTW is typically faster than
+other publically-available FFT implementations, and is even
+competitive with vendor-tuned libraries.  (See our web page for
+extensive benchmarks.)  To achieve this performance, FFTW uses novel
+code-generation and runtime self-optimization techniques (along with
+many other tricks).
+
+\question 26aug:whereisfftw  How do I obtain FFTW?
+
+FFTW can be found at \docref{the FFTW web page\}.  You can also
+retrieve it from \ftpon ftp.fftw.org in \ftpin /pub/fftw.
+
+\question 26aug:isfftwfree  Is FFTW free software?
+
+Starting with version 1.3, FFTW is Free Software in the technical
+sense defined by the Free Software Foundation (see \docref{Categories
+of Free and Non-Free Software\}), and is distributed under the terms
+of the GNU General Public License.  Previous versions of FFTW were
+distributed without fee for noncommercial use, but were not
+technically ``free.''
+
+Non-free licenses for FFTW are also available that permit different
+terms of use than the GPL.
+
+\question 10apr:nonfree  What is this about non-free licenses?
+
+The non-free licenses are for companies that wish to use FFTW in their
+products but are unwilling to release their software under the GPL
+(which would require them to release source code and allow free
+redistribution).  Such users can purchase an unlimited-use license
+from MIT.  Contact us for more details.
+
+We could instead have released FFTW under the LGPL, or even disallowed
+non-Free usage.  Suffice it to say, however, that MIT owns the
+copyright to FFTW and they only let us GPL it because we convinced
+them that it would neither affect their licensing revenue nor irritate
+existing licensees.
+
+\question 24oct:west In the West? I thought MIT was in the East?
+
+Not to an Italian.  You could say that we're a Spaghetti Western
+(with apologies to Sergio Leone).
+
+\comment ######################################################################
+
+\section  Installing FFTW
+
+\question 26aug:systems  Which systems does FFTW run on?
+
+FFTW is written in ANSI C, and should work on any system with a decent
+C compiler.  (See also \qref runOnWindows, \qref compilerCrashes.)
+FFTW can also take advantage of certain hardware-specific features,
+such as cycle counters and SIMD instructions, but this is optional.
+
+\question 26aug:runOnWindows  Does FFTW run on Windows?
+
+Yes, many people have reported successfully using FFTW on Windows with
+various compilers.  FFTW was not developed on Windows, but the source
+code is essentially straight ANSI C.  See also the \docref{FFTW
+Windows installation notes\}, \qref compilerCrashes, and \qref
+vbetalia.
+
+\question 26aug:compilerCrashes  My compiler has trouble with FFTW.
+
+Complain fiercely to the vendor of the compiler. 
+
+We have successfully used \courier{gcc\} 3.2.x on x86 and PPC, a
+recent Compaq C compiler for Alpha, version 6 of IBM's \courier{xlc\}
+compiler for AIX, Intel's \courier{icc\} versions 5-7, and Sun
+WorkShop \courier{cc\} version 6.  
+
+FFTW is likely to push compilers to their limits, however, and several
+compiler bugs have been exposed by FFTW.  A partial list follows.
+
+\courier{gcc\} 2.95.x for Solaris/SPARC produces incorrect code for
+the test program (workaround: recompile the \courier{libbench2\}
+directory with \courier{-O2\}).
+
+NetBSD/macppc 1.6 comes with a \courier{gcc\} version that also
+miscompiles the test program. (Please report a workaround if you know
+one.)
+
+\courier{gcc\} 3.2.3 for ARM reportedly crashes during compilation.
+This bug is reportedly fixed in later versions of \courier{gcc\}.
+
+Versions 8.0 and 8.1 of Intel's \courier{icc\} falsely claim to be
+\courier{gcc\}, so you should specify \courier{CC="icc -no-gcc"\};
+this is automatic in FFTW 3.1.  \courier{icc-8.0.066\} reportely
+produces incorrect code for FFTW 2.1.5, but is fixed in version 8.1.
+\courier{icc-7.1\} compiler build 20030402Z appears to produce
+incorrect dependencies, causing the compilation to fail.
+\courier{icc-7.1\} build 20030307Z appears to work fine.  (Use
+\courier{icc -V\} to check which build you have.)  As of 2003/04/18,
+build 20030402Z appears not to be available any longer on Intel's
+website, whereas the older build 20030307Z is available.
+
+\courier{ranlib\} of GNU \courier{binutils\} 2.9.1 on Irix has been
+observed to corrupt the FFTW libraries, causing a link failure when
+FFTW is compiled.  Since \courier{ranlib\} is completely superfluous
+on Irix, we suggest deleting it from your system and replacing it with
+a symbolic link to \courier{/bin/echo\}.
+
+If support for SIMD instructions is enabled in FFTW, further compiler
+problems may appear:
+
+\courier{gcc\} 3.4.[0123] for x86 produces incorrect SSE2 code for
+FFTW when \courier{-O2\} (the best choice for FFTW) is used, causing
+FFTW to crash (\courier{make check\} crashes).  This bug is fixed in
+\courier{gcc\} 3.4.4.  On x86_64 (amd64/em64t), \courier{gcc\} 3.4.4
+reportedly still has a similar problem, but this is fixed as of
+\courier{gcc\} 3.4.6.
+
+\courier{gcc-3.2\} for x86 produces incorrect SIMD code if
+\courier{-O3\} is used.  The same compiler produces incorrect SIMD
+code if no optimization is used, too.  When using \courier{gcc-3.2\},
+it is a good idea not to change the default \courier{CFLAGS\} selected
+by the \courier{configure\} script.
+
+Some 3.0.x and 3.1.x versions of \courier{gcc\} on \courier{x86\} may
+crash.  \courier{gcc\} so-called 2.96 shipping with RedHat 7.3 crashes
+when compiling SIMD code.  In both cases, please upgrade to
+\courier{gcc-3.2\} or later.
+
+Intel's \courier{icc\} 6.0 misaligns SSE constants, but FFTW has a
+workaround. \courier{icc\} 8.x fails to compile FFTW 3.0.x because it
+falsely claims to be \courier{gcc\}; we believe this to be a bug in
+\courier{icc\}, but FFTW 3.1 has a workaround.
+
+Visual C++ 2003 reportedly produces incorrect code for SSE/SSE2 when
+compiling FFTW.  This bug was reportedly fixed in VC++ 2005;
+alternatively, you could switch to the Intel compiler. VC++ 6.0 also
+reportedly produces incorrect code for the file
+\courier{reodft11e-r2hc-odd.c\} unless optimizations are disabled for
+that file.
+
+\courier{gcc\} 2.95 on MacOS X miscompiles AltiVec code (fixed in
+later versions).  \courier{gcc\} 3.2.x miscompiles AltiVec
+permutations, but FFTW has a workaround.  \courier{gcc\} 4.0.1 on
+MacOS for Intel crashes when compiling FFTW; a workaround is to
+compile one file without optimization: \courier{cd kernel; make
+CFLAGS=" " trig.lo\}.
+
+\courier{gcc\} 4.1.1 reportedly crashes when compiling FFTW for MIPS;
+the workaround is to compile the file it crashes on
+(\courier{t2_64.c\}) with a lower optimization level.
+
+\courier{gcc\} versions 4.1.2 to 4.2.0 for x86 reportedly miscompile
+FFTW 3.1's test program, causing \courier{make check\} to crash
+(\courier{gcc\} bug #26528).  The bug was reportedly fixed in
+\courier{gcc\} version 4.2.1 and later.  A workaround is to compile
+\courier{libbench2/verify-lib.c\} without optimization.
+
+\question 26aug:solarisSucks FFTW does not compile on Solaris, complaining about \courier{const\}.
+
+We know that at least on Solaris 2.5.x with Sun's compilers 4.2 you
+might get error messages from \courier{make\} such as
+
+\courier{"./fftw.h", line 88: warning: const is a keyword in ANSI C\}
+
+This is the case when the \courier{configure\} script reports that
+\courier{const\} does not work:
+
+\courier{checking for working const... (cached) no\}
+
+You should be aware that Solaris comes with two compilers, namely,
+\courier{/opt/SUNWspro/SC4.2/bin/cc\} and \courier{/usr/ucb/cc\}.  The
+latter compiler is non-ANSI.  Indeed, it is a perverse shell script
+that calls the real compiler in non-ANSI mode.  In order
+to compile FFTW, change your path so that the right \courier{cc\}
+is used.
+
+To know whether your compiler is the right one,  type
+\courier{cc -V\}.  If the compiler prints ``\courier{ucbcc\}'',
+as in 
+
+\courier{ucbcc: WorkShop Compilers 4.2 30 Oct 1996 C 4.2\}
+
+then the compiler is wrong.  The right message is something like
+
+\courier{cc: WorkShop Compilers 4.2 30 Oct 1996 C 4.2\}
+
+\question 19mar:3dnow  What's the difference between \courier{--enable-3dnow\} and \courier{--enable-k7\}?
+
+\courier{--enable-k7\} enables 3DNow! instructions on K7 processors
+(AMD Athlon and its variants).  K7 support is provided by assembly
+routines generated by a special purpose compiler.
+As of fftw-3.2, --enable-k7 is no longer supported.
+
+\courier{--enable-3dnow\} enables generic 3DNow! support using
+\courier{gcc\} builtin functions.  This works on earlier AMD
+processors, but it is not as fast as our special assembly routines.
+As of fftw-3.1, --enable-3dnow is no longer supported.
+
+\question 18apr:fma What's the difference between the fma and the non-fma versions?
+
+The fma version tries to exploit the fused multiply-add instructions
+implemented in many processors such as PowerPC, ia-64, and MIPS.  The
+two FFTW packages are otherwise identical.  In FFTW 3.1, the fma and
+non-fma versions were merged together into a single package, and the
+\courier{configure\} script attempts to automatically guess which
+version to use.  
+
+The FFTW 3.1 \courier{configure\} script enables fma by default on
+PowerPC, Itanium, and PA-RISC, and disables it otherwise.  You can
+force one or the other by using the \courier{--enable-fma\} or
+\courier{--disable-fma\} flag for \courier{configure\}.
+
+Definitely use fma if you have a PowerPC-based system with
+\courier{gcc\} (or IBM \courier{xlc\}).  This includes all GNU/Linux
+systems for PowerPC and the older PowerPC-based MacOS systems.  Also
+use it on PA-RISC and Itanium with the HP/UX compiler.
+
+Definitely do not use the fma version if you have an ia-32 processor
+(Intel, AMD, MacOS on Intel, etcetera).
+
+For other architectures/compilers, the situation is not so clear.  For
+example, ia-64 has the fma instruction, but \courier{gcc-3.2\} appears
+not to exploit it correctly.  Other compilers may do the right thing,
+but we have not tried them.  Please send us your feedback so that we
+can update this FAQ entry.
+
+\question 26aug:languages  Which language is FFTW written in?
+
+FFTW is written in ANSI C.  Most of the code, however, was
+automatically generated by a program called \courier{genfft\}, written
+in the Objective Caml dialect of ML.  You do not need to know ML or to
+have an Objective Caml compiler in order to use FFTW.
+
+\courier{genfft\} is provided with the FFTW sources, which means that
+you can play with the code generator if you want.  In this case, you
+need a working Objective Caml system.  Objective Caml is available
+from \docref{the Caml web page\}.
+
+\question 26aug:fortran  Can I call FFTW from Fortran?
+
+Yes, FFTW (versions 1.3 and higher) contains a Fortran-callable
+interface, documented in the FFTW manual.
+
+By default, FFTW configures its Fortran interface to work with the
+first compiler it finds, e.g. \courier{g77\}.  To configure for a
+different, incompatible Fortran compiler \courier{foobar\}, use
+\courier{./configure F77=foobar\} when installing FFTW.  (In the case
+of \courier{g77\}, however, FFTW 3.x also includes an extra set of
+Fortran-callable routines with one less underscore at the end of
+identifiers, which should cover most other Fortran compilers on Linux
+at least.)
+
+\question 26aug:cplusplus  Can I call FFTW from C++?
+
+Most definitely.  FFTW should compile and/or link under any C++
+compiler.  Moreover, it is likely that the C++ \courier{<complex>\}
+template class is bit-compatible with FFTW's complex-number format
+(see the FFTW manual for more details).
+
+\question 26aug:whynotfortran  Why isn't FFTW written in Fortran/C++?
+
+Because we don't like those languages, and neither approaches the
+portability of C.
+
+\question 29mar:singleprec How do I compile FFTW to run in single precision?
+
+On a Unix system: \courier{configure --enable-float\}.  On a non-Unix
+system: edit \courier{config.h\} to \courier{#define\} the symbol
+\courier{FFTW_SINGLE\} (for FFTW 3.x).  In both cases, you must then
+recompile FFTW.  In FFTW 3, all FFTW identifiers will then begin with
+\courier{fftwf_\} instead of \courier{fftw_\}.
+
+\question 28mar:64bitk7 --enable-k7 does not work on x86-64
+
+Support for --enable-k7 was discontinued in fftw-3.2.
+
+The fftw-3.1 release supports --enable-k7.  This option only works on
+32-bit x86 machines that implement 3DNow!, including the AMD Athlon
+and the AMD Opteron in 32-bit mode.  --enable-k7 does not work on AMD
+Opteron in 64-bit mode.  Use --enable-sse for x86-64 machines.
+
+FFTW supports 3DNow! by means of assembly code generated by a
+special-purpose compiler.  It is hard to produce assembly code that
+works in both 32-bit and 64-bit mode.
+
+\comment ######################################################################
+
+\section  Using FFTW
+
+\question 15mar:fftw2to3 Why not support the FFTW 2 interface in FFTW 3?
+
+FFTW 3 has semantics incompatible with earlier versions: its plans can
+only be used for a given stride, multiplicity, and other
+characteristics of the input and output arrays; these stronger
+semantics are necessary for performance reasons.  Thus, it is
+impossible to efficiently emulate the older interface (whose plans can
+be used for any transform of the same size).  We believe that it
+should be possible to upgrade most programs without any difficulty,
+however.
+
+\question 20mar:planperarray Why do FFTW 3 plans encapsulate the input/output arrays and not just the algorithm?
+
+There are several reasons:
+
+\call startlist
+\call item
+It was important for performance reasons that the plan be specific to
+array characteristics like the stride (and alignment, for SIMD), and
+requiring that the user maintain these invariants is error prone.
+\call item
+In most high-performance applications, as far as we can tell, you are
+usually transforming the same array over and over, so FFTW's semantics
+should not be a burden.
+\call item
+If you need to transform another array of the same size, creating a
+new plan once the first exists is a cheap operation.
+\call item
+If you need to transform many arrays of the same size at once, you
+should really use the \courier{plan_many\} routines in FFTW's "advanced"
+interface.
+\call item
+If the abovementioned array characteristics are the same, you are
+willing to pay close attention to the documentation, and you really
+need to, we provide a "new-array execution" interface to apply a plan
+to a new array.
+\call endlist
+
+\question 25may:slow FFTW seems really slow.
+
+You are probably recreating the plan before every transform, rather
+than creating it once and reusing it for all transforms of the same
+size.  FFTW is designed to be used in the following way:
+
+\call startlist
+\call item
+First, you create a plan.  This will take several seconds.
+\call item
+Then, you reuse the plan many times to perform FFTs.  These are fast.
+\call endlist
+
+If you don't need to compute many transforms and the time for the
+planner is significant, you have two options.  First, you can use the
+\courier{FFTW_ESTIMATE\} option in the planner, which uses heuristics
+instead of runtime measurements and produces a good plan in a short
+time.  Second, you can use the wisdom feature to precompute the plan;
+see \qref savePlans
+
+\question 22oct:slows FFTW slows down after repeated calls.
+
+Probably, NaNs or similar are creeping into your data, and the
+slowdown is due to the resulting floating-point exceptions.  For
+example, be aware that repeatedly FFTing the same array is a diverging
+process (because FFTW computes the unnormalized transform).
+
+\question 22oct:segfault An FFTW routine is crashing when I call it.
+
+Did the FFTW test programs pass (\courier{make check\}, or \courier{cd
+tests; make bigcheck\} if you want to be paranoid)?  If so, you almost
+certainly have a bug in your own code.  For example, you could be
+passing invalid arguments (such as wrongly-sized arrays) to FFTW, or
+you could simply have memory corruption elsewhere in your program that
+causes random crashes later on.  Please don't complain to us unless
+you can come up with a minimal self-contained program (preferably
+under 30 lines) that illustrates the problem.
+
+\question 22oct:fortran64 My Fortran program crashes when calling FFTW.
+
+As described in the manual, on 64-bit machines you must store the
+plans in variables large enough to hold a pointer, for example
+\courier{integer*8\}.  We recommend using \courier{integer*8\} on
+32-bit machines as well, to simplify porting.
+
+\question 24mar:conventions FFTW gives results different from my old FFT.
+
+People follow many different conventions for the DFT, and you should
+be sure to know the ones that we use (described in the FFTW manual).
+In particular, you should be aware that the
+\courier{FFTW_FORWARD\}/\courier{FFTW_BACKWARD\} directions correspond
+to signs of -1/+1 in the exponent of the DFT definition.
+(\italic{Numerical Recipes\} uses the opposite convention.)  
+
+You should also know that we compute an unnormalized transform.  In
+contrast, Matlab is an example of program that computes a normalized
+transform.  See \qref whyscaled.
+
+Finally, note that floating-point arithmetic is not exact, so
+different FFT algorithms will give slightly different results (on the
+order of the numerical accuracy; typically a fractional difference of
+1e-15 or so in double precision).
+
+\question 31aug:nondeterministic FFTW gives different results between runs
+
+If you use \courier{FFTW_MEASURE\} or \courier{FFTW_PATIENT\} mode,
+then the algorithm FFTW employs is not deterministic: it depends on
+runtime performance measurements.  This will cause the results to vary
+slightly from run to run.  However, the differences should be slight,
+on the order of the floating-point precision, and therefore should
+have no practical impact on most applications.
+
+If you use saved plans (wisdom) or \courier{FFTW_ESTIMATE\} mode,
+however, then the algorithm is deterministic and the results should be
+identical between runs.
+
+\question 26aug:savePlans Can I save FFTW's plans?
+
+Yes. Starting with version 1.2, FFTW provides the \courier{wisdom\}
+mechanism for saving plans; see the FFTW manual.
+
+\question 14sep:whyscaled Why does your inverse transform return a scaled result?
+
+Computing the forward transform followed by the backward transform (or
+vice versa) yields the original array scaled by the size of the array.
+(For multi-dimensional transforms, the size of the array is the
+product of the dimensions.)  We could, instead, have chosen a
+normalization that would have returned the unscaled array. Or, to
+accomodate the many conventions in this matter, the transform routines
+could have accepted a "scale factor" parameter. We did not do this,
+however, for two reasons. First, we didn't want to sacrifice
+performance in the common case where the scale factor is 1. Second, in
+real applications the FFT is followed or preceded by some computation
+on the data, into which the scale factor can typically be absorbed at
+little or no cost.
+
+\question 02dec:centerorigin How can I make FFTW put the origin (zero frequency) at the center of its output?
+
+For human viewing of a spectrum, it is often convenient to put the
+origin in frequency space at the center of the output array, rather
+than in the zero-th element (the default in FFTW).  If all of the
+dimensions of your array are even, you can accomplish this by simply
+multiplying each element of the input array by (-1)^(i + j + ...),
+where i, j, etcetera are the indices of the element.  (This trick is a
+general property of the DFT, and is not specific to FFTW.)
+
+\question 08may:imageaudio How do I FFT an image/audio file in \italic{foobar\} format?
+
+FFTW performs an FFT on an array of floating-point values.  You can
+certainly use it to compute the transform of an image or audio stream,
+but you are responsible for figuring out your data format and
+converting it to the form FFTW requires.
+
+\question 09apr:linkfails My program does not link (on Unix).
+
+The libraries must be listed in the correct order (\courier{-lfftw3
+-lm\} for FFTW 3.x) and \italic{after\} your program sources/objects.
+(The general rule is that if \italic{A\} uses \italic{B\}, then
+\italic{A\} must be listed before \italic{B\} in the link command.).
+
+\question 15mar:linkheader I included your header, but linking still fails.
+
+You're a C++ programmer, aren't you?  You have to compile the FFTW
+library and link it into your program, not just \courier{#include
+<fftw3.h>\}.  (Yes, this is really a FAQ.)
+
+\question 22oct:nostack My program crashes, complaining about stack space.
+
+You cannot declare large arrays with automatic storage (e.g. via
+\courier{fftw_complex array[N]\}); you should use
+\courier{fftw_malloc\} (or equivalent) to allocate the arrays you want
+to transform if they are larger than a few hundred elements.
+
+\question 13may:leaks FFTW seems to have a memory leak.
+
+After you create a plan, FFTW caches the information required to
+quickly recreate the plan.  (See \qref savePlans) It also maintains a
+small amount of other persistent memory.  You can deallocate all of
+FFTW's internally allocated memory, if you wish, by calling
+\courier{fftw_cleanup()\}, as documented in the manual.
+
+\question 16may:allzero The output of FFTW's transform is all zeros.
+
+You should initialize your input array \italic{after\} creating the
+plan, unless you use \courier{FFTW_ESTIMATE\}: planning with
+\courier{FFTW_MEASURE\} or \courier{FFTW_PATIENT\} overwrites the
+input/output arrays, as described in the manual.
+
+\question 05sep:vbetalia How do I call FFTW from the Microsoft language du jour?
+
+Please \italic{do not\} ask us Windows-specific questions.  We do not
+use Windows.  We know nothing about Visual Basic, Visual C++, or .NET.
+Please find the appropriate Usenet discussion group and ask your
+question there.  See also \qref runOnWindows.
+
+\question 15oct:pruned Can I compute only a subset of the DFT outputs?
+
+In general, no, an FFT intrinsically computes all outputs from all
+inputs.  In principle, there is something called a \italic{pruned
+FFT\} that can do what you want, but to compute K outputs out of N the
+complexity is in general O(N log K) instead of O(N log N), thus saving
+only a small additive factor in the log.  (The same argument holds if
+you instead have only K nonzero inputs.)
+
+There are some specific cases in which you can get the O(N log K)
+performance benefits easily, however, by combining a few ordinary
+FFTs.  In particular, the case where you want the first K outputs,
+where K divides N, can be handled by performing N/K transforms of size
+K and then summing the outputs multiplied by appropriate phase
+factors.  For more details, see \docref{pruned FFTs with FFTW\}.
+
+There are also some algorithms that compute pruned transforms
+\italic{approximately\}, but they are beyond the scope of this FAQ.
+
+\question 21jan:transpose  Can I use FFTW's routines for in-place and out-of-place matrix transposition?
+
+You can use the FFTW guru interface to create a rank-0 transform of
+vector rank 2 where the vector strides are transposed.  (A rank-0
+transform is equivalent to a 1D transform of size 1, which.  just
+copies the input into the output.)  Specifying the same location for
+the input and output makes the transpose in-place.
+
+For double-valued data stored in row-major format, plan creation looks like
+this:
+
+\verbatim
+fftw_plan plan_transpose(int rows, int cols, double *in, double *out)
+{
+    const unsigned flags = FFTW_ESTIMATE; /* other flags are possible */
+    fftw_iodim howmany_dims[2];
+
+    howmany_dims[0].n  = rows;
+    howmany_dims[0].is = cols;
+    howmany_dims[0].os = 1;
+
+    howmany_dims[1].n  = cols;
+    howmany_dims[1].is = 1;
+    howmany_dims[1].os = rows;
+
+    return fftw_plan_guru_r2r(/*rank=*/ 0, /*dims=*/ NULL,
+                              /*howmany_rank=*/ 2, howmany_dims,
+                              in, out, /*kind=*/ NULL, flags);
+}
+\endverbatim
+
+(This entry was written by Rhys Ulerich.)
+
+\comment ######################################################################
+
+\section  Internals of FFTW
+
+\question 26aug:howworks  How does FFTW work?
+
+The innovation (if it can be so called) in FFTW consists in having a
+variety of composable \italic{solvers\}, representing different FFT
+algorithms and implementation strategies, whose combination into a
+particular \italic{plan\} for a given size can be determined at
+runtime according to the characteristics of your machine/compiler.
+This peculiar software architecture allows FFTW to adapt itself to
+almost any machine.
+
+For more details (albeit somewhat outdated), see the paper "FFTW: An
+Adaptive Software Architecture for the FFT", by M. Frigo and
+S. G. Johnson, \italic{Proc. ICASSP\} 3, 1381 (1998), also
+available at \docref{the FFTW web page\}.
+
+\question 26aug:whyfast Why is FFTW so fast?
+
+This is a complex question, and there is no simple answer.  In fact,
+the authors do not fully know the answer, either.  In addition to many
+small performance hacks throughout FFTW, there are three general
+reasons for FFTW's speed.
+
+\call startlist
+\call item
+	FFTW uses a variety of FFT algorithms and implementation styles
+that can be arbitrarily composed to adapt itself to
+a machine.  See \qref howworks.
+\call item
+	FFTW uses a code generator to produce highly-optimized
+routines for computing small transforms.
+\call item
+	FFTW uses explicit divide-and-conquer to take advantage
+of the memory hierarchy.
+\call endlist
+
+For more details (albeit somewhat outdated), see the paper "FFTW: An
+Adaptive Software Architecture for the FFT", by M. Frigo and
+S. G. Johnson, \italic{Proc. ICASSP\} 3, 1381 (1998),
+available along with other references at \docref{the FFTW web page\}.
+
+\comment ######################################################################
+
+\section  Known bugs
+
+\question 27aug:rfftwndbug  FFTW 1.1 crashes in rfftwnd on Linux.
+
+This bug was fixed in FFTW 1.2.  There was a bug in \courier{rfftwnd\}
+causing an incorrect amount of memory to be allocated.  The bug showed
+up in Linux with libc-5.3.12 (and nowhere else that we know of).
+
+\question 15oct:fftwmpibug The MPI transforms in FFTW 1.2 give incorrect results/leak memory.
+
+These bugs were corrected in FFTW 1.2.1.  The MPI transforms (really,
+just the transpose routines) in FFTW 1.2 had bugs that could cause
+errors in some situations.
+
+\question 05nov:testsingbug The test programs in FFTW 1.2.1 fail when I change FFTW to use single precision.
+
+This bug was fixed in FFTW 1.3.  (Older versions of FFTW did
+work in single precision, but the test programs didn't--the error
+tolerances in the tests were set for double precision.)
+
+\question 24mar:teststoobig The test program in FFTW 1.2.1 fails for n > 46340.
+
+This bug was fixed in FFTW 1.3.  FFTW 1.2.1 produced the right answer,
+but the test program was wrong.  For large n, n*n in the naive
+transform that we used for comparison overflows 32 bit integer
+precision, breaking the test.
+
+\question 24aug:linuxthreads The threaded code fails on Linux Redhat 5.0
+
+We had problems with glibc-2.0.5.  The code should work with
+glibc-2.0.7.
+
+\question 26sep:bigrfftwnd FFTW 2.0's rfftwnd fails for rank > 1 transforms with a final dimension >= 65536.
+
+This bug was fixed in FFTW 2.0.1.  (There was a 32-bit integer overflow due
+to a poorly-parenthesized expression.)
+
+\question 26mar:primebug FFTW 2.0's complex transforms give the wrong results with prime factors 17 to 97.
+
+There was a bug in the complex transforms that could cause incorrect
+results under (hopefully rare) circumstances for lengths with
+intermediate-size prime factors (17-97).  This bug was fixed in FFTW
+2.1.1.
+
+\question 05apr:mpichbug FFTW 2.1.1's MPI test programs crash with MPICH.
+
+This bug was fixed in FFTW 2.1.2.  The 2.1/2.1.1 MPI test programs crashed
+when using the MPICH implementation of MPI with the \courier{ch_p4\}
+device (TCP/IP); the transforms themselves worked fine.
+
+\question 25may:aixthreadbug FFTW 2.1.2's multi-threaded transforms don't work on AIX.
+
+This bug was fixed in FFTW 2.1.3.  The multi-threaded transforms in
+previous versions didn't work with AIX's \courier{pthreads\}
+implementation, which idiosyncratically creates threads in detached
+(non-joinable) mode by default.
+
+\question 27sep:bigprimebug FFTW 2.1.2's complex transforms give incorrect results for large prime sizes.
+
+This bug was fixed in FFTW 2.1.3.  FFTW's complex-transform algorithm
+for prime sizes (in versions 2.0 to 2.1.2) had an integer overflow
+problem that caused incorrect results for many primes greater than
+32768 (on 32-bit machines).  (Sizes without large prime factors are
+not affected.)
+
+\question 25may:solaristhreadbug FFTW 2.1.3's multi-threaded transforms don't give any speedup on Solaris.
+
+This bug was fixed in FFTW 2.1.4.  (By default, Solaris creates
+threads that do not parallelize over multiple processors, so one has
+to request the proper behavior specifically.)
+
+\question 03may:aixflags FFTW 2.1.3 crashes on AIX.
+
+The FFTW 2.1.3 \courier{configure\} script picked incorrect compiler
+flags for the \courier{xlc\} compiler on newer IBM processors.  This
+is fixed in FFTW 2.1.4.
+
+\comment Here it ends!
+

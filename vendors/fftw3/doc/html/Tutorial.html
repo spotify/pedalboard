@@ -1,0 +1,109 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Tutorial (FFTW 3.3.10)</title>
+
+<meta name="description" content="Tutorial (FFTW 3.3.10)">
+<meta name="keywords" content="Tutorial (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Complex-One_002dDimensional-DFTs.html" rel="next" title="Complex One-Dimensional DFTs">
+<link href="Introduction.html" rel="prev" title="Introduction">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Tutorial"></span><div class="header">
+<p>
+Next: <a href="Other-Important-Topics.html" accesskey="n" rel="next">Other Important Topics</a>, Previous: <a href="Introduction.html" accesskey="p" rel="prev">Introduction</a>, Up: <a href="index.html" accesskey="u" rel="up">Top</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Tutorial-1"></span><h2 class="chapter">2 Tutorial</h2>
+<table class="menu" border="0" cellspacing="0">
+<tr><td align="left" valign="top">&bull; <a href="Complex-One_002dDimensional-DFTs.html" accesskey="1">Complex One-Dimensional DFTs</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Complex-Multi_002dDimensional-DFTs.html" accesskey="2">Complex Multi-Dimensional DFTs</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="One_002dDimensional-DFTs-of-Real-Data.html" accesskey="3">One-Dimensional DFTs of Real Data</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Multi_002dDimensional-DFTs-of-Real-Data.html" accesskey="4">Multi-Dimensional DFTs of Real Data</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="More-DFTs-of-Real-Data.html" accesskey="5">More DFTs of Real Data</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+</table>
+
+<p>This chapter describes the basic usage of FFTW, i.e., how to compute
+<span id="index-basic-interface-1"></span>
+the Fourier transform of a single array.  This chapter tells the
+truth, but not the <em>whole</em> truth. Specifically, FFTW implements
+additional routines and flags that are not documented here, although
+in many cases we try to indicate where added capabilities exist.  For
+more complete information, see <a href="FFTW-Reference.html">FFTW Reference</a>.  (Note that you
+need to compile and install FFTW before you can use it in a program.
+For the details of the installation, see <a href="Installation-and-Customization.html">Installation and Customization</a>.)
+</p>
+<p>We recommend that you read this tutorial in order.<a id="DOCF1" href="#FOOT1"><sup>1</sup></a>  At the least, read the first section (see <a href="Complex-One_002dDimensional-DFTs.html">Complex One-Dimensional DFTs</a>) before reading any of the others, even if your
+main interest lies in one of the other transform types.
+</p>
+<p>Users of FFTW version 2 and earlier may also want to read <a href="Upgrading-from-FFTW-version-2.html">Upgrading from FFTW version 2</a>.
+</p>
+<div class="footnote">
+<hr>
+<h4 class="footnotes-heading">Footnotes</h4>
+
+<h5><a id="FOOT1" href="#DOCF1">(1)</a></h3>
+<p>You can
+read the tutorial in bit-reversed order after computing your first
+transform.</p>
+</div>
+
+
+
+</body>
+</html>

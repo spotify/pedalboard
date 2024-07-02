@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Calling FFTW from Modern Fortran (FFTW 3.3.10)</title>
+
+<meta name="description" content="Calling FFTW from Modern Fortran (FFTW 3.3.10)">
+<meta name="keywords" content="Calling FFTW from Modern Fortran (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Overview-of-Fortran-interface.html" rel="next" title="Overview of Fortran interface">
+<link href="FFTW-MPI-Fortran-Interface.html" rel="prev" title="FFTW MPI Fortran Interface">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Calling-FFTW-from-Modern-Fortran"></span><div class="header">
+<p>
+Next: <a href="Calling-FFTW-from-Legacy-Fortran.html" accesskey="n" rel="next">Calling FFTW from Legacy Fortran</a>, Previous: <a href="Distributed_002dmemory-FFTW-with-MPI.html" accesskey="p" rel="prev">Distributed-memory FFTW with MPI</a>, Up: <a href="index.html" accesskey="u" rel="up">Top</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Calling-FFTW-from-Modern-Fortran-1"></span><h2 class="chapter">7 Calling FFTW from Modern Fortran</h2>
+<span id="index-Fortran-interface-2"></span>
+
+<p>Fortran 2003 standardized ways for Fortran code to call C libraries,
+and this allows us to support a direct translation of the FFTW C API
+into Fortran.  Compared to the legacy Fortran 77 interface
+(see <a href="Calling-FFTW-from-Legacy-Fortran.html">Calling FFTW from Legacy Fortran</a>), this direct interface
+offers many advantages, especially compile-time type-checking and
+aligned memory allocation.  As of this writing, support for these C
+interoperability features seems widespread, having been implemented in
+nearly all major Fortran compilers (e.g. GNU, Intel, IBM,
+Oracle/Solaris, Portland Group, NAG).
+<span id="index-portability-4"></span>
+</p>
+<p>This chapter documents that interface.  For the most part, since this
+interface allows Fortran to call the C interface directly, the usage
+is identical to C translated to Fortran syntax.  However, there are a
+few subtle points such as memory allocation, wisdom, and data types
+that deserve closer attention.
+</p>
+<table class="menu" border="0" cellspacing="0">
+<tr><td align="left" valign="top">&bull; <a href="Overview-of-Fortran-interface.html" accesskey="1">Overview of Fortran interface</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Reversing-array-dimensions.html" accesskey="2">Reversing array dimensions</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="FFTW-Fortran-type-reference.html" accesskey="3">FFTW Fortran type reference</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Plan-execution-in-Fortran.html" accesskey="4">Plan execution in Fortran</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Allocating-aligned-memory-in-Fortran.html" accesskey="5">Allocating aligned memory in Fortran</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Accessing-the-wisdom-API-from-Fortran.html" accesskey="6">Accessing the wisdom API from Fortran</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Defining-an-FFTW-module.html" accesskey="7">Defining an FFTW module</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+</table>
+
+
+
+
+</body>
+</html>

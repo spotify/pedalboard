@@ -1,0 +1,226 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>FFTW MPI Fortran Interface (FFTW 3.3.10)</title>
+
+<meta name="description" content="FFTW MPI Fortran Interface (FFTW 3.3.10)">
+<meta name="keywords" content="FFTW MPI Fortran Interface (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Distributed_002dmemory-FFTW-with-MPI.html" rel="up" title="Distributed-memory FFTW with MPI">
+<link href="Calling-FFTW-from-Modern-Fortran.html" rel="next" title="Calling FFTW from Modern Fortran">
+<link href="MPI-Wisdom-Communication.html" rel="prev" title="MPI Wisdom Communication">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="FFTW-MPI-Fortran-Interface"></span><div class="header">
+<p>
+Previous: <a href="FFTW-MPI-Reference.html" accesskey="p" rel="prev">FFTW MPI Reference</a>, Up: <a href="Distributed_002dmemory-FFTW-with-MPI.html" accesskey="u" rel="up">Distributed-memory FFTW with MPI</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="FFTW-MPI-Fortran-Interface-1"></span><h3 class="section">6.13 FFTW MPI Fortran Interface</h3>
+<span id="index-Fortran-interface-1"></span>
+
+<span id="index-iso_005fc_005fbinding"></span>
+<p>The FFTW MPI interface is callable from modern Fortran compilers
+supporting the Fortran 2003 <code>iso_c_binding</code> standard for calling
+C functions.  As described in <a href="Calling-FFTW-from-Modern-Fortran.html">Calling FFTW from Modern Fortran</a>,
+this means that you can directly call FFTW&rsquo;s C interface from Fortran
+with only minor changes in syntax.  There are, however, a few things
+specific to the MPI interface to keep in mind:
+</p>
+<ul>
+<li> Instead of including <code>fftw3.f03</code> as in <a href="Overview-of-Fortran-interface.html">Overview of Fortran interface</a>, you should <code>include 'fftw3-mpi.f03'</code> (after
+<code>use, intrinsic :: iso_c_binding</code> as before).  The
+<code>fftw3-mpi.f03</code> file includes <code>fftw3.f03</code>, so you should
+<em>not</em> <code>include</code> them both yourself.  (You will also want to
+include the MPI header file, usually via <code>include 'mpif.h'</code> or
+similar, although though this is not needed by <code>fftw3-mpi.f03</code>
+<i>per se</i>.)  (To use the &lsquo;<samp>fftwl_</samp>&rsquo; <code>long double</code> extended-precision routines in supporting compilers, you should include <code>fftw3f-mpi.f03</code> in <em>addition</em> to <code>fftw3-mpi.f03</code>. See <a href="Extended-and-quadruple-precision-in-Fortran.html">Extended and quadruple precision in Fortran</a>.)
+
+</li><li> Because of the different storage conventions between C and Fortran,
+you reverse the order of your array dimensions when passing them to
+FFTW (see <a href="Reversing-array-dimensions.html">Reversing array dimensions</a>).  This is merely a
+difference in notation and incurs no performance overhead.  However,
+it means that, whereas in C the <em>first</em> dimension is distributed,
+in Fortran the <em>last</em> dimension of your array is distributed.
+
+</li><li> <span id="index-MPI-communicator-3"></span>
+In Fortran, communicators are stored as <code>integer</code> types; there is
+no <code>MPI_Comm</code> type, nor is there any way to access a C
+<code>MPI_Comm</code>.  Fortunately, this is taken care of for you by the
+FFTW Fortran interface: whenever the C interface expects an
+<code>MPI_Comm</code> type, you should pass the Fortran communicator as an
+<code>integer</code>.<a id="DOCF8" href="#FOOT8"><sup>8</sup></a>
+
+</li><li> Because you need to call the &lsquo;<samp>local_size</samp>&rsquo; function to find out
+how much space to allocate, and this may be <em>larger</em> than the
+local portion of the array (see <a href="MPI-Data-Distribution.html">MPI Data Distribution</a>), you should
+<em>always</em> allocate your arrays dynamically using FFTW&rsquo;s allocation
+routines as described in <a href="Allocating-aligned-memory-in-Fortran.html">Allocating aligned memory in Fortran</a>.
+(Coincidentally, this also provides the best performance by
+guaranteeding proper data alignment.)
+
+</li><li> Because all sizes in the MPI FFTW interface are declared as
+<code>ptrdiff_t</code> in C, you should use <code>integer(C_INTPTR_T)</code> in
+Fortran (see <a href="FFTW-Fortran-type-reference.html">FFTW Fortran type reference</a>).
+
+</li><li> <span id="index-fftw_005fexecute_005fdft-1"></span>
+<span id="index-fftw_005fmpi_005fexecute_005fdft-1"></span>
+<span id="index-new_002darray-execution-3"></span>
+In Fortran, because of the language semantics, we generally recommend
+using the new-array execute functions for all plans, even in the
+common case where you are executing the plan on the same arrays for
+which the plan was created (see <a href="Plan-execution-in-Fortran.html">Plan execution in Fortran</a>).
+However, note that in the MPI interface these functions are changed:
+<code>fftw_execute_dft</code> becomes <code>fftw_mpi_execute_dft</code>,
+etcetera. See <a href="Using-MPI-Plans.html">Using MPI Plans</a>.
+
+</li></ul>
+
+<p>For example, here is a Fortran code snippet to perform a distributed
+L&nbsp;&times;&nbsp;M
+ complex DFT in-place.  (This assumes you have already
+initialized MPI with <code>MPI_init</code> and have also performed
+<code>call fftw_mpi_init</code>.)
+</p>
+<div class="example">
+<pre class="example">  use, intrinsic :: iso_c_binding
+  include 'fftw3-mpi.f03'
+  integer(C_INTPTR_T), parameter :: L = ...
+  integer(C_INTPTR_T), parameter :: M = ...
+  type(C_PTR) :: plan, cdata
+  complex(C_DOUBLE_COMPLEX), pointer :: data(:,:)
+  integer(C_INTPTR_T) :: i, j, alloc_local, local_M, local_j_offset
+
+!   <span class="roman">get local data size and allocate (note dimension reversal)</span>
+  alloc_local = fftw_mpi_local_size_2d(M, L, MPI_COMM_WORLD, &amp;
+                                       local_M, local_j_offset)
+  cdata = fftw_alloc_complex(alloc_local)
+  call c_f_pointer(cdata, data, [L,local_M])
+
+!   <span class="roman">create MPI plan for in-place forward DFT (note dimension reversal)</span>
+  plan = fftw_mpi_plan_dft_2d(M, L, data, data, MPI_COMM_WORLD, &amp;
+                              FFTW_FORWARD, FFTW_MEASURE)
+
+! <span class="roman">initialize data to some function</span> my_function(i,j)
+  do j = 1, local_M
+    do i = 1, L
+      data(i, j) = my_function(i, j + local_j_offset)
+    end do
+  end do
+
+! <span class="roman">compute transform (as many times as desired)</span>
+  call fftw_mpi_execute_dft(plan, data, data)
+
+  call fftw_destroy_plan(plan)
+  call fftw_free(cdata)
+</pre></div>
+
+<p>Note that when we called <code>fftw_mpi_local_size_2d</code> and
+<code>fftw_mpi_plan_dft_2d</code> with the dimensions in reversed order,
+since a L&nbsp;&times;&nbsp;M
+ Fortran array is viewed by FFTW in C as a
+M&nbsp;&times;&nbsp;L
+ array.  This means that the array was distributed over
+the <code>M</code> dimension, the local portion of which is a
+L&nbsp;&times;&nbsp;local_M
+ array in Fortran.  (You must <em>not</em> use an
+<code>allocate</code> statement to allocate an L&nbsp;&times;&nbsp;local_M
+ array,
+however; you must allocate <code>alloc_local</code> complex numbers, which
+may be greater than <code>L * local_M</code>, in order to reserve space for
+intermediate steps of the transform.)  Finally, we mention that
+because C&rsquo;s array indices are zero-based, the <code>local_j_offset</code>
+argument can conveniently be interpreted as an offset in the 1-based
+<code>j</code> index (rather than as a starting index as in C).
+</p>
+<p>If instead you had used the <code>ior(FFTW_MEASURE,
+FFTW_MPI_TRANSPOSED_OUT)</code> flag, the output of the transform would be a
+transposed M&nbsp;&times;&nbsp;local_L
+ array, associated with the <em>same</em>
+<code>cdata</code> allocation (since the transform is in-place), and which
+you could declare with:
+</p>
+<div class="example">
+<pre class="example">  complex(C_DOUBLE_COMPLEX), pointer :: tdata(:,:)
+  ...
+  call c_f_pointer(cdata, tdata, [M,local_L])
+</pre></div>
+
+<p>where <code>local_L</code> would have been obtained by changing the
+<code>fftw_mpi_local_size_2d</code> call to:
+</p>
+<div class="example">
+<pre class="example">  alloc_local = fftw_mpi_local_size_2d_transposed(M, L, MPI_COMM_WORLD, &amp;
+                           local_M, local_j_offset, local_L, local_i_offset)
+</pre></div>
+<div class="footnote">
+<hr>
+<h4 class="footnotes-heading">Footnotes</h4>
+
+<h5><a id="FOOT8" href="#DOCF8">(8)</a></h3>
+<p>Technically, this is because you aren&rsquo;t
+actually calling the C functions directly. You are calling wrapper
+functions that translate the communicator with <code>MPI_Comm_f2c</code>
+before calling the ordinary C interface.  This is all done
+transparently, however, since the <code>fftw3-mpi.f03</code> interface file
+renames the wrappers so that they are called in Fortran with the same
+names as the C interface functions.</p>
+</div>
+<hr>
+<div class="header">
+<p>
+Previous: <a href="FFTW-MPI-Reference.html" accesskey="p" rel="prev">FFTW MPI Reference</a>, Up: <a href="Distributed_002dmemory-FFTW-with-MPI.html" accesskey="u" rel="up">Distributed-memory FFTW with MPI</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

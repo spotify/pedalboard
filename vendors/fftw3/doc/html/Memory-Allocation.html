@@ -1,0 +1,120 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Memory Allocation (FFTW 3.3.10)</title>
+
+<meta name="description" content="Memory Allocation (FFTW 3.3.10)">
+<meta name="keywords" content="Memory Allocation (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Data-Types-and-Files.html" rel="up" title="Data Types and Files">
+<link href="Using-Plans.html" rel="next" title="Using Plans">
+<link href="Precision.html" rel="prev" title="Precision">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Memory-Allocation"></span><div class="header">
+<p>
+Previous: <a href="Precision.html" accesskey="p" rel="prev">Precision</a>, Up: <a href="Data-Types-and-Files.html" accesskey="u" rel="up">Data Types and Files</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Memory-Allocation-1"></span><h4 class="subsection">4.1.3 Memory Allocation</h4>
+
+<div class="example">
+<pre class="example">void *fftw_malloc(size_t n);
+void fftw_free(void *p);
+</pre></div>
+<span id="index-fftw_005fmalloc-3"></span>
+<span id="index-fftw_005ffree-2"></span>
+
+<p>These are functions that behave identically to <code>malloc</code> and
+<code>free</code>, except that they guarantee that the returned pointer obeys
+any special alignment restrictions imposed by any algorithm in FFTW
+(e.g. for SIMD acceleration).  See <a href="SIMD-alignment-and-fftw_005fmalloc.html">SIMD alignment and fftw_malloc</a>.
+<span id="index-alignment"></span>
+</p>
+
+<p>Data allocated by <code>fftw_malloc</code> <em>must</em> be deallocated by
+<code>fftw_free</code> and not by the ordinary <code>free</code>.
+</p>
+<p>These routines simply call through to your operating system&rsquo;s
+<code>malloc</code> or, if necessary, its aligned equivalent
+(e.g. <code>memalign</code>), so you normally need not worry about any
+significant time or space overhead.  You are <em>not required</em> to use
+them to allocate your data, but we strongly recommend it.
+</p>
+<p>Note: in C++, just as with ordinary <code>malloc</code>, you must typecast
+the output of <code>fftw_malloc</code> to whatever pointer type you are
+allocating.
+<span id="index-C_002b_002b-4"></span>
+</p>
+
+<p>We also provide the following two convenience functions to allocate
+real and complex arrays with <code>n</code> elements, which are equivalent
+to <code>(double *) fftw_malloc(sizeof(double) * n)</code> and
+<code>(fftw_complex *) fftw_malloc(sizeof(fftw_complex) * n)</code>,
+respectively:
+</p>
+<div class="example">
+<pre class="example">double *fftw_alloc_real(size_t n);
+fftw_complex *fftw_alloc_complex(size_t n);
+</pre></div>
+<span id="index-fftw_005falloc_005freal-1"></span>
+<span id="index-fftw_005falloc_005fcomplex-2"></span>
+
+<p>The equivalent functions in other precisions allocate arrays of <code>n</code>
+elements in that precision.  e.g. <code>fftwf_alloc_real(n)</code> is
+equivalent to <code>(float *) fftwf_malloc(sizeof(float) * n)</code>.
+<span id="index-precision-4"></span>
+</p>
+
+
+
+</body>
+</html>

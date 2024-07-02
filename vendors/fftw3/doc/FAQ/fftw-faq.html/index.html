@@ -1,0 +1,110 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head><title>
+FFTW Frequently Asked Questions with Answers
+</title>
+<link rev="made" href="mailto:fftw@fftw.org">
+<link rel="Contents" href="index.html">
+<link rel="Start" href="index.html">
+<META name="description"
+      content="Frequently asked questions and answers (FAQ) for FFTW.">
+<link rel="Bookmark" title="FFTW FAQ" href="index.html">
+<LINK rel="Bookmark" title="FFTW Home Page"
+      href="http://www.fftw.org">
+<LINK rel="Bookmark" title="FFTW Manual"
+      href="http://www.fftw.org/doc/">
+</head><body text="#000000" bgcolor="#FFFFFF"><h1>
+FFTW Frequently Asked Questions with Answers
+</h1>
+This is the list of Frequently Asked Questions about FFTW, a
+collection of fast C routines for computing the Discrete Fourier
+Transform in one or more dimensions.  
+<h1>
+Index
+</h1>
+
+<ul>
+<li><b><font size="+2"><a href="section1.html" rel=subdocument>Section 1.  Introduction and General Information</a></font></b>
+<li><a href="section1.html#whatisfftw" rel=subdocument>Q1.1. What is FFTW?</a>
+<li><a href="section1.html#whereisfftw" rel=subdocument>Q1.2. How do I obtain FFTW?</a>
+<li><a href="section1.html#isfftwfree" rel=subdocument>Q1.3. Is FFTW free software?</a>
+<li><a href="section1.html#nonfree" rel=subdocument>Q1.4. What is this about non-free licenses?</a>
+<li><a href="section1.html#west" rel=subdocument>Q1.5. In the West? I thought MIT was in the East?</a>
+<br><br><li><b><font size="+2"><a href="section2.html" rel=subdocument>Section 2.  Installing FFTW</a></font></b>
+<li><a href="section2.html#systems" rel=subdocument>Q2.1. Which systems does FFTW run on?</a>
+<li><a href="section2.html#runOnWindows" rel=subdocument>Q2.2. Does FFTW run on Windows?</a>
+<li><a href="section2.html#compilerCrashes" rel=subdocument>Q2.3. My compiler has trouble with FFTW.</a>
+<li><a href="section2.html#solarisSucks" rel=subdocument>Q2.4. FFTW does not compile on Solaris, complaining about
+<code>const</code>.</a>
+<li><a href="section2.html#3dnow" rel=subdocument>Q2.5. What's the difference between <code>--enable-3dnow</code> and <code>--enable-k7</code>?</a>
+<li><a href="section2.html#fma" rel=subdocument>Q2.6. What's the difference between the fma and the non-fma
+versions?</a>
+<li><a href="section2.html#languages" rel=subdocument>Q2.7. Which language is FFTW written in?</a>
+<li><a href="section2.html#fortran" rel=subdocument>Q2.8. Can I call FFTW from Fortran?</a>
+<li><a href="section2.html#cplusplus" rel=subdocument>Q2.9. Can I call FFTW from C++?</a>
+<li><a href="section2.html#whynotfortran" rel=subdocument>Q2.10. Why isn't FFTW written in Fortran/C++?</a>
+<li><a href="section2.html#singleprec" rel=subdocument>Q2.11. How do I compile FFTW to run in single precision?</a>
+<li><a href="section2.html#64bitk7" rel=subdocument>Q2.12. --enable-k7 does not work on x86-64</a>
+<br><br><li><b><font size="+2"><a href="section3.html" rel=subdocument>Section 3.  Using FFTW</a></font></b>
+<li><a href="section3.html#fftw2to3" rel=subdocument>Q3.1. Why not support the FFTW 2 interface in FFTW
+3?</a>
+<li><a href="section3.html#planperarray" rel=subdocument>Q3.2. Why do FFTW 3 plans encapsulate the input/output arrays and not just
+the algorithm?</a>
+<li><a href="section3.html#slow" rel=subdocument>Q3.3. FFTW seems really slow.</a>
+<li><a href="section3.html#slows" rel=subdocument>Q3.4. FFTW slows down after repeated calls.</a>
+<li><a href="section3.html#segfault" rel=subdocument>Q3.5. An FFTW routine is crashing when I call it.</a>
+<li><a href="section3.html#fortran64" rel=subdocument>Q3.6. My Fortran program crashes when calling FFTW.</a>
+<li><a href="section3.html#conventions" rel=subdocument>Q3.7. FFTW gives results different from my old
+FFT.</a>
+<li><a href="section3.html#nondeterministic" rel=subdocument>Q3.8. FFTW gives different results between runs</a>
+<li><a href="section3.html#savePlans" rel=subdocument>Q3.9. Can I save FFTW's plans?</a>
+<li><a href="section3.html#whyscaled" rel=subdocument>Q3.10. Why does your inverse transform return a scaled
+result?</a>
+<li><a href="section3.html#centerorigin" rel=subdocument>Q3.11. How can I make FFTW put the origin (zero frequency) at the center of
+its output?</a>
+<li><a href="section3.html#imageaudio" rel=subdocument>Q3.12. How do I FFT an image/audio file in <i>foobar</i> format?</a>
+<li><a href="section3.html#linkfails" rel=subdocument>Q3.13. My program does not link (on Unix).</a>
+<li><a href="section3.html#linkheader" rel=subdocument>Q3.14. I included your header, but linking still
+fails.</a>
+<li><a href="section3.html#nostack" rel=subdocument>Q3.15. My program crashes, complaining about stack
+space.</a>
+<li><a href="section3.html#leaks" rel=subdocument>Q3.16. FFTW seems to have a memory leak.</a>
+<li><a href="section3.html#allzero" rel=subdocument>Q3.17. The output of FFTW's transform is all zeros.</a>
+<li><a href="section3.html#vbetalia" rel=subdocument>Q3.18. How do I call FFTW from the Microsoft language du
+jour?</a>
+<li><a href="section3.html#pruned" rel=subdocument>Q3.19. Can I compute only a subset of the DFT outputs?</a>
+<li><a href="section3.html#transpose" rel=subdocument>Q3.20. Can I use FFTW's routines for in-place and out-of-place matrix
+transposition?</a>
+<br><br><li><b><font size="+2"><a href="section4.html" rel=subdocument>Section 4.  Internals of FFTW</a></font></b>
+<li><a href="section4.html#howworks" rel=subdocument>Q4.1. How does FFTW work?</a>
+<li><a href="section4.html#whyfast" rel=subdocument>Q4.2. Why is FFTW so fast?</a>
+<br><br><li><b><font size="+2"><a href="section5.html" rel=subdocument>Section 5.  Known bugs</a></font></b>
+<li><a href="section5.html#rfftwndbug" rel=subdocument>Q5.1. FFTW 1.1 crashes in rfftwnd on Linux.</a>
+<li><a href="section5.html#fftwmpibug" rel=subdocument>Q5.2. The MPI transforms in FFTW 1.2 give incorrect results/leak
+memory.</a>
+<li><a href="section5.html#testsingbug" rel=subdocument>Q5.3. The test programs in FFTW 1.2.1 fail when I change FFTW to use single
+precision.</a>
+<li><a href="section5.html#teststoobig" rel=subdocument>Q5.4. The test program in FFTW 1.2.1 fails for n &gt;
+46340.</a>
+<li><a href="section5.html#linuxthreads" rel=subdocument>Q5.5. The threaded code fails on Linux Redhat 5.0</a>
+<li><a href="section5.html#bigrfftwnd" rel=subdocument>Q5.6. FFTW 2.0's rfftwnd fails for rank &gt; 1 transforms with a final
+dimension &gt;= 65536.</a>
+<li><a href="section5.html#primebug" rel=subdocument>Q5.7. FFTW 2.0's complex transforms give the wrong results with prime
+factors 17 to 97.</a>
+<li><a href="section5.html#mpichbug" rel=subdocument>Q5.8. FFTW 2.1.1's MPI test programs crash with
+MPICH.</a>
+<li><a href="section5.html#aixthreadbug" rel=subdocument>Q5.9. FFTW 2.1.2's multi-threaded transforms don't work on
+AIX.</a>
+<li><a href="section5.html#bigprimebug" rel=subdocument>Q5.10. FFTW 2.1.2's complex transforms give incorrect results for large prime
+sizes.</a>
+<li><a href="section5.html#solaristhreadbug" rel=subdocument>Q5.11. FFTW 2.1.3's multi-threaded transforms don't give any speedup on
+Solaris.</a>
+<li><a href="section5.html#aixflags" rel=subdocument>Q5.12. FFTW 2.1.3 crashes on AIX.</a>
+</ul><hr>
+<address>
+<A href="http://www.fftw.org">Matteo Frigo and Steven G. Johnson</A> / <A href="mailto:fftw@fftw.org">fftw@fftw.org</A>
+- 14 September 2021
+</address><br>
+Extracted from FFTW Frequently Asked Questions with Answers,
+Copyright &copy; 2021 Matteo Frigo and Massachusetts Institute of Technology.
+</body></html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>The 1d Discrete Fourier Transform (DFT) (FFTW 3.3.10)</title>
+
+<meta name="description" content="The 1d Discrete Fourier Transform (DFT) (FFTW 3.3.10)">
+<meta name="keywords" content="The 1d Discrete Fourier Transform (DFT) (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="What-FFTW-Really-Computes.html" rel="up" title="What FFTW Really Computes">
+<link href="The-1d-Real_002ddata-DFT.html" rel="next" title="The 1d Real-data DFT">
+<link href="What-FFTW-Really-Computes.html" rel="prev" title="What FFTW Really Computes">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="The-1d-Discrete-Fourier-Transform-_0028DFT_0029"></span><div class="header">
+<p>
+Next: <a href="The-1d-Real_002ddata-DFT.html" accesskey="n" rel="next">The 1d Real-data DFT</a>, Previous: <a href="What-FFTW-Really-Computes.html" accesskey="p" rel="prev">What FFTW Really Computes</a>, Up: <a href="What-FFTW-Really-Computes.html" accesskey="u" rel="up">What FFTW Really Computes</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="The-1d-Discrete-Fourier-Transform-_0028DFT_0029-1"></span><h4 class="subsection">4.8.1 The 1d Discrete Fourier Transform (DFT)</h4>
+
+<span id="index-discrete-Fourier-transform-1"></span>
+<span id="index-DFT-2"></span>
+<p>The forward (<code>FFTW_FORWARD</code>) discrete Fourier transform (DFT) of a
+1d complex array <em>X</em> of size <em>n</em> computes an array <em>Y</em>,
+where:
+<center><img src="equation-dft.png" align="top">.</center>
+The backward (<code>FFTW_BACKWARD</code>) DFT computes:
+<center><img src="equation-idft.png" align="top">.</center>
+</p>
+<span id="index-normalization-8"></span>
+<p>FFTW computes an unnormalized transform, in that there is no coefficient
+in front of the summation in the DFT.  In other words, applying the
+forward and then the backward transform will multiply the input by
+<em>n</em>.
+</p>
+<span id="index-frequency-1"></span>
+<p>From above, an <code>FFTW_FORWARD</code> transform corresponds to a sign of
+<em>-1</em> in the exponent of the DFT.  Note also that we use the
+standard &ldquo;in-order&rdquo; output ordering&mdash;the <em>k</em>-th output
+corresponds to the frequency <em>k/n</em> (or <em>k/T</em>, where <em>T</em>
+is your total sampling period).  For those who like to think in terms of
+positive and negative frequencies, this means that the positive
+frequencies are stored in the first half of the output and the negative
+frequencies are stored in backwards order in the second half of the
+output.  (The frequency <em>-k/n</em> is the same as the frequency
+<em>(n-k)/n</em>.)
+</p>
+
+
+
+</body>
+</html>

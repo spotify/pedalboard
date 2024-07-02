@@ -1,0 +1,99 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Defining an FFTW module (FFTW 3.3.10)</title>
+
+<meta name="description" content="Defining an FFTW module (FFTW 3.3.10)">
+<meta name="keywords" content="Defining an FFTW module (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Calling-FFTW-from-Modern-Fortran.html" rel="up" title="Calling FFTW from Modern Fortran">
+<link href="Calling-FFTW-from-Legacy-Fortran.html" rel="next" title="Calling FFTW from Legacy Fortran">
+<link href="Wisdom-Generic-Export_002fImport-from-Fortran.html" rel="prev" title="Wisdom Generic Export/Import from Fortran">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Defining-an-FFTW-module"></span><div class="header">
+<p>
+Previous: <a href="Accessing-the-wisdom-API-from-Fortran.html" accesskey="p" rel="prev">Accessing the wisdom API from Fortran</a>, Up: <a href="Calling-FFTW-from-Modern-Fortran.html" accesskey="u" rel="up">Calling FFTW from Modern Fortran</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Defining-an-FFTW-module-1"></span><h3 class="section">7.7 Defining an FFTW module</h3>
+
+<p>Rather than using the <code>include</code> statement to include the
+<code>fftw3.f03</code> interface file in any subroutine where you want to
+use FFTW, you might prefer to define an FFTW Fortran module.  FFTW
+does not install itself as a module, primarily because
+<code>fftw3.f03</code> can be shared between different Fortran compilers while
+modules (in general) cannot.  However, it is trivial to define your
+own FFTW module if you want.  Just create a file containing:
+</p>
+<div class="example">
+<pre class="example">  module FFTW3
+    use, intrinsic :: iso_c_binding
+    include 'fftw3.f03'
+  end module
+</pre></div>
+
+<p>Compile this file into a module as usual for your compiler (e.g. with
+<code>gfortran -c</code> you will get a file <code>fftw3.mod</code>).  Now,
+instead of <code>include 'fftw3.f03'</code>, whenever you want to use FFTW
+routines you can just do:
+</p>
+<div class="example">
+<pre class="example">  use FFTW3
+</pre></div>
+
+<p>as usual for Fortran modules.  (You still need to link to the FFTW
+library, of course.)
+</p>
+
+
+</body>
+</html>

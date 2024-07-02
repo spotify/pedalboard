@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Wisdom Generic Export/Import from Fortran (FFTW 3.3.10)</title>
+
+<meta name="description" content="Wisdom Generic Export/Import from Fortran (FFTW 3.3.10)">
+<meta name="keywords" content="Wisdom Generic Export/Import from Fortran (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Accessing-the-wisdom-API-from-Fortran.html" rel="up" title="Accessing the wisdom API from Fortran">
+<link href="Defining-an-FFTW-module.html" rel="next" title="Defining an FFTW module">
+<link href="Wisdom-String-Export_002fImport-from-Fortran.html" rel="prev" title="Wisdom String Export/Import from Fortran">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Wisdom-Generic-Export_002fImport-from-Fortran"></span><div class="header">
+<p>
+Previous: <a href="Wisdom-String-Export_002fImport-from-Fortran.html" accesskey="p" rel="prev">Wisdom String Export/Import from Fortran</a>, Up: <a href="Accessing-the-wisdom-API-from-Fortran.html" accesskey="u" rel="up">Accessing the wisdom API from Fortran</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Wisdom-Generic-Export_002fImport-from-Fortran-1"></span><h4 class="subsection">7.6.3 Wisdom Generic Export/Import from Fortran</h4>
+
+<p>The most generic wisdom export/import functions allow you to provide
+an arbitrary callback function to read/write one character at a time
+in any way you want.  However, your callback function must be written
+in a special way, using the <code>bind(C)</code> attribute to be passed to a
+C interface.
+</p>
+<span id="index-fftw_005fexport_005fwisdom-1"></span>
+<p>In particular, to call the generic wisdom export function
+<code>fftw_export_wisdom</code>, you would write a callback subroutine of the form:
+</p>
+<div class="example">
+<pre class="example">  subroutine my_write_char(c, p) bind(C)
+    use, intrinsic :: iso_c_binding
+    character(C_CHAR), value :: c
+    type(C_PTR), value :: p
+    <em>...write c...</em>
+  end subroutine my_write_char
+</pre></div>
+
+<p>Given such a subroutine (along with the corresponding interface definition), you could then export wisdom using:
+</p>
+<span id="index-c_005ffunloc"></span>
+<div class="example">
+<pre class="example">  call fftw_export_wisdom(c_funloc(my_write_char), p)
+</pre></div>
+
+<span id="index-c_005floc"></span>
+<span id="index-c_005ff_005fpointer-4"></span>
+<p>The standard <code>c_funloc</code> intrinsic converts a Fortran
+<code>bind(C)</code> subroutine into a C function pointer.  The parameter
+<code>p</code> is a <code>type(C_PTR)</code> to any arbitrary data that you want
+to pass to <code>my_write_char</code> (or <code>C_NULL_PTR</code> if none).  (Note
+that you can get a C pointer to Fortran data using the intrinsic
+<code>c_loc</code>, and convert it back to a Fortran pointer in
+<code>my_write_char</code> using <code>c_f_pointer</code>.)
+</p>
+<p>Similarly, to use the generic <code>fftw_import_wisdom</code>, you would
+define a callback function of the form:
+</p>
+<span id="index-fftw_005fimport_005fwisdom-1"></span>
+<div class="example">
+<pre class="example">  integer(C_INT) function my_read_char(p) bind(C)
+    use, intrinsic :: iso_c_binding
+    type(C_PTR), value :: p
+    character :: c
+    <em>...read a character c...</em>
+    my_read_char = ichar(c, C_INT)
+  end function my_read_char
+
+  ....
+
+  integer(C_INT) :: ret
+  ret = fftw_import_wisdom(c_funloc(my_read_char), p)
+  if (ret .eq. 0) stop 'error importing wisdom'
+</pre></div>
+
+<p>Your function can return <code>-1</code> if the end of the input is reached.
+Again, <code>p</code> is an arbitrary <code>type(C_PTR</code> that is passed
+through to your function.  <code>fftw_import_wisdom</code> returns <code>0</code>
+if an error occurred and nonzero otherwise.
+</p>
+<hr>
+<div class="header">
+<p>
+Previous: <a href="Wisdom-String-Export_002fImport-from-Fortran.html" accesskey="p" rel="prev">Wisdom String Export/Import from Fortran</a>, Up: <a href="Accessing-the-wisdom-API-from-Fortran.html" accesskey="u" rel="up">Accessing the wisdom API from Fortran</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

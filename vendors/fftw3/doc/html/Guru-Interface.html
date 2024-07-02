@@ -1,0 +1,102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Guru Interface (FFTW 3.3.10)</title>
+
+<meta name="description" content="Guru Interface (FFTW 3.3.10)">
+<meta name="keywords" content="Guru Interface (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="FFTW-Reference.html" rel="up" title="FFTW Reference">
+<link href="Interleaved-and-split-arrays.html" rel="next" title="Interleaved and split arrays">
+<link href="Advanced-Real_002dto_002dreal-Transforms.html" rel="prev" title="Advanced Real-to-real Transforms">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Guru-Interface"></span><div class="header">
+<p>
+Next: <a href="New_002darray-Execute-Functions.html" accesskey="n" rel="next">New-array Execute Functions</a>, Previous: <a href="Advanced-Interface.html" accesskey="p" rel="prev">Advanced Interface</a>, Up: <a href="FFTW-Reference.html" accesskey="u" rel="up">FFTW Reference</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Guru-Interface-1"></span><h3 class="section">4.5 Guru Interface</h3>
+<span id="index-guru-interface-2"></span>
+
+<p>The &ldquo;guru&rdquo; interface to FFTW is intended to expose as much as possible
+of the flexibility in the underlying FFTW architecture.  It allows one
+to compute multi-dimensional &ldquo;vectors&rdquo; (loops) of multi-dimensional
+transforms, where each vector/transform dimension has an independent
+size and stride.
+<span id="index-vector"></span>
+One can also use more general complex-number formats, e.g. separate real
+and imaginary arrays.
+</p>
+<p>For those users who require the flexibility of the guru interface, it is
+important that they pay special attention to the documentation lest they
+shoot themselves in the foot.
+</p>
+<table class="menu" border="0" cellspacing="0">
+<tr><td align="left" valign="top">&bull; <a href="Interleaved-and-split-arrays.html" accesskey="1">Interleaved and split arrays</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Guru-vector-and-transform-sizes.html" accesskey="2">Guru vector and transform sizes</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Guru-Complex-DFTs.html" accesskey="3">Guru Complex DFTs</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Guru-Real_002ddata-DFTs.html" accesskey="4">Guru Real-data DFTs</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Guru-Real_002dto_002dreal-Transforms.html" accesskey="5">Guru Real-to-real Transforms</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="64_002dbit-Guru-Interface.html" accesskey="6">64-bit Guru Interface</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+</table>
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Complex Multi-Dimensional DFTs (FFTW 3.3.10)</title>
+
+<meta name="description" content="Complex Multi-Dimensional DFTs (FFTW 3.3.10)">
+<meta name="keywords" content="Complex Multi-Dimensional DFTs (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Tutorial.html" rel="up" title="Tutorial">
+<link href="One_002dDimensional-DFTs-of-Real-Data.html" rel="next" title="One-Dimensional DFTs of Real Data">
+<link href="Complex-One_002dDimensional-DFTs.html" rel="prev" title="Complex One-Dimensional DFTs">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Complex-Multi_002dDimensional-DFTs"></span><div class="header">
+<p>
+Next: <a href="One_002dDimensional-DFTs-of-Real-Data.html" accesskey="n" rel="next">One-Dimensional DFTs of Real Data</a>, Previous: <a href="Complex-One_002dDimensional-DFTs.html" accesskey="p" rel="prev">Complex One-Dimensional DFTs</a>, Up: <a href="Tutorial.html" accesskey="u" rel="up">Tutorial</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Complex-Multi_002dDimensional-DFTs-1"></span><h3 class="section">2.2 Complex Multi-Dimensional DFTs</h3>
+
+<p>Multi-dimensional transforms work much the same way as one-dimensional
+transforms: you allocate arrays of <code>fftw_complex</code> (preferably
+using <code>fftw_malloc</code>), create an <code>fftw_plan</code>, execute it as
+many times as you want with <code>fftw_execute(plan)</code>, and clean up
+with <code>fftw_destroy_plan(plan)</code> (and <code>fftw_free</code>).  
+</p>
+<p>FFTW provides two routines for creating plans for 2d and 3d transforms,
+and one routine for creating plans of arbitrary dimensionality.
+The 2d and 3d routines have the following signature:
+</p><div class="example">
+<pre class="example">fftw_plan fftw_plan_dft_2d(int n0, int n1,
+                           fftw_complex *in, fftw_complex *out,
+                           int sign, unsigned flags);
+fftw_plan fftw_plan_dft_3d(int n0, int n1, int n2,
+                           fftw_complex *in, fftw_complex *out,
+                           int sign, unsigned flags);
+</pre></div>
+<span id="index-fftw_005fplan_005fdft_005f2d"></span>
+<span id="index-fftw_005fplan_005fdft_005f3d"></span>
+
+<p>These routines create plans for <code>n0</code> by <code>n1</code> two-dimensional
+(2d) transforms and <code>n0</code> by <code>n1</code> by <code>n2</code> 3d transforms,
+respectively.  All of these transforms operate on contiguous arrays in
+the C-standard <em>row-major</em> order, so that the last dimension has the
+fastest-varying index in the array.  This layout is described further in
+<a href="Multi_002ddimensional-Array-Format.html">Multi-dimensional Array Format</a>.
+</p>
+<p>FFTW can also compute transforms of higher dimensionality.  In order to
+avoid confusion between the various meanings of the the word
+&ldquo;dimension&rdquo;, we use the term <em>rank</em>
+<span id="index-rank"></span>
+to denote the number of independent indices in an array.<a id="DOCF2" href="#FOOT2"><sup>2</sup></a>  For
+example, we say that a 2d transform has rank&nbsp;2, a 3d transform has
+rank&nbsp;3, and so on.  You can plan transforms of arbitrary rank by
+means of the following function:
+</p>
+<div class="example">
+<pre class="example">fftw_plan fftw_plan_dft(int rank, const int *n,
+                        fftw_complex *in, fftw_complex *out,
+                        int sign, unsigned flags);
+</pre></div>
+<span id="index-fftw_005fplan_005fdft"></span>
+
+<p>Here, <code>n</code> is a pointer to an array <code>n[rank]</code> denoting an
+<code>n[0]</code> by <code>n[1]</code> by &hellip; by <code>n[rank-1]</code> transform.
+Thus, for example, the call
+</p><div class="example">
+<pre class="example">fftw_plan_dft_2d(n0, n1, in, out, sign, flags);
+</pre></div>
+<p>is equivalent to the following code fragment:
+</p><div class="example">
+<pre class="example">int n[2];
+n[0] = n0;
+n[1] = n1;
+fftw_plan_dft(2, n, in, out, sign, flags);
+</pre></div>
+<p><code>fftw_plan_dft</code> is not restricted to 2d and 3d transforms,
+however, but it can plan transforms of arbitrary rank.
+</p>
+<p>You may have noticed that all the planner routines described so far
+have overlapping functionality.  For example, you can plan a 1d or 2d
+transform by using <code>fftw_plan_dft</code> with a <code>rank</code> of <code>1</code>
+or <code>2</code>, or even by calling <code>fftw_plan_dft_3d</code> with <code>n0</code>
+and/or <code>n1</code> equal to <code>1</code> (with no loss in efficiency).  This
+pattern continues, and FFTW&rsquo;s planning routines in general form a
+&ldquo;partial order,&rdquo; sequences of
+<span id="index-partial-order"></span>
+interfaces with strictly increasing generality but correspondingly
+greater complexity.
+</p>
+<p><code>fftw_plan_dft</code> is the most general complex-DFT routine that we
+describe in this tutorial, but there are also the advanced and guru interfaces,
+<span id="index-advanced-interface-1"></span>
+<span id="index-guru-interface-1"></span>
+which allow one to efficiently combine multiple/strided transforms
+into a single FFTW plan, transform a subset of a larger
+multi-dimensional array, and/or to handle more general complex-number
+formats.  For more information, see <a href="FFTW-Reference.html">FFTW Reference</a>.
+</p>
+<div class="footnote">
+<hr>
+<h4 class="footnotes-heading">Footnotes</h4>
+
+<h5><a id="FOOT2" href="#DOCF2">(2)</a></h3>
+<p>The
+term &ldquo;rank&rdquo; is commonly used in the APL, FORTRAN, and Common Lisp
+traditions, although it is not so common in the C&nbsp;world.</p>
+</div>
+<hr>
+<div class="header">
+<p>
+Next: <a href="One_002dDimensional-DFTs-of-Real-Data.html" accesskey="n" rel="next">One-Dimensional DFTs of Real Data</a>, Previous: <a href="Complex-One_002dDimensional-DFTs.html" accesskey="p" rel="prev">Complex One-Dimensional DFTs</a>, Up: <a href="Tutorial.html" accesskey="u" rel="up">Tutorial</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

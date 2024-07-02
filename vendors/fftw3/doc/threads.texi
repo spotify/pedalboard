@@ -1,0 +1,282 @@
+@node Multi-threaded FFTW, Distributed-memory FFTW with MPI, FFTW Reference, Top
+@chapter Multi-threaded FFTW
+
+@cindex parallel transform
+In this chapter we document the parallel FFTW routines for
+shared-memory parallel hardware.  These routines, which support
+parallel one- and multi-dimensional transforms of both real and
+complex data, are the easiest way to take advantage of multiple
+processors with FFTW.  They work just like the corresponding
+uniprocessor transform routines, except that you have an extra
+initialization routine to call, and there is a routine to set the
+number of threads to employ.  Any program that uses the uniprocessor
+FFTW can therefore be trivially modified to use the multi-threaded
+FFTW.
+
+A shared-memory machine is one in which all CPUs can directly access
+the same main memory, and such machines are now common due to the
+ubiquity of multi-core CPUs.  FFTW's multi-threading support allows
+you to utilize these additional CPUs transparently from a single
+program.  However, this does not necessarily translate into
+performance gains---when multiple threads/CPUs are employed, there is
+an overhead required for synchronization that may outweigh the
+computatational parallelism.  Therefore, you can only benefit from
+threads if your problem is sufficiently large.
+@cindex shared-memory
+@cindex threads
+
+@menu
+* Installation and Supported Hardware/Software::
+* Usage of Multi-threaded FFTW::
+* How Many Threads to Use?::
+* Thread safety::
+@end menu
+
+@c ------------------------------------------------------------
+@node Installation and Supported Hardware/Software, Usage of Multi-threaded FFTW, Multi-threaded FFTW, Multi-threaded FFTW
+@section Installation and Supported Hardware/Software
+
+All of the FFTW threads code is located in the @code{threads}
+subdirectory of the FFTW package.  On Unix systems, the FFTW threads
+libraries and header files can be automatically configured, compiled,
+and installed along with the uniprocessor FFTW libraries simply by
+including @code{--enable-threads} in the flags to the @code{configure}
+script (@pxref{Installation on Unix}), or @code{--enable-openmp} to use
+@uref{http://www.openmp.org,OpenMP} threads.
+@fpindex configure
+
+
+@cindex portability
+@cindex OpenMP
+The threads routines require your operating system to have some sort
+of shared-memory threads support.  Specifically, the FFTW threads
+package works with POSIX threads (available on most Unix variants,
+from GNU/Linux to MacOS X) and Win32 threads.  OpenMP threads, which
+are supported in many common compilers (e.g. gcc) are also supported,
+and may give better performance on some systems.  (OpenMP threads are
+also useful if you are employing OpenMP in your own code, in order to
+minimize conflicts between threading models.)  If you have a
+shared-memory machine that uses a different threads API, it should be
+a simple matter of programming to include support for it; see the file
+@code{threads/threads.c} for more detail.
+
+You can compile FFTW with @emph{both} @code{--enable-threads} and
+@code{--enable-openmp} at the same time, since they install libraries
+with different names (@samp{fftw3_threads} and @samp{fftw3_omp}, as
+described below).  However, your programs may only link to @emph{one}
+of these two libraries at a time.
+
+Ideally, of course, you should also have multiple processors in order to
+get any benefit from the threaded transforms.
+
+@c ------------------------------------------------------------
+@node Usage of Multi-threaded FFTW, How Many Threads to Use?, Installation and Supported Hardware/Software, Multi-threaded FFTW
+@section Usage of Multi-threaded FFTW
+
+Here, it is assumed that the reader is already familiar with the usage
+of the uniprocessor FFTW routines, described elsewhere in this manual.
+We only describe what one has to change in order to use the
+multi-threaded routines.
+
+@cindex OpenMP
+First, programs using the parallel complex transforms should be linked
+with @code{-lfftw3_threads -lfftw3 -lm} on Unix, or @code{-lfftw3_omp
+-lfftw3 -lm} if you compiled with OpenMP. You will also need to link
+with whatever library is responsible for threads on your system
+(e.g. @code{-lpthread} on GNU/Linux) or include whatever compiler flag
+enables OpenMP (e.g. @code{-fopenmp} with gcc).
+@cindex linking on Unix
+
+
+Second, before calling @emph{any} FFTW routines, you should call the
+function:
+
+@example
+int fftw_init_threads(void);
+@end example
+@findex fftw_init_threads
+
+This function, which need only be called once, performs any one-time
+initialization required to use threads on your system.  It returns zero
+if there was some error (which should not happen under normal
+circumstances) and a non-zero value otherwise.
+
+Third, before creating a plan that you want to parallelize, you should
+call:
+
+@example
+void fftw_plan_with_nthreads(int nthreads);
+@end example
+@findex fftw_plan_with_nthreads
+
+The @code{nthreads} argument indicates the number of threads you want
+FFTW to use (or actually, the maximum number).  All plans subsequently
+created with any planner routine will use that many threads.  You can
+call @code{fftw_plan_with_nthreads}, create some plans, call
+@code{fftw_plan_with_nthreads} again with a different argument, and
+create some more plans for a new number of threads.  Plans already created
+before a call to @code{fftw_plan_with_nthreads} are unaffected.  If you
+pass an @code{nthreads} argument of @code{1} (the default), threads are
+disabled for subsequent plans.
+
+You can determine the current number of threads that the planner can
+use by calling:
+
+@example
+int fftw_planner_nthreads(void);
+@end example
+@findex fftw_planner_nthreads
+
+@cindex OpenMP
+With OpenMP, to configure FFTW to use all of the currently running
+OpenMP threads (set by @code{omp_set_num_threads(nthreads)} or by the
+@code{OMP_NUM_THREADS} environment variable), you can do:
+@code{fftw_plan_with_nthreads(omp_get_max_threads())}. (The @samp{omp_}
+OpenMP functions are declared via @code{#include <omp.h>}.)
+
+@cindex thread safety
+Given a plan, you then execute it as usual with
+@code{fftw_execute(plan)}, and the execution will use the number of
+threads specified when the plan was created.  When done, you destroy
+it as usual with @code{fftw_destroy_plan}.  As described in
+@ref{Thread safety}, plan @emph{execution} is thread-safe, but plan
+creation and destruction are @emph{not}: you should create/destroy
+plans only from a single thread, but can safely execute multiple plans
+in parallel.
+
+There is one additional routine: if you want to get rid of all memory
+and other resources allocated internally by FFTW, you can call:
+
+@example
+void fftw_cleanup_threads(void);
+@end example
+@findex fftw_cleanup_threads
+
+which is much like the @code{fftw_cleanup()} function except that it
+also gets rid of threads-related data.  You must @emph{not} execute any
+previously created plans after calling this function.
+
+We should also mention one other restriction: if you save wisdom from a
+program using the multi-threaded FFTW, that wisdom @emph{cannot be used}
+by a program using only the single-threaded FFTW (i.e. not calling
+@code{fftw_init_threads}).  @xref{Words of Wisdom-Saving Plans}.
+
+Finally, FFTW provides a optional callback interface that allows you to
+replace its parallel threading backend at runtime:
+
+@example
+void fftw_threads_set_callback(
+    void (*parallel_loop)(void *(*work)(void *), char *jobdata, size_t elsize, int njobs, void *data),
+    void *data);
+@end example
+@findex fftw_threads_set_callback
+
+This routine (which is @emph{not} threadsafe and should generally be called before creating
+any FFTW plans) allows you to provide a function @code{parallel_loop} that executes
+parallel work for FFTW: it should call the function @code{work(jobdata + elsize*i)} for
+@code{i} from @code{0} to @code{njobs-1}, possibly in parallel.  (The `data` pointer
+supplied to @code{fftw_threads_set_callback} is passed through to your @code{parallel_loop}
+function.)   For example, if you link to an FFTW threads library built to use POSIX threads,
+but you want it to use OpenMP instead (because you are using OpenMP elsewhere in your program
+and want to avoid competing threads), you can call @code{fftw_threads_set_callback} with
+the callback function:
+
+@example
+void parallel_loop(void *(*work)(char *), char *jobdata, size_t elsize, int njobs, void *data)
+@{
+#pragma omp parallel for
+    for (int i = 0; i < njobs; ++i)
+        work(jobdata + elsize * i);
+@}
+@end example
+
+The same mechanism could be used in order to make FFTW use a threading backend
+implemented via Intel TBB, Apple GCD, or Cilk, for example.
+
+
+@c ------------------------------------------------------------
+@node How Many Threads to Use?, Thread safety, Usage of Multi-threaded FFTW, Multi-threaded FFTW
+@section How Many Threads to Use?
+
+@cindex number of threads
+There is a fair amount of overhead involved in synchronizing threads,
+so the optimal number of threads to use depends upon the size of the
+transform as well as on the number of processors you have.
+
+As a general rule, you don't want to use more threads than you have
+processors.  (Using more threads will work, but there will be extra
+overhead with no benefit.)  In fact, if the problem size is too small,
+you may want to use fewer threads than you have processors.
+
+You will have to experiment with your system to see what level of
+parallelization is best for your problem size.  Typically, the problem
+will have to involve at least a few thousand data points before threads
+become beneficial.  If you plan with @code{FFTW_PATIENT}, it will
+automatically disable threads for sizes that don't benefit from
+parallelization.
+@ctindex FFTW_PATIENT
+
+@c ------------------------------------------------------------
+@node Thread safety,  , How Many Threads to Use?, Multi-threaded FFTW
+@section Thread safety
+
+@cindex threads
+@cindex OpenMP
+@cindex thread safety
+Users writing multi-threaded programs (including OpenMP) must concern
+themselves with the @dfn{thread safety} of the libraries they
+use---that is, whether it is safe to call routines in parallel from
+multiple threads.  FFTW can be used in such an environment, but some
+care must be taken because the planner routines share data
+(e.g. wisdom and trigonometric tables) between calls and plans.
+
+The upshot is that the only thread-safe routine in FFTW is
+@code{fftw_execute} (and the new-array variants thereof).  All other routines
+(e.g. the planner) should only be called from one thread at a time.  So,
+for example, you can wrap a semaphore lock around any calls to the
+planner; even more simply, you can just create all of your plans from
+one thread.  We do not think this should be an important restriction
+(FFTW is designed for the situation where the only performance-sensitive
+code is the actual execution of the transform), and the benefits of
+shared data between plans are great.
+
+Note also that, since the plan is not modified by @code{fftw_execute},
+it is safe to execute the @emph{same plan} in parallel by multiple
+threads.  However, since a given plan operates by default on a fixed
+array, you need to use one of the new-array execute functions (@pxref{New-array Execute Functions}) so that different threads compute the transform of different data.
+
+(Users should note that these comments only apply to programs using
+shared-memory threads or OpenMP.  Parallelism using MPI or forked processes
+involves a separate address-space and global variables for each process,
+and is not susceptible to problems of this sort.)
+
+The FFTW planner is intended to be called from a single thread.  If you
+really must call it from multiple threads, you are expected to grab
+whatever lock makes sense for your application, with the understanding
+that you may be holding that lock for a long time, which is undesirable.
+
+Neither strategy works, however, in the following situation.  The
+``application'' is structured as a set of ``plugins'' which are unaware
+of each other, and for whatever reason the ``plugins'' cannot coordinate
+on grabbing the lock.  (This is not a technical problem, but an
+organizational one.  The ``plugins'' are written by independent agents,
+and from the perspective of each plugin's author, each plugin is using
+FFTW correctly from a single thread.)  To cope with this situation,
+starting from FFTW-3.3.5, FFTW supports an API to make the planner
+thread-safe:
+
+@example
+void fftw_make_planner_thread_safe(void);
+@end example
+@findex fftw_make_planner_thread_safe
+
+This call operates by brute force: It just installs a hook that wraps a
+lock (chosen by us) around all planner calls.  So there is no magic and
+you get the worst of all worlds.  The planner is still single-threaded,
+but you cannot choose which lock to use.  The planner still holds the
+lock for a long time, but you cannot impose a timeout on lock
+acquisition.  As of FFTW-3.3.5 and FFTW-3.3.6, this call does not work
+when using OpenMP as threading substrate.  (Suggestions on what to do
+about this bug are welcome.)  @emph{Do not use
+@code{fftw_make_planner_thread_safe} unless there is no other choice,}
+such as in the application/plugin situation.

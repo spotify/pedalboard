@@ -1,0 +1,195 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Multi-dimensional MPI DFTs of Real Data (FFTW 3.3.10)</title>
+
+<meta name="description" content="Multi-dimensional MPI DFTs of Real Data (FFTW 3.3.10)">
+<meta name="keywords" content="Multi-dimensional MPI DFTs of Real Data (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Distributed_002dmemory-FFTW-with-MPI.html" rel="up" title="Distributed-memory FFTW with MPI">
+<link href="Other-Multi_002ddimensional-Real_002ddata-MPI-Transforms.html" rel="next" title="Other Multi-dimensional Real-data MPI Transforms">
+<link href="One_002ddimensional-distributions.html" rel="prev" title="One-dimensional distributions">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Multi_002ddimensional-MPI-DFTs-of-Real-Data"></span><div class="header">
+<p>
+Next: <a href="Other-Multi_002ddimensional-Real_002ddata-MPI-Transforms.html" accesskey="n" rel="next">Other Multi-dimensional Real-data MPI Transforms</a>, Previous: <a href="MPI-Data-Distribution.html" accesskey="p" rel="prev">MPI Data Distribution</a>, Up: <a href="Distributed_002dmemory-FFTW-with-MPI.html" accesskey="u" rel="up">Distributed-memory FFTW with MPI</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Multi_002ddimensional-MPI-DFTs-of-Real-Data-1"></span><h3 class="section">6.5 Multi-dimensional MPI DFTs of Real Data</h3>
+
+<p>FFTW&rsquo;s MPI interface also supports multi-dimensional DFTs of real
+data, similar to the serial r2c and c2r interfaces.  (Parallel
+one-dimensional real-data DFTs are not currently supported; you must
+use a complex transform and set the imaginary parts of the inputs to
+zero.)
+</p>
+<p>The key points to understand for r2c and c2r MPI transforms (compared
+to the MPI complex DFTs or the serial r2c/c2r transforms), are:
+</p>
+<ul>
+<li> Just as for serial transforms, r2c/c2r DFTs transform n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;n<sub>d-1</sub>
+ real
+data to/from n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;(n<sub>d-1</sub>/2 + 1)
+ complex data: the last dimension of the
+complex data is cut in half (rounded down), plus one.  As for the
+serial transforms, the sizes you pass to the &lsquo;<samp>plan_dft_r2c</samp>&rsquo; and
+&lsquo;<samp>plan_dft_c2r</samp>&rsquo; are the n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;n<sub>d-1</sub>
+ dimensions of the real data.
+
+</li><li> <span id="index-padding-4"></span>
+Although the real data is <em>conceptually</em> n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;n<sub>d-1</sub>
+, it is
+<em>physically</em> stored as an n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;[2&nbsp;(n<sub>d-1</sub>/2 + 1)]
+ array, where the last
+dimension has been <em>padded</em> to make it the same size as the
+complex output.  This is much like the in-place serial r2c/c2r
+interface (see <a href="Multi_002dDimensional-DFTs-of-Real-Data.html">Multi-Dimensional DFTs of Real Data</a>), except that
+in MPI the padding is required even for out-of-place data.  The extra
+padding numbers are ignored by FFTW (they are <em>not</em> like
+zero-padding the transform to a larger size); they are only used to
+determine the data layout.
+
+</li><li> <span id="index-data-distribution-3"></span>
+The data distribution in MPI for <em>both</em> the real and complex data
+is determined by the shape of the <em>complex</em> data.  That is, you
+call the appropriate &lsquo;<samp>local size</samp>&rsquo; function for the n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;(n<sub>d-1</sub>/2 + 1)
+
+complex data, and then use the <em>same</em> distribution for the real
+data except that the last complex dimension is replaced by a (padded)
+real dimension of twice the length.
+
+</li></ul>
+
+<p>For example suppose we are performing an out-of-place r2c transform of
+L&nbsp;&times;&nbsp;M&nbsp;&times;&nbsp;N
+ real data [padded to L&nbsp;&times;&nbsp;M&nbsp;&times;&nbsp;2(N/2+1)
+],
+resulting in L&nbsp;&times;&nbsp;M&nbsp;&times;&nbsp;N/2+1
+ complex data.  Similar to the
+example in <a href="2d-MPI-example.html">2d MPI example</a>, we might do something like:
+</p>
+<div class="example">
+<pre class="example">#include &lt;fftw3-mpi.h&gt;
+
+int main(int argc, char **argv)
+{
+    const ptrdiff_t L = ..., M = ..., N = ...;
+    fftw_plan plan;
+    double *rin;
+    fftw_complex *cout;
+    ptrdiff_t alloc_local, local_n0, local_0_start, i, j, k;
+
+    MPI_Init(&amp;argc, &amp;argv);
+    fftw_mpi_init();
+
+    /* <span class="roman">get local data size and allocate</span> */
+    alloc_local = fftw_mpi_local_size_3d(L, M, N/2+1, MPI_COMM_WORLD,
+                                         &amp;local_n0, &amp;local_0_start);
+    rin = fftw_alloc_real(2 * alloc_local);
+    cout = fftw_alloc_complex(alloc_local);
+
+    /* <span class="roman">create plan for out-of-place r2c DFT</span> */
+    plan = fftw_mpi_plan_dft_r2c_3d(L, M, N, rin, cout, MPI_COMM_WORLD,
+                                    FFTW_MEASURE);
+
+    /* <span class="roman">initialize rin to some function</span> my_func(x,y,z) */
+    for (i = 0; i &lt; local_n0; ++i)
+       for (j = 0; j &lt; M; ++j)
+         for (k = 0; k &lt; N; ++k)
+       rin[(i*M + j) * (2*(N/2+1)) + k] = my_func(local_0_start+i, j, k);
+
+    /* <span class="roman">compute transforms as many times as desired</span> */
+    fftw_execute(plan);
+
+    fftw_destroy_plan(plan);
+
+    MPI_Finalize();
+}
+</pre></div>
+
+<span id="index-fftw_005falloc_005freal-2"></span>
+<span id="index-row_002dmajor-5"></span>
+<p>Note that we allocated <code>rin</code> using <code>fftw_alloc_real</code> with an
+argument of <code>2 * alloc_local</code>: since <code>alloc_local</code> is the
+number of <em>complex</em> values to allocate, the number of <em>real</em>
+values is twice as many.  The <code>rin</code> array is then
+local_n0&nbsp;&times;&nbsp;M&nbsp;&times;&nbsp;2(N/2+1)
+ in row-major order, so its
+<code>(i,j,k)</code> element is at the index <code>(i*M + j) * (2*(N/2+1)) +
+k</code> (see <a href="Multi_002ddimensional-Array-Format.html">Multi-dimensional Array Format</a>).
+</p>
+<span id="index-transpose-1"></span>
+<span id="index-FFTW_005fTRANSPOSED_005fOUT"></span>
+<span id="index-FFTW_005fTRANSPOSED_005fIN"></span>
+<p>As for the complex transforms, improved performance can be obtained by
+specifying that the output is the transpose of the input or vice versa
+(see <a href="Transposed-distributions.html">Transposed distributions</a>).  In our L&nbsp;&times;&nbsp;M&nbsp;&times;&nbsp;N
+ r2c
+example, including <code>FFTW_TRANSPOSED_OUT</code> in the flags means that
+the input would be a padded L&nbsp;&times;&nbsp;M&nbsp;&times;&nbsp;2(N/2+1)
+ real array
+distributed over the <code>L</code> dimension, while the output would be a
+M&nbsp;&times;&nbsp;L&nbsp;&times;&nbsp;N/2+1
+ complex array distributed over the <code>M</code>
+dimension.  To perform the inverse c2r transform with the same data
+distributions, you would use the <code>FFTW_TRANSPOSED_IN</code> flag.
+</p>
+<hr>
+<div class="header">
+<p>
+Next: <a href="Other-Multi_002ddimensional-Real_002ddata-MPI-Transforms.html" accesskey="n" rel="next">Other Multi-dimensional Real-data MPI Transforms</a>, Previous: <a href="MPI-Data-Distribution.html" accesskey="p" rel="prev">MPI Data Distribution</a>, Up: <a href="Distributed_002dmemory-FFTW-with-MPI.html" accesskey="u" rel="up">Distributed-memory FFTW with MPI</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

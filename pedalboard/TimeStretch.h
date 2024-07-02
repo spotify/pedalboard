@@ -226,12 +226,14 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
       sampleRate, input.getNumChannels(), options, 1.0 / initialStretchFactor,
       pow(2.0, (initialPitchShiftInSemitones / 12.0)));
 
-  rubberBandStretcher.setExpectedInputDuration(input.getNumSamples());
-
   const float **inputChannelPointers =
       (const float **)alloca(sizeof(float *) * input.getNumChannels());
 
+  size_t maximumBlockSize = rubberBandStretcher.getProcessSizeLimit();
   if (!(options & RubberBandStretcher::OptionProcessRealTime)) {
+    rubberBandStretcher.setExpectedInputDuration(input.getNumSamples());
+    rubberBandStretcher.setMaxProcessSize(maximumBlockSize);
+
     for (size_t i = 0; i < input.getNumSamples();
          i += STUDY_BLOCK_SAMPLE_SIZE) {
       size_t numSamples =
@@ -242,7 +244,6 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
       bool isLast = i + numSamples >= input.getNumSamples();
       rubberBandStretcher.study(inputChannelPointers, numSamples, isLast);
     }
-    rubberBandStretcher.setMaxProcessSize(input.getNumSamples());
   }
 
   juce::AudioBuffer<float> output(input.getNumChannels(),
@@ -253,8 +254,6 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
   output.setSize(output.getNumChannels(), 0,
                  /* keepExistingContent */ false, /* clearExtraSpace */ false,
                  /* avoidReallocating */ true);
-
-  size_t maximumBlockSize = rubberBandStretcher.getProcessSizeLimit();
 
   float **outputChannelPointers =
       (float **)alloca(sizeof(float *) * output.getNumChannels());

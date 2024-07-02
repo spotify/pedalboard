@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Distributed-memory FFTW with MPI (FFTW 3.3.10)</title>
+
+<meta name="description" content="Distributed-memory FFTW with MPI (FFTW 3.3.10)">
+<meta name="keywords" content="Distributed-memory FFTW with MPI (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="FFTW-MPI-Installation.html" rel="next" title="FFTW MPI Installation">
+<link href="Thread-safety.html" rel="prev" title="Thread safety">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Distributed_002dmemory-FFTW-with-MPI"></span><div class="header">
+<p>
+Next: <a href="Calling-FFTW-from-Modern-Fortran.html" accesskey="n" rel="next">Calling FFTW from Modern Fortran</a>, Previous: <a href="Multi_002dthreaded-FFTW.html" accesskey="p" rel="prev">Multi-threaded FFTW</a>, Up: <a href="index.html" accesskey="u" rel="up">Top</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Distributed_002dmemory-FFTW-with-MPI-1"></span><h2 class="chapter">6 Distributed-memory FFTW with MPI</h2>
+<span id="index-MPI"></span>
+
+<span id="index-parallel-transform-1"></span>
+<p>In this chapter we document the parallel FFTW routines for parallel
+systems supporting the MPI message-passing interface.  Unlike the
+shared-memory threads described in the previous chapter, MPI allows
+you to use <em>distributed-memory</em> parallelism, where each CPU has
+its own separate memory, and which can scale up to clusters of many
+thousands of processors.  This capability comes at a price, however:
+each process only stores a <em>portion</em> of the data to be
+transformed, which means that the data structures and
+programming-interface are quite different from the serial or threads
+versions of FFTW.
+<span id="index-data-distribution"></span>
+</p>
+
+<p>Distributed-memory parallelism is especially useful when you are
+transforming arrays so large that they do not fit into the memory of a
+single processor.  The storage per-process required by FFTW&rsquo;s MPI
+routines is proportional to the total array size divided by the number
+of processes.  Conversely, distributed-memory parallelism can easily
+pose an unacceptably high communications overhead for small problems;
+the threshold problem size for which parallelism becomes advantageous
+will depend on the precise problem you are interested in, your
+hardware, and your MPI implementation.
+</p>
+<p>A note on terminology: in MPI, you divide the data among a set of
+&ldquo;processes&rdquo; which each run in their own memory address space.
+Generally, each process runs on a different physical processor, but
+this is not required.  A set of processes in MPI is described by an
+opaque data structure called a &ldquo;communicator,&rdquo; the most common of
+which is the predefined communicator <code>MPI_COMM_WORLD</code> which
+refers to <em>all</em> processes.  For more information on these and
+other concepts common to all MPI programs, we refer the reader to the
+documentation at <a href="http://www.mcs.anl.gov/research/projects/mpi/">the MPI home
+page</a>.
+<span id="index-MPI-communicator"></span>
+<span id="index-MPI_005fCOMM_005fWORLD"></span>
+</p>
+
+<p>We assume in this chapter that the reader is familiar with the usage
+of the serial (uniprocessor) FFTW, and focus only on the concepts new
+to the MPI interface.
+</p>
+<table class="menu" border="0" cellspacing="0">
+<tr><td align="left" valign="top">&bull; <a href="FFTW-MPI-Installation.html" accesskey="1">FFTW MPI Installation</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Linking-and-Initializing-MPI-FFTW.html" accesskey="2">Linking and Initializing MPI FFTW</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="2d-MPI-example.html" accesskey="3">2d MPI example</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="MPI-Data-Distribution.html" accesskey="4">MPI Data Distribution</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Multi_002ddimensional-MPI-DFTs-of-Real-Data.html" accesskey="5">Multi-dimensional MPI DFTs of Real Data</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Other-Multi_002ddimensional-Real_002ddata-MPI-Transforms.html" accesskey="6">Other Multi-dimensional Real-data MPI Transforms</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="FFTW-MPI-Transposes.html" accesskey="7">FFTW MPI Transposes</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="FFTW-MPI-Wisdom.html" accesskey="8">FFTW MPI Wisdom</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Avoiding-MPI-Deadlocks.html" accesskey="9">Avoiding MPI Deadlocks</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="FFTW-MPI-Performance-Tips.html">FFTW MPI Performance Tips</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="Combining-MPI-and-Threads.html">Combining MPI and Threads</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="FFTW-MPI-Reference.html">FFTW MPI Reference</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="FFTW-MPI-Fortran-Interface.html">FFTW MPI Fortran Interface</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+</table>
+
+<hr>
+<div class="header">
+<p>
+Next: <a href="Calling-FFTW-from-Modern-Fortran.html" accesskey="n" rel="next">Calling FFTW from Modern Fortran</a>, Previous: <a href="Multi_002dthreaded-FFTW.html" accesskey="p" rel="prev">Multi-threaded FFTW</a>, Up: <a href="index.html" accesskey="u" rel="up">Top</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

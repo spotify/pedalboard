@@ -288,7 +288,7 @@ def test_preset_parameters(plugin_filename: str, plugin_preset: str):
     # plugin with default params.
     plugin = load_test_plugin(plugin_filename)
 
-    default_params = {k: v.raw_value for k, v in plugin.parameters.items() if v.type == float}
+    default_params = {k: v.raw_value for k, v in plugin.parameters.items() if v.type is float}
 
     # load preset file
     plugin.load_preset(plugin_preset)
@@ -309,7 +309,7 @@ def test_initial_parameters(plugin_filename: str):
         # or "gain" to 0, which slows down the re-initialization of a plugin.
         k: (v.max_value if k == "gain" else v.min_value)
         for k, v in get_parameters(plugin_filename).items()
-        if v.type == float
+        if v.type is float
     }
 
     # Reload the plugin, but set the initial parameters in the load call.
@@ -330,7 +330,7 @@ def test_initial_parameters(plugin_filename: str):
         [
             (path, parameter)
             for path in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
-            for parameter in [k for k, v in get_parameters(path).items() if v.type == float]
+            for parameter in [k for k, v in get_parameters(path).items() if v.type is float]
         ],
         5,
     ),
@@ -557,7 +557,7 @@ def test_attributes_proxy(plugin_filename: str):
         [
             (path, parameter)
             for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
-            for parameter in [k for k, v in get_parameters(path).items() if v.type == bool]
+            for parameter in [k for k, v in get_parameters(path).items() if v.type is bool]
         ],
         5,
     ),
@@ -585,7 +585,7 @@ def test_bool_parameters(plugin_filename: str, parameter_name: str):
         [
             (path, parameter)
             for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
-            for parameter in [k for k, v in get_parameters(path).items() if v.type == bool]
+            for parameter in [k for k, v in get_parameters(path).items() if v.type is bool]
         ],
         5,
     ),
@@ -602,7 +602,7 @@ def test_bool_parameter_valdation(plugin_filename: str, parameter_name: str):
         [
             (path, parameter)
             for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
-            for parameter in [k for k, v in get_parameters(path).items() if v.type == float]
+            for parameter in [k for k, v in get_parameters(path).items() if v.type is float]
         ],
         5,
     ),
@@ -644,7 +644,7 @@ def test_float_parameters(plugin_filename: str, parameter_name: str):
         [
             (path, parameter)
             for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
-            for parameter in [k for k, v in get_parameters(path).items() if v.type == float]
+            for parameter in [k for k, v in get_parameters(path).items() if v.type is float]
         ],
         5,
     ),
@@ -681,7 +681,7 @@ def test_float_parameter_valdation(plugin_filename: str, parameter_name: str):
         [
             (path, parameter)
             for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
-            for parameter in [k for k, v in get_parameters(path).items() if v.type == str]
+            for parameter in [k for k, v in get_parameters(path).items() if v.type is str]
         ],
         5,
     ),
@@ -709,7 +709,7 @@ def test_str_parameters(plugin_filename: str, parameter_name: str):
         [
             (path, parameter)
             for path in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
-            for parameter in [k for k, v in get_parameters(path).items() if v.type == str]
+            for parameter in [k for k, v in get_parameters(path).items() if v.type is str]
         ],
         5,
     ),
@@ -735,7 +735,7 @@ def test_plugin_parameters_persist_between_calls(plugin_filename: str):
     for name, parameter in plugin.parameters.items():
         if name == "program":
             continue
-        if parameter.type == float:
+        if parameter.type is float:
             low, high, step = parameter.range
             if not step:
                 step = 0.1
@@ -747,9 +747,9 @@ def test_plugin_parameters_persist_between_calls(plugin_filename: str):
                 x * step for x in list(range(int(low / step), int(high / step), 1)) + [high / step]
             ]
             random_value = random.choice(values)
-        elif parameter.type == bool:
+        elif parameter.type is bool:
             random_value = bool(random.random())
-        elif parameter.type == str:
+        elif parameter.type is str:
             if parameter.valid_values:
                 random_value = random.choice(parameter.valid_values)
             else:

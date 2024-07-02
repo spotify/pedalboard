@@ -1,0 +1,167 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Multi-Dimensional DFTs of Real Data (FFTW 3.3.10)</title>
+
+<meta name="description" content="Multi-Dimensional DFTs of Real Data (FFTW 3.3.10)">
+<meta name="keywords" content="Multi-Dimensional DFTs of Real Data (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Tutorial.html" rel="up" title="Tutorial">
+<link href="More-DFTs-of-Real-Data.html" rel="next" title="More DFTs of Real Data">
+<link href="One_002dDimensional-DFTs-of-Real-Data.html" rel="prev" title="One-Dimensional DFTs of Real Data">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Multi_002dDimensional-DFTs-of-Real-Data"></span><div class="header">
+<p>
+Next: <a href="More-DFTs-of-Real-Data.html" accesskey="n" rel="next">More DFTs of Real Data</a>, Previous: <a href="One_002dDimensional-DFTs-of-Real-Data.html" accesskey="p" rel="prev">One-Dimensional DFTs of Real Data</a>, Up: <a href="Tutorial.html" accesskey="u" rel="up">Tutorial</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Multi_002dDimensional-DFTs-of-Real-Data-1"></span><h3 class="section">2.4 Multi-Dimensional DFTs of Real Data</h3>
+
+<p>Multi-dimensional DFTs of real data use the following planner routines:
+</p>
+<div class="example">
+<pre class="example">fftw_plan fftw_plan_dft_r2c_2d(int n0, int n1,
+                               double *in, fftw_complex *out,
+                               unsigned flags);
+fftw_plan fftw_plan_dft_r2c_3d(int n0, int n1, int n2,
+                               double *in, fftw_complex *out,
+                               unsigned flags);
+fftw_plan fftw_plan_dft_r2c(int rank, const int *n,
+                            double *in, fftw_complex *out,
+                            unsigned flags);
+</pre></div>
+<span id="index-fftw_005fplan_005fdft_005fr2c_005f2d"></span>
+<span id="index-fftw_005fplan_005fdft_005fr2c_005f3d"></span>
+<span id="index-fftw_005fplan_005fdft_005fr2c"></span>
+
+<p>as well as the corresponding <code>c2r</code> routines with the input/output
+types swapped.  These routines work similarly to their complex
+analogues, except for the fact that here the complex output array is cut
+roughly in half and the real array requires padding for in-place
+transforms (as in 1d, above).
+</p>
+<p>As before, <code>n</code> is the logical size of the array, and the
+consequences of this on the the format of the complex arrays deserve
+careful attention.
+<span id="index-r2c_002fc2r-multi_002ddimensional-array-format"></span>
+Suppose that the real data has dimensions n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;n<sub>d-1</sub>
+ (in row-major order).
+Then, after an r2c transform, the output is an n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;(n<sub>d-1</sub>/2 + 1)
+ array of
+<code>fftw_complex</code> values in row-major order, corresponding to slightly
+over half of the output of the corresponding complex DFT.  (The division
+is rounded down.)  The ordering of the data is otherwise exactly the
+same as in the complex-DFT case.
+</p>
+<p>For out-of-place transforms, this is the end of the story: the real
+data is stored as a row-major array of size n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;n<sub>d-1</sub>
+ and the complex
+data is stored as a row-major array of size n<sub>0</sub>&nbsp;&times;&nbsp;n<sub>1</sub>&nbsp;&times;&nbsp;n<sub>2</sub>&nbsp;&times;&nbsp;&hellip;&nbsp;&times;&nbsp;(n<sub>d-1</sub>/2 + 1)
+.
+</p>
+<p>For in-place transforms, however, extra padding of the real-data array
+is necessary because the complex array is larger than the real array,
+and the two arrays share the same memory locations.  Thus, for
+in-place transforms, the final dimension of the real-data array must
+be padded with extra values to accommodate the size of the complex
+data&mdash;two values if the last dimension is even and one if it is odd.
+<span id="index-padding-1"></span>
+That is, the last dimension of the real data must physically contain
+2 * (n<sub>d-1</sub>/2+1)
+<code>double</code> values (exactly enough to hold the complex data).
+This physical array size does not, however, change the <em>logical</em>
+array size&mdash;only
+n<sub>d-1</sub>
+values are actually stored in the last dimension, and
+n<sub>d-1</sub>
+is the last dimension passed to the plan-creation routine.
+</p>
+<p>For example, consider the transform of a two-dimensional real array of
+size <code>n0</code> by <code>n1</code>.  The output of the r2c transform is a
+two-dimensional complex array of size <code>n0</code> by <code>n1/2+1</code>, where
+the <code>y</code> dimension has been cut nearly in half because of
+redundancies in the output.  Because <code>fftw_complex</code> is twice the
+size of <code>double</code>, the output array is slightly bigger than the
+input array.  Thus, if we want to compute the transform in place, we
+must <em>pad</em> the input array so that it is of size <code>n0</code> by
+<code>2*(n1/2+1)</code>.  If <code>n1</code> is even, then there are two padding
+elements at the end of each row (which need not be initialized, as they
+are only used for output).
+</p>
+<p>The following illustration depicts the input and output arrays just
+described, for both the out-of-place and in-place transforms (with the
+arrows indicating consecutive memory locations):
+<img src="rfftwnd-for-html.png" alt="rfftwnd-for-html">
+</p>
+<p>These transforms are unnormalized, so an r2c followed by a c2r
+transform (or vice versa) will result in the original data scaled by
+the number of real data elements&mdash;that is, the product of the
+(logical) dimensions of the real data.
+<span id="index-normalization-1"></span>
+</p>
+
+<p>(Because the last dimension is treated specially, if it is equal to
+<code>1</code> the transform is <em>not</em> equivalent to a lower-dimensional
+r2c/c2r transform.  In that case, the last complex dimension also has
+size <code>1</code> (<code>=1/2+1</code>), and no advantage is gained over the
+complex transforms.)
+</p>
+<hr>
+<div class="header">
+<p>
+Next: <a href="More-DFTs-of-Real-Data.html" accesskey="n" rel="next">More DFTs of Real Data</a>, Previous: <a href="One_002dDimensional-DFTs-of-Real-Data.html" accesskey="p" rel="prev">One-Dimensional DFTs of Real Data</a>, Up: <a href="Tutorial.html" accesskey="u" rel="up">Tutorial</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

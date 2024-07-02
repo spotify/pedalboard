@@ -1,0 +1,162 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Fortran-interface routines (FFTW 3.3.10)</title>
+
+<meta name="description" content="Fortran-interface routines (FFTW 3.3.10)">
+<meta name="keywords" content="Fortran-interface routines (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Calling-FFTW-from-Legacy-Fortran.html" rel="up" title="Calling FFTW from Legacy Fortran">
+<link href="FFTW-Constants-in-Fortran.html" rel="next" title="FFTW Constants in Fortran">
+<link href="Calling-FFTW-from-Legacy-Fortran.html" rel="prev" title="Calling FFTW from Legacy Fortran">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Fortran_002dinterface-routines"></span><div class="header">
+<p>
+Next: <a href="FFTW-Constants-in-Fortran.html" accesskey="n" rel="next">FFTW Constants in Fortran</a>, Previous: <a href="Calling-FFTW-from-Legacy-Fortran.html" accesskey="p" rel="prev">Calling FFTW from Legacy Fortran</a>, Up: <a href="Calling-FFTW-from-Legacy-Fortran.html" accesskey="u" rel="up">Calling FFTW from Legacy Fortran</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Fortran_002dinterface-routines-1"></span><h3 class="section">8.1 Fortran-interface routines</h3>
+
+<p>Nearly all of the FFTW functions have Fortran-callable equivalents.
+The name of the legacy Fortran routine is the same as that of the
+corresponding C routine, but with the &lsquo;<samp>fftw_</samp>&rsquo; prefix replaced by
+&lsquo;<samp>dfftw_</samp>&rsquo;.<a id="DOCF9" href="#FOOT9"><sup>9</sup></a>  The single and long-double precision
+versions use &lsquo;<samp>sfftw_</samp>&rsquo; and &lsquo;<samp>lfftw_</samp>&rsquo;, respectively, instead of
+&lsquo;<samp>fftwf_</samp>&rsquo; and &lsquo;<samp>fftwl_</samp>&rsquo;; quadruple precision (<code>real*16</code>)
+is available on some systems as &lsquo;<samp>fftwq_</samp>&rsquo; (see <a href="Precision.html">Precision</a>).
+(Note that <code>long double</code> on x86 hardware is usually at most
+80-bit extended precision, <em>not</em> quadruple precision.)
+</p>
+<p>For the most part, all of the arguments to the functions are the same,
+with the following exceptions:
+</p>
+<ul>
+<li> <code>plan</code> variables (what would be of type <code>fftw_plan</code> in C),
+must be declared as a type that is at least as big as a pointer
+(address) on your machine.  We recommend using <code>integer*8</code> everywhere,
+since this should always be big enough.
+<span id="index-portability-6"></span>
+
+</li><li> Any function that returns a value (e.g. <code>fftw_plan_dft</code>) is
+converted into a <em>subroutine</em>.  The return value is converted into
+an additional <em>first</em> parameter of this subroutine.<a id="DOCF10" href="#FOOT10"><sup>10</sup></a>
+
+</li><li> <span id="index-column_002dmajor-2"></span>
+The Fortran routines expect multi-dimensional arrays to be in
+<em>column-major</em> order, which is the ordinary format of Fortran
+arrays (see <a href="Multi_002ddimensional-Array-Format.html">Multi-dimensional Array Format</a>).  They do this
+transparently and costlessly simply by reversing the order of the
+dimensions passed to FFTW, but this has one important consequence for
+multi-dimensional real-complex transforms, discussed below.
+
+</li><li> Wisdom import and export is somewhat more tricky because one cannot
+easily pass files or strings between C and Fortran; see <a href="Wisdom-of-Fortran_003f.html">Wisdom of Fortran?</a>.
+
+</li><li> Legacy Fortran cannot use the <code>fftw_malloc</code> dynamic-allocation routine.
+If you want to exploit the SIMD FFTW (see <a href="SIMD-alignment-and-fftw_005fmalloc.html">SIMD alignment and fftw_malloc</a>), you&rsquo;ll
+need to figure out some other way to ensure that your arrays are at
+least 16-byte aligned.
+
+</li><li> <span id="index-fftw_005fiodim-2"></span>
+<span id="index-guru-interface-4"></span>
+Since Fortran 77 does not have data structures, the <code>fftw_iodim</code>
+structure from the guru interface (see <a href="Guru-vector-and-transform-sizes.html">Guru vector and transform sizes</a>) must be split into separate arguments.  In particular, any
+<code>fftw_iodim</code> array arguments in the C guru interface become three
+integer array arguments (<code>n</code>, <code>is</code>, and <code>os</code>) in the
+Fortran guru interface, all of whose lengths should be equal to the
+corresponding <code>rank</code> argument.
+
+</li><li> The guru planner interface in Fortran does <em>not</em> do any automatic
+translation between column-major and row-major; you are responsible
+for setting the strides etcetera to correspond to your Fortran arrays.
+However, as a slight bug that we are preserving for backwards
+compatibility, the &lsquo;<samp>plan_guru_r2r</samp>&rsquo; in Fortran <em>does</em> reverse the
+order of its <code>kind</code> array parameter, so the <code>kind</code> array
+of that routine should be in the reverse of the order of the iodim
+arrays (see above).
+
+</li></ul>
+
+<p>In general, you should take care to use Fortran data types that
+correspond to (i.e. are the same size as) the C types used by FFTW.
+In practice, this correspondence is usually straightforward
+(i.e. <code>integer</code> corresponds to <code>int</code>, <code>real</code>
+corresponds to <code>float</code>, etcetera).  The native Fortran
+double/single-precision complex type should be compatible with
+<code>fftw_complex</code>/<code>fftwf_complex</code>.  Such simple correspondences
+are assumed in the examples below.
+<span id="index-portability-7"></span>
+</p>
+<div class="footnote">
+<hr>
+<h4 class="footnotes-heading">Footnotes</h4>
+
+<h5><a id="FOOT9" href="#DOCF9">(9)</a></h3>
+<p>Technically, Fortran 77 identifiers are not
+allowed to have more than 6 characters, nor may they contain
+underscores.  Any compiler that enforces this limitation doesn&rsquo;t
+deserve to link to FFTW.</p>
+<h5><a id="FOOT10" href="#DOCF10">(10)</a></h3>
+<p>The
+reason for this is that some Fortran implementations seem to have
+trouble with C function return values, and vice versa.</p>
+</div>
+<hr>
+<div class="header">
+<p>
+Next: <a href="FFTW-Constants-in-Fortran.html" accesskey="n" rel="next">FFTW Constants in Fortran</a>, Previous: <a href="Calling-FFTW-from-Legacy-Fortran.html" accesskey="p" rel="prev">Calling FFTW from Legacy Fortran</a>, Up: <a href="Calling-FFTW-from-Legacy-Fortran.html" accesskey="u" rel="up">Calling FFTW from Legacy Fortran</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Linking and Initializing MPI FFTW (FFTW 3.3.10)</title>
+
+<meta name="description" content="Linking and Initializing MPI FFTW (FFTW 3.3.10)">
+<meta name="keywords" content="Linking and Initializing MPI FFTW (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Distributed_002dmemory-FFTW-with-MPI.html" rel="up" title="Distributed-memory FFTW with MPI">
+<link href="2d-MPI-example.html" rel="next" title="2d MPI example">
+<link href="FFTW-MPI-Installation.html" rel="prev" title="FFTW MPI Installation">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Linking-and-Initializing-MPI-FFTW"></span><div class="header">
+<p>
+Next: <a href="2d-MPI-example.html" accesskey="n" rel="next">2d MPI example</a>, Previous: <a href="FFTW-MPI-Installation.html" accesskey="p" rel="prev">FFTW MPI Installation</a>, Up: <a href="Distributed_002dmemory-FFTW-with-MPI.html" accesskey="u" rel="up">Distributed-memory FFTW with MPI</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Linking-and-Initializing-MPI-FFTW-1"></span><h3 class="section">6.2 Linking and Initializing MPI FFTW</h3>
+
+<p>Programs using the MPI FFTW routines should be linked with
+<code>-lfftw3_mpi -lfftw3 -lm</code> on Unix in double precision,
+<code>-lfftw3f_mpi -lfftw3f -lm</code> in single precision, and so on
+(see <a href="Precision.html">Precision</a>). You will also need to link with whatever library
+is responsible for MPI on your system; in most MPI implementations,
+there is a special compiler alias named <code>mpicc</code> to compile and
+link MPI code.
+<span id="index-mpicc-1"></span>
+<span id="index-linking-on-Unix-1"></span>
+<span id="index-precision-5"></span>
+</p>
+
+<span id="index-fftw_005finit_005fthreads-1"></span>
+<p>Before calling any FFTW routines except possibly
+<code>fftw_init_threads</code> (see <a href="Combining-MPI-and-Threads.html">Combining MPI and Threads</a>), but after calling
+<code>MPI_Init</code>, you should call the function:
+</p>
+<div class="example">
+<pre class="example">void fftw_mpi_init(void);
+</pre></div>
+<span id="index-fftw_005fmpi_005finit"></span>
+
+<p>If, at the end of your program, you want to get rid of all memory and
+other resources allocated internally by FFTW, for both the serial and
+MPI routines, you can call:
+</p>
+<div class="example">
+<pre class="example">void fftw_mpi_cleanup(void);
+</pre></div>
+<span id="index-fftw_005fmpi_005fcleanup"></span>
+
+<p>which is much like the <code>fftw_cleanup()</code> function except that it
+also gets rid of FFTW&rsquo;s MPI-related data.  You must <em>not</em> execute
+any previously created plans after calling this function.
+</p>
+
+
+
+</body>
+</html>

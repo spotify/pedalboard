@@ -1,0 +1,118 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for FFTW
+(version 3.3.10, 10 December 2020).
+
+Copyright (C) 2003 Matteo Frigo.
+
+Copyright (C) 2003 Massachusetts Institute of Technology.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that this permission notice may be stated in a translation
+approved by the Free Software Foundation. -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Using MPI Plans (FFTW 3.3.10)</title>
+
+<meta name="description" content="Using MPI Plans (FFTW 3.3.10)">
+<meta name="keywords" content="Using MPI Plans (FFTW 3.3.10)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<link href="index.html" rel="start" title="Top">
+<link href="Concept-Index.html" rel="index" title="Concept Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="FFTW-MPI-Reference.html" rel="up" title="FFTW MPI Reference">
+<link href="MPI-Data-Distribution-Functions.html" rel="next" title="MPI Data Distribution Functions">
+<link href="MPI-Initialization.html" rel="prev" title="MPI Initialization">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<span id="Using-MPI-Plans"></span><div class="header">
+<p>
+Next: <a href="MPI-Data-Distribution-Functions.html" accesskey="n" rel="next">MPI Data Distribution Functions</a>, Previous: <a href="MPI-Initialization.html" accesskey="p" rel="prev">MPI Initialization</a>, Up: <a href="FFTW-MPI-Reference.html" accesskey="u" rel="up">FFTW MPI Reference</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<span id="Using-MPI-Plans-1"></span><h4 class="subsection">6.12.3 Using MPI Plans</h4>
+
+<p>Once an MPI plan is created, you can execute and destroy it using
+<code>fftw_execute</code>, <code>fftw_destroy_plan</code>, and the other functions
+in the serial interface that operate on generic plans (see <a href="Using-Plans.html">Using Plans</a>).  
+</p>
+<span id="index-collective-function-3"></span>
+<span id="index-MPI-communicator-1"></span>
+<p>The <code>fftw_execute</code> and <code>fftw_destroy_plan</code> functions, applied to
+MPI plans, are <em>collective</em> calls: they must be called for all processes
+in the communicator that was used to create the plan.
+</p>
+<span id="index-new_002darray-execution-1"></span>
+<p>You must <em>not</em> use the serial new-array plan-execution functions
+<code>fftw_execute_dft</code> and so on (see <a href="New_002darray-Execute-Functions.html">New-array Execute Functions</a>) with MPI plans.  Such functions are specialized to the
+problem type, and there are specific new-array execute functions for MPI plans:
+</p>
+<span id="index-fftw_005fmpi_005fexecute_005fdft"></span>
+<span id="index-fftw_005fmpi_005fexecute_005fdft_005fr2c"></span>
+<span id="index-fftw_005fmpi_005fexecute_005fdft_005fc2r"></span>
+<span id="index-fftw_005fmpi_005fexecute_005fr2r"></span>
+<div class="example">
+<pre class="example">void fftw_mpi_execute_dft(fftw_plan p, fftw_complex *in, fftw_complex *out);
+void fftw_mpi_execute_dft_r2c(fftw_plan p, double *in, fftw_complex *out);
+void fftw_mpi_execute_dft_c2r(fftw_plan p, fftw_complex *in, double *out);
+void fftw_mpi_execute_r2r(fftw_plan p, double *in, double *out);
+</pre></div>
+
+<span id="index-alignment-3"></span>
+<span id="index-fftw_005fmalloc-6"></span>
+<p>These functions have the same restrictions as those of the serial
+new-array execute functions.  They are <em>always</em> safe to apply to
+the <em>same</em> <code>in</code> and <code>out</code> arrays that were used to
+create the plan.  They can only be applied to new arrarys if those
+arrays have the same types, dimensions, in-placeness, and alignment as
+the original arrays, where the best way to ensure the same alignment
+is to use FFTW&rsquo;s <code>fftw_malloc</code> and related allocation functions
+for all arrays (see <a href="Memory-Allocation.html">Memory Allocation</a>).  Note that distributed
+transposes (see <a href="FFTW-MPI-Transposes.html">FFTW MPI Transposes</a>) use
+<code>fftw_mpi_execute_r2r</code>, since they count as rank-zero r2r plans
+from FFTW&rsquo;s perspective.
+</p>
+<hr>
+<div class="header">
+<p>
+Next: <a href="MPI-Data-Distribution-Functions.html" accesskey="n" rel="next">MPI Data Distribution Functions</a>, Previous: <a href="MPI-Initialization.html" accesskey="p" rel="prev">MPI Initialization</a>, Up: <a href="FFTW-MPI-Reference.html" accesskey="u" rel="up">FFTW MPI Reference</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>
