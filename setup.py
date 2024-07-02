@@ -160,11 +160,11 @@ if platform.system() != "Darwin":
             [
                 "-DHAVE_SSE2",
                 "-DHAVE_AVX",
-                # "-DHAVE_AVX_128_FMA",
+                # "-DHAVE_AVX_128_FMA", # AMD only
                 "-DHAVE_AVX2",
-                # "-DHAVE_AVX512", # Not supported on GitHub Actions yet :(
-                # "-DHAVE_GENERIC_SIMD128",
-                # "-DHAVE_GENERIC_SIMD256",
+                # "-DHAVE_AVX512", # No measurable speed difference
+                # "-DHAVE_GENERIC_SIMD128", # Crashes!
+                # "-DHAVE_GENERIC_SIMD256", # Also crashes!
             ]
         )
 
@@ -191,22 +191,18 @@ if platform.system() != "Darwin":
             "-DHAVE_DECL_SRAND48",
             "-DHAVE_DECL_COSL",
             "-DHAVE_DECL_SINL",
-            # "-DHAVE_DECL_MEMALIGN",
             "-DHAVE_DECL_POSIX_MEMALIGN",
-            "-DHAVE_CLOCK_GETTIME",
-            "-DHAVE_GETTIMEOFDAY",
-            "-DHAVE_GETPAGESIZE",
             "-DHAVE_DRAND48",
             "-DHAVE_SRAND48",
-            # "-DHAVE_MEMALIGN",
             "-DHAVE_POSIX_MEMALIGN",
-            "-DHAVE_MACH_ABSOLUTE_TIME",
             "-DHAVE_ISNAN",
             "-DHAVE_SNPRINTF",
             "-DHAVE_STRCHR",
             "-DHAVE_SYSCTL",
         ]
     )
+    if platform.system() == "Linux":
+        ALL_CFLAGS.append("-DHAVE_GETTIMEOFDAY")
 
 ALL_SOURCE_PATHS += list(Path("vendors/rubberband/single").glob("*.cpp"))
 
