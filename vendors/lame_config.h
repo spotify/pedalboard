@@ -54,7 +54,7 @@
 /* faster log implementation with less but enough precission */
 #define USE_FAST_LOG 1
 
-#define HAVE_STRCHR
+// #define HAVE_STRCHR
 #define HAVE_MEMCPY
 
 #if defined(_MSC_VER) || defined(__BORLANDC__)

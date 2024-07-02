@@ -142,6 +142,7 @@ if platform.system() != "Darwin":
         "common/",
         "libbench",
         "avx512",
+        "avx-128-fma",
     )
 
     # On ARM, ignore the X86-specific SIMD code:
@@ -151,9 +152,8 @@ if platform.system() != "Darwin":
     else:
         # And on x86, ignore the ARM-specific SIMD code (and KCVI; not GCC or Clang compatible).
         fftw_paths = ignore_files_matching(fftw_paths, "neon", "kcvi")
-        # Support for FMA4 instructions:
-        ALL_CFLAGS.append("-mfma4")
-        ALL_CFLAGS.append("-march=native")
+        ALL_CFLAGS.append("-mavx")
+        ALL_CFLAGS.append("-march=broadwell")
         # Enable SIMD instructions:
         ALL_CFLAGS.extend(
             [
