@@ -728,8 +728,8 @@ jobs:
         - { os: 'ubuntu-20.04', build: cp313-musllinux_aarch64 }
         - { os: 'ubuntu-20.04', build: cp313t-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: cp313t-manylinux_aarch64 }
-        - { os: 'ubuntu-20.04', build: cp313t-musllinux_x86_64 }
-        - { os: 'ubuntu-20.04', build: cp313t-musllinux_aarch64 }
+        # - { os: 'ubuntu-20.04', build: cp313t-musllinux_x86_64 }
+        # - { os: 'ubuntu-20.04', build: cp313t-musllinux_aarch64 }
         - { os: 'ubuntu-20.04', build: pp37-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: pp37-manylinux_aarch64 }
         - { os: 'ubuntu-20.04', build: pp38-manylinux_x86_64 }
