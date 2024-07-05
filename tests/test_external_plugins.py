@@ -320,14 +320,10 @@ def test_get_vst3_preset(plugin_filename: str):
     ), "Preset data for {plugin_filename} is not in .vstpreset format"
     # Check that the class ID (8 bytes into the data) is a 32-character hex string.
     cid = preset_data[8:][:32]
-    assert all(
-        c in b"0123456789ABCDEF" for c in cid
-    ), f"CID contains invalid characters: {cid}"
+    assert all(c in b"0123456789ABCDEF" for c in cid), f"CID contains invalid characters: {cid}"
 
 
-@pytest.mark.skipif(
-    not plugin_named("Magical8BitPlug"), reason="Missing Magical8BitPlug 2 plugin."
-)
+@pytest.mark.skipif(not plugin_named("Magical8BitPlug"), reason="Missing Magical8BitPlug 2 plugin.")
 def test_set_vst3_preset():
     plugin_file = plugin_named("Magical8BitPlug")
     assert (
