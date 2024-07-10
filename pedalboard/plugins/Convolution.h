@@ -106,11 +106,11 @@ inline void init_convolution(py::module &m) {
                                     py::array_t<float, py::array::c_style>>
                            impulseResponse,
                        float mix, std::optional<double> sampleRate) {
-             py::gil_scoped_release release;
              auto plugin = std::make_unique<JucePlugin<ConvolutionWithMix>>();
 
              if (auto *impulseResponseFilename =
                      std::get_if<std::string>(&impulseResponse)) {
+               py::gil_scoped_release release;
                // Load the IR file on construction, to handle errors
                auto inputFile = juce::File(*impulseResponseFilename);
                // Test opening the file before we pass it to
