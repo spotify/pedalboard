@@ -16,9 +16,21 @@
 
 
 import os
-import pytest
+
 import numpy as np
-from pedalboard import process, Delay, Distortion, Invert, Gain, Compressor, Convolution, Reverb
+import pytest
+
+from pedalboard import (
+    Compressor,
+    Convolution,
+    Delay,
+    Distortion,
+    Gain,
+    Invert,
+    Reverb,
+    process,
+)
+from pedalboard.io import AudioFile
 
 IMPULSE_RESPONSE_PATH = os.path.join(os.path.dirname(__file__), "impulse_response.wav")
 
@@ -69,6 +81,15 @@ def test_convolution_works(sr=44100, duration=10):
     assert not np.allclose(full_scale_noise, result, rtol=0.1)
 
 
+def test_convolution_works_with_buffer(sr=44100, duration=10):
+    full_scale_noise = np.random.rand(sr * duration).astype(np.float32)
+
+    expected = Convolution(IMPULSE_RESPONSE_PATH, 0.5)(full_scale_noise, sr)
+    with AudioFile(IMPULSE_RESPONSE_PATH) as f:
+        actual = Convolution(f.read(f.frames), 0.5, sample_rate=sr)(full_scale_noise, sr)
+    np.testing.assert_allclose(expected, actual, atol=0.0001)
+
+
 def test_throw_on_inaccessible_convolution_file():
     # Should work:
     Convolution(IMPULSE_RESPONSE_PATH)
@@ -76,6 +97,26 @@ def test_throw_on_inaccessible_convolution_file():
     # Should fail:
     with pytest.raises(RuntimeError):
         Convolution("missing_impulse_response.wav")
+
+
+def test_convolution_repr():
+    assert IMPULSE_RESPONSE_PATH in repr(Convolution(IMPULSE_RESPONSE_PATH))
+    assert "12345 samples of 2-channel audio at 44100 Hz" in repr(
+        Convolution(np.random.rand(12345, 2).astype(np.float32), 0.5, 44100)
+    )
+
+
+def test_convolution_filename():
+    conv = Convolution(IMPULSE_RESPONSE_PATH)
+    assert conv.impulse_response_filename == IMPULSE_RESPONSE_PATH
+    assert conv.impulse_response is None
+
+
+def test_convolution_impulse_response_storage():
+    ir = np.random.rand(2, 12345).astype(np.float32)
+    conv = Convolution(ir, 0.5, 44100)
+    assert conv.impulse_response_filename is None
+    np.testing.assert_allclose(conv.impulse_response, ir)
 
 
 @pytest.mark.parametrize("gain_db", [-12, -6, 0, 1.1, 6, 12, 24, 48, 96])

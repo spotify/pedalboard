@@ -304,12 +304,29 @@ class Compressor(Plugin):
 class Convolution(Plugin):
     """
     An audio convolution, suitable for things like speaker simulation or reverb modeling.
+
+    The convolution impulse response can be specified either by filename or as a 32-bit floating point NumPy array. If a NumPy array is provided, the ``sample_rate`` argument must also be provided to indicate the sample rate of the impulse response.
+
+    *Support for passing NumPy arrays as impulse responses introduced in v0.9.10.*
     """
 
-    def __init__(self, impulse_response_filename: str, mix: float = 1.0) -> None: ...
+    def __init__(
+        self,
+        impulse_response_filename: typing.Union[
+            str, numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]
+        ],
+        mix: float = 1.0,
+        sample_rate: typing.Optional[float] = None,
+    ) -> None: ...
     def __repr__(self) -> str: ...
     @property
-    def impulse_response_filename(self) -> str:
+    def impulse_response(
+        self,
+    ) -> typing.Optional[numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]]:
+        """ """
+
+    @property
+    def impulse_response_filename(self) -> typing.Optional[str]:
         """ """
 
     @property
