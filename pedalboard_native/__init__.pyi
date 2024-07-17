@@ -859,7 +859,7 @@ class MP3Compressor(Plugin):
 
     Currently only supports variable bit-rate mode (VBR) and accepts a floating-point VBR quality value (between 0.0 and 10.0; lower is better).
 
-    Note that the MP3 format only supports 32kHz, 44.1kHz, and 48kHz audio; if an unsupported sample rate is provided, an exception will be thrown at processing time.
+    Note that the MP3 format only supports 8kHz, 11025Hz, 12kHz, 16kHz, 22050Hz, 24kHz, 32kHz, 44.1kHz, and 48kHz audio; if an unsupported sample rate is provided, an exception will be thrown at processing time.
     """
 
     def __init__(self, vbr_quality: float = 2.0) -> None: ...
