@@ -68,7 +68,7 @@ def test_is_list_like():
     assert len(pb) == 0
     pb.append(Reverb())
     assert len(pb) == 1
-    
+
     gain = Gain(-6)
 
     assert len(Pedalboard([gain])) == 1
