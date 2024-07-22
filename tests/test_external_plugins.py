@@ -245,6 +245,10 @@ def max_volume_of(x: np.ndarray) -> float:
     IS_TESTING_MUSL_LIBC_ON_CI,
     reason="External plugins are not officially supported without glibc.",
 )
+@pytest.mark.skipif(
+    not IS_64BIT,
+    reason="External plugins are not officially supported on 32-bit platforms.",
+)
 def test_at_least_one_plugin_is_available_for_testing():
     assert AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
 
