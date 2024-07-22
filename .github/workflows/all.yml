@@ -701,9 +701,6 @@ jobs:
         - { os: windows-latest, build: cp310-win32 }
         - { os: windows-latest, build: cp311-win32 }
         - { os: windows-latest, build: cp312-win32 }
-        - { os: windows-latest, build: pp37-win32 }
-        - { os: windows-latest, build: pp38-win32 }
-        - { os: windows-latest, build: pp39-win32 }
         - { os: 'ubuntu-20.04', build: cp36-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: cp36-manylinux_aarch64 }
         - { os: 'ubuntu-20.04', build: cp37-manylinux_x86_64 }
