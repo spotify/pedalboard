@@ -694,6 +694,13 @@ jobs:
         - { os: windows-latest, build: pp37-win_amd64 }
         - { os: windows-latest, build: pp38-win_amd64 }
         - { os: windows-latest, build: pp39-win_amd64 }
+        - { os: windows-latest, build: cp36-win32 }
+        - { os: windows-latest, build: cp37-win32 }
+        - { os: windows-latest, build: cp38-win32 }
+        - { os: windows-latest, build: cp39-win32 }
+        - { os: windows-latest, build: cp310-win32 }
+        - { os: windows-latest, build: cp311-win32 }
+        - { os: windows-latest, build: cp312-win32 }
         - { os: 'ubuntu-20.04', build: cp36-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: cp36-manylinux_aarch64 }
         - { os: 'ubuntu-20.04', build: cp37-manylinux_x86_64 }
@@ -746,7 +753,7 @@ jobs:
           CIBW_TEST_REQUIRES: -r test-requirements.txt
           CIBW_TEST_COMMAND: "pytest {project}/tests"
           CIBW_BUILD: ${{ matrix.build }}
-          CIBW_ARCHS: auto64 # Only support building 64-bit wheels. It's 2022!
+          CIBW_ARCHS_WINDOWS: auto # Allow 32-bit Windows builds
           CIBW_ARCHS_LINUX: auto64 aarch64 # Useful for building linux images with Apple Silicon
           CIBW_ARCHS_MACOS: x86_64 universal2 arm64 # Support Apple Silicon
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
