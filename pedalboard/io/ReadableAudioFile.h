@@ -572,15 +572,20 @@ public:
     const juce::ScopedReadLock scopedReadLock(objectLock);
     if (!reader)
       throw std::runtime_error("I/O operation on a closed file.");
-    if (targetPosition >
-        (reader->lengthInSamples + (lengthCorrection ? *lengthCorrection : 0)))
+
+    long long endOfFile =
+        (reader->lengthInSamples + (lengthCorrection ? *lengthCorrection : 0));
+
+    if (targetPosition > endOfFile)
       throw std::domain_error(
-          "Cannot seek beyond end of file (" +
-          std::to_string(reader->lengthInSamples +
-                         (lengthCorrection ? *lengthCorrection : 0)) +
-          " frames).");
+          "Cannot seek to position " + std::to_string(targetPosition) +
+          " frames, which is beyond end of file (" + std::to_string(endOfFile) +
+          " frames) by " + std::to_string(endOfFile - targetPosition) +
+          " frames.");
+
     if (targetPosition < 0)
-      throw std::domain_error("Cannot seek before start of file.");
+      throw std::domain_error("Cannot seek before start of file (to position " +
+                              std::to_string(targetPosition) + ").");
 
     // Promote to a write lock as we're now modifying the object:
     ScopedTryWriteLock scopedTryWriteLock(objectLock);
