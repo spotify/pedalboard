@@ -23,6 +23,7 @@ import random
 import shutil
 import signal
 import subprocess
+import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -72,9 +73,11 @@ if os.getenv("CIBW_TEST_REQUIRES") or os.getenv("CI"):
     ]
 
 IS_TESTING_MUSL_LIBC_ON_CI = "musl" in os.getenv("CIBW_BUILD", "")
-if IS_TESTING_MUSL_LIBC_ON_CI:
+IS_64BIT = sys.maxsize > 2**32
+if IS_TESTING_MUSL_LIBC_ON_CI or not IS_64BIT:
     # We can't load any external plugins at all on musl libc (unless they don't require glibc,
     # but I don't know of any that fit that description)
+    # We also can't load 64-bit plugins (the default) on 32-bit systems.
     AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT = []
     AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT = []
 
