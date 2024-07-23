@@ -32,8 +32,6 @@ public:
   virtual ~AddLatency(){};
 
   virtual void reset() override {
-    JucePlugin<juce::dsp::DelayLine<
-        float, juce::dsp::DelayLineInterpolationTypes::None>>::reset();
     getDSP().reset();
     samplesProvided = 0;
   }

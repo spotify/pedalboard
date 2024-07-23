@@ -46,8 +46,6 @@ public:
   }
 
   virtual void reset() override {
-    JucePlugin<juce::dsp::DelayLine<
-        SampleType, juce::dsp::DelayLineInterpolationTypes::None>>::reset();
     this->getDSP().reset();
     this->getDSP().setMaximumDelayInSamples(silenceLengthSamples);
     this->getDSP().setDelay(silenceLengthSamples);
@@ -75,13 +73,11 @@ public:
   T &getNestedPlugin() { return plugin; }
 
   void setSilenceLengthSamples(int newSilenceLengthSamples) {
-    if (silenceLengthSamples != newSilenceLengthSamples) {
-      this->getDSP().setMaximumDelayInSamples(newSilenceLengthSamples);
-      this->getDSP().setDelay(newSilenceLengthSamples);
-      silenceLengthSamples = newSilenceLengthSamples;
+    this->getDSP().setMaximumDelayInSamples(newSilenceLengthSamples);
+    this->getDSP().setDelay(newSilenceLengthSamples);
+    silenceLengthSamples = newSilenceLengthSamples;
 
-      reset();
-    }
+    reset();
   }
 
   int getSilenceLengthSamples() const { return silenceLengthSamples; }
