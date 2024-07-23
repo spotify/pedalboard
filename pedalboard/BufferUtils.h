@@ -47,15 +47,17 @@ detectChannelLayout(const py::array_t<T, py::array::c_style> inputArray,
       } else if (inputInfo.shape[1] == *channelCountHint) {
         return ChannelLayout::Interleaved;
       } else {
-        throw std::runtime_error(
-            "Unable to determine channel layout from shape: (" +
-            std::to_string(inputInfo.shape[0]) + ", " +
-            std::to_string(inputInfo.shape[1]) + ").");
+        // The hint was not used; fall through to the next case.
       }
     }
 
     // Try to auto-detect the channel layout from the shape
-    if (inputInfo.shape[1] < inputInfo.shape[0]) {
+    if (inputInfo.shape[0] == 0 && inputInfo.shape[1] > 0) {
+      // Zero channels doesn't make sense; but zero samples does.
+      return ChannelLayout::Interleaved;
+    } else if (inputInfo.shape[1] == 0 && inputInfo.shape[0] > 0) {
+      return ChannelLayout::NotInterleaved;
+    } else if (inputInfo.shape[1] < inputInfo.shape[0]) {
       return ChannelLayout::Interleaved;
     } else if (inputInfo.shape[0] < inputInfo.shape[1]) {
       return ChannelLayout::NotInterleaved;
@@ -111,12 +113,6 @@ juce::AudioBuffer<T> copyPyArrayIntoJuceBuffer(
   } else {
     throw std::runtime_error("Number of input dimensions must be 1 or 2 (got " +
                              std::to_string(inputInfo.ndim) + ").");
-  }
-
-  if (numChannels == 0) {
-    throw std::runtime_error("No channels passed!");
-  } else if (numChannels > 2) {
-    throw std::runtime_error("More than two channels received!");
   }
 
   juce::AudioBuffer<T> ioBuffer(numChannels, numSamples);
@@ -193,12 +189,6 @@ const juce::AudioBuffer<T> convertPyArrayIntoJuceBuffer(
       throw std::runtime_error(
           "Number of input dimensions must be 1 or 2 (got " +
           std::to_string(inputInfo.ndim) + ").");
-    }
-
-    if (numChannels == 0) {
-      throw std::runtime_error("No channels passed!");
-    } else if (numChannels > 2) {
-      throw std::runtime_error("More than two channels received!");
     }
 
     T **channelPointers = (T **)alloca(numChannels * sizeof(T *));
