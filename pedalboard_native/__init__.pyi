@@ -1052,7 +1052,7 @@ class AudioUnitPlugin(ExternalPlugin):
 
     *Support for running Audio Unit plugins on background threads introduced in v0.8.8.*
 
-    *Support for loading AUv3 plugins (``.appex`` bundles) introduced in v0.9.5.*
+    *Support for loading AUv3 plugins (* ``.appex`` *bundles) introduced in v0.9.5.*
     """
 
     @typing.overload
