@@ -45,26 +45,36 @@ public:
               std::optional<std::string> outputDeviceName,
               std::optional<std::shared_ptr<Chain>> pedalboard,
               std::optional<double> sampleRate, std::optional<int> bufferSize,
-              bool allowFeedback)
+              bool allowFeedback, int numInputChannels, int numOutputChannels)
 #ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
-      : pedalboard(pedalboard ? *pedalboard
-                              : std::make_shared<Chain>(
-                                    std::vector<std::shared_ptr<Plugin>>())),
+      : pedalboard(pedalboard ? *pedalboard : nullptr),
         livePedalboard(std::vector<std::shared_ptr<Plugin>>())
 #endif
   {
 #ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
     juce::AudioDeviceManager::AudioDeviceSetup setup;
-    setup.inputDeviceName = inputDeviceName ? *inputDeviceName : "";
-    setup.outputDeviceName = outputDeviceName ? *outputDeviceName : "";
+    if (inputDeviceName) {
+      setup.inputDeviceName = *inputDeviceName;
+    } else {
+      numInputChannels = 0;
+    }
+
+    if (outputDeviceName) {
+      setup.outputDeviceName = *outputDeviceName;
+    } else {
+      numOutputChannels = 0;
+    }
+
     // A value of 0 indicates we want to use whatever the device default is:
     setup.sampleRate = sampleRate ? *sampleRate : 0;
-    if (inputDeviceName && outputDeviceName) {
-      setup.bufferSize = bufferSize ? *bufferSize : 512;
-    } else {
-      // Use a fairly large buffer to allow reading and writing from Python:
-      setup.bufferSize = bufferSize ? *bufferSize : 96000;
-    }
+
+    // This is our buffer between Python and the audio thread, so
+    // let's make it fairly large to allow for good performance:
+    int fifoBufferSize = 96000;
+
+    // This is our buffer between the audio hardware and the audio thread,
+    // so this can be a lot smaller:
+    setup.bufferSize = bufferSize ? *bufferSize : 512;
 
     if (inputDeviceName && outputDeviceName && !allowFeedback &&
         juce::String(*inputDeviceName).containsIgnoreCase("microphone") &&
@@ -82,20 +92,23 @@ public:
     }
 
     if (inputDeviceName) {
-      recordBufferFifo = std::make_unique<juce::AbstractFifo>(setup.bufferSize);
-      recordBuffer =
-          std::make_unique<juce::AudioBuffer<float>>(2, setup.bufferSize);
+      recordBufferFifo =
+          std::make_unique<juce::AbstractFifo>(setup.bufferSize + 1);
+      recordBuffer = std::make_unique<juce::AudioBuffer<float>>(
+          numInputChannels, setup.bufferSize + 1);
     }
 
     if (outputDeviceName) {
-      playBufferFifo = std::make_unique<juce::AbstractFifo>(setup.bufferSize);
-      playBuffer =
-          std::make_unique<juce::AudioBuffer<float>>(2, setup.bufferSize);
+      playBufferFifo =
+          std::make_unique<juce::AbstractFifo>(setup.bufferSize + 1);
+      playBuffer = std::make_unique<juce::AudioBuffer<float>>(
+          numOutputChannels, setup.bufferSize + 1);
     }
 
     juce::String defaultDeviceName;
-    juce::String error = deviceManager.initialise(2, 2, nullptr, true,
-                                                  defaultDeviceName, &setup);
+    juce::String error =
+        deviceManager.initialise(numInputChannels, numOutputChannels, nullptr,
+                                 true, defaultDeviceName, &setup);
     if (!error.isEmpty()) {
       throw std::domain_error(error.toStdString());
     }
@@ -117,7 +130,12 @@ public:
   void close() { deviceManager.closeAudioDevice(); }
 
   void start() {
+    if (isRunning) {
+      throw std::runtime_error("This AudioStream is already running.");
+    }
+
     isRunning = true;
+    numDroppedInputFrames = 0;
     changeObserverThread =
         std::thread(&AudioStream::propagateChangesToAudioThread, this);
     deviceManager.addAudioCallback(this);
@@ -134,6 +152,10 @@ public:
   void propagateChangesToAudioThread() {
     while (isRunning) {
       std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+      if (!pedalboard) {
+        continue;
+      }
 
       // Make sure nobody modifies the Python-side object while we're reading
       // it (without taking the GIL, which would be expensive)
@@ -201,6 +223,40 @@ public:
     return names;
   }
 
+  template <typename Setup> static auto getSetupInfo(Setup &s, bool isInput) {
+    struct SetupInfo {
+      // double brackets so that we get the expression type, i.e. a (possibly
+      // const) reference
+      decltype((s.inputDeviceName)) name;
+      decltype((s.inputChannels)) channels;
+      decltype((s.useDefaultInputChannels)) useDefault;
+    };
+
+    return isInput ? SetupInfo{s.inputDeviceName, s.inputChannels,
+                               s.useDefaultInputChannels}
+                   : SetupInfo{s.outputDeviceName, s.outputChannels,
+                               s.useDefaultOutputChannels};
+  }
+
+  static std::optional<std::string>
+  getDefaultDeviceName(bool isInput, int numChannelsNeeded) {
+    juce::AudioDeviceManager deviceManager;
+    deviceManager.getAvailableDeviceTypes();
+
+    juce::AudioDeviceManager::AudioDeviceSetup setup;
+
+    if (auto *type = deviceManager.getCurrentDeviceTypeObject()) {
+      const auto info = getSetupInfo(setup, isInput);
+
+      if (numChannelsNeeded > 0 && info.name.isEmpty())
+        return {
+            type->getDeviceNames(isInput)[type->getDefaultDeviceIndex(isInput)]
+                .toStdString()};
+    }
+
+    return {};
+  }
+
   virtual void audioDeviceIOCallback(const float **inputChannelData,
                                      int numInputChannels,
                                      float **outputChannelData,
@@ -230,6 +286,52 @@ public:
           }
         }
       }
+    }
+
+    if (recordBufferFifo) {
+      // If Python wants audio input, then copy the audio into the record
+      // buffer:
+      for (int attempt = 0; attempt < 2; attempt++) {
+        int samplesWritten = 0;
+        {
+          const auto scope = recordBufferFifo->write(numSamples);
+
+          if (scope.blockSize1 > 0)
+            for (int i = 0; i < numInputChannels; i++) {
+              std::memcpy(
+                  (char *)recordBuffer->getWritePointer(i, scope.startIndex1),
+                  (char *)inputChannelData[i],
+                  scope.blockSize1 * sizeof(float));
+            }
+
+          if (scope.blockSize2 > 0)
+            for (int i = 0; i < numInputChannels; i++) {
+              std::memcpy(
+                  (char *)recordBuffer->getWritePointer(i, scope.startIndex2),
+                  (char *)(inputChannelData[i] + scope.blockSize1),
+                  scope.blockSize2 * sizeof(float));
+            }
+
+          samplesWritten = scope.blockSize1 + scope.blockSize2;
+        }
+
+        if (samplesWritten < numSamples) {
+          numDroppedInputFrames += numSamples - samplesWritten;
+          // We've dropped some frames during recording; not great.
+          // Favour capturing more recent audio instead, so clear out enough
+          // space in the buffer to keep up and retry:
+          const auto scope = recordBufferFifo->read(numSamples);
+
+          // Do nothing here; as soon as `scope` goes out of scope,
+          // the buffer will now allow us to read `numSamples`.
+        } else {
+          break;
+        }
+      }
+    }
+
+    for (int i = 0; i < numOutputChannels; i++) {
+      std::memset((char *)outputChannelData[i], 0, numSamples * sizeof(float));
     }
 
     if (playBufferFifo) {
@@ -276,8 +378,36 @@ public:
 
   bool getIsRunning() const { return isRunning; }
 
+  int getDroppedInputFrameCount() const { return numDroppedInputFrames; }
+
+  bool getIgnoreDroppedInput() const { return ignoreDroppedInput; }
+
+  void setIgnoreDroppedInput(bool ignore) { ignoreDroppedInput = ignore; }
+
   juce::AudioDeviceManager::AudioDeviceSetup getAudioDeviceSetup() const {
     return deviceManager.getAudioDeviceSetup();
+  }
+
+  int writeIntoBuffer(const juce::AbstractFifo::ScopedWrite &scope, int offset,
+                      juce::AudioBuffer<float> &from,
+                      juce::AudioBuffer<float> &to) {
+    bool inputIsMono = from.getNumChannels() == 1;
+    int numChannels = inputIsMono ? to.getNumChannels() : from.getNumChannels();
+
+    if (scope.blockSize1 > 0) {
+      for (int c = 0; c < numChannels; c++) {
+        to.copyFrom(c, scope.startIndex1, from, inputIsMono ? 0 : c, offset,
+                    scope.blockSize1);
+      }
+    }
+
+    if (scope.blockSize2 > 0) {
+      for (int c = 0; c < numChannels; c++) {
+        to.copyFrom(c, scope.startIndex2, from, inputIsMono ? 0 : c,
+                    offset + scope.blockSize1, scope.blockSize2);
+      }
+    }
+    return scope.blockSize1 + scope.blockSize2;
   }
 
   void writeAllAtOnce(juce::AudioBuffer<float> buffer) {
@@ -311,21 +441,7 @@ public:
           std::min(playBufferFifo->getFreeSpace(), buffer.getNumSamples() - i);
 
       const auto scope = playBufferFifo->write(numSamplesToWrite);
-      if (scope.blockSize1 > 0) {
-        for (int c = 0; c < buffer.getNumChannels(); c++) {
-          playBuffer->copyFrom(c, scope.startIndex1, buffer, c, i,
-                               scope.blockSize1);
-        }
-      }
-
-      if (scope.blockSize2 > 0) {
-        for (int c = 0; c < buffer.getNumChannels(); c++) {
-          playBuffer->copyFrom(c, scope.startIndex2, buffer, c,
-                               i + scope.blockSize1, scope.blockSize2);
-        }
-      }
-
-      i += numSamplesToWrite;
+      i += writeIntoBuffer(scope, i, buffer, *playBuffer);
     }
 
     stop();
@@ -355,26 +471,134 @@ public:
           std::min(playBufferFifo->getFreeSpace(), buffer.getNumSamples() - i);
 
       const auto scope = playBufferFifo->write(numSamplesToWrite);
+      i += writeIntoBuffer(scope, i, buffer, *playBuffer);
+    }
+  }
+
+  juce::AudioBuffer<float> readAllAtOnce(int numSamples) {
+    // Read this number of samples from the audio device, via its FIFO:
+    if (!recordBufferFifo) {
+      throw std::runtime_error(
+          "This AudioStream object was not created with an input device, so "
+          "it cannot read audio data.");
+    }
+
+    if (isRunning) {
+      throw std::runtime_error(
+          "readAllAtOnce() called when the stream is already running. "
+          "This is an internal Pedalboard error and should be reported.");
+    }
+
+    juce::AudioBuffer<float> returnBuffer(
+        deviceManager.getAudioDeviceSetup()
+            .inputChannels.countNumberOfSetBits(),
+        numSamples);
+
+    start();
+    bool errorSet = false;
+    // Read the desired number of samples from the output device, via the FIFO:
+    for (int i = 0; i < returnBuffer.getNumSamples();) {
+      errorSet = PyErr_CheckSignals() != 0;
+      if (errorSet) {
+        break;
+      }
+
+      py::gil_scoped_release release;
+
+      int numSamplesToRead = std::min(recordBufferFifo->getNumReady(),
+                                      returnBuffer.getNumSamples() - i);
+
+      const auto scope = recordBufferFifo->read(numSamplesToRead);
       if (scope.blockSize1 > 0) {
-        for (int c = 0; c < buffer.getNumChannels(); c++) {
-          playBuffer->copyFrom(c, scope.startIndex1, buffer, c, i,
-                               scope.blockSize1);
+        for (int c = 0; c < returnBuffer.getNumChannels(); c++) {
+          returnBuffer.copyFrom(c, i, *recordBuffer, c, scope.startIndex1,
+                                scope.blockSize1);
         }
       }
 
       if (scope.blockSize2 > 0) {
-        for (int c = 0; c < buffer.getNumChannels(); c++) {
-          playBuffer->copyFrom(c, scope.startIndex2, buffer, c,
-                               i + scope.blockSize1, scope.blockSize2);
+        for (int c = 0; c < returnBuffer.getNumChannels(); c++) {
+          returnBuffer.copyFrom(c, i + scope.blockSize1, *recordBuffer, c,
+                                scope.startIndex2, scope.blockSize2);
         }
       }
 
-      i += numSamplesToWrite;
+      i += scope.blockSize1 + scope.blockSize2;
     }
+    stop();
+
+    numDroppedInputFrames = 0;
+
+    // Always return the buffer, even if an error was set:
+    if (errorSet) {
+      throw py::error_already_set();
+    }
+    return returnBuffer;
   }
 
   juce::AudioBuffer<float> read(int numSamples) {
     // Read this number of samples from the audio device, via its FIFO:
+    if (!recordBufferFifo) {
+      throw std::runtime_error(
+          "This AudioStream object was not created with an input device, so "
+          "it cannot read audio data.");
+    }
+
+    if (!isRunning) {
+      return readAllAtOnce(numSamples);
+    }
+
+    if (numSamples == 0) {
+      numSamples = recordBufferFifo->getNumReady();
+    }
+
+    if (numDroppedInputFrames && !ignoreDroppedInput) {
+      int numDropped = numDroppedInputFrames;
+      numDroppedInputFrames = 0;
+      throw std::runtime_error(
+          std::to_string(numDropped) +
+          " frames of audio data were dropped since the last call to read(). "
+          "To prevent audio from being lost during recording, ensure that you "
+          "call read() as quickly as possible or increase your buffer size.");
+    }
+
+    py::gil_scoped_release release;
+
+    juce::AudioBuffer<float> returnBuffer(
+        deviceManager.getAudioDeviceSetup()
+            .inputChannels.countNumberOfSetBits(),
+        numSamples);
+
+    // Read the desired number of samples from the output device, via the FIFO:
+    for (int i = 0; i < returnBuffer.getNumSamples();) {
+      int numSamplesToRead = std::min(recordBufferFifo->getNumReady(),
+                                      returnBuffer.getNumSamples() - i);
+
+      const auto scope = recordBufferFifo->read(numSamplesToRead);
+      if (scope.blockSize1 > 0) {
+        for (int c = 0; c < returnBuffer.getNumChannels(); c++) {
+          returnBuffer.copyFrom(c, i, *recordBuffer, c, scope.startIndex1,
+                                scope.blockSize1);
+        }
+      }
+
+      if (scope.blockSize2 > 0) {
+        for (int c = 0; c < returnBuffer.getNumChannels(); c++) {
+          returnBuffer.copyFrom(c, i + scope.blockSize1, *recordBuffer, c,
+                                scope.startIndex2, scope.blockSize2);
+        }
+      }
+
+      i += scope.blockSize1 + scope.blockSize2;
+    }
+
+    numDroppedInputFrames = 0;
+
+    return returnBuffer;
+  }
+
+  double getSampleRate() const {
+    return deviceManager.getAudioDeviceSetup().sampleRate;
   }
 
 private:
@@ -389,7 +613,7 @@ private:
   // currently being used for rendering.
   // The `livePedalboard` object already has a std::mutex on it,
   // but we want something that's faster and callable from the
-  // dudio thread.
+  // audio thread.
   juce::SpinLock livePedalboardMutex;
 
   // A "live" pedalboard, called from the audio thread.
@@ -407,6 +631,9 @@ private:
   std::unique_ptr<juce::AbstractFifo> playBufferFifo;
   std::unique_ptr<juce::AudioBuffer<float>> recordBuffer;
   std::unique_ptr<juce::AudioBuffer<float>> playBuffer;
+
+  std::atomic<long long> numDroppedInputFrames{0};
+  bool ignoreDroppedInput = false;
 #endif
 };
 
@@ -414,15 +641,32 @@ inline void init_audio_stream(py::module &m) {
   auto audioStream =
       py::class_<AudioStream, std::shared_ptr<AudioStream>>(m, "AudioStream",
                                                             R"(
-A class that streams audio from an input audio device (i.e.: a microphone,
-audio interface, etc) and/or to an output device (speaker, headphones),
-allowing access to the audio stream from within Python code.
+A class that allows interacting with live streams of audio from an input
+audio device (i.e.: a microphone, audio interface, etc) and/or to an
+output device (speaker, headphones), allowing access to the audio
+stream from within Python code.
 
-:class:`AudioStream` may be used as a context manager::
+Use :py:meth:`AudioStream.play` to play audio data to your speakers::
+
+    # Play a 10-second chunk of an audio file:
+    with AudioFile("my_audio_file.mp3") as f:
+        chunk = f.read(f.samplerate * 10)
+    AudioStream.play(chunk, f.samplerate)
+
+Or use :py:meth:`AudioStream.write` to play audio in near-real-time::
+
+    # Play an audio file by looping through it in chunks:
+    with AudioStream(output_device="default") as stream:
+        with AudioFile("my_audio_file.mp3") as f:
+            while f.tell() < f.frames:
+                # Decode and play 512 samples at a time:
+                stream.write(f.read(512))
+
+:class:`AudioStream` may also be used to pass live audio through a :class:`Pedalboard`::
 
    # Pass both an input and output device name to connect both ends:
-   input_device_name = AudioStream.input_device_names[0]
-   output_device_name = AudioStream.output_device_names[0]
+   input_device_name = AudioStream.default_input_device_name
+   output_device_name = AudioStream.default_output_device_name
    with AudioStream(input_device_name, output_device_name) as stream:
        # In this block, audio is streaming through `stream`!
        # Audio will be coming out of your speakers at this point.
@@ -437,36 +681,10 @@ allowing access to the audio stream from within Python code.
        # Delete plugins:
        del stream.plugins[0]
 
-   # Pass just an input device to allow recording:
-   input_device_name = AudioStream.input_device_names[0]
-   with AudioStream(input_device_name) as stream:
-       # In this block, audio is streaming into `stream`!
-       # Use `stream.read` to read from the stream:
-       while True:
-           chunk = stream.read(512)
-
-    
-   # ...or pass just an output device to allow playback:
-   output_device_name = AudioStream.output_device_names[0]
-   with AudioStream(None, output_device_name) as stream:
-       # In this block, audio is streaming out of `stream`!
-       # Use `stream.write` to write to the speaker:
-       with AudioFile("some_file.mp3") as f:
-           while f.tell() < f.frames:
-               # stream.write will block if the buffer is full:
-               stream.write(f.read(512))
-
-
-:class:`AudioStream` may also be used synchronously::
-
+   # Or use AudioStream synchronously:
    stream = AudioStream(input_device_name, output_device_name)
    stream.plugins.append(Reverb(wet_level=1.0))
    stream.run()  # Run the stream until Ctrl-C is received
-
-
-...or use :class:`AudioStream` just to play an audio buffer::
-
-   AudioStream(None, output_device_name).write(audio_data)
 
 .. note::
     This class uses C++ under the hood to ensure speed, thread safety,
@@ -488,21 +706,28 @@ allowing access to the audio stream from within Python code.
     background thread, allowing for easier cleanup.
 
 *Introduced in v0.7.0. Not supported on Linux.*
+
+*:py:meth:`read` and :py:meth:`write` methods introduced in v0.9.12.*
 )")
           .def(py::init([](std::optional<std::string> inputDeviceName,
                            std::optional<std::string> outputDeviceName,
                            std::optional<std::shared_ptr<Chain>> pedalboard,
                            std::optional<double> sampleRate,
-                           std::optional<int> bufferSize, bool allowFeedback) {
+                           std::optional<int> bufferSize, bool allowFeedback,
+                           int numInputChannels, int numOutputChannels) {
                  return std::make_shared<AudioStream>(
                      inputDeviceName, outputDeviceName, pedalboard, sampleRate,
-                     bufferSize, allowFeedback);
+                     bufferSize, allowFeedback, numInputChannels,
+                     numOutputChannels);
                }),
-               py::arg("input_device_name"), py::arg("output_device_name"),
+               py::arg("input_device_name") = py::none(),
+               py::arg("output_device_name") = py::none(),
                py::arg("plugins") = py::none(),
                py::arg("sample_rate") = py::none(),
                py::arg("buffer_size") = py::none(),
-               py::arg("allow_feedback") = false);
+               py::arg("allow_feedback") = false,
+               py::arg("num_input_channels") = 1,
+               py::arg("num_output_channels") = 2);
 #ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
   audioStream
       .def("run", &AudioStream::stream,
@@ -513,7 +738,7 @@ allowing access to the audio stream from within Python code.
       .def_property_readonly(
           "running", &AudioStream::getIsRunning,
           ":py:const:`True` if this stream is currently streaming live "
-          "audio from input to output, :py:const:`False` otherwise.")
+          "audio, :py:const:`False` otherwise.")
       .def("__enter__", &AudioStream::enter,
            "Use this :class:`AudioStream` as a context manager. Entering the "
            "context manager will immediately start the audio stream, sending "
@@ -547,6 +772,27 @@ allowing access to the audio stream from within Python code.
                     &AudioStream::setPedalboard,
                     "The Pedalboard object that this AudioStream will use to "
                     "process audio.")
+      .def_property_readonly(
+          "dropped_input_frame_count", &AudioStream::getDroppedInputFrameCount,
+          "The number of frames of audio that were dropped since the last call "
+          "to :py:meth:`read`. To prevent audio from being dropped during "
+          "recording, ensure that you call :py:meth:`read` as often as "
+          "possible or increase your buffer size.")
+      .def_property_readonly(
+          "sample_rate", &AudioStream::getSampleRate,
+          "The sample rate that this stream is operating at.")
+      .def_property(
+          "ignore_dropped_input", &AudioStream::getIgnoreDroppedInput,
+          &AudioStream::setIgnoreDroppedInput,
+          "Controls the behavior of the :py:meth:`read` method when audio data "
+          "is dropped. If this property is false (the default), the "
+          ":py:meth:`read` method will raise a :py:exc:`RuntimeError` if any "
+          "audio data is dropped in between calls. If this property is true, "
+          "the :py:meth:`read` method will return the most recent audio data "
+          "available, even if some audio data was dropped.\n\n"
+          ".. note::\n    "
+          "The :py:attr:`dropped_input_frame_count` property is unaffected "
+          "by this setting.")
       .def(
           "write",
           [](AudioStream &stream,
@@ -554,9 +800,41 @@ allowing access to the audio stream from within Python code.
             stream.write(copyPyArrayIntoJuceBuffer(inputArray));
           },
           py::arg("audio"),
-          "Write audio data to the output device. This method will block if "
-          "the buffer is full until the audio is played, ensuring that audio "
-          "is played back in real-time.");
+          "Write audio data to the output device. This method will block until "
+          "the provided audio is played in its entirety.")
+      .def(
+          "read",
+          [](AudioStream &stream, int numSamples) {
+            return copyJuceBufferIntoPyArray(stream.read(numSamples),
+                                             ChannelLayout::NotInterleaved, 0);
+          },
+          py::arg("num_samples") = 0,
+          "Record audio data from the input device. When called with no "
+          "arguments, this method returns all of the available audio data in "
+          "the buffer. If `num_samples` is provided, this method will block "
+          "until the desired number of samples have been received.\n\n"
+          ".. warning::\n    Recording audio is a **real-time** operation, so "
+          "if your code doesn't call :py:meth:`read` quickly enough, some "
+          "audio will be lost. To warn about this, :py:meth:`read` will throw "
+          "an exception if audio data is dropped. This behavior can be "
+          "disabled by setting :py:attr:`ignore_dropped_input` to "
+          ":py:const:`True`. The number of dropped samples since the last call "
+          "to :py:meth:`read` can be retrieved by accessing "
+          "the :py:attr:`dropped_input_frame_count` property.")
+      .def_static(
+          "play",
+          [](const py::array_t<float, py::array::c_style> audio,
+             float sampleRate, std::optional<std::string> outputDeviceName) {
+            juce::AudioBuffer<float> buffer = copyPyArrayIntoJuceBuffer(audio);
+            AudioStream(std::nullopt, outputDeviceName ? *outputDeviceName : "",
+                        std::nullopt, {sampleRate}, std::nullopt, false, 0,
+                        buffer.getNumChannels())
+                .write(buffer);
+          },
+          py::arg("audio"), py::arg("sample_rate"),
+          py::arg("output_device_name") = py::none(),
+          "Play audio data to the speaker, headphones, or other output device. "
+          "This method will block until the audio is finished playing.");
 #endif
   audioStream
       .def_property_readonly_static(
@@ -581,5 +859,30 @@ allowing access to the audio stream from within Python code.
           },
           "The output devices (i.e.: speakers, headphones, etc.) currently "
           "available on the current machine.");
+  audioStream
+      .def_property_readonly_static(
+          "default_input_device_name",
+          [](py::object *obj) -> std::optional<std::string> {
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
+            return AudioStream::getDefaultDeviceName(true, 1);
+#else
+            return {};
+#endif
+          },
+          "The name of the default input device (i.e.: microphone, audio "
+          "interface, etc.) currently available on the current machine. May be "
+          ":py:const:`None`.")
+      .def_property_readonly_static(
+          "default_output_device_name",
+          [](py::object *obj) -> std::optional<std::string> {
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
+            return AudioStream::getDefaultDeviceName(false, 2);
+#else
+            return {};
+#endif
+          },
+          "The name of the default output device (i.e.: speakers, headphones, "
+          "etc.) currently available on the current machine. May be "
+          ":py:const:`None`.");
 }
 } // namespace Pedalboard
