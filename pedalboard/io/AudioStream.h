@@ -46,13 +46,10 @@ public:
               std::optional<std::shared_ptr<Chain>> pedalboard,
               std::optional<double> sampleRate, std::optional<int> bufferSize,
               bool allowFeedback, int numInputChannels, int numOutputChannels)
-#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
       : pedalboard(pedalboard ? *pedalboard
                               : std::make_shared<Chain>(
                                     std::vector<std::shared_ptr<Plugin>>())),
-        livePedalboard(std::vector<std::shared_ptr<Plugin>>())
-#endif
-  {
+        livePedalboard(std::vector<std::shared_ptr<Plugin>>()) {
 #ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
     juce::AudioDeviceManager::AudioDeviceSetup setup;
     if (inputDeviceName) {
@@ -118,7 +115,6 @@ public:
 #endif
   }
 
-#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
   ~AudioStream() {
     stop();
     close();
@@ -128,9 +124,14 @@ public:
 
   void setPedalboard(std::shared_ptr<Chain> chain) { pedalboard = chain; }
 
-  void close() { deviceManager.closeAudioDevice(); }
+  void close() {
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
+    deviceManager.closeAudioDevice();
+#endif
+  }
 
   void start() {
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
     if (isRunning) {
       throw std::runtime_error("This AudioStream is already running.");
     }
@@ -142,9 +143,11 @@ public:
     changeObserverThread =
         std::thread(&AudioStream::propagateChangesToAudioThread, this);
     deviceManager.addAudioCallback(this);
+#endif
   }
 
   void stop() {
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
     deviceManager.removeAudioCallback(this);
     isRunning = false;
     if (changeObserverThread.joinable()) {
@@ -157,6 +160,7 @@ public:
       playBufferFifo->reset();
     }
     close();
+#endif
   }
 
   void propagateChangesToAudioThread() {
@@ -186,6 +190,7 @@ public:
   }
 
   void stream() {
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
     if (!getNumInputChannels() || !getNumOutputChannels())
       throw std::runtime_error(
           "This AudioStream object was not created with both an input and an "
@@ -206,6 +211,9 @@ public:
     }
     stop();
     throw py::error_already_set();
+#else
+    throw std::runtime_error("AudioStream is not supported on this platform.");
+#endif
   }
 
   std::shared_ptr<AudioStream> enter() {
@@ -224,6 +232,7 @@ public:
   }
 
   static std::vector<std::string> getDeviceNames(bool isInput) {
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
     juce::AudioDeviceManager deviceManager;
 
     std::vector<std::string> names;
@@ -233,8 +242,12 @@ public:
       }
     }
     return names;
+#else
+    return {};
+#endif
   }
 
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
   template <typename Setup> static auto getSetupInfo(Setup &s, bool isInput) {
     struct SetupInfo {
       // double brackets so that we get the expression type, i.e. a (possibly
@@ -249,9 +262,11 @@ public:
                    : SetupInfo{s.outputDeviceName, s.outputChannels,
                                s.useDefaultOutputChannels};
   }
+#endif
 
   static std::optional<std::string>
   getDefaultDeviceName(bool isInput, int numChannelsNeeded) {
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
     juce::AudioDeviceManager deviceManager;
     deviceManager.getAvailableDeviceTypes();
 
@@ -265,10 +280,11 @@ public:
             type->getDeviceNames(isInput)[type->getDefaultDeviceIndex(isInput)]
                 .toStdString()};
     }
-
+#endif
     return {};
   }
 
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
   virtual void audioDeviceIOCallback(const float **inputChannelData,
                                      int numInputChannels,
                                      float **outputChannelData,
@@ -385,6 +401,7 @@ public:
       plugin->reset();
     }
   }
+#endif
 
   bool getIsRunning() const { return isRunning; }
 
@@ -394,9 +411,11 @@ public:
 
   void setIgnoreDroppedInput(bool ignore) { ignoreDroppedInput = ignore; }
 
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
   juce::AudioDeviceManager::AudioDeviceSetup getAudioDeviceSetup() const {
     return deviceManager.getAudioDeviceSetup();
   }
+#endif
 
   int writeIntoBuffer(const juce::AbstractFifo::ScopedWrite &scope, int offset,
                       juce::AudioBuffer<float> &from,
@@ -462,13 +481,21 @@ public:
   }
 
   int getNumInputChannels() const {
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
     return deviceManager.getAudioDeviceSetup()
         .inputChannels.countNumberOfSetBits();
+#else
+    return 0;
+#endif
   }
 
   int getNumOutputChannels() const {
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
     return deviceManager.getAudioDeviceSetup()
         .outputChannels.countNumberOfSetBits();
+#else
+    return 0;
+#endif
   }
 
   void write(juce::AudioBuffer<float> buffer) {
@@ -509,10 +536,7 @@ public:
           "This is an internal Pedalboard error and should be reported.");
     }
 
-    juce::AudioBuffer<float> returnBuffer(
-        deviceManager.getAudioDeviceSetup()
-            .inputChannels.countNumberOfSetBits(),
-        numSamples);
+    juce::AudioBuffer<float> returnBuffer(getNumInputChannels(), numSamples);
 
     start();
     bool errorSet = false;
@@ -584,10 +608,7 @@ public:
 
     py::gil_scoped_release release;
 
-    juce::AudioBuffer<float> returnBuffer(
-        deviceManager.getAudioDeviceSetup()
-            .inputChannels.countNumberOfSetBits(),
-        numSamples);
+    juce::AudioBuffer<float> returnBuffer(getNumInputChannels(), numSamples);
 
     // Read the desired number of samples from the output device, via the FIFO:
     for (int i = 0; i < returnBuffer.getNumSamples();) {
@@ -618,7 +639,11 @@ public:
   }
 
   double getSampleRate() const {
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
     return deviceManager.getAudioDeviceSetup().sampleRate;
+#else
+    return 0;
+#endif
   }
 
   std::optional<int> getNumBufferedInputFrames() const {
@@ -629,7 +654,9 @@ public:
   }
 
 private:
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
   juce::AudioDeviceManager deviceManager;
+#endif
   juce::dsp::ProcessSpec spec;
   bool isRunning = false;
 
@@ -661,7 +688,6 @@ private:
 
   std::atomic<long long> numDroppedInputFrames{0};
   bool ignoreDroppedInput = false;
-#endif
 };
 
 inline void init_audio_stream(py::module &m) {
@@ -763,7 +789,8 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
            "audio through to the output device.")
       .def("__exit__", &AudioStream::exit,
            "Exit the context manager, ending the audio stream. Once called, "
-           "the audio stream will be stopped (i.e.: :py:attr:`running` will be "
+           "the audio stream will be stopped (i.e.: :py:attr:`running` will "
+           "be "
            ":py:const:`False`).")
       .def("__repr__",
            [](const AudioStream &stream) {
@@ -802,7 +829,8 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
           [](AudioStream &stream) {
             return stream.getAudioDeviceSetup().bufferSize;
           },
-          "The size (in frames) of the buffer used between the audio hardware "
+          "The size (in frames) of the buffer used between the audio "
+          "hardware "
           "and Python.")
       .def_property("plugins", &AudioStream::getPedalboard,
                     &AudioStream::setPedalboard,
@@ -810,17 +838,19 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
                     "process audio.")
       .def_property_readonly(
           "dropped_input_frame_count", &AudioStream::getDroppedInputFrameCount,
-          "The number of frames of audio that were dropped since the last call "
+          "The number of frames of audio that were dropped since the last "
+          "call "
           "to :py:meth:`read`. To prevent audio from being dropped during "
           "recording, ensure that you call :py:meth:`read` as often as "
           "possible or increase your buffer size.")
       .def_property_readonly(
           "sample_rate", &AudioStream::getSampleRate,
           "The sample rate that this stream is operating at.")
-      .def_property_readonly(
-          "num_input_channels", &AudioStream::getNumInputChannels,
-          "The number of input channels on the input device. Will be ``0`` if "
-          "no input device is connected.")
+      .def_property_readonly("num_input_channels",
+                             &AudioStream::getNumInputChannels,
+                             "The number of input channels on the input "
+                             "device. Will be ``0`` if "
+                             "no input device is connected.")
       .def_property_readonly(
           "num_output_channels", &AudioStream::getNumOutputChannels,
           "The number of output channels on the output "
@@ -828,13 +858,15 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
       .def_property(
           "ignore_dropped_input", &AudioStream::getIgnoreDroppedInput,
           &AudioStream::setIgnoreDroppedInput,
-          "Controls the behavior of the :py:meth:`read` method when audio data "
+          "Controls the behavior of the :py:meth:`read` method when audio "
+          "data "
           "is dropped. If this property is false (the default), the "
           ":py:meth:`read` method will raise a :py:exc:`RuntimeError` if any "
           "audio data is dropped in between calls. If this property is true, "
           "the :py:meth:`read` method will return the most recent audio data "
           "available, even if some audio data was dropped.\n\n.. note::\n    "
-          "The :py:attr:`dropped_input_frame_count` property is unaffected by "
+          "The :py:attr:`dropped_input_frame_count` property is unaffected "
+          "by "
           "this setting.")
       .def(
           "write",
@@ -847,7 +879,8 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
                   std::to_string(sampleRate) +
                   " Hz) does not match the output device's sample rate (" +
                   std::to_string(stream.getSampleRate()) +
-                  " Hz). To write audio data to the output device, the sample "
+                  " Hz). To write audio data to the output device, the "
+                  "sample "
                   "rate of the audio must match the output device's sample "
                   "rate.");
             }
@@ -856,7 +889,8 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
           py::arg("audio"), py::arg("sample_rate"),
           "Write (play) audio data to the output device. This method will "
           "block until the provided audio buffer is played in its "
-          "entirety.\n\nIf the provided sample rate does not match the output "
+          "entirety.\n\nIf the provided sample rate does not match the "
+          "output "
           "device's sample rate, an error will be thrown. In this case, you "
           "can use :py:class:`StreamResampler` to resample the audio before "
           "calling :py:meth:`write`.")
@@ -867,16 +901,19 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
                                              ChannelLayout::NotInterleaved, 0);
           },
           py::arg("num_samples") = 0,
-          "Read (record) audio data from the input device. When called with no "
+          "Read (record) audio data from the input device. When called with "
+          "no "
           "arguments, this method returns all of the available audio data in "
           "the buffer. If `num_samples` is provided, this method will block "
           "until the desired number of samples have been received. The audio "
           "is recorded at the :py:attr:`sample_rate` of this stream.\n\n.. "
-          "warning::\n    Recording audio is a **real-time** operation, so if "
+          "warning::\n    Recording audio is a **real-time** operation, so "
+          "if "
           "your code doesn't call :py:meth:`read` quickly enough, some audio "
           "will be lost. To warn about this, :py:meth:`read` will throw an "
           "exception if audio data is dropped. This behavior can be disabled "
-          "by setting :py:attr:`ignore_dropped_input` to :py:const:`True`. The "
+          "by setting :py:attr:`ignore_dropped_input` to :py:const:`True`. "
+          "The "
           "number of dropped samples since the last call to :py:meth:`read` "
           "can be retrieved by accessing the "
           ":py:attr:`dropped_input_frame_count` property.")
@@ -902,52 +939,39 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
           },
           py::arg("audio"), py::arg("sample_rate"),
           py::arg("output_device_name") = py::none(),
-          "Play audio data to the speaker, headphones, or other output device. "
+          "Play audio data to the speaker, headphones, or other output "
+          "device. "
           "This method will block until the audio is finished playing.")
       .def_property_readonly_static(
           "input_device_names",
           [](py::object *obj) -> std::vector<std::string> {
-#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
             return AudioStream::getDeviceNames(true);
-#else
-            return {};
-#endif
           },
           "The input devices (i.e.: microphones, audio interfaces, etc.) "
           "currently available on the current machine.")
       .def_property_readonly_static(
           "output_device_names",
           [](py::object *obj) -> std::vector<std::string> {
-#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
             return AudioStream::getDeviceNames(false);
-#else
-            return {};
-#endif
           },
           "The output devices (i.e.: speakers, headphones, etc.) currently "
           "available on the current machine.")
       .def_property_readonly_static(
           "default_input_device_name",
           [](py::object *obj) -> std::optional<std::string> {
-#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
             return AudioStream::getDefaultDeviceName(true, 1);
-#else
-            return {};
-#endif
           },
           "The name of the default input device (i.e.: microphone, audio "
-          "interface, etc.) currently available on the current machine. May be "
+          "interface, etc.) currently available on the current machine. May "
+          "be "
           ":py:const:`None`.")
       .def_property_readonly_static(
           "default_output_device_name",
           [](py::object *obj) -> std::optional<std::string> {
-#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
             return AudioStream::getDefaultDeviceName(false, 2);
-#else
-            return {};
-#endif
           },
-          "The name of the default output device (i.e.: speakers, headphones, "
+          "The name of the default output device (i.e.: speakers, "
+          "headphones, "
           "etc.) currently available on the current machine. May be "
           ":py:const:`None`.");
 }
