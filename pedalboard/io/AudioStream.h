@@ -47,7 +47,9 @@ public:
               std::optional<double> sampleRate, std::optional<int> bufferSize,
               bool allowFeedback, int numInputChannels, int numOutputChannels)
 #ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
-      : pedalboard(pedalboard ? *pedalboard : nullptr),
+      : pedalboard(pedalboard ? *pedalboard
+                              : std::make_shared<Chain>(
+                                    std::vector<std::shared_ptr<Plugin>>())),
         livePedalboard(std::vector<std::shared_ptr<Plugin>>())
 #endif
   {
@@ -67,10 +69,6 @@ public:
 
     // A value of 0 indicates we want to use whatever the device default is:
     setup.sampleRate = sampleRate ? *sampleRate : 0;
-
-    // This is our buffer between Python and the audio thread, so
-    // let's make it fairly large to allow for good performance:
-    int fifoBufferSize = 96000;
 
     // This is our buffer between the audio hardware and the audio thread,
     // so this can be a lot smaller:
@@ -112,6 +110,9 @@ public:
     if (!error.isEmpty()) {
       throw std::domain_error(error.toStdString());
     }
+
+    // We'll re-open the audio device when we need it
+    deviceManager.closeAudioDevice();
 #else
     throw std::runtime_error("AudioStream is not supported on this platform.");
 #endif
@@ -134,6 +135,8 @@ public:
       throw std::runtime_error("This AudioStream is already running.");
     }
 
+    deviceManager.restartLastAudioDevice();
+
     isRunning = true;
     numDroppedInputFrames = 0;
     changeObserverThread =
@@ -147,15 +150,18 @@ public:
     if (changeObserverThread.joinable()) {
       changeObserverThread.join();
     }
+    if (recordBufferFifo) {
+      recordBufferFifo->reset();
+    }
+    if (playBufferFifo) {
+      playBufferFifo->reset();
+    }
+    close();
   }
 
   void propagateChangesToAudioThread() {
     while (isRunning) {
       std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-      if (!pedalboard) {
-        continue;
-      }
 
       // Make sure nobody modifies the Python-side object while we're reading
       // it (without taking the GIL, which would be expensive)
@@ -180,6 +186,11 @@ public:
   }
 
   void stream() {
+    if (!getNumInputChannels() || !getNumOutputChannels())
+      throw std::runtime_error(
+          "This AudioStream object was not created with both an input and an "
+          "output device, so calling run() would do nothing.");
+
     start();
     while (isRunning) {
       if (PyErr_CheckSignals() != 0) {
@@ -206,6 +217,7 @@ public:
             const py::object &traceback) {
     bool shouldThrow = PythonException::isPending();
     stop();
+    close();
 
     if (shouldThrow || PythonException::isPending())
       throw py::error_already_set();
@@ -261,7 +273,7 @@ public:
                                      int numInputChannels,
                                      float **outputChannelData,
                                      int numOutputChannels, int numSamples) {
-
+    // Live processing mode: run the input audio through a Pedalboard object.
     if (!playBufferFifo && !recordBufferFifo) {
       for (int i = 0; i < numOutputChannels; i++) {
         const float *inputChannel = inputChannelData[i % numInputChannels];
@@ -323,7 +335,7 @@ public:
           const auto scope = recordBufferFifo->read(numSamples);
 
           // Do nothing here; as soon as `scope` goes out of scope,
-          // the buffer will now allow us to read `numSamples`.
+          // the buffer will now allow us to append `numSamples`.
         } else {
           break;
         }
@@ -335,8 +347,6 @@ public:
     }
 
     if (playBufferFifo) {
-      // If we have content from Python to play, then play it, replacing
-      // anything that was already in the buffer:
       const auto scope = playBufferFifo->read(numSamples);
 
       if (scope.blockSize1 > 0)
@@ -449,6 +459,16 @@ public:
     if (errorSet) {
       throw py::error_already_set();
     }
+  }
+
+  int getNumInputChannels() const {
+    return deviceManager.getAudioDeviceSetup()
+        .inputChannels.countNumberOfSetBits();
+  }
+
+  int getNumOutputChannels() const {
+    return deviceManager.getAudioDeviceSetup()
+        .outputChannels.countNumberOfSetBits();
   }
 
   void write(juce::AudioBuffer<float> buffer) {
@@ -601,6 +621,13 @@ public:
     return deviceManager.getAudioDeviceSetup().sampleRate;
   }
 
+  std::optional<int> getNumBufferedInputFrames() const {
+    if (!recordBufferFifo) {
+      return {};
+    }
+    return {recordBufferFifo->getNumReady()};
+  }
+
 private:
   juce::AudioDeviceManager deviceManager;
   juce::dsp::ProcessSpec spec;
@@ -638,9 +665,8 @@ private:
 };
 
 inline void init_audio_stream(py::module &m) {
-  auto audioStream =
-      py::class_<AudioStream, std::shared_ptr<AudioStream>>(m, "AudioStream",
-                                                            R"(
+  py::class_<AudioStream, std::shared_ptr<AudioStream>>(m, "AudioStream",
+                                                        R"(
 A class that allows interacting with live streams of audio from an input
 audio device (i.e.: a microphone, audio interface, etc) and/or to an
 output device (speaker, headphones), allowing access to the audio
@@ -653,7 +679,7 @@ Use :py:meth:`AudioStream.play` to play audio data to your speakers::
         chunk = f.read(f.samplerate * 10)
     AudioStream.play(chunk, f.samplerate)
 
-Or use :py:meth:`AudioStream.write` to play audio in near-real-time::
+Or use :py:meth:`AudioStream.write` to stream audio in chunks::
 
     # Play an audio file by looping through it in chunks:
     with AudioStream(output_device="default") as stream:
@@ -686,10 +712,6 @@ Or use :py:meth:`AudioStream.write` to play audio in near-real-time::
    stream.plugins.append(Reverb(wet_level=1.0))
    stream.run()  # Run the stream until Ctrl-C is received
 
-.. note::
-    This class uses C++ under the hood to ensure speed, thread safety,
-    and avoid any locking concerns with Python's Global Interpreter Lock.
-
 .. warning::
     The :class:`AudioStream` class implements a context manager interface
     to ensure that audio streams are never left "dangling" (i.e.: running in
@@ -698,47 +720,43 @@ Or use :py:meth:`AudioStream.write` to play audio in near-real-time::
     While it is possible to call the :meth:`__enter__` method directly to run an
     audio stream in the background, this can have some nasty side effects. If the
     :class:`AudioStream` object is no longer reachable (not bound to a variable,
-    not in scope, etc), the audio stream will continue to play back forever, and
+    not in scope, etc), the audio stream will continue to run forever, and
     won't stop until the Python interpreter exits.
 
     To run an :class:`AudioStream` in the background, use Python's
-    :py:mod:`threading` module to call the synchronous :meth:`run` method on a
+    :py:mod:`threading` module to run the stream object method on a
     background thread, allowing for easier cleanup.
 
 *Introduced in v0.7.0. Not supported on Linux.*
 
-*:py:meth:`read` and :py:meth:`write` methods introduced in v0.9.12.*
+:py:meth:`read` *and* :py:meth:`write` *methods introduced in v0.9.12.*
 )")
-          .def(py::init([](std::optional<std::string> inputDeviceName,
-                           std::optional<std::string> outputDeviceName,
-                           std::optional<std::shared_ptr<Chain>> pedalboard,
-                           std::optional<double> sampleRate,
-                           std::optional<int> bufferSize, bool allowFeedback,
-                           int numInputChannels, int numOutputChannels) {
-                 return std::make_shared<AudioStream>(
-                     inputDeviceName, outputDeviceName, pedalboard, sampleRate,
-                     bufferSize, allowFeedback, numInputChannels,
-                     numOutputChannels);
-               }),
-               py::arg("input_device_name") = py::none(),
-               py::arg("output_device_name") = py::none(),
-               py::arg("plugins") = py::none(),
-               py::arg("sample_rate") = py::none(),
-               py::arg("buffer_size") = py::none(),
-               py::arg("allow_feedback") = false,
-               py::arg("num_input_channels") = 1,
-               py::arg("num_output_channels") = 2);
-#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
-  audioStream
+      .def(py::init([](std::optional<std::string> inputDeviceName,
+                       std::optional<std::string> outputDeviceName,
+                       std::optional<std::shared_ptr<Chain>> pedalboard,
+                       std::optional<double> sampleRate,
+                       std::optional<int> bufferSize, bool allowFeedback,
+                       int numInputChannels, int numOutputChannels) {
+             return std::make_shared<AudioStream>(
+                 inputDeviceName, outputDeviceName, pedalboard, sampleRate,
+                 bufferSize, allowFeedback, numInputChannels,
+                 numOutputChannels);
+           }),
+           py::arg("input_device_name") = py::none(),
+           py::arg("output_device_name") = py::none(),
+           py::arg("plugins") = py::none(), py::arg("sample_rate") = py::none(),
+           py::arg("buffer_size") = py::none(),
+           py::arg("allow_feedback") = false, py::arg("num_input_channels") = 1,
+           py::arg("num_output_channels") = 2)
       .def("run", &AudioStream::stream,
            "Start streaming audio from input to output, passing the audio "
-           "stream  through the :py:attr:`plugins` on this AudioStream object. "
+           "stream through the :py:attr:`plugins` on this AudioStream object. "
            "This call will block the current thread until a "
            ":py:exc:`KeyboardInterrupt` (``Ctrl-C``) is received.")
-      .def_property_readonly(
-          "running", &AudioStream::getIsRunning,
-          ":py:const:`True` if this stream is currently streaming live "
-          "audio, :py:const:`False` otherwise.")
+      .def_property_readonly("running", &AudioStream::getIsRunning,
+                             ":py:const:`True` if this stream is currently "
+                             "streaming live "
+                             "audio, :py:const:`False` otherwise.")
       .def("__enter__", &AudioStream::enter,
            "Use this :class:`AudioStream` as a context manager. Entering the "
            "context manager will immediately start the audio stream, sending "
@@ -752,10 +770,21 @@ Or use :py:meth:`AudioStream.write` to play audio in near-real-time::
              std::ostringstream ss;
              ss << "<pedalboard.io.AudioStream";
              auto audioDeviceSetup = stream.getAudioDeviceSetup();
-             ss << " input_device_name="
-                << audioDeviceSetup.inputDeviceName.toStdString();
-             ss << " output_device_name="
-                << audioDeviceSetup.outputDeviceName.toStdString();
+
+             if (stream.getNumInputChannels() > 0) {
+               ss << " input_device_name=\""
+                  << audioDeviceSetup.inputDeviceName.toStdString() << "\"";
+             } else {
+               ss << " input_device_name=None";
+             }
+
+             if (stream.getNumOutputChannels() > 0) {
+               ss << " output_device_name=\""
+                  << audioDeviceSetup.outputDeviceName.toStdString() << "\"";
+             } else {
+               ss << " output_device_name=None";
+             }
+
              ss << " sample_rate="
                 << juce::String(audioDeviceSetup.sampleRate, 2).toStdString();
              ss << " buffer_size=" << audioDeviceSetup.bufferSize;
@@ -768,6 +797,13 @@ Or use :py:meth:`AudioStream.write` to play audio in near-real-time::
              ss << ">";
              return ss.str();
            })
+      .def_property_readonly(
+          "buffer_size",
+          [](AudioStream &stream) {
+            return stream.getAudioDeviceSetup().bufferSize;
+          },
+          "The size (in frames) of the buffer used between the audio hardware "
+          "and Python.")
       .def_property("plugins", &AudioStream::getPedalboard,
                     &AudioStream::setPedalboard,
                     "The Pedalboard object that this AudioStream will use to "
@@ -781,6 +817,14 @@ Or use :py:meth:`AudioStream.write` to play audio in near-real-time::
       .def_property_readonly(
           "sample_rate", &AudioStream::getSampleRate,
           "The sample rate that this stream is operating at.")
+      .def_property_readonly(
+          "num_input_channels", &AudioStream::getNumInputChannels,
+          "The number of input channels on the input device. Will be ``0`` if "
+          "no input device is connected.")
+      .def_property_readonly(
+          "num_output_channels", &AudioStream::getNumOutputChannels,
+          "The number of output channels on the output "
+          "device. Will be ``0`` if no output device is connected.")
       .def_property(
           "ignore_dropped_input", &AudioStream::getIgnoreDroppedInput,
           &AudioStream::setIgnoreDroppedInput,
@@ -789,19 +833,33 @@ Or use :py:meth:`AudioStream.write` to play audio in near-real-time::
           ":py:meth:`read` method will raise a :py:exc:`RuntimeError` if any "
           "audio data is dropped in between calls. If this property is true, "
           "the :py:meth:`read` method will return the most recent audio data "
-          "available, even if some audio data was dropped.\n\n"
-          ".. note::\n    "
-          "The :py:attr:`dropped_input_frame_count` property is unaffected "
-          "by this setting.")
+          "available, even if some audio data was dropped.\n\n.. note::\n    "
+          "The :py:attr:`dropped_input_frame_count` property is unaffected by "
+          "this setting.")
       .def(
           "write",
           [](AudioStream &stream,
-             const py::array_t<float, py::array::c_style> inputArray) {
+             const py::array_t<float, py::array::c_style> inputArray,
+             float sampleRate) {
+            if (sampleRate != stream.getSampleRate()) {
+              throw std::runtime_error(
+                  "The sample rate provided to `write` (" +
+                  std::to_string(sampleRate) +
+                  " Hz) does not match the output device's sample rate (" +
+                  std::to_string(stream.getSampleRate()) +
+                  " Hz). To write audio data to the output device, the sample "
+                  "rate of the audio must match the output device's sample "
+                  "rate.");
+            }
             stream.write(copyPyArrayIntoJuceBuffer(inputArray));
           },
-          py::arg("audio"),
-          "Write audio data to the output device. This method will block until "
-          "the provided audio is played in its entirety.")
+          py::arg("audio"), py::arg("sample_rate"),
+          "Write (play) audio data to the output device. This method will "
+          "block until the provided audio buffer is played in its "
+          "entirety.\n\nIf the provided sample rate does not match the output "
+          "device's sample rate, an error will be thrown. In this case, you "
+          "can use :py:class:`StreamResampler` to resample the audio before "
+          "calling :py:meth:`write`.")
       .def(
           "read",
           [](AudioStream &stream, int numSamples) {
@@ -809,18 +867,29 @@ Or use :py:meth:`AudioStream.write` to play audio in near-real-time::
                                              ChannelLayout::NotInterleaved, 0);
           },
           py::arg("num_samples") = 0,
-          "Record audio data from the input device. When called with no "
+          "Read (record) audio data from the input device. When called with no "
           "arguments, this method returns all of the available audio data in "
           "the buffer. If `num_samples` is provided, this method will block "
-          "until the desired number of samples have been received.\n\n"
-          ".. warning::\n    Recording audio is a **real-time** operation, so "
-          "if your code doesn't call :py:meth:`read` quickly enough, some "
-          "audio will be lost. To warn about this, :py:meth:`read` will throw "
-          "an exception if audio data is dropped. This behavior can be "
-          "disabled by setting :py:attr:`ignore_dropped_input` to "
-          ":py:const:`True`. The number of dropped samples since the last call "
-          "to :py:meth:`read` can be retrieved by accessing "
-          "the :py:attr:`dropped_input_frame_count` property.")
+          "until the desired number of samples have been received. The audio "
+          "is recorded at the :py:attr:`sample_rate` of this stream.\n\n.. "
+          "warning::\n    Recording audio is a **real-time** operation, so if "
+          "your code doesn't call :py:meth:`read` quickly enough, some audio "
+          "will be lost. To warn about this, :py:meth:`read` will throw an "
+          "exception if audio data is dropped. This behavior can be disabled "
+          "by setting :py:attr:`ignore_dropped_input` to :py:const:`True`. The "
+          "number of dropped samples since the last call to :py:meth:`read` "
+          "can be retrieved by accessing the "
+          ":py:attr:`dropped_input_frame_count` property.")
+      .def_property_readonly(
+          "buffered_input_sample_count",
+          &AudioStream::getNumBufferedInputFrames,
+          "The number of frames of audio that are currently in the input "
+          "buffer. This number will change rapidly, and will be "
+          ":py:const:`None` if no input device is connected.")
+      .def("close", &AudioStream::close,
+           "Close the audio stream, stopping the audio device and releasing "
+           "any resources. After calling close, this AudioStream object is no "
+           "longer usable.")
       .def_static(
           "play",
           [](const py::array_t<float, py::array::c_style> audio,
@@ -834,9 +903,7 @@ Or use :py:meth:`AudioStream.write` to play audio in near-real-time::
           py::arg("audio"), py::arg("sample_rate"),
           py::arg("output_device_name") = py::none(),
           "Play audio data to the speaker, headphones, or other output device. "
-          "This method will block until the audio is finished playing.");
-#endif
-  audioStream
+          "This method will block until the audio is finished playing.")
       .def_property_readonly_static(
           "input_device_names",
           [](py::object *obj) -> std::vector<std::string> {
@@ -858,8 +925,7 @@ Or use :py:meth:`AudioStream.write` to play audio in near-real-time::
 #endif
           },
           "The output devices (i.e.: speakers, headphones, etc.) currently "
-          "available on the current machine.");
-  audioStream
+          "available on the current machine.")
       .def_property_readonly_static(
           "default_input_device_name",
           [](py::object *obj) -> std::optional<std::string> {

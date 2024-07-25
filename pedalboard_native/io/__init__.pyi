@@ -230,7 +230,7 @@ class AudioStream:
             chunk = f.read(f.samplerate * 10)
         AudioStream.play(chunk, f.samplerate)
 
-    Or use :py:meth:`AudioStream.write` to play audio in near-real-time::
+    Or use :py:meth:`AudioStream.write` to stream audio in chunks::
 
         # Play an audio file by looping through it in chunks:
         with AudioStream(output_device="default") as stream:
@@ -263,10 +263,6 @@ class AudioStream:
        stream.plugins.append(Reverb(wet_level=1.0))
        stream.run()  # Run the stream until Ctrl-C is received
 
-    .. note::
-        This class uses C++ under the hood to ensure speed, thread safety,
-        and avoid any locking concerns with Python's Global Interpreter Lock.
-
     .. warning::
         The :class:`AudioStream` class implements a context manager interface
         to ensure that audio streams are never left "dangling" (i.e.: running in
@@ -275,16 +271,16 @@ class AudioStream:
         While it is possible to call the :meth:`__enter__` method directly to run an
         audio stream in the background, this can have some nasty side effects. If the
         :class:`AudioStream` object is no longer reachable (not bound to a variable,
-        not in scope, etc), the audio stream will continue to play back forever, and
+        not in scope, etc), the audio stream will continue to run forever, and
         won't stop until the Python interpreter exits.
 
         To run an :class:`AudioStream` in the background, use Python's
-        :py:mod:`threading` module to call the synchronous :meth:`run` method on a
+        :py:mod:`threading` module to run the stream object method on a
         background thread, allowing for easier cleanup.
 
     *Introduced in v0.7.0. Not supported on Linux.*
 
-    *:py:meth:`read` and :py:meth:`write` methods introduced in v0.9.12.*
+    :py:meth:`read` *and* :py:meth:`write` *methods introduced in v0.9.12.*
     """
 
     def __enter__(self) -> AudioStream:
@@ -309,6 +305,11 @@ class AudioStream:
         num_output_channels: int = 2,
     ) -> None: ...
     def __repr__(self) -> str: ...
+    def close(self) -> None:
+        """
+        Close the audio stream, stopping the audio device and releasing any resources. After calling close, this AudioStream object is no longer usable.
+        """
+
     @staticmethod
     def play(
         audio: numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]],
@@ -321,20 +322,36 @@ class AudioStream:
 
     def read(self, num_samples: int = 0) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
         """
-        Record audio data from the input device. When called with no arguments, this method returns all of the available audio data in the buffer. If `num_samples` is provided, this method will block until the desired number of samples have been received.
-
         .. warning::
             Recording audio is a **real-time** operation, so if your code doesn't call :py:meth:`read` quickly enough, some audio will be lost. To warn about this, :py:meth:`read` will throw an exception if audio data is dropped. This behavior can be disabled by setting :py:attr:`ignore_dropped_input` to :py:const:`True`. The number of dropped samples since the last call to :py:meth:`read` can be retrieved by accessing the :py:attr:`dropped_input_frame_count` property.
         """
 
     def run(self) -> None:
         """
-        Start streaming audio from input to output, passing the audio stream  through the :py:attr:`plugins` on this AudioStream object. This call will block the current thread until a :py:exc:`KeyboardInterrupt` (``Ctrl-C``) is received.
+        Start streaming audio from input to output, passing the audio stream through the :py:attr:`plugins` on this AudioStream object. This call will block the current thread until a :py:exc:`KeyboardInterrupt` (``Ctrl-C``) is received.
         """
 
-    def write(self, audio: numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]) -> None:
+    def write(
+        self, audio: numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]], sample_rate: float
+    ) -> None:
         """
-        Write audio data to the output device. This method will block until the provided audio is played in its entirety.
+        If the provided sample rate does not match the output device's sample rate, an error will be thrown. In this case, you can use :py:class:`StreamResampler` to resample the audio before calling :py:meth:`write`.
+        """
+
+    @property
+    def buffer_size(self) -> int:
+        """
+        The size (in frames) of the buffer used between the audio hardware and Python.
+
+
+        """
+
+    @property
+    def buffered_input_sample_count(self) -> typing.Optional[int]:
+        """
+        The number of frames of audio that are currently in the input buffer. This number will change rapidly, and will be :py:const:`None` if no input device is connected.
+
+
         """
 
     @property
@@ -366,6 +383,22 @@ class AudioStream:
         """
 
     @property
+    def num_input_channels(self) -> int:
+        """
+        The number of input channels on the input device. Will be ``0`` if no input device is connected.
+
+
+        """
+
+    @property
+    def num_output_channels(self) -> int:
+        """
+        The number of output channels on the output device. Will be ``0`` if no output device is connected.
+
+
+        """
+
+    @property
     def plugins(self) -> pedalboard_native.utils.Chain:
         """
         The Pedalboard object that this AudioStream will use to process audio.
@@ -394,6 +427,8 @@ class AudioStream:
 
 
         """
+    default_input_device_name = "MacBook Pro Microphone"
+    default_output_device_name = "MacBook Pro Speakers"
     input_device_names: typing.List[str] = []
     output_device_names: typing.List[str] = []
     pass
