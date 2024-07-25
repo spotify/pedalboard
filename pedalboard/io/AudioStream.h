@@ -796,6 +796,7 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
            [](const AudioStream &stream) {
              std::ostringstream ss;
              ss << "<pedalboard.io.AudioStream";
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
              auto audioDeviceSetup = stream.getAudioDeviceSetup();
 
              if (stream.getNumInputChannels() > 0) {
@@ -820,6 +821,7 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
              } else {
                ss << " not running";
              }
+#endif
              ss << " at " << &stream;
              ss << ">";
              return ss.str();
@@ -827,7 +829,11 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
       .def_property_readonly(
           "buffer_size",
           [](AudioStream &stream) {
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
             return stream.getAudioDeviceSetup().bufferSize;
+#else
+            return 0;
+#endif
           },
           "The size (in frames) of the buffer used between the audio "
           "hardware "
