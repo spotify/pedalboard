@@ -969,16 +969,14 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
           },
           "The name of the default input device (i.e.: microphone, audio "
           "interface, etc.) currently available on the current machine. May "
-          "be "
-          ":py:const:`None`.")
+          "be :py:const:`None` if no input devices are present.")
       .def_property_readonly_static(
           "default_output_device_name",
           [](py::object *obj) -> std::optional<std::string> {
             return AudioStream::getDefaultDeviceName(false, 2);
           },
           "The name of the default output device (i.e.: speakers, "
-          "headphones, "
-          "etc.) currently available on the current machine. May be "
-          ":py:const:`None`.");
+          "headphones, etc.) currently available on the current machine. May "
+          "be :py:const:`None` if no output devices are present.");
 }
 } // namespace Pedalboard
