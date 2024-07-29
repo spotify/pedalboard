@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "BufferUtils.h"
 #include "JuceHeader.h"
 #include <mutex>
 
@@ -54,6 +55,15 @@ public:
   virtual void reset() = 0;
 
   /**
+   * Reset this plugin's memory of the last channel layout and/or last channel
+   * count. This should usually not be called directly.
+   */
+  void resetLastChannelLayout() {
+    lastSpec = {0};
+    lastChannelLayout = {};
+  };
+
+  /**
    * Get the number of samples of latency introduced by this plugin.
    * This is the number of samples that must be provided to the plugin
    * before meaningful output will be returned.
@@ -82,7 +92,39 @@ public:
   // plugins to avoid deadlocking.
   std::mutex mutex;
 
+  template <typename T>
+  ChannelLayout parseAndCacheChannelLayout(
+      const py::array_t<T, py::array::c_style> inputArray,
+      std::optional<int> channelCountHint = {}) {
+
+    if (!channelCountHint && lastSpec.numChannels != 0) {
+      channelCountHint = {lastSpec.numChannels};
+    }
+
+    if (lastChannelLayout) {
+      try {
+        lastChannelLayout = detectChannelLayout(inputArray, channelCountHint);
+      } catch (...) {
+        // Use the last cached layout.
+      }
+    } else {
+      // We have no cached layout; detect it now and raise if necessary:
+      try {
+        lastChannelLayout = detectChannelLayout(inputArray, channelCountHint);
+      } catch (const std::exception &e) {
+        throw std::runtime_error(
+            std::string(e.what()) +
+            " Provide a non-square array first to allow Pedalboard to "
+            "determine which dimension corresponds with the number of channels "
+            "and which dimension corresponds with the number of samples.");
+      }
+    }
+
+    return *lastChannelLayout;
+  }
+
 protected:
   juce::dsp::ProcessSpec lastSpec = {0};
+  std::optional<ChannelLayout> lastChannelLayout = {};
 };
 } // namespace Pedalboard
