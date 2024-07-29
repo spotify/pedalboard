@@ -218,14 +218,32 @@ class AudioFile:
 
 class AudioStream:
     """
-    A class that streams audio from an input audio device (i.e.: a microphone,
-    audio interface, etc) to an output device (speaker, headphones),
-    passing it through a :class:`pedalboard.Pedalboard` to add effects.
+    A class that allows interacting with live streams of audio from an input
+    audio device (i.e.: a microphone, audio interface, etc) and/or to an
+    output device (speaker, headphones), allowing access to the audio
+    stream from within Python code.
 
-    :class:`AudioStream` may be used as a context manager::
+    Use :py:meth:`AudioStream.play` to play audio data to your speakers::
 
-       input_device_name = AudioStream.input_device_names[0]
-       output_device_name = AudioStream.output_device_names[0]
+        # Play a 10-second chunk of an audio file:
+        with AudioFile("my_audio_file.mp3") as f:
+            chunk = f.read(f.samplerate * 10)
+        AudioStream.play(chunk, f.samplerate)
+
+    Or use :py:meth:`AudioStream.write` to stream audio in chunks::
+
+        # Play an audio file by looping through it in chunks:
+        with AudioStream(output_device="default") as stream:
+            with AudioFile("my_audio_file.mp3") as f:
+                while f.tell() < f.frames:
+                    # Decode and play 512 samples at a time:
+                    stream.write(f.read(512))
+
+    :class:`AudioStream` may also be used to pass live audio through a :class:`Pedalboard`::
+
+       # Pass both an input and output device name to connect both ends:
+       input_device_name = AudioStream.default_input_device_name
+       output_device_name = AudioStream.default_output_device_name
        with AudioStream(input_device_name, output_device_name) as stream:
            # In this block, audio is streaming through `stream`!
            # Audio will be coming out of your speakers at this point.
@@ -240,19 +258,10 @@ class AudioStream:
            # Delete plugins:
            del stream.plugins[0]
 
-
-    :class:`AudioStream` may also be used synchronously::
-
-       stream = AudioStream(ogg_buffer)
+       # Or use AudioStream synchronously:
+       stream = AudioStream(input_device_name, output_device_name)
        stream.plugins.append(Reverb(wet_level=1.0))
        stream.run()  # Run the stream until Ctrl-C is received
-
-    .. note::
-        This class uses C++ under the hood to ensure speed, thread safety,
-        and avoid any locking concerns with Python's Global Interpreter Lock.
-        Audio data processed by :class:`AudioStream` is not available to
-        Python code; the only way to interact with the audio stream is through
-        the :py:attr:`plugins` attribute.
 
     .. warning::
         The :class:`AudioStream` class implements a context manager interface
@@ -262,14 +271,16 @@ class AudioStream:
         While it is possible to call the :meth:`__enter__` method directly to run an
         audio stream in the background, this can have some nasty side effects. If the
         :class:`AudioStream` object is no longer reachable (not bound to a variable,
-        not in scope, etc), the audio stream will continue to play back forever, and
+        not in scope, etc), the audio stream will continue to run forever, and
         won't stop until the Python interpreter exits.
 
         To run an :class:`AudioStream` in the background, use Python's
-        :py:mod:`threading` module to call the synchronous :meth:`run` method on a
+        :py:mod:`threading` module to run the stream object method on a
         background thread, allowing for easier cleanup.
 
     *Introduced in v0.7.0. Not supported on Linux.*
+
+    :py:meth:`read` *and* :py:meth:`write` *methods introduced in v0.9.12.*
     """
 
     def __enter__(self) -> AudioStream:
@@ -284,17 +295,107 @@ class AudioStream:
 
     def __init__(
         self,
-        input_device_name: str,
-        output_device_name: str,
+        input_device_name: typing.Optional[str] = None,
+        output_device_name: typing.Optional[str] = None,
         plugins: typing.Optional[pedalboard_native.utils.Chain] = None,
         sample_rate: typing.Optional[float] = None,
-        buffer_size: int = 512,
+        buffer_size: typing.Optional[int] = None,
         allow_feedback: bool = False,
+        num_input_channels: int = 1,
+        num_output_channels: int = 2,
     ) -> None: ...
     def __repr__(self) -> str: ...
+    def close(self) -> None:
+        """
+        Close the audio stream, stopping the audio device and releasing any resources. After calling close, this AudioStream object is no longer usable.
+        """
+
+    @staticmethod
+    def play(
+        audio: numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]],
+        sample_rate: float,
+        output_device_name: typing.Optional[str] = None,
+    ) -> None:
+        """
+        Play audio data to the speaker, headphones, or other output device. This method will block until the audio is finished playing.
+        """
+
+    def read(self, num_samples: int = 0) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+        """
+        .. warning::
+            Recording audio is a **real-time** operation, so if your code doesn't call :py:meth:`read` quickly enough, some audio will be lost. To warn about this, :py:meth:`read` will throw an exception if audio data is dropped. This behavior can be disabled by setting :py:attr:`ignore_dropped_input` to :py:const:`True`. The number of dropped samples since the last call to :py:meth:`read` can be retrieved by accessing the :py:attr:`dropped_input_frame_count` property.
+        """
+
     def run(self) -> None:
         """
-        Start streaming audio from input to output, passing the audio stream  through the :py:attr:`plugins` on this AudioStream object. This call will block the current thread until a :py:exc:`KeyboardInterrupt` (``Ctrl-C``) is received.
+        Start streaming audio from input to output, passing the audio stream through the :py:attr:`plugins` on this AudioStream object. This call will block the current thread until a :py:exc:`KeyboardInterrupt` (``Ctrl-C``) is received.
+        """
+
+    def write(
+        self, audio: numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]], sample_rate: float
+    ) -> None:
+        """
+        If the provided sample rate does not match the output device's sample rate, an error will be thrown. In this case, you can use :py:class:`StreamResampler` to resample the audio before calling :py:meth:`write`.
+        """
+
+    @property
+    def buffer_size(self) -> int:
+        """
+        The size (in frames) of the buffer used between the audio hardware and Python.
+
+
+        """
+
+    @property
+    def buffered_input_sample_count(self) -> typing.Optional[int]:
+        """
+        The number of frames of audio that are currently in the input buffer. This number will change rapidly, and will be :py:const:`None` if no input device is connected.
+
+
+        """
+
+    @property
+    def dropped_input_frame_count(self) -> int:
+        """
+        The number of frames of audio that were dropped since the last call to :py:meth:`read`. To prevent audio from being dropped during recording, ensure that you call :py:meth:`read` as often as possible or increase your buffer size.
+
+
+        """
+
+    @property
+    def ignore_dropped_input(self) -> bool:
+        """
+        Controls the behavior of the :py:meth:`read` method when audio data is dropped. If this property is false (the default), the :py:meth:`read` method will raise a :py:exc:`RuntimeError` if any audio data is dropped in between calls. If this property is true, the :py:meth:`read` method will return the most recent audio data available, even if some audio data was dropped.
+
+        .. note::
+            The :py:attr:`dropped_input_frame_count` property is unaffected by this setting.
+
+
+        """
+
+    @ignore_dropped_input.setter
+    def ignore_dropped_input(self, arg1: bool) -> None:
+        """
+        Controls the behavior of the :py:meth:`read` method when audio data is dropped. If this property is false (the default), the :py:meth:`read` method will raise a :py:exc:`RuntimeError` if any audio data is dropped in between calls. If this property is true, the :py:meth:`read` method will return the most recent audio data available, even if some audio data was dropped.
+
+        .. note::
+            The :py:attr:`dropped_input_frame_count` property is unaffected by this setting.
+        """
+
+    @property
+    def num_input_channels(self) -> int:
+        """
+        The number of input channels on the input device. Will be ``0`` if no input device is connected.
+
+
+        """
+
+    @property
+    def num_output_channels(self) -> int:
+        """
+        The number of output channels on the output device. Will be ``0`` if no output device is connected.
+
+
         """
 
     @property
@@ -314,10 +415,20 @@ class AudioStream:
     @property
     def running(self) -> bool:
         """
-        :py:const:`True` if this stream is currently streaming live audio from input to output, :py:const:`False` otherwise.
+        :py:const:`True` if this stream is currently streaming live audio, :py:const:`False` otherwise.
 
 
         """
+
+    @property
+    def sample_rate(self) -> float:
+        """
+        The sample rate that this stream is operating at.
+
+
+        """
+    default_input_device_name = "MacBook Pro Microphone"
+    default_output_device_name = "MacBook Pro Speakers"
     input_device_names: typing.List[str] = []
     output_device_names: typing.List[str] = []
     pass
