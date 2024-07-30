@@ -215,6 +215,11 @@ jobs:
           ccache --zero-stats
         #  cat ${{ runner.workspace }}/.ccache_log || true
         #  ls -lashR ${{ runner.workspace }}/pedalboard
+      - name: Delete Existing Cache for ${{ runner.os }} Objects
+        run: gh cache delete --repo ${{ github.repository }} ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
+        env:
+          # This token requires the "repo" scope.
+          GITHUB_TOKEN: ${{ secrets.ACTION_CLEAR_CACHES_TOKEN }}
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -309,6 +314,11 @@ jobs:
           ccache --zero-stats
         #  cat ${{ runner.workspace }}/.ccache_log || true
         #  ls -lashR ${{ runner.workspace }}
+      - name: Delete Existing Cache for ${{ runner.os }} Objects
+        run: gh cache delete --repo ${{ github.repository }} ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
+        env:
+          # This token requires the "repo" scope.
+          GITHUB_TOKEN: ${{ secrets.ACTION_CLEAR_CACHES_TOKEN }}
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
