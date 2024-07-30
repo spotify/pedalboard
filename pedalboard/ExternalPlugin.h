@@ -1731,6 +1731,16 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           "A string that can be saved and used to uniquely identify this "
           "plugin (and version) again.\n\n*Introduced in v0.9.4.*")
       .def_property_readonly(
+          "reported_latency_samples",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.getLatencyHint();
+          },
+          "The number of samples of latency (delay) that this plugin reports "
+          "to introduce into the audio signal due to internal buffering "
+          "and processing. Note that not all plugins correctly report "
+          "the latency that they introduce, so this value may be inaccurate "
+          "(especially if the plugin reports 0).\n\n*Introduced in v0.9.12.*")
+      .def_property_readonly(
           "_parameters",
           &ExternalPlugin<juce::PatchedVST3PluginFormat>::getParameters,
           py::return_value_policy::reference_internal)
@@ -1944,6 +1954,16 @@ see :class:`pedalboard.VST3Plugin`.)
           },
           "A string that can be saved and used to uniquely identify this "
           "plugin (and version) again.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "reported_latency_samples",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.getLatencyHint();
+          },
+          "The number of samples of latency (delay) that this plugin reports "
+          "to introduce into the audio signal due to internal buffering "
+          "and processing. Note that not all plugins correctly report "
+          "the latency that they introduce, so this value may be inaccurate "
+          "(especially if the plugin reports 0).\n\n*Introduced in v0.9.12.*")
       .def_property_readonly(
           "_parameters",
           &ExternalPlugin<juce::AudioUnitPluginFormat>::getParameters,
