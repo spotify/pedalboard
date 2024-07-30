@@ -1431,6 +1431,16 @@ class AudioUnitPlugin(ExternalPlugin):
         """
 
     @property
+    def reported_latency_samples(self) -> int:
+        """
+        The number of samples of latency (delay) that this plugin reports to introduce into the audio signal due to internal buffering and processing. Pedalboard automatically compensates for this latency during processing, so this property is present for informational purposes. Note that not all plugins correctly report the latency that they introduce, so this value may be inaccurate (especially if the plugin reports 0).
+
+        *Introduced in v0.9.12.*
+
+
+        """
+
+    @property
     def version(self) -> str:
         """
         The version string for this plugin, as reported by the plugin itself.
@@ -1993,6 +2003,26 @@ class VST3Plugin(ExternalPlugin):
         """
 
     @property
+    def preset_data(self) -> bytes:
+        """
+        Get or set the current plugin state as bytes in .vstpreset format.
+
+        .. warning::
+            This property can be set to change the plugin's internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.
+
+
+        """
+
+    @preset_data.setter
+    def preset_data(self, arg1: bytes) -> None:
+        """
+        Get or set the current plugin state as bytes in .vstpreset format.
+
+        .. warning::
+            This property can be set to change the plugin's internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.
+        """
+
+    @property
     def raw_state(self) -> bytes:
         """
         A :py:class:`bytes` object representing the plugin's internal state.
@@ -2014,6 +2044,16 @@ class VST3Plugin(ExternalPlugin):
 
         .. warning::
             This property can be set to change the plugin's internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.
+        """
+
+    @property
+    def reported_latency_samples(self) -> int:
+        """
+        The number of samples of latency (delay) that this plugin reports to introduce into the audio signal due to internal buffering and processing. Pedalboard automatically compensates for this latency during processing, so this property is present for informational purposes. Note that not all plugins correctly report the latency that they introduce, so this value may be inaccurate (especially if the plugin reports 0).
+
+        *Introduced in v0.9.12.*
+
+
         """
 
     @property

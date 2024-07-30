@@ -1792,7 +1792,9 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           },
           "The number of samples of latency (delay) that this plugin reports "
           "to introduce into the audio signal due to internal buffering "
-          "and processing. Note that not all plugins correctly report "
+          "and processing. Pedalboard automatically compensates for this "
+          "latency during processing, so this property is present for "
+          "informational purposes. Note that not all plugins correctly report "
           "the latency that they introduce, so this value may be inaccurate "
           "(especially if the plugin reports 0).\n\n*Introduced in v0.9.12.*")
       .def_property_readonly(
@@ -2016,7 +2018,9 @@ see :class:`pedalboard.VST3Plugin`.)
           },
           "The number of samples of latency (delay) that this plugin reports "
           "to introduce into the audio signal due to internal buffering "
-          "and processing. Note that not all plugins correctly report "
+          "and processing. Pedalboard automatically compensates for this "
+          "latency during processing, so this property is present for "
+          "informational purposes. Note that not all plugins correctly report "
           "the latency that they introduce, so this value may be inaccurate "
           "(especially if the plugin reports 0).\n\n*Introduced in v0.9.12.*")
       .def_property_readonly(
