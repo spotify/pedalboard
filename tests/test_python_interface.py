@@ -17,7 +17,7 @@
 
 import pytest
 import numpy as np
-from pedalboard import Pedalboard, Gain
+from pedalboard import Pedalboard, Gain, Reverb
 
 
 @pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 4), (2, 4)])
@@ -63,6 +63,12 @@ def test_repr():
 
 
 def test_is_list_like():
+    assert len(Pedalboard()) == 0
+    pb = Pedalboard()
+    assert len(pb) == 0
+    pb.append(Reverb())
+    assert len(pb) == 1
+
     gain = Gain(-6)
 
     assert len(Pedalboard([gain])) == 1
