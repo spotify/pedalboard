@@ -674,6 +674,7 @@ def test_bool_parameter_valdation(plugin_filename: str, parameter_name: str):
 def test_float_parameters(plugin_filename: str, parameter_name: str):
     plugin = load_test_plugin(plugin_filename)
     parameter_value = getattr(plugin, parameter_name)
+    original_raw_value = parameter_value.raw_value
     assert repr(parameter_value) == repr(float(parameter_value))
     assert isinstance(parameter_value, float)
     # Change the parameter and ensure that it does change:
@@ -694,6 +695,13 @@ def test_float_parameters(plugin_filename: str, parameter_name: str):
         if math.isnan(getattr(plugin, parameter_name)):
             continue
         assert math.isclose(new_value, getattr(plugin, parameter_name), abs_tol=epsilon * 2.0)
+
+    # Ensure that raw value can be set by resetting parameter to original value
+    setattr(parameter_value, "raw_value", original_raw_value)
+    assert math.isclose(
+        original_raw_value,
+        getattr(parameter_value, "raw_value"),
+        abs_tol=epsilon * 2.0)
 
     # Ensure that if we access an attribute that we're not adding to the value,
     # we fall back to the underlying type (float) or we raise an exception if not:
