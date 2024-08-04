@@ -290,7 +290,7 @@ public:
                                      float **outputChannelData,
                                      int numOutputChannels, int numSamples) {
     // Live processing mode: run the input audio through a Pedalboard object.
-    if (!playBufferFifo && !recordBufferFifo) {
+    if (playBufferFifo && recordBufferFifo) {
       for (int i = 0; i < numOutputChannels; i++) {
         const float *inputChannel = inputChannelData[i % numInputChannels];
         std::memcpy((char *)outputChannelData[i], (char *)inputChannel,
@@ -314,9 +314,7 @@ public:
           }
         }
       }
-    }
-
-    if (recordBufferFifo) {
+    } else if (recordBufferFifo) {
       // If Python wants audio input, then copy the audio into the record
       // buffer:
       for (int attempt = 0; attempt < 2; attempt++) {
@@ -356,13 +354,12 @@ public:
           break;
         }
       }
-    }
+    } else if (playBufferFifo) {
+      for (int i = 0; i < numOutputChannels; i++) {
+        std::memset((char *)outputChannelData[i], 0,
+                    numSamples * sizeof(float));
+      }
 
-    for (int i = 0; i < numOutputChannels; i++) {
-      std::memset((char *)outputChannelData[i], 0, numSamples * sizeof(float));
-    }
-
-    if (playBufferFifo) {
       const auto scope = playBufferFifo->read(numSamples);
 
       if (scope.blockSize1 > 0)
@@ -378,6 +375,11 @@ public:
                       (char *)playBuffer->getReadPointer(i, scope.startIndex2),
                       scope.blockSize2 * sizeof(float));
         }
+    } else {
+      for (int i = 0; i < numOutputChannels; i++) {
+        std::memset((char *)outputChannelData[i], 0,
+                    numSamples * sizeof(float));
+      }
     }
   }
 
@@ -832,7 +834,7 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
 #ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
             return stream.getAudioDeviceSetup().bufferSize;
 #else
-            return 0;
+                                 return 0;
 #endif
           },
           "The size (in frames) of the buffer used between the audio "
