@@ -122,7 +122,7 @@ def ignore_files_matching(files, *matches):
 
 
 # Platform-specific FFT speedup flags:
-if platform.system() == "Windows":
+if platform.system() == "Windows" or "musllinux" in os.getenv("CIBW_BUILD", ""):
     ALL_CPPFLAGS.append("-DUSE_BUILTIN_FFT")
     ALL_CPPFLAGS.append("-DNO_THREADING")
 elif platform.system() == "Darwin":

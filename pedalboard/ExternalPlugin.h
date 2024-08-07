@@ -640,33 +640,70 @@ public:
     }
   }
 
-  struct PresetVisitor : public juce::ExtensionsVisitor {
-    const std::string presetFilePath;
+  struct SetPresetVisitor : public juce::ExtensionsVisitor {
+    const juce::MemoryBlock &presetData;
+    bool didSetPreset;
 
-    PresetVisitor(const std::string presetFilePath)
-        : presetFilePath(presetFilePath) {}
+    SetPresetVisitor(const juce::MemoryBlock &presetData)
+        : presetData(presetData), didSetPreset(false) {}
 
     void visitVST3Client(
         const juce::ExtensionsVisitor::VST3Client &client) override {
-      juce::File presetFile(presetFilePath);
-      juce::MemoryBlock presetData;
-
-      if (!presetFile.loadFileAsData(presetData)) {
-        throw std::runtime_error("Failed to read preset file: " +
-                                 presetFilePath);
-      }
-
-      if (!client.setPreset(presetData)) {
-        throw std::runtime_error(
-            "Plugin returned an error when loading data from preset file: " +
-            presetFilePath);
-      }
+      this->didSetPreset = client.setPreset(presetData);
     }
   };
 
-  void loadPresetData(std::string presetFilePath) {
-    PresetVisitor visitor{presetFilePath};
+  void loadPresetFile(std::string presetFilePath) {
+    juce::File presetFile(presetFilePath);
+    juce::MemoryBlock presetData;
+
+    if (!presetFile.loadFileAsData(presetData)) {
+      throw std::runtime_error("Failed to read preset file: " + presetFilePath);
+    }
+
+    SetPresetVisitor visitor{presetData};
     pluginInstance->getExtensions(visitor);
+    if (!visitor.didSetPreset) {
+      throw std::runtime_error("Plugin failed to load data from preset file: " +
+                               presetFilePath);
+    }
+  }
+
+  void setPreset(const void *data, size_t size) {
+    juce::MemoryBlock presetData(data, size);
+    SetPresetVisitor visitor{presetData};
+    pluginInstance->getExtensions(visitor);
+    if (!visitor.didSetPreset) {
+      throw std::runtime_error("Failed to set preset data for plugin: " +
+                               pathToPluginFile.toStdString());
+    }
+  }
+
+  struct GetPresetVisitor : public juce::ExtensionsVisitor {
+    // This block will get updated with the current preset data when
+    // visiting VST3 clients.
+    juce::MemoryBlock &presetData;
+    bool didGetPreset;
+
+    GetPresetVisitor(juce::MemoryBlock &presetData)
+        : presetData(presetData), didGetPreset(false) {}
+
+    void visitVST3Client(
+        const juce::ExtensionsVisitor::VST3Client &client) override {
+      this->presetData = client.getPreset();
+      this->didGetPreset = true;
+    }
+  };
+
+  void getPreset(juce::MemoryBlock &dest) const {
+    // Get the plugin state's .vstpreset representation if possible.
+    GetPresetVisitor visitor(dest);
+    pluginInstance->getExtensions(visitor);
+
+    if (!visitor.didGetPreset) {
+      throw std::runtime_error("Failed to get preset data for plugin " +
+                               pathToPluginFile.toStdString());
+    }
   }
 
   void reinstantiatePlugin() {
@@ -1633,9 +1670,27 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
              return ss.str();
            })
       .def("load_preset",
-           &ExternalPlugin<juce::PatchedVST3PluginFormat>::loadPresetData,
+           &ExternalPlugin<juce::PatchedVST3PluginFormat>::loadPresetFile,
            "Load a VST3 preset file in .vstpreset format.",
            py::arg("preset_file_path"))
+      .def_property(
+          "preset_data",
+          [](const ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            juce::MemoryBlock presetData;
+            plugin.getPreset(presetData);
+            return py::bytes((const char *)presetData.getData(),
+                             presetData.getSize());
+          },
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin,
+             const py::bytes &presetData) {
+            py::buffer_info info(py::buffer(presetData).request());
+            plugin.setPreset(info.ptr, static_cast<size_t>(info.size));
+          },
+          "Get or set the current plugin state as bytes in .vstpreset "
+          "format.\n\n"
+          ".. warning::\n    This property can be set to change the "
+          "plugin's internal state, but providing invalid data may cause the "
+          "plugin to crash, taking the entire Python process down with it.")
       .def_static(
           "get_plugin_names_for_file",
           [](std::string filename) {
@@ -1731,6 +1786,18 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           "A string that can be saved and used to uniquely identify this "
           "plugin (and version) again.\n\n*Introduced in v0.9.4.*")
       .def_property_readonly(
+          "reported_latency_samples",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.getLatencyHint();
+          },
+          "The number of samples of latency (delay) that this plugin reports "
+          "to introduce into the audio signal due to internal buffering "
+          "and processing. Pedalboard automatically compensates for this "
+          "latency during processing, so this property is present for "
+          "informational purposes. Note that not all plugins correctly report "
+          "the latency that they introduce, so this value may be inaccurate "
+          "(especially if the plugin reports 0).\n\n*Introduced in v0.9.12.*")
+      .def_property_readonly(
           "_parameters",
           &ExternalPlugin<juce::PatchedVST3PluginFormat>::getParameters,
           py::return_value_policy::reference_internal)
@@ -1812,7 +1879,7 @@ see :class:`pedalboard.VST3Plugin`.)
 
 *Support for running Audio Unit plugins on background threads introduced in v0.8.8.*
 
-*Support for loading AUv3 plugins (``.appex`` bundles) introduced in v0.9.5.*
+*Support for loading AUv3 plugins (* ``.appex`` *bundles) introduced in v0.9.5.*
 )")
       .def(
           py::init([](std::string &pathToPluginFile, py::object parameterValues,
@@ -1944,6 +2011,18 @@ see :class:`pedalboard.VST3Plugin`.)
           },
           "A string that can be saved and used to uniquely identify this "
           "plugin (and version) again.\n\n*Introduced in v0.9.4.*")
+      .def_property_readonly(
+          "reported_latency_samples",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.getLatencyHint();
+          },
+          "The number of samples of latency (delay) that this plugin reports "
+          "to introduce into the audio signal due to internal buffering "
+          "and processing. Pedalboard automatically compensates for this "
+          "latency during processing, so this property is present for "
+          "informational purposes. Note that not all plugins correctly report "
+          "the latency that they introduce, so this value may be inaccurate "
+          "(especially if the plugin reports 0).\n\n*Introduced in v0.9.12.*")
       .def_property_readonly(
           "_parameters",
           &ExternalPlugin<juce::AudioUnitPluginFormat>::getParameters,

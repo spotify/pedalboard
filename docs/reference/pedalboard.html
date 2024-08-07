@@ -6,7 +6,7 @@
 <meta property="og:title" content="The pedalboard API" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://spotify.github.io/pedalboard/reference/pedalboard.html" />
-<meta property="og:site_name" content="Pedalboard v0.9.9 Documentation" />
+<meta property="og:site_name" content="Pedalboard v0.9.12 Documentation" />
 <meta property="og:description" content="This module provides classes and functions for adding effects to audio. Most classes in this module are subclasses of Plugin, each of which allows applying effects to an audio buffer or stream. The..." />
 <meta property="og:image" content="https://repository-images.githubusercontent.com/383471193/0f79b949-9b91-4436-bfc4-05d30ef384cc" />
 <meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
@@ -14,7 +14,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="The pedalboard.io API" href="pedalboard.io.html" /><link rel="prev" title="Features" href="../index.html" />
 
     <link rel="shortcut icon" href="../_static/favicon.ico"/><meta name="generator" content="sphinx-5.3.0, furo 2022.09.29"/>
-        <title>The pedalboard API - Pedalboard v0.9.9 Documentation</title>
+        <title>The pedalboard API - Pedalboard v0.9.12 Documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=d81277517bee4d6b0349d71bb2661d4890b5617c" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
@@ -132,7 +132,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">Pedalboard v0.9.9 Documentation</div></a>
+      <a href="../index.html"><div class="brand">Pedalboard v0.9.12 Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -158,7 +158,7 @@
     <img class="sidebar-logo" src="../_static/pedalboard_logo_small.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">Pedalboard v0.9.9 Documentation</span>
+  <span class="sidebar-brand-text">Pedalboard v0.9.12 Documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
@@ -471,6 +471,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Pedalboard.reset" title="pedalboard.Pedalboard.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Pedalboard.process" title="pedalboard.Pedalboard.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Pedalboard.__call__" title="pedalboard.Pedalboard.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -559,7 +564,7 @@ instead and <a class="reference external" href="https://github.com/spotify/pedal
 </div>
 <p><em>Support for instrument plugins introduced in v0.7.4.</em></p>
 <p><em>Support for running Audio Unit plugins on background threads introduced in v0.8.8.</em></p>
-<p><em>Support for loading AUv3 plugins (``.appex`` bundles) introduced in v0.9.5.</em></p>
+<p><em>Support for loading AUv3 plugins (</em> <code class="docutils literal notranslate"><span class="pre">.appex</span></code> <em>bundles) introduced in v0.9.5.</em></p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.AudioUnitPlugin.__call__">
 <span class="sig-name descname"><span class="pre">__call__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_array</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8192</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.12)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.AudioUnitPlugin.__call__" title="Permalink to this definition">#</a></dt>
@@ -749,6 +754,13 @@ on a provided <a class="reference external" href="https://docs.python.org/3/libr
 </dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.AudioUnitPlugin.reported_latency_samples">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">reported_latency_samples</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></em><a class="headerlink" href="#pedalboard.AudioUnitPlugin.reported_latency_samples" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of samples of latency (delay) that this plugin reports to introduce into the audio signal due to internal buffering and processing. Pedalboard automatically compensates for this latency during processing, so this property is present for informational purposes. Note that not all plugins correctly report the latency that they introduce, so this value may be inaccurate (especially if the plugin reports 0).</p>
+<p><em>Introduced in v0.9.12.</em></p>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="pedalboard.AudioUnitPlugin.version">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">version</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></em><a class="headerlink" href="#pedalboard.AudioUnitPlugin.version" title="Permalink to this definition">#</a></dt>
 <dd><p>The version string for this plugin, as reported by the plugin itself.</p>
@@ -821,6 +833,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Bitcrush.reset" title="pedalboard.Bitcrush.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Bitcrush.process" title="pedalboard.Bitcrush.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Bitcrush.__call__" title="pedalboard.Bitcrush.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -893,6 +910,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Chain.reset" title="pedalboard.Chain.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Chain.process" title="pedalboard.Chain.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Chain.__call__" title="pedalboard.Chain.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -967,6 +989,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Chorus.reset" title="pedalboard.Chorus.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Chorus.process" title="pedalboard.Chorus.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Chorus.__call__" title="pedalboard.Chorus.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1027,6 +1054,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Clipping.reset" title="pedalboard.Clipping.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Clipping.process" title="pedalboard.Clipping.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Clipping.__call__" title="pedalboard.Clipping.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1088,6 +1120,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Compressor.reset" title="pedalboard.Compressor.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Compressor.process" title="pedalboard.Compressor.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Compressor.__call__" title="pedalboard.Compressor.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1106,8 +1143,10 @@ automatically invoke <a class="reference internal" href="#pedalboard.Compressor.
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.Convolution">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Convolution</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">impulse_response_filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">mix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Convolution" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Convolution</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">impulse_response_filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.12)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.12)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Convolution" title="Permalink to this definition">#</a></dt>
 <dd><p>An audio convolution, suitable for things like speaker simulation or reverb modeling.</p>
+<p>The convolution impulse response can be specified either by filename or as a 32-bit floating point NumPy array. If a NumPy array is provided, the <code class="docutils literal notranslate"><span class="pre">sample_rate</span></code> argument must also be provided to indicate the sample rate of the impulse response.</p>
+<p><em>Support for passing NumPy arrays as impulse responses introduced in v0.9.10.</em></p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.Convolution.__call__">
 <span class="sig-name descname"><span class="pre">__call__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_array</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8192</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.12)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.Convolution.__call__" title="Permalink to this definition">#</a></dt>
@@ -1148,6 +1187,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Convolution.reset" title="pedalboard.Convolution.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Convolution.process" title="pedalboard.Convolution.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Convolution.__call__" title="pedalboard.Convolution.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1208,6 +1252,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Delay.reset" title="pedalboard.Delay.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Delay.process" title="pedalboard.Delay.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Delay.__call__" title="pedalboard.Delay.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1269,6 +1318,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Distortion.reset" title="pedalboard.Distortion.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Distortion.process" title="pedalboard.Distortion.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Distortion.__call__" title="pedalboard.Distortion.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1329,6 +1383,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.GSMFullRateCompressor.reset" title="pedalboard.GSMFullRateCompressor.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.GSMFullRateCompressor.process" title="pedalboard.GSMFullRateCompressor.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.GSMFullRateCompressor.__call__" title="pedalboard.GSMFullRateCompressor.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1390,6 +1449,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Gain.reset" title="pedalboard.Gain.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Gain.process" title="pedalboard.Gain.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Gain.__call__" title="pedalboard.Gain.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1450,6 +1514,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.HighShelfFilter.reset" title="pedalboard.HighShelfFilter.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.HighShelfFilter.process" title="pedalboard.HighShelfFilter.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.HighShelfFilter.__call__" title="pedalboard.HighShelfFilter.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1510,6 +1579,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.HighpassFilter.reset" title="pedalboard.HighpassFilter.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.HighpassFilter.process" title="pedalboard.HighpassFilter.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.HighpassFilter.__call__" title="pedalboard.HighpassFilter.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1570,6 +1644,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.IIRFilter.reset" title="pedalboard.IIRFilter.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.IIRFilter.process" title="pedalboard.IIRFilter.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.IIRFilter.__call__" title="pedalboard.IIRFilter.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1631,6 +1710,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Invert.reset" title="pedalboard.Invert.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Invert.process" title="pedalboard.Invert.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Invert.__call__" title="pedalboard.Invert.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1734,6 +1818,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.LadderFilter.reset" title="pedalboard.LadderFilter.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.LadderFilter.process" title="pedalboard.LadderFilter.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.LadderFilter.__call__" title="pedalboard.LadderFilter.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1794,6 +1883,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Limiter.reset" title="pedalboard.Limiter.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Limiter.process" title="pedalboard.Limiter.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Limiter.__call__" title="pedalboard.Limiter.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1854,6 +1948,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.LowShelfFilter.reset" title="pedalboard.LowShelfFilter.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.LowShelfFilter.process" title="pedalboard.LowShelfFilter.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.LowShelfFilter.__call__" title="pedalboard.LowShelfFilter.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1914,6 +2013,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.LowpassFilter.reset" title="pedalboard.LowpassFilter.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.LowpassFilter.process" title="pedalboard.LowpassFilter.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.LowpassFilter.__call__" title="pedalboard.LowpassFilter.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -1935,7 +2039,7 @@ automatically invoke <a class="reference internal" href="#pedalboard.LowpassFilt
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">MP3Compressor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vbr_quality</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.MP3Compressor" title="Permalink to this definition">#</a></dt>
 <dd><p>An MP3 compressor plugin that runs the LAME MP3 encoder in real-time to add compression artifacts to the audio stream.</p>
 <p>Currently only supports variable bit-rate mode (VBR) and accepts a floating-point VBR quality value (between 0.0 and 10.0; lower is better).</p>
-<p>Note that the MP3 format only supports 32kHz, 44.1kHz, and 48kHz audio; if an unsupported sample rate is provided, an exception will be thrown at processing time.</p>
+<p>Note that the MP3 format only supports 8kHz, 11025Hz, 12kHz, 16kHz, 22050Hz, 24kHz, 32kHz, 44.1kHz, and 48kHz audio; if an unsupported sample rate is provided, an exception will be thrown at processing time.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.MP3Compressor.__call__">
 <span class="sig-name descname"><span class="pre">__call__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_array</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8192</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.12)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.MP3Compressor.__call__" title="Permalink to this definition">#</a></dt>
@@ -1976,6 +2080,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.MP3Compressor.reset" title="pedalboard.MP3Compressor.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.MP3Compressor.process" title="pedalboard.MP3Compressor.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.MP3Compressor.__call__" title="pedalboard.MP3Compressor.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -2048,6 +2157,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Mix.reset" title="pedalboard.Mix.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Mix.process" title="pedalboard.Mix.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Mix.__call__" title="pedalboard.Mix.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -2114,6 +2228,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.NoiseGate.reset" title="pedalboard.NoiseGate.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.NoiseGate.process" title="pedalboard.NoiseGate.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.NoiseGate.__call__" title="pedalboard.NoiseGate.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -2174,6 +2293,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.PeakFilter.reset" title="pedalboard.PeakFilter.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.PeakFilter.process" title="pedalboard.PeakFilter.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.PeakFilter.__call__" title="pedalboard.PeakFilter.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -2234,6 +2358,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Phaser.reset" title="pedalboard.Phaser.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Phaser.process" title="pedalboard.Phaser.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Phaser.__call__" title="pedalboard.Phaser.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -2295,6 +2424,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.PitchShift.reset" title="pedalboard.PitchShift.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.PitchShift.process" title="pedalboard.PitchShift.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.PitchShift.__call__" title="pedalboard.PitchShift.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -2341,6 +2475,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Plugin.reset" title="pedalboard.Plugin.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Plugin.process" title="pedalboard.Plugin.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Plugin.__call__" title="pedalboard.Plugin.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -2433,6 +2572,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.PluginContainer.reset" title="pedalboard.PluginContainer.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.PluginContainer.process" title="pedalboard.PluginContainer.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.PluginContainer.__call__" title="pedalboard.PluginContainer.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -2529,6 +2673,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Resample.reset" title="pedalboard.Resample.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Resample.process" title="pedalboard.Resample.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Resample.__call__" title="pedalboard.Resample.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -2601,6 +2750,11 @@ processing at the expense of memory usage.</p>
 processing begins, clearing any state from previous calls to <code class="docutils literal notranslate"><span class="pre">process</span></code>.
 If calling <code class="docutils literal notranslate"><span class="pre">process</span></code> multiple times while processing the same audio file
 or buffer, set <code class="docutils literal notranslate"><span class="pre">reset</span></code> to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The layout of the provided <code class="docutils literal notranslate"><span class="pre">input_array</span></code> will be automatically detected,
+assuming that the smaller dimension corresponds with the number of channels.
+If the number of samples and the number of channels are the same, each
+<a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">Plugin</span></code></a> object will use the last-detected channel layout until
+<a class="reference internal" href="#pedalboard.Reverb.reset" title="pedalboard.Reverb.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is explicitly called (as of v0.9.9).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <a class="reference internal" href="#pedalboard.Reverb.process" title="pedalboard.Reverb.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> method can also be used via <a class="reference internal" href="#pedalboard.Reverb.__call__" title="pedalboard.Reverb.__call__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__call__()</span></code></a>;
@@ -2832,6 +2986,16 @@ on a provided <a class="reference external" href="https://docs.python.org/3/libr
 </dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.VST3Plugin.preset_data">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">preset_data</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.12)"><span class="pre">bytes</span></a></em><a class="headerlink" href="#pedalboard.VST3Plugin.preset_data" title="Permalink to this definition">#</a></dt>
+<dd><p>Get or set the current plugin state as bytes in .vstpreset format.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This property can be set to change the plugin’s internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.</p>
+</div>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="pedalboard.VST3Plugin.raw_state">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">raw_state</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.12)"><span class="pre">bytes</span></a></em><a class="headerlink" href="#pedalboard.VST3Plugin.raw_state" title="Permalink to this definition">#</a></dt>
 <dd><p>A <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code></a> object representing the plugin’s internal state.</p>
@@ -2840,6 +3004,13 @@ on a provided <a class="reference external" href="https://docs.python.org/3/libr
 <p class="admonition-title">Warning</p>
 <p>This property can be set to change the plugin’s internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.</p>
 </div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.VST3Plugin.reported_latency_samples">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">reported_latency_samples</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></em><a class="headerlink" href="#pedalboard.VST3Plugin.reported_latency_samples" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of samples of latency (delay) that this plugin reports to introduce into the audio signal due to internal buffering and processing. Pedalboard automatically compensates for this latency during processing, so this property is present for informational purposes. Note that not all plugins correctly report the latency that they introduce, so this value may be inaccurate (especially if the plugin reports 0).</p>
+<p><em>Introduced in v0.9.12.</em></p>
 </dd></dl>
 
 <dl class="py property">
@@ -3024,6 +3195,7 @@ the audio stream.</p>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.manufacturer_name"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.manufacturer_name</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.name"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.name</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.raw_state"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.raw_state</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.reported_latency_samples"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.reported_latency_samples</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.version"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.version</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.is_effect"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.is_effect</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.AudioUnitPlugin.reset"><code class="docutils literal notranslate"><span class="pre">AudioUnitPlugin.reset()</span></code></a></li>
@@ -3298,7 +3470,9 @@ the audio stream.</p>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.is_instrument"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.is_instrument</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.manufacturer_name"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.manufacturer_name</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.name"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.name</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.VST3Plugin.preset_data"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.preset_data</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.raw_state"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.raw_state</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.VST3Plugin.reported_latency_samples"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.reported_latency_samples</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.VST3Plugin.version"><code class="docutils literal notranslate"><span class="pre">VST3Plugin.version</span></code></a></li>
 </ul>
 </li>

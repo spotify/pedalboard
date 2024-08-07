@@ -114,12 +114,16 @@ class Plugin:
         If calling ``process`` multiple times while processing the same audio file
         or buffer, set ``reset`` to ``False``.
 
+        The layout of the provided ``input_array`` will be automatically detected,
+        assuming that the smaller dimension corresponds with the number of channels.
+        If the number of samples and the number of channels are the same, each
+        :py:class:`Plugin` object will use the last-detected channel layout until
+        :py:meth:`reset` is explicitly called (as of v0.9.9).
+
         .. note::
             The :py:meth:`process` method can also be used via :py:meth:`__call__`;
             i.e.: just calling this object like a function (``my_plugin(...)``) will
             automatically invoke :py:meth:`process` with the same arguments.
-
-
         """
 
     def reset(self) -> None:
@@ -304,12 +308,29 @@ class Compressor(Plugin):
 class Convolution(Plugin):
     """
     An audio convolution, suitable for things like speaker simulation or reverb modeling.
+
+    The convolution impulse response can be specified either by filename or as a 32-bit floating point NumPy array. If a NumPy array is provided, the ``sample_rate`` argument must also be provided to indicate the sample rate of the impulse response.
+
+    *Support for passing NumPy arrays as impulse responses introduced in v0.9.10.*
     """
 
-    def __init__(self, impulse_response_filename: str, mix: float = 1.0) -> None: ...
+    def __init__(
+        self,
+        impulse_response_filename: typing.Union[
+            str, numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]
+        ],
+        mix: float = 1.0,
+        sample_rate: typing.Optional[float] = None,
+    ) -> None: ...
     def __repr__(self) -> str: ...
     @property
-    def impulse_response_filename(self) -> str:
+    def impulse_response(
+        self,
+    ) -> typing.Optional[numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]]:
+        """ """
+
+    @property
+    def impulse_response_filename(self) -> typing.Optional[str]:
         """ """
 
     @property
@@ -842,7 +863,7 @@ class MP3Compressor(Plugin):
 
     Currently only supports variable bit-rate mode (VBR) and accepts a floating-point VBR quality value (between 0.0 and 10.0; lower is better).
 
-    Note that the MP3 format only supports 32kHz, 44.1kHz, and 48kHz audio; if an unsupported sample rate is provided, an exception will be thrown at processing time.
+    Note that the MP3 format only supports 8kHz, 11025Hz, 12kHz, 16kHz, 22050Hz, 24kHz, 32kHz, 44.1kHz, and 48kHz audio; if an unsupported sample rate is provided, an exception will be thrown at processing time.
     """
 
     def __init__(self, vbr_quality: float = 2.0) -> None: ...
@@ -1035,7 +1056,7 @@ class AudioUnitPlugin(ExternalPlugin):
 
     *Support for running Audio Unit plugins on background threads introduced in v0.8.8.*
 
-    *Support for loading AUv3 plugins (``.appex`` bundles) introduced in v0.9.5.*
+    *Support for loading AUv3 plugins (* ``.appex`` *bundles) introduced in v0.9.5.*
     """
 
     @typing.overload
@@ -1407,6 +1428,16 @@ class AudioUnitPlugin(ExternalPlugin):
 
         .. warning::
             This property can be set to change the plugin's internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.
+        """
+
+    @property
+    def reported_latency_samples(self) -> int:
+        """
+        The number of samples of latency (delay) that this plugin reports to introduce into the audio signal due to internal buffering and processing. Pedalboard automatically compensates for this latency during processing, so this property is present for informational purposes. Note that not all plugins correctly report the latency that they introduce, so this value may be inaccurate (especially if the plugin reports 0).
+
+        *Introduced in v0.9.12.*
+
+
         """
 
     @property
@@ -1972,6 +2003,26 @@ class VST3Plugin(ExternalPlugin):
         """
 
     @property
+    def preset_data(self) -> bytes:
+        """
+        Get or set the current plugin state as bytes in .vstpreset format.
+
+        .. warning::
+            This property can be set to change the plugin's internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.
+
+
+        """
+
+    @preset_data.setter
+    def preset_data(self, arg1: bytes) -> None:
+        """
+        Get or set the current plugin state as bytes in .vstpreset format.
+
+        .. warning::
+            This property can be set to change the plugin's internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.
+        """
+
+    @property
     def raw_state(self) -> bytes:
         """
         A :py:class:`bytes` object representing the plugin's internal state.
@@ -1993,6 +2044,16 @@ class VST3Plugin(ExternalPlugin):
 
         .. warning::
             This property can be set to change the plugin's internal state, but providing invalid data may cause the plugin to crash, taking the entire Python process down with it.
+        """
+
+    @property
+    def reported_latency_samples(self) -> int:
+        """
+        The number of samples of latency (delay) that this plugin reports to introduce into the audio signal due to internal buffering and processing. Pedalboard automatically compensates for this latency during processing, so this property is present for informational purposes. Note that not all plugins correctly report the latency that they introduce, so this value may be inaccurate (especially if the plugin reports 0).
+
+        *Introduced in v0.9.12.*
+
+
         """
 
     @property

@@ -16,11 +16,62 @@
 
 
 import os
-import pytest
+
 import numpy as np
-from pedalboard import process, Delay, Distortion, Invert, Gain, Compressor, Convolution, Reverb
+import pytest
+
+from pedalboard import (
+    Bitcrush,
+    Chorus,
+    Clipping,
+    Compressor,
+    Convolution,
+    Delay,
+    Distortion,
+    Gain,
+    GSMFullRateCompressor,
+    HighpassFilter,
+    HighShelfFilter,
+    Invert,
+    LowpassFilter,
+    LowShelfFilter,
+    MP3Compressor,
+    NoiseGate,
+    PeakFilter,
+    Phaser,
+    PitchShift,
+    Resample,
+    Reverb,
+    process,
+)
+from pedalboard.io import AudioFile
 
 IMPULSE_RESPONSE_PATH = os.path.join(os.path.dirname(__file__), "impulse_response.wav")
+
+
+ALL_BUILTIN_PLUGINS = [
+    Compressor,
+    Delay,
+    Distortion,
+    Gain,
+    Invert,
+    Reverb,
+    Bitcrush,
+    Chorus,
+    Clipping,
+    # Convolution, # Not instantiable with zero arguments
+    HighpassFilter,
+    LowpassFilter,
+    HighShelfFilter,
+    LowShelfFilter,
+    PeakFilter,
+    NoiseGate,
+    Phaser,
+    PitchShift,
+    MP3Compressor,
+    GSMFullRateCompressor,
+    Resample,
+]
 
 
 @pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 44100), (2, 44100)])
@@ -69,6 +120,15 @@ def test_convolution_works(sr=44100, duration=10):
     assert not np.allclose(full_scale_noise, result, rtol=0.1)
 
 
+def test_convolution_works_with_buffer(sr=44100, duration=10):
+    full_scale_noise = np.random.rand(sr * duration).astype(np.float32)
+
+    expected = Convolution(IMPULSE_RESPONSE_PATH, 0.5)(full_scale_noise, sr)
+    with AudioFile(IMPULSE_RESPONSE_PATH) as f:
+        actual = Convolution(f.read(f.frames), 0.5, sample_rate=sr)(full_scale_noise, sr)
+    np.testing.assert_allclose(expected, actual, atol=0.0001)
+
+
 def test_throw_on_inaccessible_convolution_file():
     # Should work:
     Convolution(IMPULSE_RESPONSE_PATH)
@@ -76,6 +136,26 @@ def test_throw_on_inaccessible_convolution_file():
     # Should fail:
     with pytest.raises(RuntimeError):
         Convolution("missing_impulse_response.wav")
+
+
+def test_convolution_repr():
+    assert IMPULSE_RESPONSE_PATH in repr(Convolution(IMPULSE_RESPONSE_PATH))
+    assert "12345 samples of 2-channel audio at 44100 Hz" in repr(
+        Convolution(np.random.rand(12345, 2).astype(np.float32), 0.5, 44100)
+    )
+
+
+def test_convolution_filename():
+    conv = Convolution(IMPULSE_RESPONSE_PATH)
+    assert conv.impulse_response_filename == IMPULSE_RESPONSE_PATH
+    assert conv.impulse_response is None
+
+
+def test_convolution_impulse_response_storage():
+    ir = np.random.rand(2, 12345).astype(np.float32)
+    conv = Convolution(ir, 0.5, 44100)
+    assert conv.impulse_response_filename is None
+    np.testing.assert_allclose(conv.impulse_response, ir)
 
 
 @pytest.mark.parametrize("gain_db", [-12, -6, 0, 1.1, 6, 12, 24, 48, 96])
@@ -167,3 +247,67 @@ def test_plugin_state_not_cleared_if_passed_smaller_buffer():
     effected_silence_noise_floor = np.amax(np.abs(effected_silence))
 
     assert effected_silence_noise_floor > 0.25
+
+
+@pytest.mark.parametrize("plugin_class", ALL_BUILTIN_PLUGINS)
+def test_process_differently_shaped_empty_buffers(plugin_class):
+    plugin = plugin_class()
+    sr = 44100
+    assert plugin(np.zeros((0, 1), dtype=np.float32), sr).shape == (0, 1)
+    assert plugin(np.zeros((1, 0), dtype=np.float32), sr).shape == (1, 0)
+    assert plugin(np.zeros((0,), dtype=np.float32), sr).shape == (0,)
+
+
+@pytest.mark.parametrize("plugin_class", ALL_BUILTIN_PLUGINS)
+def test_process_one_by_one_buffer(plugin_class):
+    plugin = plugin_class()
+    sr = 44100
+    # Processing a single sample at a time should work:
+    assert plugin(np.zeros((1, 1), dtype=np.float32), sr).shape == (1, 1)
+    # Processing that same sample as a flat 1D array should work too:
+    assert plugin(np.zeros((1,), dtype=np.float32), sr).shape == (1,)
+
+
+@pytest.mark.parametrize("plugin_class", ALL_BUILTIN_PLUGINS)
+def test_process_two_by_two_buffer(plugin_class):
+    plugin = plugin_class()
+    sr = 44100
+
+    # Writing a 2x2 buffer should not work right off the bat, as we
+    # can't tell which dimension is channels and which dimension is
+    # samples:
+    with pytest.raises(RuntimeError) as e:
+        plugin(np.zeros((2, 2), dtype=np.float32), sr).shape
+    assert "Provide a non-square array first" in str(e)
+
+    # ...but if we write a non-square buffer, it should work:
+    output = plugin(np.zeros((2, 1024), dtype=np.float32), sr)
+    assert output.shape[0] == 2
+    # ...and now square buffers are interpreted as having the same channel layout:
+    assert plugin(np.zeros((2, 2), dtype=np.float32), sr).shape[0] == 2
+
+
+@pytest.mark.parametrize("channel_dimension", [0, 1])
+@pytest.mark.parametrize("plugin_class", ALL_BUILTIN_PLUGINS)
+def test_process_two_by_two_buffer_with_hint(plugin_class, channel_dimension: int):
+    plugin = plugin_class()
+    sr = 44100
+
+    empty_shape = (2, 0) if channel_dimension == 0 else (0, 2)
+
+    # ...if we pass an empty array of the right shape, that shape hint should be saved:
+    assert plugin(np.zeros(empty_shape, dtype=np.float32), sr).shape == empty_shape
+    # ...and now square buffers are interpreted as having the same channel layout:
+    output = plugin(np.zeros((2, 2), dtype=np.float32), sr)
+    assert output.shape[channel_dimension] == 2
+
+    # Some plugins buffer their output, so make sure we eventually do get something out in the right shape:
+    while output.shape[1 if channel_dimension == 0 else 0] == 0:
+        output = plugin(np.zeros((2, 2), dtype=np.float32), sr, reset=False)
+        assert output.shape[channel_dimension] == 2
+
+    # ...but not if we call reset():
+    plugin.reset()
+    with pytest.raises(RuntimeError) as e:
+        plugin(np.zeros((2, 2), dtype=np.float32), sr).shape
+    assert "Provide a non-square array first" in str(e)

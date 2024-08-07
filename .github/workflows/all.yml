@@ -131,6 +131,11 @@ jobs:
           ccache --show-stats --verbose
           ccache --zero-stats
         #  cat ${{ runner.workspace }}/.ccache_log || true
+      - name: Delete Existing Cache for ${{ runner.os }} Objects
+        run: gh cache delete --repo ${{ github.repository }} ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
+        env:
+          # This token requires the "repo" scope.
+          GITHUB_TOKEN: ${{ secrets.ACTION_CLEAR_CACHES_TOKEN }}
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -210,6 +215,11 @@ jobs:
           ccache --zero-stats
         #  cat ${{ runner.workspace }}/.ccache_log || true
         #  ls -lashR ${{ runner.workspace }}/pedalboard
+      - name: Delete Existing Cache for ${{ runner.os }} Objects
+        run: gh cache delete --repo ${{ github.repository }} ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
+        env:
+          # This token requires the "repo" scope.
+          GITHUB_TOKEN: ${{ secrets.ACTION_CLEAR_CACHES_TOKEN }}
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -304,6 +314,11 @@ jobs:
           ccache --zero-stats
         #  cat ${{ runner.workspace }}/.ccache_log || true
         #  ls -lashR ${{ runner.workspace }}
+      - name: Delete Existing Cache for ${{ runner.os }} Objects
+        run: gh cache delete --repo ${{ github.repository }} ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
+        env:
+          # This token requires the "repo" scope.
+          GITHUB_TOKEN: ${{ secrets.ACTION_CLEAR_CACHES_TOKEN }}
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -703,6 +718,15 @@ jobs:
         - { os: windows-latest, build: pp37-win_amd64 }
         - { os: windows-latest, build: pp38-win_amd64 }
         - { os: windows-latest, build: pp39-win_amd64 }
+        - { os: windows-latest, build: cp36-win32 }
+        - { os: windows-latest, build: cp37-win32 }
+        - { os: windows-latest, build: cp38-win32 }
+        - { os: windows-latest, build: cp39-win32 }
+        - { os: windows-latest, build: cp310-win32 }
+        - { os: windows-latest, build: cp311-win32 }
+        - { os: windows-latest, build: cp312-win32 }
+        - { os: 'ubuntu-20.04', build: cp36-manylinux_x86_64 }
+        - { os: 'ubuntu-20.04', build: cp36-manylinux_aarch64 }
         - { os: 'ubuntu-20.04', build: cp37-manylinux_x86_64 }
         - { os: 'ubuntu-20.04', build: cp37-manylinux_aarch64 }
         - { os: 'ubuntu-20.04', build: cp38-manylinux_x86_64 }
@@ -761,7 +785,7 @@ jobs:
           CIBW_TEST_REQUIRES: -r test-requirements.txt
           CIBW_TEST_COMMAND: "pytest {project}/tests"
           CIBW_BUILD: ${{ matrix.build }}
-          CIBW_ARCHS: auto64 # Only support building 64-bit wheels. It's 2022!
+          CIBW_ARCHS_WINDOWS: auto # Allow 32-bit Windows builds
           CIBW_ARCHS_LINUX: auto64 aarch64 # Useful for building linux images with Apple Silicon
           CIBW_ARCHS_MACOS: x86_64 universal2 arm64 # Support Apple Silicon
           # on macOS and with Python 3.10: building NumPy from source fails without these options:

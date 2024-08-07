@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import platform
+import time
 
+import numpy as np
 import pytest
 
 import pedalboard
@@ -46,7 +47,7 @@ def test_create_stream(input_device_name: str, output_device_name: str):
         )
     except Exception as e:
         if any(substr in str(e) for substr in ACCEPTABLE_ERRORS_ON_CI):
-            return
+            raise pytest.skip(str(e))
         raise
 
     assert stream is not None
@@ -65,6 +66,108 @@ def test_create_stream(input_device_name: str, output_device_name: str):
             del stream.plugins[i]
         assert stream.running
     assert not stream.running
+
+
+# Note: this test may do nothing on CI, because we don't have mock audio devices available.
+# This will run on macOS and probably Windows as long as at least one audio device is available.
+@pytest.mark.skipif(platform.system() == "Linux", reason="AudioStream not supported on Linux yet.")
+@pytest.mark.skipif(
+    pedalboard.io.AudioStream.default_output_device_name == "Null Audio Device",
+    reason="Tests do not work with a null audio device.",
+)
+def test_write_to_stream():
+    try:
+        stream = pedalboard.io.AudioStream(
+            None, pedalboard.io.AudioStream.default_output_device_name
+        )
+    except Exception as e:
+        if any(substr in str(e) for substr in ACCEPTABLE_ERRORS_ON_CI):
+            raise pytest.skip(str(e))
+        raise
+
+    assert stream is not None
+    assert not stream.running
+    with stream:
+        assert stream.running
+        stream.write(np.zeros((2, 1024), dtype=np.float32), stream.sample_rate)
+    assert not stream.running
+
+
+# Note: this test may do nothing on CI, because we don't have mock audio devices available.
+# This will run on macOS and probably Windows as long as at least one audio device is available.
+@pytest.mark.skipif(platform.system() == "Linux", reason="AudioStream not supported on Linux yet.")
+@pytest.mark.skipif(
+    pedalboard.io.AudioStream.default_output_device_name == "Null Audio Device",
+    reason="Tests do not work with a null audio device.",
+)
+def test_write_to_stream_without_opening():
+    try:
+        stream = pedalboard.io.AudioStream(
+            None, pedalboard.io.AudioStream.default_output_device_name
+        )
+    except Exception as e:
+        if any(substr in str(e) for substr in ACCEPTABLE_ERRORS_ON_CI):
+            raise pytest.skip(str(e))
+        raise
+
+    assert stream is not None
+    assert not stream.running
+    stream.write(np.zeros((2, 1024), dtype=np.float32), stream.sample_rate)
+    assert not stream.running
+    assert stream.buffered_input_sample_count is None
+
+
+# Note: this test may do nothing on CI, because we don't have mock audio devices available.
+# This will run on macOS and probably Windows as long as at least one audio device is available.
+@pytest.mark.skipif(platform.system() == "Linux", reason="AudioStream not supported on Linux yet.")
+@pytest.mark.skipif(
+    pedalboard.io.AudioStream.default_output_device_name == "Null Audio Device",
+    reason="Tests do not work with a null audio device.",
+)
+def test_read_from_stream():
+    try:
+        stream = pedalboard.io.AudioStream(pedalboard.io.AudioStream.default_input_device_name)
+    except Exception as e:
+        if any(substr in str(e) for substr in ACCEPTABLE_ERRORS_ON_CI):
+            raise pytest.skip(str(e))
+        raise
+
+    assert stream is not None
+    assert not stream.running
+    result = stream.read(1)
+    assert result.shape == (stream.num_input_channels, 1)
+    assert not stream.running
+    assert stream.buffered_input_sample_count == 0
+
+
+# Note: this test may do nothing on CI, because we don't have mock audio devices available.
+# This will run on macOS and probably Windows as long as at least one audio device is available.
+@pytest.mark.skipif(platform.system() == "Linux", reason="AudioStream not supported on Linux yet.")
+@pytest.mark.skipif(
+    pedalboard.io.AudioStream.default_output_device_name == "Null Audio Device",
+    reason="Tests do not work with a null audio device.",
+)
+def test_read_from_stream_measures_dropped_frames():
+    try:
+        stream = pedalboard.io.AudioStream(pedalboard.io.AudioStream.default_input_device_name)
+    except Exception as e:
+        if any(substr in str(e) for substr in ACCEPTABLE_ERRORS_ON_CI):
+            raise pytest.skip(str(e))
+        raise
+
+    assert stream is not None
+    with stream:
+        assert stream.running
+        assert stream.dropped_input_frame_count == 0
+        time.sleep(5 * stream.buffer_size / stream.sample_rate)
+        assert stream.buffered_input_sample_count > 0
+        dropped_count = stream.dropped_input_frame_count
+        assert dropped_count > 0
+    # The input buffer was cleared on __exit__, so the buffer count should be zero:
+    assert stream.buffered_input_sample_count == 0
+
+    # ...but we should still know how many frames were dropped:
+    assert stream.dropped_input_frame_count == dropped_count
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Test platform is not Linux.")

@@ -16,6 +16,7 @@
 
 
 import random
+import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
@@ -160,6 +161,7 @@ def test_simultaneous_reads_from_the_same_file(
         should_error.clear()
 
 
+@pytest.mark.skipif(sys.maxsize <= 2**32, reason="This test OOMs on 32-bit platforms.")
 @pytest.mark.parametrize("num_workers", [2, 4])
 @pytest.mark.parametrize("locking_scheme", ["lock", "no lock"])
 @pytest.mark.parametrize("raise_exceptions", [False, True])
