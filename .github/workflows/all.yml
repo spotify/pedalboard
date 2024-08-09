@@ -436,7 +436,7 @@ jobs:
       - name: Remove libasound Before Testing
         if: runner.os == 'Linux'
         # Tests should still pass if we have no libasound installed.
-        run: sudo apt-get remove libasound2-dev
+        run: sudo apt-get remove libasound2-dev libasound2
       - name: Run tests
         env:
           TEST_WORKER_INDEX: ${{ matrix.runner_index }}
