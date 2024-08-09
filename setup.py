@@ -52,6 +52,7 @@ ALL_CPPFLAGS.extend(
         "-DJUCE_MODULE_AVAILABLE_juce_graphics=1",
         "-DJUCE_MODULE_AVAILABLE_juce_gui_basics=1",
         "-DJUCE_MODULE_AVAILABLE_juce_gui_extra=1",
+        "-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1",
         "-DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1",
         "-DJUCE_STRICT_REFCOUNTEDPOINTER=1",
         "-DJUCE_STANDALONE_APPLICATION=1",
@@ -260,7 +261,6 @@ if platform.system() == "Darwin":
         ALL_CPPFLAGS.append("-flto=thin")
         ALL_LINK_ARGS.append("-flto=thin")
     ALL_LINK_ARGS.append("-fvisibility=hidden")
-    ALL_CPPFLAGS.append("-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1")
     ALL_CFLAGS += ["-Wno-comment"]
 elif platform.system() == "Linux":
     ALL_CPPFLAGS.append("-DLINUX=1")
@@ -272,7 +272,6 @@ elif platform.system() == "Linux":
     ALL_CFLAGS += ["-Wno-comment"]
 elif platform.system() == "Windows":
     ALL_CPPFLAGS.append("-DWINDOWS=1")
-    ALL_CPPFLAGS.append("-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1")
 else:
     raise NotImplementedError(
         "Not sure how to build JUCE on platform: {}!".format(platform.system())
@@ -356,6 +355,7 @@ elif platform.system() == "Linux":
         include_paths = [flag[2:] for flag in flags]
         ALL_INCLUDES += include_paths
     ALL_LINK_ARGS += ["-lfreetype"]
+    ALL_LINK_ARGS += ["-lasound"]
 
     ALL_RESOLVED_SOURCE_PATHS = [str(p.resolve()) for p in ALL_SOURCE_PATHS]
 elif platform.system() == "Windows":

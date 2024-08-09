@@ -74,7 +74,8 @@ jobs:
           && sudo apt-get install -y pkg-config libsndfile1 \
           libx11-dev libxrandr-dev libxinerama-dev \
           libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
-          libxcursor-dev libfreetype6 libfreetype6-dev
+          libxcursor-dev libfreetype6 libfreetype6-dev \
+          libasound2-dev
       # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
       - name: Install ccache on Linux
         if: runner.os == 'Linux'
@@ -131,11 +132,11 @@ jobs:
           ccache --show-stats --verbose
           ccache --zero-stats
         #  cat ${{ runner.workspace }}/.ccache_log || true
-      - name: Delete Existing Cache for ${{ runner.os }} Objects
-        run: gh cache delete --repo ${{ github.repository }} ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
-        env:
-          # This token requires the "repo" scope.
-          GITHUB_TOKEN: ${{ secrets.ACTION_CLEAR_CACHES_TOKEN }}
+      # - name: Delete Existing Cache for ${{ runner.os }} Objects
+      #   run: gh cache delete --repo ${{ github.repository }} ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
+      #   env:
+      #     # This token requires the "repo" scope.
+      #     GITHUB_TOKEN: ${{ secrets.ACTION_CLEAR_CACHES_TOKEN }}
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -215,11 +216,11 @@ jobs:
           ccache --zero-stats
         #  cat ${{ runner.workspace }}/.ccache_log || true
         #  ls -lashR ${{ runner.workspace }}/pedalboard
-      - name: Delete Existing Cache for ${{ runner.os }} Objects
-        run: gh cache delete --repo ${{ github.repository }} ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
-        env:
-          # This token requires the "repo" scope.
-          GITHUB_TOKEN: ${{ secrets.ACTION_CLEAR_CACHES_TOKEN }}
+      # - name: Delete Existing Cache for ${{ runner.os }} Objects
+      #   run: gh cache delete --repo ${{ github.repository }} ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
+      #   env:
+      #     # This token requires the "repo" scope.
+      #     GITHUB_TOKEN: ${{ secrets.ACTION_CLEAR_CACHES_TOKEN }}
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -256,7 +257,8 @@ jobs:
           && sudo apt-get install -y pkg-config libsndfile1 \
           libx11-dev libxrandr-dev libxinerama-dev \
           libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
-          libxcursor-dev libfreetype6 libfreetype6-dev
+          libxcursor-dev libfreetype6 libfreetype6-dev \
+          libasound2-dev
       # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
       - name: Install ccache on Linux
         if: runner.os == 'Linux'
@@ -314,11 +316,11 @@ jobs:
           ccache --zero-stats
         #  cat ${{ runner.workspace }}/.ccache_log || true
         #  ls -lashR ${{ runner.workspace }}
-      - name: Delete Existing Cache for ${{ runner.os }} Objects
-        run: gh cache delete --repo ${{ github.repository }} ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
-        env:
-          # This token requires the "repo" scope.
-          GITHUB_TOKEN: ${{ secrets.ACTION_CLEAR_CACHES_TOKEN }}
+      # - name: Delete Existing Cache for ${{ runner.os }} Objects
+      #   run: gh cache delete --repo ${{ github.repository }} ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
+      #   env:
+      #     # This token requires the "repo" scope.
+      #     GITHUB_TOKEN: ${{ secrets.ACTION_CLEAR_CACHES_TOKEN }}
       - name: Save Cached ${{ runner.os }} Objects
         id: cache-objects-save
         uses: actions/cache/save@v4
@@ -362,7 +364,8 @@ jobs:
           && sudo apt-get install -y pkg-config libsndfile1 \
           libx11-dev libxrandr-dev libxinerama-dev \
           libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
-          libxcursor-dev libfreetype6 libfreetype6-dev
+          libxcursor-dev libfreetype6 libfreetype6-dev \
+          libasound2-dev
       # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
       - name: Install ccache on Linux
         if: runner.os == 'Linux'
@@ -481,7 +484,8 @@ jobs:
           && sudo apt-get install -y pkg-config libsndfile1 \
           libx11-dev libxrandr-dev libxinerama-dev \
           libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
-          libxcursor-dev libfreetype6 libfreetype6-dev
+          libxcursor-dev libfreetype6 libfreetype6-dev \
+          libasound2-dev
       # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
       - name: Install ccache on Linux
         if: runner.os == 'Linux'
@@ -611,7 +615,8 @@ jobs:
           && sudo apt-get install -y pkg-config libsndfile1 \
           libx11-dev libxrandr-dev libxinerama-dev \
           libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
-          libxcursor-dev libfreetype6 libfreetype6-dev
+          libxcursor-dev libfreetype6 libfreetype6-dev \
+          libasound2-dev
       # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
       - name: Install ccache on Linux
         if: runner.os == 'Linux'

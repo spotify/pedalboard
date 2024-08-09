@@ -31,7 +31,7 @@ NOISE_FLOOR = 1e-4
 def get_num_frames(f: sf.SoundFile) -> int:
     # On some platforms and formats, f.frames == -1L.
     # Check for this bug and work around it:
-    if f.frames > 2 ** 32:
+    if len(f) > 2 ** 32:
         f.seek(0)
         last_position = f.tell()
         while True:
@@ -45,7 +45,7 @@ def get_num_frames(f: sf.SoundFile) -> int:
             else:
                 last_position = new_position
     else:
-        return f.frames
+        return len(f)
 
 
 def main():
