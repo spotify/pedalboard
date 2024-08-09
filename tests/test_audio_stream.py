@@ -151,6 +151,8 @@ def test_read_from_stream_measures_dropped_frames():
 
     assert stream is not None
     with stream:
+        if stream.sample_rate == 0:
+            raise pytest.skip("Sample rate of default audio device is 0")
         assert stream.running
         assert stream.dropped_input_frame_count == 0
         time.sleep(5 * stream.buffer_size / stream.sample_rate)
