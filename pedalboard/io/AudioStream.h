@@ -81,7 +81,10 @@ public:
           "`allow_feedback=True` to the AudioStream constructor.");
     }
 
-    if (!inputDeviceName && !outputDeviceName) {
+    if ((!inputDeviceName ||
+         (inputDeviceName.has_value() && inputDeviceName.value().empty())) &&
+        (!outputDeviceName ||
+         (outputDeviceName.has_value() && outputDeviceName.value().empty()))) {
       throw std::runtime_error("At least one of `input_device_name` or "
                                "`output_device_name` must be provided.");
     }
