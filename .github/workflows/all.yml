@@ -447,21 +447,18 @@ jobs:
     strategy:
       matrix:
         include:
-          - { os: macos-13, python-version: "3.7", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
           - { os: macos-13, python-version: "3.8", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
           - { os: macos-13, python-version: "3.9", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
           - { os: macos-13, python-version: "3.10", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
           - { os: macos-13, python-version: "3.11", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
           - { os: macos-13, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
           - { os: macos-13, python-version: "3.13.0-rc.1", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: ubuntu-20.04, python-version: "3.7", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.8", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.9", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.10", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.11", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-20.04, python-version: "3.13.0-rc.1", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
-          # - { os: windows-latest, python-version: "3.7", compiler: "msvc", cc: "msvc", cxx: "msvc" }
           # - { os: windows-latest, python-version: "3.8", compiler: "msvc", cc: "msvc", cxx: "msvc" }
           # - { os: windows-latest, python-version: "3.9", compiler: "msvc", cc: "msvc", cxx: "msvc" }
           # - { os: windows-latest, python-version: "3.10", compiler: "msvc", cc: "msvc", cxx: "msvc" }
@@ -596,7 +593,7 @@ jobs:
     needs: [prime-asan-build-caches]
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
         os: ['ubuntu-20.04']
     name: Test with Python ${{ matrix.python-version }} + Address Sanitizer
     steps:
