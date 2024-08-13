@@ -2,13 +2,16 @@ coverage
 pytest>6.2
 pytest-cov
 pytest-mock
-pybind11>=2.10.4
+pybind11<2.13; python_version < '3.7'
+pybind11>=2.13; python_version >= '3.7'
 setuptools>=59
 pip>22; python_version > '3.6'
 pip>21; python_version < '3.7'
 wheel
 
-numpy
+numpy>=2.1.0rc1; python_version>="3.13"
+numpy>=2; python_version>="3.9" and python_version<"3.13"
+numpy<2; python_version<="3.8"
 google-cloud-storage
 tqdm
 psutil

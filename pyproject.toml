@@ -2,9 +2,11 @@
 requires = [
     "setuptools>=59.6.0",
     "wheel>=0.36.2",
-    "pybind11>=2.12",
+    'pybind11>=2.13; python_version>="3.9"',
+    'pybind11<=2.12; python_version<="3.8"',
     # Building with NumPy 2 allows backwards compatibility with NumPy 1:
-    'numpy>=2; python_version>="3.9"',
+    'numpy>=2.1.0rc1; python_version>="3.13"',
+    'numpy>=2; python_version>="3.9" and python_version<"3.13"',
     'numpy<2; python_version<="3.8"',
 ]
 
@@ -18,4 +20,4 @@ before-all = "yum install -y libsndfile libX11-devel libXrandr-devel libXinerama
 # Use apk instead of yum when building on Alpine Linux
 # (Note: this is experimental, as most VSTs require glibc and thus Alpine Linux isn't that useful)
 select = "*-musllinux*"
-before-all = "apk add libsndfile libx11-dev libxrandr-dev libxinerama-dev libxrender-dev libxcomposite-dev libxinerama-dev libxcursor-dev freetype-dev libexecinfo-dev"
+before-all = "apk add libsndfile libx11-dev libxrandr-dev libxinerama-dev libxrender-dev libxcomposite-dev libxinerama-dev libxcursor-dev freetype-dev"
