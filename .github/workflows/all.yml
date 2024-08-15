@@ -197,7 +197,8 @@ jobs:
           CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_DEBUG: "1"
-          MACOSX_DEPLOYMENT_TARGET: "10.13"
+          # Use the minimum macOS deployment target supported by our version of PyBind:
+          MACOSX_DEPLOYMENT_TARGET: "10.14"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           # This build caching is only to speed up tests on CI, so we only care about x86_64 for now.
           # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
@@ -546,7 +547,8 @@ jobs:
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
-          MACOSX_DEPLOYMENT_TARGET: "10.13"
+          # Use the minimum macOS deployment target supported by our version of PyBind:
+          MACOSX_DEPLOYMENT_TARGET: "10.14"
           # This build caching is only to speed up tests on CI, so we only care about x86_64 for now.
           # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
           # Fun fact: this is supported in Python itself! https://github.com/python/cpython/blob/893c9cc/Lib/_osx_support.py#L314-L328
@@ -787,8 +789,8 @@ jobs:
           # Also testing any pypy versions fails, as TensorFlow isn't pypy compatible.
           CIBW_TEST_SKIP: "*manylinux* *musllinux_aarch* *pp* *-macosx_universal2:arm64"
           CIBW_PRERELEASE_PYTHONS: "1"
-          # Use the minimum macOS deployment target that has C++17 support:
-          MACOSX_DEPLOYMENT_TARGET: "10.13"
+          # Use the minimum macOS deployment target supported by our version of PyBind:
+          MACOSX_DEPLOYMENT_TARGET: "10.14"
           CIBW_MUSLLINUX_X86_64_IMAGE: quay.io/pypa/musllinux_1_1_x86_64:2024-04-29-07d05a0
           CIBW_MUSLLINUX_AARCH64_IMAGE: quay.io/pypa/musllinux_1_1_aarch64:2024-04-29-07d05a0
           CIBW_FREE_THREADED_SUPPORT: "1"
