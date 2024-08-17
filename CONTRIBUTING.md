@@ -8,7 +8,7 @@ We'd love to get patches from you!
 
 To compile Pedalboard from scratch, the following packages will need to be installed:
 
-- [Python 3.7](https://www.python.org/downloads/) or higher.
+- [Python 3.8](https://www.python.org/downloads/) or higher.
 - A C++ compiler, e.g. `gcc`, `clang`, etc.
   - On macOS, a working Xcode installation should provide this.
 - On Linux:
