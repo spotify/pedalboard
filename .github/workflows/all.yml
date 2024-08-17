@@ -437,6 +437,11 @@ jobs:
         if: runner.os == 'Linux'
         # Tests should still pass if we have no libasound installed.
         run: sudo apt-get remove libasound2-dev libasound2
+      - name: Setup dummy soundcard for testing
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y linux-modules-extra-$(uname -r)
+          sudo modprobe snd-dummy
       - name: Run tests
         env:
           TEST_WORKER_INDEX: ${{ matrix.runner_index }}
