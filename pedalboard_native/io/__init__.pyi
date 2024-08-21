@@ -427,8 +427,8 @@ class AudioStream:
 
 
         """
-    default_input_device_name = "MacBook Pro Microphone"
-    default_output_device_name = "MacBook Pro Speakers"
+    default_input_device_name: Optional[str] = None
+    default_output_device_name: Optional[str] = None
     input_device_names: typing.List[str] = []
     output_device_names: typing.List[str] = []
     pass
