@@ -6,7 +6,7 @@
 <meta property="og:title" content="The pedalboard API" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://spotify.github.io/pedalboard/reference/pedalboard.html" />
-<meta property="og:site_name" content="Pedalboard v0.9.12 Documentation" />
+<meta property="og:site_name" content="Pedalboard v0.9.13 Documentation" />
 <meta property="og:description" content="This module provides classes and functions for adding effects to audio. Most classes in this module are subclasses of Plugin, each of which allows applying effects to an audio buffer or stream. The..." />
 <meta property="og:image" content="https://repository-images.githubusercontent.com/383471193/0f79b949-9b91-4436-bfc4-05d30ef384cc" />
 <meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
@@ -14,7 +14,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="The pedalboard.io API" href="pedalboard.io.html" /><link rel="prev" title="Features" href="../index.html" />
 
     <link rel="shortcut icon" href="../_static/favicon.ico"/><meta name="generator" content="sphinx-5.3.0, furo 2022.09.29"/>
-        <title>The pedalboard API - Pedalboard v0.9.12 Documentation</title>
+        <title>The pedalboard API - Pedalboard v0.9.13 Documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=d81277517bee4d6b0349d71bb2661d4890b5617c" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
@@ -132,7 +132,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">Pedalboard v0.9.12 Documentation</div></a>
+      <a href="../index.html"><div class="brand">Pedalboard v0.9.13 Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -158,7 +158,7 @@
     <img class="sidebar-logo" src="../_static/pedalboard_logo_small.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">Pedalboard v0.9.12 Documentation</span>
+  <span class="sidebar-brand-text">Pedalboard v0.9.13 Documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
@@ -575,7 +575,7 @@ instead and <a class="reference external" href="https://github.com/spotify/pedal
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.AudioUnitPlugin.get_plugin_names_for_file">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_plugin_names_for_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.AudioUnitPlugin.get_plugin_names_for_file" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_plugin_names_for_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.AudioUnitPlugin.get_plugin_names_for_file" title="Permalink to this definition">#</a></dt>
 <dd><p>Return a list of plugin names contained within a given Audio Unit bundle (i.e.: a <code class="docutils literal notranslate"><span class="pre">.component</span></code> or <code class="docutils literal notranslate"><span class="pre">.appex</span></code> file). If the provided file cannot be scanned, an <code class="docutils literal notranslate"><span class="pre">ImportError</span></code> will be raised.</p>
 <p>Note that most Audio Units have a single plugin inside, but this method can be useful to determine if multiple plugins are present in one bundle, and if so, what their names are.</p>
 </dd></dl>
@@ -856,7 +856,7 @@ automatically invoke <a class="reference internal" href="#pedalboard.Bitcrush.pr
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.Chain">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Chain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plugins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><span class="pre">Plugin</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Chain" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Chain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plugins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><span class="pre">Plugin</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Chain" title="Permalink to this definition">#</a></dt>
 <dd><p>Run zero or more plugins as a plugin. Useful when used with the Mix plugin.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.Chain.__call__">
@@ -2103,7 +2103,7 @@ automatically invoke <a class="reference internal" href="#pedalboard.MP3Compress
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.Mix">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Mix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plugins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><span class="pre">Plugin</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Mix" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Mix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plugins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><span class="pre">Plugin</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Mix" title="Permalink to this definition">#</a></dt>
 <dd><p>A utility plugin that allows running other plugins in parallel. All plugins provided will be mixed equally.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.Mix.__call__">
@@ -2512,7 +2512,7 @@ automatically invoke <a class="reference internal" href="#pedalboard.Plugin.proc
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.PluginContainer">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">PluginContainer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plugins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><span class="pre">Plugin</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.PluginContainer" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">PluginContainer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plugins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pedalboard.Plugin" title="pedalboard.Plugin"><span class="pre">Plugin</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.PluginContainer" title="Permalink to this definition">#</a></dt>
 <dd><p>A generic audio processing plugin that contains zero or more other plugins. Not intended for direct use.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.PluginContainer.append">
@@ -2813,7 +2813,7 @@ instead and <a class="reference external" href="https://github.com/spotify/pedal
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.VST3Plugin.get_plugin_names_for_file">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_plugin_names_for_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.VST3Plugin.get_plugin_names_for_file" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_plugin_names_for_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.VST3Plugin.get_plugin_names_for_file" title="Permalink to this definition">#</a></dt>
 <dd><p>Return a list of plugin names contained within a given VST3 plugin (i.e.: a “.vst3”). If the provided file cannot be scanned, an ImportError will be raised.</p>
 </dd></dl>
 
