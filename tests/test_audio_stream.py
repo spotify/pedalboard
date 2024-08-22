@@ -71,9 +71,9 @@ def test_create_stream(input_device_name: str, output_device_name: str):
 @pytest.mark.skipif(
     (
         pedalboard.io.AudioStream.default_output_device_name == "Null Audio Device"
-        or pedalboard.io.AudioStream.default_output_device_name is None
+        or not pedalboard.io.AudioStream.default_output_device_name
     ),
-    reason="Tests do not work with a null audio device.",
+    reason="Test requires a working audio device.",
 )
 def test_write_to_stream():
     try:
@@ -98,9 +98,9 @@ def test_write_to_stream():
 @pytest.mark.skipif(
     (
         pedalboard.io.AudioStream.default_output_device_name == "Null Audio Device"
-        or pedalboard.io.AudioStream.default_output_device_name is None
+        or not pedalboard.io.AudioStream.default_output_device_name
     ),
-    reason="Tests do not work with a null audio device.",
+    reason="Test requires a working audio device.",
 )
 def test_write_to_stream_without_opening():
     try:
@@ -124,9 +124,9 @@ def test_write_to_stream_without_opening():
 @pytest.mark.skipif(
     (
         pedalboard.io.AudioStream.default_input_device_name == "Null Audio Device"
-        or pedalboard.io.AudioStream.default_input_device_name is None
+        or not pedalboard.io.AudioStream.default_input_device_name
     ),
-    reason="Tests do not work with a null audio device.",
+    reason="Test requires a working audio device.",
 )
 def test_read_from_stream():
     try:
@@ -149,9 +149,9 @@ def test_read_from_stream():
 @pytest.mark.skipif(
     (
         pedalboard.io.AudioStream.default_input_device_name == "Null Audio Device"
-        or pedalboard.io.AudioStream.default_input_device_name is None
+        or not pedalboard.io.AudioStream.default_input_device_name
     ),
-    reason="Tests do not work with a null audio device.",
+    reason="Test requires a working audio device.",
 )
 def test_read_from_stream_measures_dropped_frames():
     try:
