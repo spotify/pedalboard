@@ -195,3 +195,37 @@ def test_returned_sample_count(
         f"{output.shape[1]:,} samples were output by resampler (in chunks:"
         f" {[o.shape[1] for o in outputs]}) when {expected_output.shape[1]:,} were expected."
     )
+
+
+@pytest.mark.parametrize("fundamental_hz", [440])
+@pytest.mark.parametrize("sample_rate", [8000])
+@pytest.mark.parametrize("target_sample_rate", [48000])
+@pytest.mark.parametrize("buffer_size", [1_000_000_000])
+@pytest.mark.parametrize("num_channels", [2])
+@pytest.mark.parametrize(
+    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
+)
+def test_speed(
+    fundamental_hz: float,
+    sample_rate: float,
+    target_sample_rate: float,
+    buffer_size: int,
+    num_channels: int,
+    quality,
+):
+    sine_wave = generate_sine_at(
+        sample_rate,
+        fundamental_hz,
+        num_channels=num_channels,
+        num_seconds=60 * 60,
+    ).astype(np.float32)
+    if num_channels == 1:
+        sine_wave = np.expand_dims(sine_wave, 0)
+
+    # Downsample:
+    resampler = StreamResampler(sample_rate, target_sample_rate, num_channels, quality)
+    outputs = [
+        resampler.process(sine_wave[:, i : i + buffer_size])
+        for i in range(0, sine_wave.shape[1], buffer_size)
+    ]
+    outputs.append(resampler.process(None))

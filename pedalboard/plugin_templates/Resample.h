@@ -19,6 +19,7 @@
 #include "../JuceHeader.h"
 #include "../Plugin.h"
 #include "../plugins/AddLatency.h"
+#include "../juce_overrides/juce_SIMDGenericInterpolator.h"
 
 namespace Pedalboard {
 
@@ -46,19 +47,19 @@ public:
   void setQuality(const ResamplingQuality newQuality) {
     switch (newQuality) {
     case ResamplingQuality::ZeroOrderHold:
-      interpolator = juce::Interpolators::ZeroOrderHold();
+      interpolator = juce::SIMDInterpolators::ZeroOrderHold();
       break;
     case ResamplingQuality::Linear:
-      interpolator = juce::Interpolators::Linear();
+      interpolator = juce::SIMDInterpolators::Linear();
       break;
     case ResamplingQuality::CatmullRom:
-      interpolator = juce::Interpolators::CatmullRom();
+      interpolator = juce::SIMDInterpolators::CatmullRom();
       break;
     case ResamplingQuality::Lagrange:
-      interpolator = juce::Interpolators::Lagrange();
+      interpolator = juce::SIMDInterpolators::Lagrange();
       break;
     case ResamplingQuality::WindowedSinc:
-      interpolator = juce::Interpolators::WindowedSinc();
+      interpolator = juce::SIMDInterpolators::WindowedSinc();
       break;
     default:
       throw std::domain_error("Unknown resampler quality received!");
@@ -73,18 +74,18 @@ public:
     // Unfortunately, std::visit cannot be used here due to macOS version
     // issues: https://stackoverflow.com/q/52310835/679081
     if (auto *i =
-            std::get_if<juce::Interpolators::ZeroOrderHold>(&interpolator)) {
+            std::get_if<juce::SIMDInterpolators::ZeroOrderHold>(&interpolator)) {
       return i->getBaseLatency();
     } else if (auto *i =
-                   std::get_if<juce::Interpolators::Linear>(&interpolator)) {
+                   std::get_if<juce::SIMDInterpolators::Linear>(&interpolator)) {
       return i->getBaseLatency();
-    } else if (auto *i = std::get_if<juce::Interpolators::CatmullRom>(
+    } else if (auto *i = std::get_if<juce::SIMDInterpolators::CatmullRom>(
                    &interpolator)) {
       return i->getBaseLatency();
     } else if (auto *i =
-                   std::get_if<juce::Interpolators::Lagrange>(&interpolator)) {
+                   std::get_if<juce::SIMDInterpolators::Lagrange>(&interpolator)) {
       return i->getBaseLatency();
-    } else if (auto *i = std::get_if<juce::Interpolators::WindowedSinc>(
+    } else if (auto *i = std::get_if<juce::SIMDInterpolators::WindowedSinc>(
                    &interpolator)) {
       return i->getBaseLatency();
     } else {
@@ -96,18 +97,18 @@ public:
     // Unfortunately, std::visit cannot be used here due to macOS version
     // issues: https://stackoverflow.com/q/52310835/679081
     if (auto *i =
-            std::get_if<juce::Interpolators::ZeroOrderHold>(&interpolator)) {
+            std::get_if<juce::SIMDInterpolators::ZeroOrderHold>(&interpolator)) {
       i->reset();
     } else if (auto *i =
-                   std::get_if<juce::Interpolators::Linear>(&interpolator)) {
+                   std::get_if<juce::SIMDInterpolators::Linear>(&interpolator)) {
       i->reset();
-    } else if (auto *i = std::get_if<juce::Interpolators::CatmullRom>(
+    } else if (auto *i = std::get_if<juce::SIMDInterpolators::CatmullRom>(
                    &interpolator)) {
       i->reset();
     } else if (auto *i =
-                   std::get_if<juce::Interpolators::Lagrange>(&interpolator)) {
+                   std::get_if<juce::SIMDInterpolators::Lagrange>(&interpolator)) {
       i->reset();
-    } else if (auto *i = std::get_if<juce::Interpolators::WindowedSinc>(
+    } else if (auto *i = std::get_if<juce::SIMDInterpolators::WindowedSinc>(
                    &interpolator)) {
       i->reset();
     } else {
@@ -120,22 +121,22 @@ public:
     // Unfortunately, std::visit cannot be used here due to macOS version
     // issues: https://stackoverflow.com/q/52310835/679081
     if (auto *i =
-            std::get_if<juce::Interpolators::ZeroOrderHold>(&interpolator)) {
+            std::get_if<juce::SIMDInterpolators::ZeroOrderHold>(&interpolator)) {
       return i->process(speedRatio, inputSamples, outputSamples,
                         numOutputSamplesToProduce);
     } else if (auto *i =
-                   std::get_if<juce::Interpolators::Linear>(&interpolator)) {
+                   std::get_if<juce::SIMDInterpolators::Linear>(&interpolator)) {
       return i->process(speedRatio, inputSamples, outputSamples,
                         numOutputSamplesToProduce);
-    } else if (auto *i = std::get_if<juce::Interpolators::CatmullRom>(
+    } else if (auto *i = std::get_if<juce::SIMDInterpolators::CatmullRom>(
                    &interpolator)) {
       return i->process(speedRatio, inputSamples, outputSamples,
                         numOutputSamplesToProduce);
     } else if (auto *i =
-                   std::get_if<juce::Interpolators::Lagrange>(&interpolator)) {
+                   std::get_if<juce::SIMDInterpolators::Lagrange>(&interpolator)) {
       return i->process(speedRatio, inputSamples, outputSamples,
                         numOutputSamplesToProduce);
-    } else if (auto *i = std::get_if<juce::Interpolators::WindowedSinc>(
+    } else if (auto *i = std::get_if<juce::SIMDInterpolators::WindowedSinc>(
                    &interpolator)) {
       return i->process(speedRatio, inputSamples, outputSamples,
                         numOutputSamplesToProduce);
@@ -145,9 +146,9 @@ public:
   }
 
 private:
-  std::variant<juce::Interpolators::ZeroOrderHold, juce::Interpolators::Linear,
-               juce::Interpolators::CatmullRom, juce::Interpolators::Lagrange,
-               juce::Interpolators::WindowedSinc>
+  std::variant<juce::SIMDInterpolators::ZeroOrderHold, juce::SIMDInterpolators::Linear,
+               juce::SIMDInterpolators::CatmullRom, juce::SIMDInterpolators::Lagrange,
+               juce::SIMDInterpolators::WindowedSinc>
       interpolator;
 };
 
