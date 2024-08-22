@@ -434,10 +434,6 @@ jobs:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
           GCS_READER_SERVICE_ACCOUNT_KEY: ${{ secrets.GCS_READER_SERVICE_ACCOUNT_KEY }}
         run: python ./tests/download_test_plugins.py
-      - name: Remove libasound Before Testing
-        if: runner.os == 'Linux'
-        # Tests should still pass if we have no libasound installed.
-        run: sudo apt-get remove libasound2-dev libasound2
       - name: Setup dummy soundcard for testing
         if: runner.os == 'Linux'
         run: |
