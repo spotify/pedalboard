@@ -278,10 +278,14 @@ public:
     if (auto *type = deviceManager.getCurrentDeviceTypeObject()) {
       const auto info = getSetupInfo(setup, isInput);
 
-      if (numChannelsNeeded > 0 && info.name.isEmpty())
-        return {
+      if (numChannelsNeeded > 0 && info.name.isEmpty()) {
+        std::string deviceName =
             type->getDeviceNames(isInput)[type->getDefaultDeviceIndex(isInput)]
-                .toStdString()};
+                .toStdString();
+        if (!deviceName.empty()) {
+          return {deviceName};
+        }
+      }
     }
 #endif
     return {};
