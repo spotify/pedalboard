@@ -74,7 +74,8 @@ jobs:
           && sudo apt-get install -y pkg-config libsndfile1 \
           libx11-dev libxrandr-dev libxinerama-dev \
           libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
-          libxcursor-dev libfreetype6 libfreetype6-dev
+          libxcursor-dev libfreetype6 libfreetype6-dev \
+          libasound2-dev
       # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
       - name: Install ccache on Linux
         if: runner.os == 'Linux'
@@ -257,7 +258,8 @@ jobs:
           && sudo apt-get install -y pkg-config libsndfile1 \
           libx11-dev libxrandr-dev libxinerama-dev \
           libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
-          libxcursor-dev libfreetype6 libfreetype6-dev
+          libxcursor-dev libfreetype6 libfreetype6-dev \
+          libasound2-dev
       # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
       - name: Install ccache on Linux
         if: runner.os == 'Linux'
@@ -363,7 +365,8 @@ jobs:
           && sudo apt-get install -y pkg-config libsndfile1 \
           libx11-dev libxrandr-dev libxinerama-dev \
           libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
-          libxcursor-dev libfreetype6 libfreetype6-dev
+          libxcursor-dev libfreetype6 libfreetype6-dev \
+          libasound2-dev
       # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
       - name: Install ccache on Linux
         if: runner.os == 'Linux'
@@ -431,6 +434,11 @@ jobs:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
           GCS_READER_SERVICE_ACCOUNT_KEY: ${{ secrets.GCS_READER_SERVICE_ACCOUNT_KEY }}
         run: python ./tests/download_test_plugins.py
+      - name: Setup dummy soundcard for testing
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y linux-modules-extra-$(uname -r)
+          sudo modprobe snd-dummy
       - name: Run tests
         env:
           TEST_WORKER_INDEX: ${{ matrix.runner_index }}
@@ -482,7 +490,8 @@ jobs:
           && sudo apt-get install -y pkg-config libsndfile1 \
           libx11-dev libxrandr-dev libxinerama-dev \
           libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
-          libxcursor-dev libfreetype6 libfreetype6-dev
+          libxcursor-dev libfreetype6 libfreetype6-dev \
+          libasound2-dev
       # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
       - name: Install ccache on Linux
         if: runner.os == 'Linux'
@@ -613,7 +622,8 @@ jobs:
           && sudo apt-get install -y pkg-config libsndfile1 \
           libx11-dev libxrandr-dev libxinerama-dev \
           libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
-          libxcursor-dev libfreetype6 libfreetype6-dev
+          libxcursor-dev libfreetype6 libfreetype6-dev \
+          libasound2-dev
       # We depend on ccache features that are only present in 4.8.0 and later, but installing from apt-get gives us v3.
       - name: Install ccache on Linux
         if: runner.os == 'Linux'
