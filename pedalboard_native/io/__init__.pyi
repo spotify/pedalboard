@@ -278,7 +278,7 @@ class AudioStream:
         :py:mod:`threading` module to run the stream object method on a
         background thread, allowing for easier cleanup.
 
-    *Introduced in v0.7.0. Not supported on Linux.*
+    *Introduced in v0.7.0 for macOS and Windows. Linux support introduced in v0.9.14.*
 
     :py:meth:`read` *and* :py:meth:`write` *methods introduced in v0.9.12.*
     """
