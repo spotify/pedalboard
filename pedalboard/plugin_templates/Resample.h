@@ -18,8 +18,8 @@
 
 #include "../JuceHeader.h"
 #include "../Plugin.h"
-#include "../plugins/AddLatency.h"
 #include "../juce_overrides/juce_SIMDGenericInterpolator.h"
+#include "../plugins/AddLatency.h"
 
 namespace Pedalboard {
 
@@ -44,7 +44,7 @@ enum class ResamplingQuality {
  */
 class VariableQualityResampler {
 public:
-  void setQuality(const ResamplingQuality newQuality) {
+  void setQuality(const ResamplingQuality newQuality, float speedRatio) {
     switch (newQuality) {
     case ResamplingQuality::ZeroOrderHold:
       interpolator = juce::SIMDInterpolators::ZeroOrderHold();
@@ -73,17 +73,17 @@ public:
   float getBaseLatency() const {
     // Unfortunately, std::visit cannot be used here due to macOS version
     // issues: https://stackoverflow.com/q/52310835/679081
-    if (auto *i =
-            std::get_if<juce::SIMDInterpolators::ZeroOrderHold>(&interpolator)) {
+    if (auto *i = std::get_if<juce::SIMDInterpolators::ZeroOrderHold>(
+            &interpolator)) {
       return i->getBaseLatency();
-    } else if (auto *i =
-                   std::get_if<juce::SIMDInterpolators::Linear>(&interpolator)) {
+    } else if (auto *i = std::get_if<juce::SIMDInterpolators::Linear>(
+                   &interpolator)) {
       return i->getBaseLatency();
     } else if (auto *i = std::get_if<juce::SIMDInterpolators::CatmullRom>(
                    &interpolator)) {
       return i->getBaseLatency();
-    } else if (auto *i =
-                   std::get_if<juce::SIMDInterpolators::Lagrange>(&interpolator)) {
+    } else if (auto *i = std::get_if<juce::SIMDInterpolators::Lagrange>(
+                   &interpolator)) {
       return i->getBaseLatency();
     } else if (auto *i = std::get_if<juce::SIMDInterpolators::WindowedSinc>(
                    &interpolator)) {
@@ -96,17 +96,17 @@ public:
   void reset() noexcept {
     // Unfortunately, std::visit cannot be used here due to macOS version
     // issues: https://stackoverflow.com/q/52310835/679081
-    if (auto *i =
-            std::get_if<juce::SIMDInterpolators::ZeroOrderHold>(&interpolator)) {
+    if (auto *i = std::get_if<juce::SIMDInterpolators::ZeroOrderHold>(
+            &interpolator)) {
       i->reset();
-    } else if (auto *i =
-                   std::get_if<juce::SIMDInterpolators::Linear>(&interpolator)) {
+    } else if (auto *i = std::get_if<juce::SIMDInterpolators::Linear>(
+                   &interpolator)) {
       i->reset();
     } else if (auto *i = std::get_if<juce::SIMDInterpolators::CatmullRom>(
                    &interpolator)) {
       i->reset();
-    } else if (auto *i =
-                   std::get_if<juce::SIMDInterpolators::Lagrange>(&interpolator)) {
+    } else if (auto *i = std::get_if<juce::SIMDInterpolators::Lagrange>(
+                   &interpolator)) {
       i->reset();
     } else if (auto *i = std::get_if<juce::SIMDInterpolators::WindowedSinc>(
                    &interpolator)) {
@@ -120,20 +120,20 @@ public:
               float *outputSamples, int numOutputSamplesToProduce) noexcept {
     // Unfortunately, std::visit cannot be used here due to macOS version
     // issues: https://stackoverflow.com/q/52310835/679081
-    if (auto *i =
-            std::get_if<juce::SIMDInterpolators::ZeroOrderHold>(&interpolator)) {
+    if (auto *i = std::get_if<juce::SIMDInterpolators::ZeroOrderHold>(
+            &interpolator)) {
       return i->process(speedRatio, inputSamples, outputSamples,
                         numOutputSamplesToProduce);
-    } else if (auto *i =
-                   std::get_if<juce::SIMDInterpolators::Linear>(&interpolator)) {
+    } else if (auto *i = std::get_if<juce::SIMDInterpolators::Linear>(
+                   &interpolator)) {
       return i->process(speedRatio, inputSamples, outputSamples,
                         numOutputSamplesToProduce);
     } else if (auto *i = std::get_if<juce::SIMDInterpolators::CatmullRom>(
                    &interpolator)) {
       return i->process(speedRatio, inputSamples, outputSamples,
                         numOutputSamplesToProduce);
-    } else if (auto *i =
-                   std::get_if<juce::SIMDInterpolators::Lagrange>(&interpolator)) {
+    } else if (auto *i = std::get_if<juce::SIMDInterpolators::Lagrange>(
+                   &interpolator)) {
       return i->process(speedRatio, inputSamples, outputSamples,
                         numOutputSamplesToProduce);
     } else if (auto *i = std::get_if<juce::SIMDInterpolators::WindowedSinc>(
@@ -146,9 +146,10 @@ public:
   }
 
 private:
-  std::variant<juce::SIMDInterpolators::ZeroOrderHold, juce::SIMDInterpolators::Linear,
-               juce::SIMDInterpolators::CatmullRom, juce::SIMDInterpolators::Lagrange,
-               juce::SIMDInterpolators::WindowedSinc>
+  std::variant<
+      juce::SIMDInterpolators::ZeroOrderHold, juce::SIMDInterpolators::Linear,
+      juce::SIMDInterpolators::CatmullRom, juce::SIMDInterpolators::Lagrange,
+      juce::SIMDInterpolators::WindowedSinc>
       interpolator;
 };
 
@@ -157,7 +158,7 @@ private:
  */
 template <typename SampleType> class Passthrough : public Plugin {
 public:
-  virtual ~Passthrough(){};
+  virtual ~Passthrough() {};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {}
 
@@ -179,7 +180,7 @@ template <typename T = Passthrough<float>, typename SampleType = float,
           int DefaultSampleRate = 8000>
 class Resample : public Plugin {
 public:
-  virtual ~Resample(){};
+  virtual ~Resample() {};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {
     bool specChanged = lastSpec.sampleRate != spec.sampleRate ||
@@ -191,15 +192,16 @@ public:
       nativeToTargetResamplers.resize(spec.numChannels);
       targetToNativeResamplers.resize(spec.numChannels);
 
+      resamplerRatio = spec.sampleRate / targetSampleRate;
+      inverseResamplerRatio = targetSampleRate / spec.sampleRate;
+
       for (int i = 0; i < spec.numChannels; i++) {
-        nativeToTargetResamplers[i].setQuality(quality);
+        nativeToTargetResamplers[i].setQuality(quality, resamplerRatio);
         nativeToTargetResamplers[i].reset();
-        targetToNativeResamplers[i].setQuality(quality);
+        targetToNativeResamplers[i].setQuality(quality, inverseResamplerRatio);
         targetToNativeResamplers[i].reset();
       }
 
-      resamplerRatio = spec.sampleRate / targetSampleRate;
-      inverseResamplerRatio = targetSampleRate / spec.sampleRate;
       maximumBlockSizeInTargetSampleRate =
           std::ceil(spec.maximumBlockSize / resamplerRatio);
 

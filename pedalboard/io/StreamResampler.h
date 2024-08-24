@@ -31,12 +31,13 @@ public:
     overflowSamples.resize(numChannels);
     resamplers.resize(numChannels);
 
+    resamplerRatio = sourceSampleRate / targetSampleRate;
+
     for (int i = 0; i < numChannels; i++) {
-      resamplers[i].setQuality(quality);
+      resamplers[i].setQuality(quality, resamplerRatio);
       resamplers[i].reset();
     }
 
-    resamplerRatio = sourceSampleRate / targetSampleRate;
     inputLatency = resamplers[0].getBaseLatency();
     outputLatency = inputLatency / resamplerRatio;
 
