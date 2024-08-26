@@ -225,7 +225,7 @@ board = Pedalboard([
 
 ### Running Pedalboard on Live Audio
 
-On macOS or Windows, Pedalboard supports streaming live audio through
+`pedalboard` supports streaming live audio through
 <a href="https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream">
 an <code class="docutils literal"><span class="pre">AudioStream</span></code> object</a>,
 allowing for real-time manipulation of audio by adding effects in Python.
