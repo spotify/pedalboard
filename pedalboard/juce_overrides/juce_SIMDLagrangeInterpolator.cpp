@@ -19,6 +19,10 @@
 
   ==============================================================================
 */
+// #define debugprintf printf
+#define debugprintf                                                            \
+  if (false)                                                                   \
+  printf
 
 #include "juce_SIMDGenericInterpolator.h"
 
@@ -47,23 +51,14 @@ static float calcCoefficient(float input, float offset) noexcept {
 float SIMDInterpolators::LagrangeTraits::valueAtOffset(const float *inputs,
                                                        float offset,
                                                        int index) noexcept {
-  float result = 0.0f;
-
-  result += calcCoefficient<0>(inputs[index], offset);
-  if (++index == 5)
-    index = 0;
-  result += calcCoefficient<1>(inputs[index], offset);
-  if (++index == 5)
-    index = 0;
-  result += calcCoefficient<2>(inputs[index], offset);
-  if (++index == 5)
-    index = 0;
-  result += calcCoefficient<3>(inputs[index], offset);
-  if (++index == 5)
-    index = 0;
-  result += calcCoefficient<4>(inputs[index], offset);
-
-  return result;
+  debugprintf(
+      "[new Lagran] Reading from sub-sample pos %f and indices %d -> %d\n",
+      offset, index - 4, index);
+  return calcCoefficient<0>(inputs[index - 4], offset) +
+         calcCoefficient<1>(inputs[index - 3], offset) +
+         calcCoefficient<2>(inputs[index - 2], offset) +
+         calcCoefficient<3>(inputs[index - 1], offset) +
+         calcCoefficient<4>(inputs[index], offset);
 }
 
 } // namespace juce

@@ -31,11 +31,18 @@ namespace Pedalboard {
  * majority of use cases.
  */
 enum class ResamplingQuality {
+  // These types are all the custom "vectorized" types:
   ZeroOrderHold = 0,
   Linear = 1,
   CatmullRom = 2,
   Lagrange = 3,
   WindowedSinc = 4,
+  // These are the "slow" versions, kept in place for testing:
+  SlowZeroOrderHold = 5,
+  SlowLinear = 6,
+  SlowCatmullRom = 7,
+  SlowLagrange = 8,
+  SlowWindowedSinc = 9,
 };
 
 /**
@@ -60,6 +67,21 @@ public:
       break;
     case ResamplingQuality::WindowedSinc:
       interpolator = juce::SIMDInterpolators::WindowedSinc();
+      break;
+    case ResamplingQuality::SlowZeroOrderHold:
+      interpolator = juce::Interpolators::ZeroOrderHold();
+      break;
+    case ResamplingQuality::SlowLinear:
+      interpolator = juce::Interpolators::Linear();
+      break;
+    case ResamplingQuality::SlowCatmullRom:
+      interpolator = juce::Interpolators::CatmullRom();
+      break;
+    case ResamplingQuality::SlowLagrange:
+      interpolator = juce::Interpolators::Lagrange();
+      break;
+    case ResamplingQuality::SlowWindowedSinc:
+      interpolator = juce::Interpolators::WindowedSinc();
       break;
     default:
       throw std::domain_error("Unknown resampler quality received!");
@@ -88,6 +110,21 @@ public:
     } else if (auto *i = std::get_if<juce::SIMDInterpolators::WindowedSinc>(
                    &interpolator)) {
       return i->getBaseLatency();
+    } else if (auto *i = std::get_if<juce::Interpolators::ZeroOrderHold>(
+                   &interpolator)) {
+      return i->getBaseLatency();
+    } else if (auto *i =
+                   std::get_if<juce::Interpolators::Linear>(&interpolator)) {
+      return i->getBaseLatency();
+    } else if (auto *i = std::get_if<juce::Interpolators::CatmullRom>(
+                   &interpolator)) {
+      return i->getBaseLatency();
+    } else if (auto *i =
+                   std::get_if<juce::Interpolators::Lagrange>(&interpolator)) {
+      return i->getBaseLatency();
+    } else if (auto *i = std::get_if<juce::Interpolators::WindowedSinc>(
+                   &interpolator)) {
+      return i->getBaseLatency();
     } else {
       throw std::runtime_error("Unknown resampler quality!");
     }
@@ -109,6 +146,21 @@ public:
                    &interpolator)) {
       i->reset();
     } else if (auto *i = std::get_if<juce::SIMDInterpolators::WindowedSinc>(
+                   &interpolator)) {
+      i->reset();
+    } else if (auto *i = std::get_if<juce::Interpolators::ZeroOrderHold>(
+                   &interpolator)) {
+      i->reset();
+    } else if (auto *i =
+                   std::get_if<juce::Interpolators::Linear>(&interpolator)) {
+      i->reset();
+    } else if (auto *i = std::get_if<juce::Interpolators::CatmullRom>(
+                   &interpolator)) {
+      i->reset();
+    } else if (auto *i =
+                   std::get_if<juce::Interpolators::Lagrange>(&interpolator)) {
+      i->reset();
+    } else if (auto *i = std::get_if<juce::Interpolators::WindowedSinc>(
                    &interpolator)) {
       i->reset();
     } else {
@@ -140,6 +192,26 @@ public:
                    &interpolator)) {
       return i->process(speedRatio, inputSamples, outputSamples,
                         numOutputSamplesToProduce);
+    } else if (auto *i = std::get_if<juce::Interpolators::ZeroOrderHold>(
+                   &interpolator)) {
+      return i->process(speedRatio, inputSamples, outputSamples,
+                        numOutputSamplesToProduce);
+    } else if (auto *i =
+                   std::get_if<juce::Interpolators::Linear>(&interpolator)) {
+      return i->process(speedRatio, inputSamples, outputSamples,
+                        numOutputSamplesToProduce);
+    } else if (auto *i = std::get_if<juce::Interpolators::CatmullRom>(
+                   &interpolator)) {
+      return i->process(speedRatio, inputSamples, outputSamples,
+                        numOutputSamplesToProduce);
+    } else if (auto *i =
+                   std::get_if<juce::Interpolators::Lagrange>(&interpolator)) {
+      return i->process(speedRatio, inputSamples, outputSamples,
+                        numOutputSamplesToProduce);
+    } else if (auto *i = std::get_if<juce::Interpolators::WindowedSinc>(
+                   &interpolator)) {
+      return i->process(speedRatio, inputSamples, outputSamples,
+                        numOutputSamplesToProduce);
     } else {
       throw std::runtime_error("Unknown resampler quality!");
     }
@@ -149,7 +221,9 @@ private:
   std::variant<
       juce::SIMDInterpolators::ZeroOrderHold, juce::SIMDInterpolators::Linear,
       juce::SIMDInterpolators::CatmullRom, juce::SIMDInterpolators::Lagrange,
-      juce::SIMDInterpolators::WindowedSinc>
+      juce::SIMDInterpolators::WindowedSinc, juce::Interpolators::ZeroOrderHold,
+      juce::Interpolators::Linear, juce::Interpolators::CatmullRom,
+      juce::Interpolators::Lagrange, juce::Interpolators::WindowedSinc>
       interpolator;
 };
 
@@ -515,6 +589,24 @@ inline void init_resample(py::module &m) {
       .value("WindowedSinc", ResamplingQuality::WindowedSinc,
              "The highest quality and slowest resampling method, with no "
              "audible artifacts.")
+      .value("_SlowZeroOrderHold", ResamplingQuality::SlowZeroOrderHold,
+             "The lowest quality and fastest resampling method, with lots of "
+             "audible artifacts. This version is slower but included for "
+             "compatibility.")
+      .value("_SlowLinear", ResamplingQuality::SlowLinear,
+             "A resampling method slightly less noisy than the simplest "
+             "method, but not by much. This version is slower but included for "
+             "compatibility.")
+      .value("_SlowCatmullRom", ResamplingQuality::SlowCatmullRom,
+             "A moderately good-sounding resampling method which is fast to "
+             "run. This version is slower but included for compatibility.")
+      .value("_SlowLagrange", ResamplingQuality::SlowLagrange,
+             "A moderately good-sounding resampling method which is slow to "
+             "run. This version is slower but included for compatibility.")
+      .value("_SlowWindowedSinc", ResamplingQuality::SlowWindowedSinc,
+             "The highest quality and slowest resampling method, with no "
+             "audible artifacts. This version is slower but included for "
+             "compatibility.")
       .export_values();
 
   resample
@@ -548,6 +640,21 @@ inline void init_resample(py::module &m) {
                break;
              case ResamplingQuality::WindowedSinc:
                ss << "WindowedSinc";
+               break;
+             case ResamplingQuality::SlowZeroOrderHold:
+               ss << "SlowZeroOrderHold";
+               break;
+             case ResamplingQuality::SlowLinear:
+               ss << "SlowLinear";
+               break;
+             case ResamplingQuality::SlowCatmullRom:
+               ss << "SlowCatmullRom";
+               break;
+             case ResamplingQuality::SlowLagrange:
+               ss << "SlowLagrange";
+               break;
+             case ResamplingQuality::SlowWindowedSinc:
+               ss << "SlowWindowedSinc";
                break;
              default:
                ss << "unknown";

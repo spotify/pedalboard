@@ -15,10 +15,15 @@
 # limitations under the License.
 
 
-import pytest
+import sys
+import time
+
 import numpy as np
+import pytest
+
 from pedalboard import Resample
 from pedalboard.io import StreamResampler
+
 from .utils import generate_sine_at
 
 TOLERANCE_PER_QUALITY = {
@@ -197,11 +202,16 @@ def test_returned_sample_count(
     )
 
 
+# generate_sine_at(6000, 440, num_channels=1, num_seconds=60 * 60)
+# generate_sine_at(44100, 440, num_channels=1, num_seconds=60 * 60)
+# generate_sine_at(96000, 440, num_channels=1, num_seconds=60 * 60)
+
+
 @pytest.mark.parametrize("fundamental_hz", [440])
-@pytest.mark.parametrize("sample_rate", [8000])
-@pytest.mark.parametrize("target_sample_rate", [48000])
+@pytest.mark.parametrize("sample_rate", [6000, 44100, 96000])
+@pytest.mark.parametrize("target_sample_rate", [22050, 32000, 48000])
 @pytest.mark.parametrize("buffer_size", [1_000_000_000])
-@pytest.mark.parametrize("num_channels", [2])
+@pytest.mark.parametrize("num_channels", [1])
 @pytest.mark.parametrize(
     "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
 )
@@ -224,8 +234,74 @@ def test_speed(
 
     # Downsample:
     resampler = StreamResampler(sample_rate, target_sample_rate, num_channels, quality)
+    ratio = target_sample_rate / sample_rate
+    a = time.time()
     outputs = [
         resampler.process(sine_wave[:, i : i + buffer_size])
         for i in range(0, sine_wave.shape[1], buffer_size)
     ]
     outputs.append(resampler.process(None))
+    b = time.time()
+    with open(f"{sys.version_info.minor}-testresults.txt", "a") as f:
+        f.write(f"{quality} {ratio:.4f}x = {b - a} seconds\n")
+
+
+@pytest.mark.parametrize("sample_rate", [6000, 44100, 96000])
+@pytest.mark.parametrize("target_sample_rate", [22050, 32000, 48000])
+@pytest.mark.parametrize(
+    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
+)
+@pytest.mark.parametrize("batch_size", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+def test_simd_accuracy(quality, sample_rate, target_sample_rate, batch_size):
+    num_channels = 1
+    _input = np.expand_dims(np.arange(0, 10, dtype=np.float32), 0)
+
+    new_resampler = StreamResampler(sample_rate, target_sample_rate, num_channels, quality)
+
+    print()
+    print("Passing in inputs:")
+    for i in range(0, _input.shape[1], batch_size):
+        print(f"\t{_input[:, i : i + batch_size]}")
+    outputs = [
+        new_resampler.process(_input[:, i : i + batch_size])
+        for i in range(0, _input.shape[1], batch_size)
+    ]
+    outputs.append(new_resampler.process(None))
+    print(f"Actual outputs:")
+    for o in outputs:
+        print(f"\t{o}")
+    actual_output = np.concatenate(outputs, axis=1)
+
+    accurate_resampler = StreamResampler(
+        sample_rate,
+        target_sample_rate,
+        num_channels,
+        getattr(Resample.Quality, "_Slow" + quality.name),
+    )
+    outputs = [
+        accurate_resampler.process(_input[:, i : i + batch_size])
+        for i in range(0, _input.shape[1], batch_size)
+    ]
+    outputs.append(accurate_resampler.process(None))
+    print(f"Expected outputs:")
+    for o in outputs:
+        print(f"\t{o}")
+    expected_output = np.concatenate(outputs, axis=1)
+
+    print(f"{actual_output=}")
+    print(f"{expected_output=}")
+    np.testing.assert_allclose(expected_output, actual_output, atol=0.0001)
+
+
+def test_simd_linear_accuracy_hardcoded():
+    linear_resampler = StreamResampler(44100, 32000, 1, Resample.Quality.Linear)
+    _input = np.expand_dims(np.arange(0, 10, dtype=np.float32), 0)
+
+    actual_output = np.concatenate(
+        [linear_resampler.process(_input), linear_resampler.process(None)], axis=1
+    )
+    np.testing.assert_allclose(
+        np.array([[0.378125, 1.756250, 3.134375, 4.512500, 5.890625, 7.268750]]),
+        actual_output,
+        atol=0.0001,
+    )

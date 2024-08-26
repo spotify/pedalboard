@@ -255,8 +255,6 @@ ALL_INCLUDES += ["vendors/libgsm/inc"]
 # like -ffast-math, but without the negative side effects on other code in the same process:
 MOSTLY_FAST_MATH = [
     "-fassociative-math",
-    "-fno-signaling-nans",
-    "-fno-signaling-math",
     "-fno-trapping-math",
     "-fno-signed-zeros",
     "-freciprocal-math",
@@ -291,16 +289,15 @@ else:
         "Not sure how to build JUCE on platform: {}!".format(platform.system())
     )
 
-
 ALL_CPPFLAGS += [
     "-Rpass-analysis=loop-vectorize",
     "-Rpass=loop-vectorize",
     "-Rpass-missed=loop-vectorize",
+    "-fdiagnostics-show-template-tree",
 ]
-
 if DEBUG:
     ALL_CPPFLAGS += ["-DDEBUG=1", "-D_DEBUG=1"]
-    ALL_CPPFLAGS += ["-O0", "-g"]
+    ALL_CPPFLAGS += ["-O3", "-g"]
 else:
     ALL_CPPFLAGS += ["/Ox" if platform.system() == "Windows" else "-O3"]
 
