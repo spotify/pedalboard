@@ -290,10 +290,10 @@ else:
     )
 
 ALL_CPPFLAGS += [
-    "-Rpass-analysis=loop-vectorize",
-    "-Rpass=loop-vectorize",
-    "-Rpass-missed=loop-vectorize",
-    "-fdiagnostics-show-template-tree",
+    # "-Rpass-analysis=loop-vectorize",
+    # "-Rpass=loop-vectorize",
+    # "-Rpass-missed=loop-vectorize",
+    # "-fdiagnostics-show-template-tree",
 ]
 if DEBUG:
     ALL_CPPFLAGS += ["-DDEBUG=1", "-D_DEBUG=1"]
