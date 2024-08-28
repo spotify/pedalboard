@@ -50,11 +50,13 @@ static float calcCoefficient(float input, float offset) noexcept {
 
 float SIMDInterpolators::LagrangeTraits::valueAtOffset(
     const float *inputs, const float offset) noexcept {
-  return calcCoefficient<0>(inputs[((int)offset) - 4], offset) +
-         calcCoefficient<1>(inputs[((int)offset) - 3], offset) +
-         calcCoefficient<2>(inputs[((int)offset) - 2], offset) +
-         calcCoefficient<3>(inputs[((int)offset) - 1], offset) +
-         calcCoefficient<4>(inputs[((int)offset)], offset);
+  const int index = (int)offset;
+  const float frac = offset - (float)index;
+  return calcCoefficient<0>(inputs[index - 4], frac) +
+         calcCoefficient<1>(inputs[index - 3], frac) +
+         calcCoefficient<2>(inputs[index - 2], frac) +
+         calcCoefficient<3>(inputs[index - 1], frac) +
+         calcCoefficient<4>(inputs[index], frac);
 }
 
 } // namespace juce
