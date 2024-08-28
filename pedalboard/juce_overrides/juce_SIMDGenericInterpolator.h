@@ -25,17 +25,17 @@
 
 #include "../JuceHeader.h"
 
-#define debugprintf printf
-// #define debugprintf                                                            \
-//   if (false)                                                                   \
-//   printf
+// #define debugprintf printf
+#define debugprintf                                                            \
+  if (false)                                                                   \
+  printf
 
 namespace juce {
 
 template <typename trait, unsigned long K>
-static forcedinline void
+static forcedinline double
 computeValuesAtOffsets(const float *const __restrict inputs,
-                       const float startPos, const float posOffset,
+                       const double startPos, const double posOffset,
                        float *const __restrict outputs) noexcept {
   std::array<float, K> results;
   std::array<float, K> positions;
@@ -47,10 +47,79 @@ computeValuesAtOffsets(const float *const __restrict inputs,
 
 #pragma clang loop vectorize(enable) interleave(enable)
   for (unsigned long i = 0; i < K; i++) {
-    results[i] = trait::valueAtOffset(inputs, positions[i]);
+    outputs[i] = trait::valueAtOffset(inputs, positions[i]);
   }
 
-  std::memcpy(outputs, results.data(), K * sizeof(float));
+  // std::memcpy(outputs, results.data(), K * sizeof(float));
+  return startPos + K * posOffset;
+}
+
+template <typename trait>
+static forcedinline double
+computeValuesAtOffsets(const float *const __restrict inputs, double startPos,
+                       const double posOffset, float *__restrict outputs,
+                       int numOutputSamples) noexcept {
+  while (numOutputSamples > 128) {
+    startPos = computeValuesAtOffsets<trait, 128>(inputs, startPos, posOffset,
+                                                  outputs);
+    outputs += 128;
+    numOutputSamples -= 128;
+  }
+  while (numOutputSamples >= 64) {
+    startPos =
+        computeValuesAtOffsets<trait, 64>(inputs, startPos, posOffset, outputs);
+    outputs += 64;
+    numOutputSamples -= 64;
+  }
+  while (numOutputSamples >= 32) {
+    startPos =
+        computeValuesAtOffsets<trait, 32>(inputs, startPos, posOffset, outputs);
+    outputs += 32;
+    numOutputSamples -= 32;
+  }
+  while (numOutputSamples >= 32) {
+    startPos =
+        computeValuesAtOffsets<trait, 32>(inputs, startPos, posOffset, outputs);
+    outputs += 32;
+    numOutputSamples -= 32;
+  }
+  while (numOutputSamples >= 16) {
+    startPos =
+        computeValuesAtOffsets<trait, 16>(inputs, startPos, posOffset, outputs);
+    outputs += 16;
+    numOutputSamples -= 16;
+  }
+  while (numOutputSamples >= 8) {
+    startPos =
+        computeValuesAtOffsets<trait, 8>(inputs, startPos, posOffset, outputs);
+    outputs += 8;
+    numOutputSamples -= 8;
+  }
+  while (numOutputSamples >= 4) {
+    startPos =
+        computeValuesAtOffsets<trait, 4>(inputs, startPos, posOffset, outputs);
+    outputs += 4;
+    numOutputSamples -= 4;
+  }
+  while (numOutputSamples >= 4) {
+    startPos =
+        computeValuesAtOffsets<trait, 4>(inputs, startPos, posOffset, outputs);
+    outputs += 4;
+    numOutputSamples -= 4;
+  }
+  while (numOutputSamples >= 2) {
+    startPos =
+        computeValuesAtOffsets<trait, 2>(inputs, startPos, posOffset, outputs);
+    outputs += 2;
+    numOutputSamples -= 2;
+  }
+  if (numOutputSamples >= 1) {
+    startPos =
+        computeValuesAtOffsets<trait, 1>(inputs, startPos, posOffset, outputs);
+    outputs++;
+    numOutputSamples--;
+  }
+  return startPos;
 }
 
 /**
@@ -116,19 +185,6 @@ private:
   //==============================================================================
   int interpolate(double speedRatio, const float *input, float *output,
                   int numOutputSamplesToProduce) noexcept {
-    // if (numOutputSamplesToProduce > 1024) {
-    //   // Subdivide the work among many interpolate() calls
-    //   // to avoid floating point errors, which do happen.
-    //   // TODO: use speedRatio as an input here too!
-    //   int toProduceA = numOutputSamplesToProduce / 2;
-    //   int toProduceB = numOutputSamplesToProduce - toProduceA;
-
-    //   int numUsedA = interpolate(speedRatio, input, output, toProduceA);
-    //   int numUsedB = interpolate(speedRatio, input + numUsedA,
-    //                              output + toProduceA, toProduceB);
-    //   return numUsedA + numUsedB;
-    // }
-
     debugprintf("Generating %d output samples at speedRatio=%f with "
                 "lastInputSamples: \t[",
                 numOutputSamplesToProduce, speedRatio);
@@ -145,9 +201,8 @@ private:
 
     int inputBufferSize =
         std::max(numInputSamples + memorySize, (int)std::ceil(pos));
-    float *rawInputBuf = new float[inputBufferSize + 1];
-    rawInputBuf[0] = 12345.6789f;
-    float *inputBuf = rawInputBuf + 1;
+    std::vector<float> vec(inputBufferSize);
+    float *inputBuf = vec.data();
     std::memcpy(inputBuf, lastInputSamples, memorySize * sizeof(float));
     std::memcpy(inputBuf + memorySize, input, numInputSamples * sizeof(float));
 
@@ -163,30 +218,16 @@ private:
         debugprintf("%f, ", inputBuf[i]);
     }
 
-    long long numOutputSamplesProduced = numOutputSamplesToProduce;
-    while (numOutputSamplesToProduce > 0) {
-      *output++ = InterpolatorTraits::valueAtOffset(inputBuf, pos);
-      pos += speedRatio;
-      --numOutputSamplesToProduce;
-    }
+    computeValuesAtOffsets<InterpolatorTraits>(
+        inputBuf, pos, speedRatio, output, numOutputSamplesToProduce);
 
-    pos = subSamplePos + (numOutputSamplesProduced * speedRatio) -
+    pos = subSamplePos + (numOutputSamplesToProduce * speedRatio) -
           numInputSamples;
 
     int lastIndexUsed =
-        (int)std::ceil(subSamplePos + (numOutputSamplesProduced *
-                                       speedRatio) /* - speedRatio */);
+        (int)std::ceil(subSamplePos + (numOutputSamplesToProduce * speedRatio));
 
     numUsed = lastIndexUsed - memorySize;
-
-    // debugprintf("Last index used: %d, pos=%f\n", lastIndexUsed, pos);
-    // while (pos > memorySize) {
-    //   pos -= 1;
-    //   lastIndexUsed++;
-    //   numUsed++;
-
-    //   debugprintf("Last index used: %d, pos=%f\n", lastIndexUsed, pos);
-    // }
 
     if (lastIndexUsed > inputBufferSize) {
       printf("lastIndexUsed (%d) > inputBufferSize (%d)\n", lastIndexUsed,
@@ -202,11 +243,8 @@ private:
       // indexBuffer in this code (as we're not using a ring buffer). Thus,
       // pos must always end pointing at the last sample in lastInputSamples
       // or later.
-      printf("pos (%f) < memorySize - 1 (%d)\n", pos, memorySize - 1);
       pos += 1;
-      // lastIndexUsed += 1;
     }
-    printf("pos (%f) >= memorySize - 1 (%d)\n", pos, memorySize - 1);
 
     debugprintf(
         "Copying %d samples to lastInputSamples from inputBuf[%d:%d]: \t[",
