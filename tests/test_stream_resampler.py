@@ -207,13 +207,28 @@ def test_returned_sample_count(
 # generate_sine_at(96000, 440, num_channels=1, num_seconds=60 * 60)
 
 
+SIMD_INTERPOLATORS = [
+    Resample.Quality.ZeroOrderHold,
+    Resample.Quality.Linear,
+    Resample.Quality.CatmullRom,
+]
+
+FAST_SIMD_INTERPOLATORS = [
+    Resample.Quality.FastZeroOrderHold,
+    Resample.Quality.FastLinear,
+    Resample.Quality.FastCatmullRom,
+]
+
+
 @pytest.mark.parametrize("fundamental_hz", [440])
-@pytest.mark.parametrize("sample_rate", [6000, 44100, 96000])
-@pytest.mark.parametrize("target_sample_rate", [22050, 32000, 48000])
+@pytest.mark.parametrize("sample_rate", [44100, 48000, 96000])
+@pytest.mark.parametrize("target_sample_rate", [11025, 22050, 32000, 48000, 1234.56])
 @pytest.mark.parametrize("buffer_size", [1_000_000_000])
 @pytest.mark.parametrize("num_channels", [1])
 @pytest.mark.parametrize(
-    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
+    "quality",
+    FAST_SIMD_INTERPOLATORS,
+    ids=[q.name for q in FAST_SIMD_INTERPOLATORS],
 )
 def test_speed(
     fundamental_hz: float,
@@ -232,32 +247,64 @@ def test_speed(
     if num_channels == 1:
         sine_wave = np.expand_dims(sine_wave, 0)
 
-    # Downsample:
-    resampler = StreamResampler(sample_rate, target_sample_rate, num_channels, quality)
-    ratio = target_sample_rate / sample_rate
-    a = time.time()
-    outputs = [
-        resampler.process(sine_wave[:, i : i + buffer_size])
-        for i in range(0, sine_wave.shape[1], buffer_size)
-    ]
-    outputs.append(resampler.process(None))
-    b = time.time()
-    with open(f"{sys.version_info.minor}-testresults.txt", "a") as f:
-        f.write(f"{quality} {ratio:.4f}x = {b - a} seconds\n")
+    simd_timings = []
+    for _ in range(3):
+        resampler = StreamResampler(sample_rate, target_sample_rate, num_channels, quality)
+        a = time.time()
+        outputs = [
+            resampler.process(sine_wave[:, i : i + buffer_size])
+            for i in range(0, sine_wave.shape[1], buffer_size)
+        ]
+        outputs.append(resampler.process(None))
+        b = time.time()
+        simd_timings.append(b - a)
+    simd_time = np.mean(simd_timings)
+
+    non_simd_timings = []
+    for _ in range(3):
+        slow_resampler = StreamResampler(
+            sample_rate,
+            target_sample_rate,
+            num_channels,
+            getattr(Resample.Quality, "_Slow" + quality.name.replace("Fast", "")),
+        )
+        a = time.time()
+        outputs = [
+            slow_resampler.process(sine_wave[:, i : i + buffer_size])
+            for i in range(0, sine_wave.shape[1], buffer_size)
+        ]
+        outputs.append(slow_resampler.process(None))
+        b = time.time()
+        non_simd_timings.append(b - a)
+    non_simd_time = np.mean(non_simd_timings)
+
+    print(f"SIMD: {simd_time:.2f}s, non-SIMD: {non_simd_time:.2f}s")
+    if simd_time > non_simd_time:
+        if 1 - (non_simd_time / simd_time) > 0.05:
+            print(f"❌ SIMD is {(1 - (non_simd_time / simd_time)) * 100:.2f}% slower.")
+        else:
+            print(
+                f"☑️ SIMD is roughly the same ({(1 - (non_simd_time / simd_time)) * 100:.2f}% slower)."
+            )
+    else:
+        print(
+            f"✅ SIMD is {(1 - (simd_time / non_simd_time)) * 100:.2f}% "
+            f"({non_simd_time / simd_time:.2f}x) faster."
+        )
 
 
 @pytest.mark.parametrize("sample_rate", [6000, 44100, 96000])
 @pytest.mark.parametrize("target_sample_rate", [22050, 32000, 48000, 1234.56])
+@pytest.mark.parametrize("quality", SIMD_INTERPOLATORS, ids=[q.name for q in SIMD_INTERPOLATORS])
 @pytest.mark.parametrize(
-    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
-)
-@pytest.mark.parametrize(
-    "batch_size", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 1000, 100_000, 158_760_000]
+    "batch_size",
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 1000, 100_000, 158_760_000],
 )
 def test_simd_accuracy(quality, sample_rate, target_sample_rate, batch_size):
-    if quality == Resample.Quality.WindowedSinc:
-        pytest.skip("WindowedSinc is not SIMD-accelerated")
-
+    """
+    This test ensures that all of the SIMD resamplers match the exact behaviour
+    of the old JUCE resampler code (i.e.: Linear is a bit-for-bit match for _SlowLinear).
+    """
     input_length = max(batch_size, 10)
 
     num_channels = 1
@@ -285,16 +332,6 @@ def test_simd_accuracy(quality, sample_rate, target_sample_rate, batch_size):
     expected_output = np.concatenate(outputs, axis=1)
 
     if expected_output.shape[1] < actual_output.shape[1]:
-        # import matplotlib.pyplot as plt
-
-        # start_index = min(expected_output.shape[1], actual_output.shape[1]) - 100
-
-        # plt.plot(actual_output[0, start_index:], label="actual")
-        # plt.plot(expected_output[0, start_index:], label="expected")
-
-        # plt.title(f"Quality: {quality}, " f"Sample rate: {sample_rate} -> {target_sample_rate}")
-        # plt.legend()
-        # plt.show()
         raise AssertionError(
             f"SIMD resampler output {actual_output.shape[1] - expected_output.shape[1]:,} more samples than expected "
             f"({actual_output.shape[1]:,} instead of {expected_output.shape[1]:,})"
@@ -320,20 +357,20 @@ def test_simd_accuracy(quality, sample_rate, target_sample_rate, batch_size):
         except AssertionError:
             import matplotlib.pyplot as plt
 
-            # plt.plot(expected_output[0], label="expected")
-            # plt.plot(actual_output[0], label="actual")
-            # diff = expected_output[0] - actual_output[0]
-            # plt.plot(
-            #     diff[max_diff_index - 100 : max_diff_index + 100],
-            #     label=f"difference ({max_diff_index} ± 100)",
-            # )
-            # plt.title(
-            #     f"Quality: {quality}, "
-            #     f"Sample rate: {sample_rate} -> {target_sample_rate}, "
-            #     f"average diff = {avg_diff}"
-            # )
-            # plt.legend()
-            # plt.show()
+            plt.plot(expected_output[0], label="expected")
+            plt.plot(actual_output[0], label="actual")
+            diff = expected_output[0] - actual_output[0]
+            plt.plot(
+                diff[max_diff_index - 100 : max_diff_index + 100],
+                label=f"difference ({max_diff_index} ± 100)",
+            )
+            plt.title(
+                f"{quality}, "
+                f"{sample_rate}Hz to {target_sample_rate}Hz "
+                f"avg diff = {avg_diff}"
+            )
+            plt.legend()
+            plt.show()
             raise
 
 
@@ -347,5 +384,5 @@ def test_simd_linear_accuracy_hardcoded():
     np.testing.assert_allclose(
         np.array([[0.378125, 1.756250, 3.134375, 4.512500, 5.890625, 7.268750]]),
         actual_output,
-        atol=0.0001,
+        atol=1e-9,
     )

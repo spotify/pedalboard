@@ -28,16 +28,16 @@
 namespace juce {
 
 template <int K> static forcedinline bool isExactRatio(double value) {
-  return value == 0.5 || value == 2 || value == 0.25 || value == 4 ||
-         value == 0.125 || value == 8 || value == 0.0625 || value == 16;
+  double reciprocal = 1.0 / value;
+  return (value * K) == (double)(int)(value * K) &&
+         (reciprocal * K) == (double)(int)(reciprocal * K);
 }
 
 /**
- * @brief The original JUCE resampler code accumulates floating point error in a
+ * The original JUCE resampler code accumulates floating point error in a
  * very specific way. To remain consistent with that, this class does the same.
- *
  */
-struct Position {
+template <bool MatchOriginalPrecision = true> struct Position {
   long long numUsed = 0;
   long long integerPart = 0;
   // This looks weird, right? Well, again, this is to match the original code
@@ -46,11 +46,7 @@ struct Position {
 
   Position(long long _integerStartValue) : integerPart(_integerStartValue) {}
 
-  double getTotalPosition() const {
-    // printf("getTotalPosition: fractionalPart=%.12f, integerPart=%d\n",
-    //        fractionalPart, integerPart);
-    return integerPart + fractionalPart;
-  }
+  double getTotalPosition() const { return integerPart + fractionalPart; }
 
   int getCeiling() const {
     return (fractionalPart > 0) ? integerPart + 1 : integerPart;
@@ -80,7 +76,7 @@ struct Position {
     // For certain ratios that we know to be absolutely exact in floating point,
     // we can speed things up by using closed form methods and integer math,
     // which can be vectorized by the compiler much more effectively:
-    if (isExactRatio<K>(ratio)) {
+    if ((K >= 8 && isExactRatio<K>(ratio)) || !MatchOriginalPrecision) {
       if (_fractionalPart >= 1.0) {
         _integerPart += (int)_fractionalPart;
         _fractionalPart -= (int)_fractionalPart;
@@ -100,7 +96,6 @@ struct Position {
           _fractionalPart -= 1.0;
           _integerPart++;
         }
-
         fractionalParts[i] = _fractionalPart;
         integerParts[i] = _integerPart;
 
@@ -118,15 +113,16 @@ struct Position {
   void resetNumUsed() { numUsed = 0; }
 };
 
-template <typename trait, unsigned long K>
+template <typename trait, unsigned long K, typename Pos>
 static forcedinline void
-computeValuesAtOffsets(const float *const __restrict inputs, Position &position,
+computeValuesAtOffsets(const float *const __restrict inputs, Pos &position,
                        const double posOffset,
                        float *const __restrict outputs) noexcept {
   std::array<float, K> results;
   std::array<float, K> fractionalPositions;
   std::array<int, K> integerPositions;
-  position.incrementBatch<K>(posOffset, fractionalPositions, integerPositions);
+  position.template incrementBatch<K>(posOffset, fractionalPositions,
+                                      integerPositions);
 
 #pragma clang loop vectorize(enable) interleave(enable)
   for (unsigned long i = 0; i < K; i++) {
@@ -140,9 +136,9 @@ computeValuesAtOffsets(const float *const __restrict inputs, Position &position,
   }
 }
 
-template <typename trait>
+template <typename trait, typename Pos>
 static forcedinline void
-computeValuesAtOffsets(const float *const __restrict inputs, Position &position,
+computeValuesAtOffsets(const float *const __restrict inputs, Pos &position,
                        const double posOffset, float *__restrict outputs,
                        int numOutputSamples) noexcept {
   while (numOutputSamples >= 1024) {
@@ -226,7 +222,8 @@ computeValuesAtOffsets(const float *const __restrict inputs, Position &position,
 
     @tags{Audio}
 */
-template <class InterpolatorTraits, int memorySize>
+template <class InterpolatorTraits, int memorySize,
+          typename Pos = Position<false>>
 class JUCE_API SIMDGenericInterpolator {
 public:
   SIMDGenericInterpolator() noexcept { reset(); }
@@ -250,7 +247,7 @@ public:
      stream.
   */
   void reset() noexcept {
-    subSamplePos = Position(memorySize - 1);
+    subSamplePos = Pos(memorySize - 1);
     std::fill(std::begin(lastInputSamples), std::end(lastInputSamples), 0.0f);
   }
 
@@ -276,11 +273,6 @@ private:
   //==============================================================================
   int interpolate(double speedRatio, const float *input, float *output,
                   int numOutputSamplesToProduce) noexcept {
-    // printf("\n\n[new       ]\e[0;32m Outputting %d samples with speed "
-    //        "ratio %f and pos %.20f (%d + %.20f)\e[0m\n",
-    //        numOutputSamplesToProduce, speedRatio,
-    //        subSamplePos.getTotalPosition(), subSamplePos.integerPart,
-    //        subSamplePos.fractionalPart);
     auto pos = subSamplePos;
     int numUsed = 0;
 
@@ -294,21 +286,12 @@ private:
     int inputBufferSwitchThreshold = memorySize * 2;
     int inputBufferSize =
         std::max(numInputSamplesToBuffer + memorySize, pos.getCeiling());
-    std::vector<float> vec(inputBufferSize);
-    float *inputBuf = vec.data();
+    float inputBuf[memorySize * 3]; // up to inputBufferSize will be used
 
     // Copy all of lastInputSamples in:
     std::memcpy(inputBuf, lastInputSamples, memorySize * sizeof(float));
     std::memcpy(inputBuf + memorySize, input,
                 numInputSamplesToBuffer * sizeof(float));
-
-    // printf("numInputSamples is %d, copied into inputBuf = [",
-    // numInputSamples); for (int i = 0; i < inputBufferSize; i++) {
-    //   if (i == inputBufferSize - 1)
-    //     printf("%f]\n\n", inputBuf[i]);
-    //   else
-    //     printf("%f, ", inputBuf[i]);
-    // }
 
     if ((numInputSamples + memorySize) > inputBufferSwitchThreshold) {
       // Compute the first samples from the input buffer alone,
@@ -340,28 +323,9 @@ private:
           inputBuf, pos, speedRatio, output, numOutputSamplesToProduce);
     }
 
-    // The following calculation is "more correct" but does not match the
-    // original code: pos = subSamplePos + (numOutputSamplesToProduce *
-    // speedRatio) -
-    //       numInputSamples;
-
-    // Note that this index is from the start of the lastInputSamples buffer,
-    // virtually concatenated with the input buffer.
-    // int lastIndexUsed =
-    //     (int)std::ceil(subSamplePos.getTotalPosition() +
-    //                    (numOutputSamplesToProduce * speedRatio));
-    int lastIndexUsed = std::max(0, pos.getCeilingMinus(speedRatio));
-    // printf("[new       ] lastIndexUsed = %d\n", lastIndexUsed);
-    // printf("[new       ] pos = %d + %.20f\n", pos.integerPart,
-    //        pos.fractionalPart);
-
-    // numUsed = lastIndexUsed - memorySize - 1;
     numUsed = pos.numUsed;
-    // printf("[new       ] numUsed = %d\n", numUsed);
     pos.decrementInteger(numUsed);
     pos.resetNumUsed();
-    // printf("[new       ] pos = %d + %.20f\n", pos.integerPart,
-    //        pos.fractionalPart);
 
     while (pos.getTotalPosition() <= (memorySize - 1)) {
       // In the original code, the real position in the lastInputSamples
@@ -370,37 +334,20 @@ private:
       // buffer). Thus, pos must always end pointing at the last sample in
       // lastInputSamples or later.
       pos.incrementInteger(1);
-      // printf("[new       ] pos = %d + %.20f\n", pos.integerPart,
-      //        pos.fractionalPart);
     }
 
-    if ((lastIndexUsed - memorySize) >= inputBufferSwitchThreshold) {
-      std::memcpy(lastInputSamples, input + lastIndexUsed - memorySize * 2,
+    if (numUsed >= inputBufferSwitchThreshold) {
+      std::memcpy(lastInputSamples,
+                  input + numUsed + memorySize - memorySize * 2,
                   memorySize * sizeof(float));
-    } else if (lastIndexUsed > memorySize) {
-      int startOfCopy = std::min(inputBufferSize, lastIndexUsed) - memorySize;
-      printf("copying out of inputBuf from index %d = [", startOfCopy);
-      for (int i = 0; i < inputBufferSize; i++) {
-        if (i == inputBufferSize - 1)
-          printf("%f]\n\n", inputBuf[i]);
-        else
-          printf("%f, ", inputBuf[i]);
-      }
+    } else if (numUsed > 0) {
+      int startOfCopy =
+          std::min(inputBufferSize, numUsed + memorySize) - memorySize;
       std::memcpy(lastInputSamples, inputBuf + startOfCopy,
                   memorySize * sizeof(float));
     }
 
     subSamplePos = pos;
-    printf(
-        "new Exiting with numUsed=%d, subSamplePos=%.20f, lastIndexUsed = % d, "
-        "lastInputSamples = [",
-        numUsed, subSamplePos.getTotalPosition(), lastIndexUsed);
-    for (int i = 0; i < memorySize; i++) {
-      if (i == memorySize - 1)
-        printf("%f]\n\n", lastInputSamples[i]);
-      else
-        printf("%f, ", lastInputSamples[i]);
-    }
     return numUsed;
   }
 
@@ -409,7 +356,7 @@ private:
 
   // This sub-sample position is indexed from the start of lastInputSamples,
   // which is initialized with zeros.
-  Position subSamplePos = Position(memorySize);
+  Pos subSamplePos = Pos(memorySize);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SIMDGenericInterpolator)
 };
@@ -424,12 +371,6 @@ private:
 */
 class SIMDInterpolators {
 private:
-  struct LagrangeTraits {
-    static constexpr float algorithmicLatency = 2.0f;
-
-    static float valueAtOffset(const float *, float, int) noexcept;
-  };
-
   struct CatmullRomTraits {
     //==============================================================================
     static constexpr float algorithmicLatency = 2.0f;
@@ -461,11 +402,7 @@ private:
       auto y0 = inputs[index - 1];
       auto y1 = inputs[index];
 
-      auto result = y1 * frac + y0 * (1.0f - frac);
-      // printf("{\"type\": \"new\", \"y0\": %.12f, \"y1\": %.12f, \"frac\": "
-      //        "%.12f, \"index\": %d, \"result\": %.12f}\n",
-      //        y0, y1, frac, index, result);
-      return result;
+      return y1 * frac + y0 * (1.0f - frac);
     }
   };
 
@@ -480,10 +417,33 @@ private:
   };
 
 public:
-  using Lagrange = SIMDGenericInterpolator<LagrangeTraits, 5>;
-  using CatmullRom = SIMDGenericInterpolator<CatmullRomTraits, 4>;
-  using Linear = SIMDGenericInterpolator<LinearTraits, 2>;
-  using ZeroOrderHold = SIMDGenericInterpolator<ZeroOrderHoldTraits, 1>;
+  using LegacyPosition = Position<true>;
+  using ExactPosition = Position<false>;
+
+  // NOTE(psobot): These two interpolator types are very particular about
+  // the order in which their input buffers are filled (i.e.: left-to-right
+  // instead of right-to-left). This is not yet implemented in the above
+  // SIMD code. To enable this, some of the indexing and buffer filling logic
+  // will have to be rewritten to accommodate this.
+  //
+  // using WindowedSinc  = GenericInterpolator<WindowedSincTraits,  200>;
+  // using Lagrange = SIMDGenericInterpolator<LagrangeTraits, 5>;
+
+  // These variants are faster for all sampling ratios, but their outputs
+  // are not byte-for-byte identical to the original JUCE interpolators:
+  using CatmullRom =
+      SIMDGenericInterpolator<CatmullRomTraits, 4, ExactPosition>;
+  using Linear = SIMDGenericInterpolator<LinearTraits, 2, ExactPosition>;
+  using ZeroOrderHold =
+      SIMDGenericInterpolator<ZeroOrderHoldTraits, 1, ExactPosition>;
+
+  // Variants that match the original precision of the JUCE interpolators,
+  // but may be slower for non-exact sampling ratios:
+  using LegacyCatmullRom =
+      SIMDGenericInterpolator<CatmullRomTraits, 4, LegacyPosition>;
+  using LegacyLinear = SIMDGenericInterpolator<LinearTraits, 2, LegacyPosition>;
+  using LegacyZeroOrderHold =
+      SIMDGenericInterpolator<ZeroOrderHoldTraits, 1, LegacyPosition>;
 };
 
 } // namespace juce

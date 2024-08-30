@@ -289,12 +289,7 @@ else:
         "Not sure how to build JUCE on platform: {}!".format(platform.system())
     )
 
-ALL_CPPFLAGS += [
-    "-Rpass-analysis=loop-vectorize",
-    "-Rpass=loop-vectorize",
-    "-Rpass-missed=loop-vectorize",
-    "-fdiagnostics-show-template-tree",
-]
+ALL_CPPFLAGS += []
 if DEBUG:
     ALL_CPPFLAGS += ["-DDEBUG=1", "-D_DEBUG=1"]
     ALL_CPPFLAGS += ["-O3", "-g"]
