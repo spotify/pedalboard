@@ -49,9 +49,7 @@ static float calcCoefficient(float input, float offset) noexcept {
 }
 
 float SIMDInterpolators::LagrangeTraits::valueAtOffset(
-    const float *inputs, const float offset) noexcept {
-  const int index = (int)offset;
-  const float frac = offset - (float)index;
+    const float *inputs, const float frac, const int index) noexcept {
   return calcCoefficient<0>(inputs[index - 4], frac) +
          calcCoefficient<1>(inputs[index - 3], frac) +
          calcCoefficient<2>(inputs[index - 2], frac) +

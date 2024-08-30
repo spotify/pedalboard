@@ -247,29 +247,28 @@ def test_speed(
 
 
 @pytest.mark.parametrize("sample_rate", [6000, 44100, 96000])
-@pytest.mark.parametrize("target_sample_rate", [22050, 32000, 48000])
+@pytest.mark.parametrize("target_sample_rate", [22050, 32000, 48000, 1234.56])
 @pytest.mark.parametrize(
     "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
 )
-@pytest.mark.parametrize("batch_size", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+@pytest.mark.parametrize(
+    "batch_size", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 1000, 100_000, 158_760_000]
+)
 def test_simd_accuracy(quality, sample_rate, target_sample_rate, batch_size):
+    if quality == Resample.Quality.WindowedSinc:
+        pytest.skip("WindowedSinc is not SIMD-accelerated")
+
+    input_length = max(batch_size, 10)
+
     num_channels = 1
-    _input = np.expand_dims(np.arange(0, 10, dtype=np.float32), 0)
+    _input = np.expand_dims(np.arange(0, input_length, dtype=np.float32), 0)
 
     new_resampler = StreamResampler(sample_rate, target_sample_rate, num_channels, quality)
-
-    print()
-    print("Passing in inputs:")
-    for i in range(0, _input.shape[1], batch_size):
-        print(f"\t{_input[:, i : i + batch_size]}")
     outputs = [
         new_resampler.process(_input[:, i : i + batch_size])
         for i in range(0, _input.shape[1], batch_size)
     ]
     outputs.append(new_resampler.process(None))
-    print(f"Actual outputs:")
-    for o in outputs:
-        print(f"\t{o}")
     actual_output = np.concatenate(outputs, axis=1)
 
     accurate_resampler = StreamResampler(
@@ -283,14 +282,59 @@ def test_simd_accuracy(quality, sample_rate, target_sample_rate, batch_size):
         for i in range(0, _input.shape[1], batch_size)
     ]
     outputs.append(accurate_resampler.process(None))
-    print(f"Expected outputs:")
-    for o in outputs:
-        print(f"\t{o}")
     expected_output = np.concatenate(outputs, axis=1)
 
-    print(f"{actual_output=}")
-    print(f"{expected_output=}")
-    np.testing.assert_allclose(expected_output, actual_output, atol=0.0001)
+    if expected_output.shape[1] < actual_output.shape[1]:
+        # import matplotlib.pyplot as plt
+
+        # start_index = min(expected_output.shape[1], actual_output.shape[1]) - 100
+
+        # plt.plot(actual_output[0, start_index:], label="actual")
+        # plt.plot(expected_output[0, start_index:], label="expected")
+
+        # plt.title(f"Quality: {quality}, " f"Sample rate: {sample_rate} -> {target_sample_rate}")
+        # plt.legend()
+        # plt.show()
+        raise AssertionError(
+            f"SIMD resampler output {actual_output.shape[1] - expected_output.shape[1]:,} more samples than expected "
+            f"({actual_output.shape[1]:,} instead of {expected_output.shape[1]:,})"
+        )
+
+    if expected_output.shape[1] > actual_output.shape[1]:
+        raise AssertionError(
+            f"SIMD resampler output {expected_output.shape[1] - actual_output.shape[1]:,} fewer samples than expected "
+            f"({expected_output.shape[1]:,} instead of {actual_output.shape[1]:,})"
+        )
+
+    if expected_output.shape[1] > 0:
+        try:
+            avg_diff = np.average(expected_output - actual_output)
+            max_diff = np.amax(np.abs(expected_output - actual_output))
+            max_diff_index = np.argmax(np.abs(expected_output - actual_output))
+            np.testing.assert_allclose(
+                expected_output,
+                actual_output,
+                atol=1e-8,
+                err_msg=f"Max diff: {max_diff} at index {max_diff_index:,}",
+            )
+        except AssertionError:
+            import matplotlib.pyplot as plt
+
+            # plt.plot(expected_output[0], label="expected")
+            # plt.plot(actual_output[0], label="actual")
+            # diff = expected_output[0] - actual_output[0]
+            # plt.plot(
+            #     diff[max_diff_index - 100 : max_diff_index + 100],
+            #     label=f"difference ({max_diff_index} ± 100)",
+            # )
+            # plt.title(
+            #     f"Quality: {quality}, "
+            #     f"Sample rate: {sample_rate} -> {target_sample_rate}, "
+            #     f"average diff = {avg_diff}"
+            # )
+            # plt.legend()
+            # plt.show()
+            raise
 
 
 def test_simd_linear_accuracy_hardcoded():

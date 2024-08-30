@@ -25,101 +25,191 @@
 
 #include "../JuceHeader.h"
 
-// #define debugprintf printf
-#define debugprintf                                                            \
-  if (false)                                                                   \
-  printf
-
 namespace juce {
 
+template <int K> static forcedinline bool isExactRatio(double value) {
+  return value == 0.5 || value == 2 || value == 0.25 || value == 4 ||
+         value == 0.125 || value == 8 || value == 0.0625 || value == 16;
+}
+
+/**
+ * @brief The original JUCE resampler code accumulates floating point error in a
+ * very specific way. To remain consistent with that, this class does the same.
+ *
+ */
+struct Position {
+  long long numUsed = 0;
+  long long integerPart = 0;
+  // This looks weird, right? Well, again, this is to match the original code
+  // with all of its floating-point quirks.
+  double fractionalPart = 1.0;
+
+  Position(long long _integerStartValue) : integerPart(_integerStartValue) {}
+
+  double getTotalPosition() const {
+    // printf("getTotalPosition: fractionalPart=%.12f, integerPart=%d\n",
+    //        fractionalPart, integerPart);
+    return integerPart + fractionalPart;
+  }
+
+  int getCeiling() const {
+    return (fractionalPart > 0) ? integerPart + 1 : integerPart;
+  }
+
+  int getCeilingMinus(double offset) const {
+    int toReturn = integerPart + 1;
+    double fractionalPartCopy = fractionalPart - offset;
+    while (fractionalPartCopy < 0 || fractionalPartCopy == 0) {
+      toReturn--;
+      fractionalPartCopy += 1.0;
+    }
+    return toReturn;
+  }
+
+  void incrementInteger(long long amount) { integerPart += amount; }
+
+  template <int K>
+  forcedinline void incrementBatch(double ratio,
+                                   std::array<float, K> &fractionalParts,
+                                   std::array<int, K> &integerParts) {
+
+    int integerPartStart = integerPart;
+    int _integerPart = integerPart;
+    double _fractionalPart = fractionalPart;
+
+    // For certain ratios that we know to be absolutely exact in floating point,
+    // we can speed things up by using closed form methods and integer math,
+    // which can be vectorized by the compiler much more effectively:
+    if (isExactRatio<K>(ratio)) {
+      if (_fractionalPart >= 1.0) {
+        _integerPart += (int)_fractionalPart;
+        _fractionalPart -= (int)_fractionalPart;
+      }
+#pragma clang loop vectorize(enable) interleave(enable)
+      for (int i = 0; i < K; i++) {
+        fractionalParts[i] = _fractionalPart + (ratio * i) -
+                             (int)(_fractionalPart + (ratio * i));
+        integerParts[i] = _integerPart + (i * ratio);
+      }
+      _fractionalPart = fractionalParts[K - 1] + ratio;
+      _integerPart = integerParts[K - 1];
+    } else {
+#pragma clang loop vectorize(enable) interleave(enable)
+      for (int i = 0; i < K; i++) {
+        while (_fractionalPart >= 1.0) {
+          _fractionalPart -= 1.0;
+          _integerPart++;
+        }
+
+        fractionalParts[i] = _fractionalPart;
+        integerParts[i] = _integerPart;
+
+        _fractionalPart += ratio;
+      }
+    }
+
+    integerPart = _integerPart;
+    fractionalPart = _fractionalPart;
+    numUsed += _integerPart - integerPartStart;
+  }
+
+  void decrementInteger(long long amount) { integerPart -= amount; }
+
+  void resetNumUsed() { numUsed = 0; }
+};
+
 template <typename trait, unsigned long K>
-static forcedinline double
-computeValuesAtOffsets(const float *const __restrict inputs,
-                       const double startPos, const double posOffset,
+static forcedinline void
+computeValuesAtOffsets(const float *const __restrict inputs, Position &position,
+                       const double posOffset,
                        float *const __restrict outputs) noexcept {
   std::array<float, K> results;
-  std::array<float, K> positions;
+  std::array<float, K> fractionalPositions;
+  std::array<int, K> integerPositions;
+  position.incrementBatch<K>(posOffset, fractionalPositions, integerPositions);
 
 #pragma clang loop vectorize(enable) interleave(enable)
   for (unsigned long i = 0; i < K; i++) {
-    positions[i] = (startPos + (i * posOffset));
+    results[i] = trait::valueAtOffset(inputs, fractionalPositions[i],
+                                      integerPositions[i]);
   }
 
 #pragma clang loop vectorize(enable) interleave(enable)
   for (unsigned long i = 0; i < K; i++) {
-    outputs[i] = trait::valueAtOffset(inputs, positions[i]);
+    outputs[i] = results[i];
   }
-
-  // std::memcpy(outputs, results.data(), K * sizeof(float));
-  return startPos + K * posOffset;
 }
 
 template <typename trait>
-static forcedinline double
-computeValuesAtOffsets(const float *const __restrict inputs, double startPos,
+static forcedinline void
+computeValuesAtOffsets(const float *const __restrict inputs, Position &position,
                        const double posOffset, float *__restrict outputs,
                        int numOutputSamples) noexcept {
-  while (numOutputSamples > 128) {
-    startPos = computeValuesAtOffsets<trait, 128>(inputs, startPos, posOffset,
-                                                  outputs);
+  while (numOutputSamples >= 1024) {
+    computeValuesAtOffsets<trait, 1024>(inputs, position, posOffset, outputs);
+    outputs += 1024;
+    numOutputSamples -= 1024;
+  }
+  while (numOutputSamples >= 512) {
+    computeValuesAtOffsets<trait, 512>(inputs, position, posOffset, outputs);
+    outputs += 512;
+    numOutputSamples -= 512;
+  }
+  while (numOutputSamples >= 256) {
+    computeValuesAtOffsets<trait, 256>(inputs, position, posOffset, outputs);
+    outputs += 256;
+    numOutputSamples -= 256;
+  }
+  while (numOutputSamples >= 128) {
+    computeValuesAtOffsets<trait, 128>(inputs, position, posOffset, outputs);
     outputs += 128;
     numOutputSamples -= 128;
   }
   while (numOutputSamples >= 64) {
-    startPos =
-        computeValuesAtOffsets<trait, 64>(inputs, startPos, posOffset, outputs);
+    computeValuesAtOffsets<trait, 64>(inputs, position, posOffset, outputs);
     outputs += 64;
     numOutputSamples -= 64;
   }
   while (numOutputSamples >= 32) {
-    startPos =
-        computeValuesAtOffsets<trait, 32>(inputs, startPos, posOffset, outputs);
+    computeValuesAtOffsets<trait, 32>(inputs, position, posOffset, outputs);
     outputs += 32;
     numOutputSamples -= 32;
   }
   while (numOutputSamples >= 32) {
-    startPos =
-        computeValuesAtOffsets<trait, 32>(inputs, startPos, posOffset, outputs);
+    computeValuesAtOffsets<trait, 32>(inputs, position, posOffset, outputs);
     outputs += 32;
     numOutputSamples -= 32;
   }
   while (numOutputSamples >= 16) {
-    startPos =
-        computeValuesAtOffsets<trait, 16>(inputs, startPos, posOffset, outputs);
+    computeValuesAtOffsets<trait, 16>(inputs, position, posOffset, outputs);
     outputs += 16;
     numOutputSamples -= 16;
   }
   while (numOutputSamples >= 8) {
-    startPos =
-        computeValuesAtOffsets<trait, 8>(inputs, startPos, posOffset, outputs);
+    computeValuesAtOffsets<trait, 8>(inputs, position, posOffset, outputs);
     outputs += 8;
     numOutputSamples -= 8;
   }
   while (numOutputSamples >= 4) {
-    startPos =
-        computeValuesAtOffsets<trait, 4>(inputs, startPos, posOffset, outputs);
+    computeValuesAtOffsets<trait, 4>(inputs, position, posOffset, outputs);
     outputs += 4;
     numOutputSamples -= 4;
   }
   while (numOutputSamples >= 4) {
-    startPos =
-        computeValuesAtOffsets<trait, 4>(inputs, startPos, posOffset, outputs);
+    computeValuesAtOffsets<trait, 4>(inputs, position, posOffset, outputs);
     outputs += 4;
     numOutputSamples -= 4;
   }
   while (numOutputSamples >= 2) {
-    startPos =
-        computeValuesAtOffsets<trait, 2>(inputs, startPos, posOffset, outputs);
+    computeValuesAtOffsets<trait, 2>(inputs, position, posOffset, outputs);
     outputs += 2;
     numOutputSamples -= 2;
   }
   if (numOutputSamples >= 1) {
-    startPos =
-        computeValuesAtOffsets<trait, 1>(inputs, startPos, posOffset, outputs);
+    computeValuesAtOffsets<trait, 1>(inputs, position, posOffset, outputs);
     outputs++;
     numOutputSamples--;
   }
-  return startPos;
 }
 
 /**
@@ -131,8 +221,8 @@ computeValuesAtOffsets(const float *const __restrict inputs, double startPos,
    you're resampling multiple channels, make sure each one uses its own
    interpolator object.
 
-    @see LagrangeInterpolator, CatmullRomInterpolator, WindowedSincInterpolator,
-         LinearInterpolator, ZeroOrderHoldInterpolator
+    @see LagrangeInterpolator, CatmullRomInterpolator,
+   WindowedSincInterpolator, LinearInterpolator, ZeroOrderHoldInterpolator
 
     @tags{Audio}
 */
@@ -156,17 +246,18 @@ public:
 
   /** Resets the state of the interpolator.
 
-      Call this when there's a break in the continuity of the input data stream.
+      Call this when there's a break in the continuity of the input data
+     stream.
   */
   void reset() noexcept {
-    subSamplePos = memorySize;
+    subSamplePos = Position(memorySize - 1);
     std::fill(std::begin(lastInputSamples), std::end(lastInputSamples), 0.0f);
   }
 
   /** Resamples a stream of samples.
 
-      @param speedRatio                   the number of input samples to use for
-     each output sample
+      @param speedRatio                   the number of input samples to use
+     for each output sample
       @param inputSamples                 the source data to read from. This
      must contain at least (speedRatio * numOutputSamplesToProduce) samples.
       @param outputSamples                the buffer to write the results into
@@ -185,87 +276,130 @@ private:
   //==============================================================================
   int interpolate(double speedRatio, const float *input, float *output,
                   int numOutputSamplesToProduce) noexcept {
-    debugprintf("Generating %d output samples at speedRatio=%f with "
-                "lastInputSamples: \t[",
-                numOutputSamplesToProduce, speedRatio);
-    for (int i = 0; i < memorySize; i++) {
-      if (i == memorySize - 1)
-        debugprintf("%f]\n", lastInputSamples[i]);
-      else
-        debugprintf("%f, ", lastInputSamples[i]);
-    }
+    // printf("\n\n[new       ]\e[0;32m Outputting %d samples with speed "
+    //        "ratio %f and pos %.20f (%d + %.20f)\e[0m\n",
+    //        numOutputSamplesToProduce, speedRatio,
+    //        subSamplePos.getTotalPosition(), subSamplePos.integerPart,
+    //        subSamplePos.fractionalPart);
     auto pos = subSamplePos;
     int numUsed = 0;
 
     int numInputSamples = std::ceil(numOutputSamplesToProduce * speedRatio);
 
+    // The number of samples to copy from the input buffer into a temporary
+    // stack buffer. Once we read past memorySize * 2 samples, we can switch
+    // to reading the input buffer directly to avoid having to copy all of
+    // the input into a temporary buffer.
+    int numInputSamplesToBuffer = std::min(numInputSamples, memorySize * 2);
+    int inputBufferSwitchThreshold = memorySize * 2;
     int inputBufferSize =
-        std::max(numInputSamples + memorySize, (int)std::ceil(pos));
+        std::max(numInputSamplesToBuffer + memorySize, pos.getCeiling());
     std::vector<float> vec(inputBufferSize);
     float *inputBuf = vec.data();
+
+    // Copy all of lastInputSamples in:
     std::memcpy(inputBuf, lastInputSamples, memorySize * sizeof(float));
-    std::memcpy(inputBuf + memorySize, input, numInputSamples * sizeof(float));
+    std::memcpy(inputBuf + memorySize, input,
+                numInputSamplesToBuffer * sizeof(float));
 
-    debugprintf(
-        "Producing %d output samples from pos=%f with buffer with size %d "
-        "(%d input samples, %d memory size): [",
-        numOutputSamplesToProduce, pos, numInputSamples + memorySize,
-        numInputSamples, memorySize);
-    for (int i = 0; i < numInputSamples + memorySize; i++) {
-      if (i == numInputSamples + memorySize - 1)
-        debugprintf("%f]\n", inputBuf[i]);
-      else
-        debugprintf("%f, ", inputBuf[i]);
+    // printf("numInputSamples is %d, copied into inputBuf = [",
+    // numInputSamples); for (int i = 0; i < inputBufferSize; i++) {
+    //   if (i == inputBufferSize - 1)
+    //     printf("%f]\n\n", inputBuf[i]);
+    //   else
+    //     printf("%f, ", inputBuf[i]);
+    // }
+
+    if ((numInputSamples + memorySize) > inputBufferSwitchThreshold) {
+      // Compute the first samples from the input buffer alone,
+      // rounding down to figure out how many full output samples
+      // we can compute:
+      int numOutputSamplesThatCanBeProducedFromBuffer = 0;
+      while (
+          numOutputSamplesThatCanBeProducedFromBuffer <
+              numOutputSamplesToProduce &&
+          pos.getTotalPosition() +
+                  (numOutputSamplesThatCanBeProducedFromBuffer * speedRatio) <
+              memorySize * 2) {
+        numOutputSamplesThatCanBeProducedFromBuffer++;
+      }
+
+      computeValuesAtOffsets<InterpolatorTraits>(
+          inputBuf, pos, speedRatio, output,
+          numOutputSamplesThatCanBeProducedFromBuffer);
+      int remainingOutputSamples = numOutputSamplesToProduce -
+                                   numOutputSamplesThatCanBeProducedFromBuffer;
+      pos.decrementInteger(memorySize);
+      computeValuesAtOffsets<InterpolatorTraits>(
+          input, pos, speedRatio,
+          output + numOutputSamplesThatCanBeProducedFromBuffer,
+          remainingOutputSamples);
+      pos.incrementInteger(memorySize);
+    } else {
+      computeValuesAtOffsets<InterpolatorTraits>(
+          inputBuf, pos, speedRatio, output, numOutputSamplesToProduce);
     }
 
-    computeValuesAtOffsets<InterpolatorTraits>(
-        inputBuf, pos, speedRatio, output, numOutputSamplesToProduce);
+    // The following calculation is "more correct" but does not match the
+    // original code: pos = subSamplePos + (numOutputSamplesToProduce *
+    // speedRatio) -
+    //       numInputSamples;
 
-    pos = subSamplePos + (numOutputSamplesToProduce * speedRatio) -
-          numInputSamples;
+    // Note that this index is from the start of the lastInputSamples buffer,
+    // virtually concatenated with the input buffer.
+    // int lastIndexUsed =
+    //     (int)std::ceil(subSamplePos.getTotalPosition() +
+    //                    (numOutputSamplesToProduce * speedRatio));
+    int lastIndexUsed = std::max(0, pos.getCeilingMinus(speedRatio));
+    // printf("[new       ] lastIndexUsed = %d\n", lastIndexUsed);
+    // printf("[new       ] pos = %d + %.20f\n", pos.integerPart,
+    //        pos.fractionalPart);
 
-    int lastIndexUsed =
-        (int)std::ceil(subSamplePos + (numOutputSamplesToProduce * speedRatio));
+    // numUsed = lastIndexUsed - memorySize - 1;
+    numUsed = pos.numUsed;
+    // printf("[new       ] numUsed = %d\n", numUsed);
+    pos.decrementInteger(numUsed);
+    pos.resetNumUsed();
+    // printf("[new       ] pos = %d + %.20f\n", pos.integerPart,
+    //        pos.fractionalPart);
 
-    numUsed = lastIndexUsed - memorySize;
-
-    if (lastIndexUsed > inputBufferSize) {
-      printf("lastIndexUsed (%d) > inputBufferSize (%d)\n", lastIndexUsed,
-             inputBufferSize);
-      throw std::runtime_error(
-          "lastIndexUsed (" + std::to_string(lastIndexUsed) +
-          ") > inputBufferSize (" + std::to_string(inputBufferSize) + ")");
+    while (pos.getTotalPosition() <= (memorySize - 1)) {
+      // In the original code, the real position in the lastInputSamples
+      // buffer is given by (pos + indexBuffer) % memorySize. However, we
+      // don't have indexBuffer in this code (as we're not using a ring
+      // buffer). Thus, pos must always end pointing at the last sample in
+      // lastInputSamples or later.
+      pos.incrementInteger(1);
+      // printf("[new       ] pos = %d + %.20f\n", pos.integerPart,
+      //        pos.fractionalPart);
     }
 
-    while (pos <= (memorySize - 1)) {
-      // In the original code, the real position in the lastInputSamples buffer
-      // is given by (pos + indexBuffer) % memorySize. However, we don't have
-      // indexBuffer in this code (as we're not using a ring buffer). Thus,
-      // pos must always end pointing at the last sample in lastInputSamples
-      // or later.
-      pos += 1;
+    if ((lastIndexUsed - memorySize) >= inputBufferSwitchThreshold) {
+      std::memcpy(lastInputSamples, input + lastIndexUsed - memorySize * 2,
+                  memorySize * sizeof(float));
+    } else if (lastIndexUsed > memorySize) {
+      int startOfCopy = std::min(inputBufferSize, lastIndexUsed) - memorySize;
+      printf("copying out of inputBuf from index %d = [", startOfCopy);
+      for (int i = 0; i < inputBufferSize; i++) {
+        if (i == inputBufferSize - 1)
+          printf("%f]\n\n", inputBuf[i]);
+        else
+          printf("%f, ", inputBuf[i]);
+      }
+      std::memcpy(lastInputSamples, inputBuf + startOfCopy,
+                  memorySize * sizeof(float));
     }
 
-    debugprintf(
-        "Copying %d samples to lastInputSamples from inputBuf[%d:%d]: \t[",
-        memorySize, lastIndexUsed - memorySize, lastIndexUsed);
-    std::memcpy(lastInputSamples, inputBuf + lastIndexUsed - memorySize,
-                memorySize * sizeof(float));
-    for (int i = 0; i < memorySize; i++) {
-      if (i == memorySize - 1)
-        debugprintf("%f]\n", lastInputSamples[i]);
-      else
-        debugprintf("%f, ", lastInputSamples[i]);
-    }
     subSamplePos = pos;
-    debugprintf(
-        "Exiting with numUsed=%d, subSamplePos=%f, lastInputSamples = [",
-        numUsed, subSamplePos);
+    printf(
+        "new Exiting with numUsed=%d, subSamplePos=%.20f, lastIndexUsed = % d, "
+        "lastInputSamples = [",
+        numUsed, subSamplePos.getTotalPosition(), lastIndexUsed);
     for (int i = 0; i < memorySize; i++) {
       if (i == memorySize - 1)
-        debugprintf("%f]\n\n", lastInputSamples[i]);
+        printf("%f]\n\n", lastInputSamples[i]);
       else
-        debugprintf("%f, ", lastInputSamples[i]);
+        printf("%f, ", lastInputSamples[i]);
     }
     return numUsed;
   }
@@ -275,7 +409,7 @@ private:
 
   // This sub-sample position is indexed from the start of lastInputSamples,
   // which is initialized with zeros.
-  double subSamplePos = memorySize;
+  Position subSamplePos = Position(memorySize);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SIMDGenericInterpolator)
 };
@@ -290,86 +424,19 @@ private:
 */
 class SIMDInterpolators {
 private:
-  struct WindowedSincTraits {
-    static constexpr float algorithmicLatency = 100.0f;
-
-    static forcedinline float windowedSinc(float firstFrac,
-                                           int index) noexcept {
-      auto index2 = index + 1;
-      auto frac = firstFrac;
-
-      auto value1 = lookupTable[index];
-      auto value2 = lookupTable[index2];
-
-      return value1 + (frac * (value2 - value1));
-    }
-
-    static forcedinline float valueAtOffset(const float *const inputs,
-                                            const float offset) noexcept {
-      const float frac = offset - (int)offset;
-
-      const int numCrossings = 100;
-      const float floatCrossings = (float)numCrossings;
-      float result = 0.0f;
-
-      auto samplePosition = (int)(offset + 1 - 2 * algorithmicLatency);
-      float firstFrac = 0.0f;
-      float lastSincPosition = -1.0f;
-      int index = 0, sign = -1;
-
-      for (int i = -numCrossings; i <= numCrossings; ++i) {
-        auto sincPosition = (1.0f - frac) + (float)i;
-
-        if (i == -numCrossings || (sincPosition >= 0 && lastSincPosition < 0)) {
-          auto indexFloat =
-              (sincPosition >= 0.f ? sincPosition : -sincPosition) * 100.0f;
-          auto indexFloored = std::floor(indexFloat);
-          index = (int)indexFloored;
-          firstFrac = indexFloat - indexFloored;
-          sign = (sincPosition < 0 ? -1 : 1);
-        }
-
-        if (sincPosition == 0.0f) {
-          debugprintf(
-              "[new WinSin] Reading from inputs[%d] => \e[0;32m%f\e[0;0m\n",
-              samplePosition, inputs[samplePosition]);
-          result += inputs[samplePosition];
-        } else if (sincPosition < floatCrossings &&
-                   sincPosition > -floatCrossings) {
-          debugprintf(
-              "[new WinSin] Reading from inputs[%d] => \e[0;32m%f\e[0;0m\n",
-              samplePosition, inputs[samplePosition]);
-          result += inputs[samplePosition] * windowedSinc(firstFrac, index);
-        }
-
-        if (++samplePosition == numCrossings * 2)
-          samplePosition = 0;
-
-        lastSincPosition = sincPosition;
-        index += 100 * sign;
-      }
-
-      return result;
-    }
-
-    static const float lookupTable[10001];
-  };
-
   struct LagrangeTraits {
     static constexpr float algorithmicLatency = 2.0f;
 
-    static float valueAtOffset(const float *, float) noexcept;
+    static float valueAtOffset(const float *, float, int) noexcept;
   };
 
   struct CatmullRomTraits {
     //==============================================================================
     static constexpr float algorithmicLatency = 2.0f;
 
-    static forcedinline float valueAtOffset(const float *const inputs,
-                                            const float offset) noexcept {
-      const int index = (int)offset;
-      const float frac = offset - (float)index;
-
+    static forcedinline float
+    valueAtOffset(const float *const __restrict inputs, const float frac,
+                  const int index) noexcept {
       auto y0 = inputs[index - 3];
       auto y1 = inputs[index - 2];
       auto y2 = inputs[index - 1];
@@ -378,49 +445,41 @@ private:
       auto halfY0 = 0.5f * y0;
       auto halfY3 = 0.5f * y3;
 
-      auto output =
-          y1 +
-          frac * ((0.5f * y2 - halfY0) +
-                  (frac *
-                   (((y0 + 2.0f * y2) - (halfY3 + 2.5f * y1)) +
-                    (frac * ((halfY3 + 1.5f * y1) - (halfY0 + 1.5f * y2))))));
-
-      debugprintf("[new CatRom] Reading from sub-sample pos %f: y0=%f, "
-                  "y1=%f, y2=%f, y3=%f => \e[0;32m%f\e[0;0m\n",
-                  frac, y0, y1, y2, y3, output);
-      return output;
+      return y1 + frac * ((0.5f * y2 - halfY0) +
+                          (frac * (((y0 + 2.0f * y2) - (halfY3 + 2.5f * y1)) +
+                                   (frac * ((halfY3 + 1.5f * y1) -
+                                            (halfY0 + 1.5f * y2))))));
     }
   };
 
   struct LinearTraits {
     static constexpr float algorithmicLatency = 1.0f;
 
-    static forcedinline float valueAtOffset(const float *const inputs,
-                                            const float offset) noexcept {
-      const int index = (int)offset;
-      const float frac = offset - (float)index;
+    static forcedinline float
+    valueAtOffset(const float *const __restrict inputs, const float frac,
+                  const int index) noexcept {
       auto y0 = inputs[index - 1];
       auto y1 = inputs[index];
 
-      auto res = y1 * frac + y0 * (1.0f - frac);
-      debugprintf("[new Linear] Reading from sub-sample pos %f            : "
-                  "y0=%f, y1=%f => \e[0;32m%f\e[0;0m\n",
-                  offset, y0, y1, res);
-      return res;
+      auto result = y1 * frac + y0 * (1.0f - frac);
+      // printf("{\"type\": \"new\", \"y0\": %.12f, \"y1\": %.12f, \"frac\": "
+      //        "%.12f, \"index\": %d, \"result\": %.12f}\n",
+      //        y0, y1, frac, index, result);
+      return result;
     }
   };
 
   struct ZeroOrderHoldTraits {
     static constexpr float algorithmicLatency = 0.0f;
 
-    static forcedinline float valueAtOffset(const float *const inputs,
-                                            const float offset) noexcept {
-      return inputs[(int)offset];
+    static forcedinline float
+    valueAtOffset(const float *const __restrict inputs, const float frac,
+                  const int index) noexcept {
+      return inputs[index];
     }
   };
 
 public:
-  using WindowedSinc = SIMDGenericInterpolator<WindowedSincTraits, 200>;
   using Lagrange = SIMDGenericInterpolator<LagrangeTraits, 5>;
   using CatmullRom = SIMDGenericInterpolator<CatmullRomTraits, 4>;
   using Linear = SIMDGenericInterpolator<LinearTraits, 2>;
