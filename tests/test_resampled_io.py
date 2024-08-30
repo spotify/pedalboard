@@ -110,7 +110,7 @@ def test_read_resampled(
 
     with AudioFile(BytesIO(read_buffer.getvalue())).resampled_to(target_sample_rate, quality) as f:
         actual = f.read(float(f.frames))
-        np.testing.assert_allclose(expected_sine_wave, actual)
+        np.testing.assert_allclose(expected_sine_wave, actual, verbose=True)
 
 
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])

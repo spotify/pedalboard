@@ -218,6 +218,36 @@ public:
     }
   }
 
+  std::tuple<double, long long> calculateSubSamplePosition(
+      double newSubSamplePos, double resamplerRatio,
+      long long numOutputSamplesToProduce) const noexcept {
+    long long numInputSamplesUsed = 0;
+
+    if (std::holds_alternative<juce::SIMDInterpolators::ZeroOrderHold>(
+            interpolator) ||
+        std::holds_alternative<juce::SIMDInterpolators::Linear>(interpolator) ||
+        std::holds_alternative<juce::SIMDInterpolators::CatmullRom>(
+            interpolator)) {
+      // These resamplers use constant-time subsample position calculation:
+      double numInputSamplesNeeded =
+          std::max(0LL, numOutputSamplesToProduce - 1) * resamplerRatio;
+      numInputSamplesUsed = std::ceil(numInputSamplesNeeded);
+      return {numInputSamplesNeeded - numInputSamplesUsed + 1,
+              numInputSamplesUsed};
+    } else {
+      while (numOutputSamplesToProduce > 0) {
+        while (newSubSamplePos >= 1.0) {
+          numInputSamplesUsed++;
+          newSubSamplePos -= 1.0;
+        }
+
+        newSubSamplePos += resamplerRatio;
+        --numOutputSamplesToProduce;
+      }
+      return {newSubSamplePos, numInputSamplesUsed};
+    }
+  }
+
   int process(double speedRatio, const float *inputSamples,
               float *outputSamples, int numOutputSamplesToProduce) noexcept {
     // Unfortunately, std::visit cannot be used here due to macOS version

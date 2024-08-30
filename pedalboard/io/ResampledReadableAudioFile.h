@@ -37,16 +37,31 @@ namespace Pedalboard {
 static inline int inputBufferSizeFor(ResamplingQuality quality) {
   switch (quality) {
   case ResamplingQuality::ZeroOrderHold:
+  case ResamplingQuality::FastZeroOrderHold:
+  case ResamplingQuality::LegacyZeroOrderHold:
+  case ResamplingQuality::SlowZeroOrderHold:
     return 1;
   case ResamplingQuality::Linear:
+  case ResamplingQuality::FastLinear:
+  case ResamplingQuality::LegacyLinear:
+  case ResamplingQuality::SlowLinear:
     return 2;
   case ResamplingQuality::CatmullRom:
+  case ResamplingQuality::FastCatmullRom:
+  case ResamplingQuality::LegacyCatmullRom:
+  case ResamplingQuality::SlowCatmullRom:
     return 4;
   case ResamplingQuality::Lagrange:
     return 5;
   case ResamplingQuality::WindowedSinc:
     return 200;
+  default:
+    throw std::runtime_error("Unknown resampling quality (" +
+                             std::to_string((int)quality) +
+                             "); this is an internal "
+                             "Pedalboard error and should be reported.");
   }
+  assert(false);
   return 0;
 }
 
