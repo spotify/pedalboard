@@ -289,10 +289,9 @@ else:
         "Not sure how to build JUCE on platform: {}!".format(platform.system())
     )
 
-ALL_CPPFLAGS += []
 if DEBUG:
     ALL_CPPFLAGS += ["-DDEBUG=1", "-D_DEBUG=1"]
-    ALL_CPPFLAGS += ["-O3", "-g"]
+    ALL_CPPFLAGS += ["-O0", "-g"]
 else:
     ALL_CPPFLAGS += ["/Ox" if platform.system() == "Windows" else "-O3"]
 

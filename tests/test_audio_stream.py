@@ -24,7 +24,7 @@ import pedalboard
 # Very silly: even just creating an AudioStream object that reads from an `iPhone Microphone``
 # will cause a locally-present iPhone to emit a sound. Running `pytest` on my laptop makes my
 # phone ding.
-INPUT_DEVICE_NAMES_TO_SKIP = {"iPhone Microphone"}
+INPUT_DEVICE_NAMES_TO_SKIP = {"iPhone Microphone", "AirPods"}
 INPUT_DEVICE_NAMES = [
     n
     for n in pedalboard.io.AudioStream.input_device_names

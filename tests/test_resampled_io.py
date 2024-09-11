@@ -88,7 +88,7 @@ def test_read_zero():
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [123.45, 8000, 11025, 12345.67, 22050, 44100, 48000])
 @pytest.mark.parametrize("num_channels", [1, 2])
-@pytest.mark.parametrize("quality", QUALITIES)
+@pytest.mark.parametrize("quality", QUALITIES, ids=[q.name for q in QUALITIES])
 def test_read_resampled(
     fundamental_hz: float,
     sample_rate: float,
@@ -116,7 +116,7 @@ def test_read_resampled(
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67, 22050, 44100, 48000])
 @pytest.mark.parametrize("chunk_size", [10, 100])
-@pytest.mark.parametrize("quality", QUALITIES)
+@pytest.mark.parametrize("quality", QUALITIES, ids=[q.name for q in QUALITIES])
 def test_tell_resampled(sample_rate: float, target_sample_rate: float, chunk_size: int, quality):
     signal = np.linspace(1, sample_rate, sample_rate).astype(np.float32)
 
@@ -136,7 +136,7 @@ def test_tell_resampled(sample_rate: float, target_sample_rate: float, chunk_siz
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67, 22050, 44100, 48000])
 @pytest.mark.parametrize("offset", [2, 10, 100, -10, -1000])
 @pytest.mark.parametrize("chunk_size", [2, 10, 50, 100, 1_000_000])
-@pytest.mark.parametrize("quality", QUALITIES)
+@pytest.mark.parametrize("quality", QUALITIES, ids=[q.name for q in QUALITIES])
 def test_seek_resampled(
     sample_rate: float, target_sample_rate: float, offset: int, chunk_size: int, quality
 ):
@@ -180,7 +180,7 @@ def test_seek_resampled_is_constant_time(sample_rate: float, target_sample_rate:
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67, 22050, 44100, 48000])
 @pytest.mark.parametrize("chunk_size", [1000])
 @pytest.mark.parametrize("duration", [1.0])
-@pytest.mark.parametrize("quality", QUALITIES)
+@pytest.mark.parametrize("quality", QUALITIES, ids=[q.name for q in QUALITIES])
 def test_read_resampled_in_chunks(
     sample_rate: float, target_sample_rate: float, chunk_size: int, duration: float, quality
 ):
@@ -216,7 +216,7 @@ def test_read_resampled_in_chunks(
 @pytest.mark.parametrize("target_sample_rate", [8000, 12345.67, 22050, 44100, 48000])
 @pytest.mark.parametrize("chunk_size", [1, 4, 5])
 @pytest.mark.parametrize("duration", [0.1])
-@pytest.mark.parametrize("quality", QUALITIES)
+@pytest.mark.parametrize("quality", QUALITIES, ids=[q.name for q in QUALITIES])
 def test_read_resampled_with_tiny_chunks(
     sample_rate: float, target_sample_rate: float, chunk_size: int, duration, quality
 ):
@@ -227,7 +227,7 @@ def test_read_resampled_with_tiny_chunks(
 
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67, 22050, 44100, 48000])
-@pytest.mark.parametrize("quality", QUALITIES)
+@pytest.mark.parametrize("quality", QUALITIES, ids=[q.name for q in QUALITIES])
 def test_frame_count(sample_rate: float, target_sample_rate: float, quality):
     signal = np.linspace(1, sample_rate, sample_rate).astype(np.float32)
     expected_signal = expected_output(signal, sample_rate, target_sample_rate, 1, quality)

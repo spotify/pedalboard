@@ -40,7 +40,9 @@ TOLERANCE_PER_QUALITY = {
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67, 22050, 44100, 48000])
 @pytest.mark.parametrize("buffer_size", [4, 256, 8192, 1_000_000])
 @pytest.mark.parametrize("num_channels", [1, 2])
-@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+@pytest.mark.parametrize(
+    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
+)
 def test_stream_resample(
     fundamental_hz: float,
     sample_rate: float,
@@ -88,7 +90,9 @@ def test_stream_resample(
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67])
 @pytest.mark.parametrize("buffer_size", [256, 8192, 1_000_000])
 @pytest.mark.parametrize("num_channels", [1, 2])
-@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+@pytest.mark.parametrize(
+    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
+)
 def test_reset(
     fundamental_hz: float,
     sample_rate: float,
@@ -138,7 +142,9 @@ def test_reset(
 
 @pytest.mark.parametrize("sample_rate", [123.45, 8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [123.45, 8000, 11025, 12345.67, 22050, 44100, 48000])
-@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+@pytest.mark.parametrize(
+    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
+)
 def test_input_latency(sample_rate: float, target_sample_rate: float, quality: Resample.Quality):
     resampler = StreamResampler(sample_rate, target_sample_rate, 1, quality)
     _input = np.random.rand(int(resampler.input_latency)).astype(np.float32)
@@ -151,7 +157,9 @@ def test_input_latency(sample_rate: float, target_sample_rate: float, quality: R
 
 @pytest.mark.parametrize("sample_rate", [123.45, 8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [123.45, 8000, 11025, 12345.67, 22050, 44100, 48000])
-@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+@pytest.mark.parametrize(
+    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
+)
 def test_flush(sample_rate: float, target_sample_rate: float, quality: Resample.Quality):
     resampler = StreamResampler(sample_rate, target_sample_rate, 1, quality)
     _input = np.random.rand(int(sample_rate)).astype(np.float32)
@@ -170,7 +178,9 @@ def test_flush(sample_rate: float, target_sample_rate: float, quality: Resample.
 @pytest.mark.parametrize("sample_rate", [123.45, 8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [123.45, 8000, 11025, 12345.67, 22050, 44100, 48000])
 @pytest.mark.parametrize("chunk_size", [1, 4, 256, 8192, 1_000_000])
-@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+@pytest.mark.parametrize(
+    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
+)
 def test_returned_sample_count(
     sample_rate: float, target_sample_rate: float, chunk_size: int, quality
 ) -> np.ndarray:
@@ -207,29 +217,25 @@ def test_returned_sample_count(
 # generate_sine_at(96000, 440, num_channels=1, num_seconds=60 * 60)
 
 
-SIMD_INTERPOLATORS = [
-    Resample.Quality.ZeroOrderHold,
-    Resample.Quality.Linear,
-    Resample.Quality.CatmullRom,
-]
-
 FAST_SIMD_INTERPOLATORS = [
-    Resample.Quality.FastZeroOrderHold,
-    Resample.Quality.FastLinear,
-    Resample.Quality.FastCatmullRom,
+    Resample.Quality.WindowedSinc256,
+    Resample.Quality.WindowedSinc128,
+    Resample.Quality.WindowedSinc64,
+    Resample.Quality.WindowedSinc32,
+    Resample.Quality.WindowedSinc16,
+    Resample.Quality.WindowedSinc8,
 ]
 
 
 @pytest.mark.parametrize("fundamental_hz", [440])
-@pytest.mark.parametrize("sample_rate", [44100, 48000, 96000])
-@pytest.mark.parametrize("target_sample_rate", [11025, 22050, 32000, 48000, 1234.56])
+@pytest.mark.parametrize("sample_rate", [11025, 22050, 32000, 44100, 48000, 96000])
+@pytest.mark.parametrize("target_sample_rate", [11025, 22050, 32000, 44100, 48000, 1234.56])
 @pytest.mark.parametrize("buffer_size", [1_000_000_000])
 @pytest.mark.parametrize("num_channels", [1])
 @pytest.mark.parametrize(
-    "quality",
-    FAST_SIMD_INTERPOLATORS,
-    ids=[q.name for q in FAST_SIMD_INTERPOLATORS],
+    "quality", FAST_SIMD_INTERPOLATORS, ids=[q.name for q in FAST_SIMD_INTERPOLATORS]
 )
+@pytest.mark.skipif(True, reason="This test is only for performance comparison.")
 def test_speed(
     fundamental_hz: float,
     sample_rate: float,
@@ -242,7 +248,7 @@ def test_speed(
         sample_rate,
         fundamental_hz,
         num_channels=num_channels,
-        num_seconds=60 * 60,
+        num_seconds=60,
     ).astype(np.float32)
     if num_channels == 1:
         sine_wave = np.expand_dims(sine_wave, 0)
@@ -257,16 +263,18 @@ def test_speed(
         ]
         outputs.append(resampler.process(None))
         b = time.time()
+        actual_output = np.concatenate(outputs, axis=1)
         simd_timings.append(b - a)
     simd_time = np.mean(simd_timings)
 
+    original_quality = Resample.Quality.WindowedSinc
     non_simd_timings = []
     for _ in range(3):
         slow_resampler = StreamResampler(
             sample_rate,
             target_sample_rate,
             num_channels,
-            getattr(Resample.Quality, "_Slow" + quality.name.replace("Fast", "")),
+            original_quality,
         )
         a = time.time()
         outputs = [
@@ -275,114 +283,22 @@ def test_speed(
         ]
         outputs.append(slow_resampler.process(None))
         b = time.time()
+        expected_output = np.concatenate(outputs, axis=1)
         non_simd_timings.append(b - a)
     non_simd_time = np.mean(non_simd_timings)
 
-    print(f"SIMD: {simd_time:.2f}s, non-SIMD: {non_simd_time:.2f}s")
+    print(f"{quality}: {simd_time:.2f}s, {original_quality}: {non_simd_time:.2f}s")
     if simd_time > non_simd_time:
         if 1 - (non_simd_time / simd_time) > 0.05:
-            print(f"❌ SIMD is {(1 - (non_simd_time / simd_time)) * 100:.2f}% slower.")
+            print(f"❌ {quality} is {(1 - (non_simd_time / simd_time)) * 100:.2f}% slower.")
         else:
             print(
-                f"☑️ SIMD is roughly the same ({(1 - (non_simd_time / simd_time)) * 100:.2f}% slower)."
+                f"☑️ {quality} is roughly the same ({(1 - (non_simd_time / simd_time)) * 100:.2f}% slower)."
             )
     else:
         print(
-            f"✅ SIMD is {(1 - (simd_time / non_simd_time)) * 100:.2f}% "
+            f"✅ {quality} is {((non_simd_time / simd_time) - 1) * 100:.2f}% "
             f"({non_simd_time / simd_time:.2f}x) faster."
         )
 
-
-@pytest.mark.parametrize("sample_rate", [6000, 44100, 96000])
-@pytest.mark.parametrize("target_sample_rate", [22050, 32000, 48000, 1234.56])
-@pytest.mark.parametrize("quality", SIMD_INTERPOLATORS, ids=[q.name for q in SIMD_INTERPOLATORS])
-@pytest.mark.parametrize(
-    "batch_size",
-    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 1000, 100_000, 158_760_000],
-)
-def test_simd_accuracy(quality, sample_rate, target_sample_rate, batch_size):
-    """
-    This test ensures that all of the SIMD resamplers match the exact behaviour
-    of the old JUCE resampler code (i.e.: Linear is a bit-for-bit match for _SlowLinear).
-    """
-    input_length = max(batch_size, 10)
-
-    num_channels = 1
-    _input = np.expand_dims(np.arange(0, input_length, dtype=np.float32), 0)
-
-    new_resampler = StreamResampler(sample_rate, target_sample_rate, num_channels, quality)
-    outputs = [
-        new_resampler.process(_input[:, i : i + batch_size])
-        for i in range(0, _input.shape[1], batch_size)
-    ]
-    outputs.append(new_resampler.process(None))
-    actual_output = np.concatenate(outputs, axis=1)
-
-    accurate_resampler = StreamResampler(
-        sample_rate,
-        target_sample_rate,
-        num_channels,
-        getattr(Resample.Quality, "_Slow" + quality.name),
-    )
-    outputs = [
-        accurate_resampler.process(_input[:, i : i + batch_size])
-        for i in range(0, _input.shape[1], batch_size)
-    ]
-    outputs.append(accurate_resampler.process(None))
-    expected_output = np.concatenate(outputs, axis=1)
-
-    if expected_output.shape[1] < actual_output.shape[1]:
-        raise AssertionError(
-            f"SIMD resampler output {actual_output.shape[1] - expected_output.shape[1]:,} more samples than expected "
-            f"({actual_output.shape[1]:,} instead of {expected_output.shape[1]:,})"
-        )
-
-    if expected_output.shape[1] > actual_output.shape[1]:
-        raise AssertionError(
-            f"SIMD resampler output {expected_output.shape[1] - actual_output.shape[1]:,} fewer samples than expected "
-            f"({expected_output.shape[1]:,} instead of {actual_output.shape[1]:,})"
-        )
-
-    if expected_output.shape[1] > 0:
-        try:
-            avg_diff = np.average(expected_output - actual_output)
-            max_diff = np.amax(np.abs(expected_output - actual_output))
-            max_diff_index = np.argmax(np.abs(expected_output - actual_output))
-            np.testing.assert_allclose(
-                expected_output,
-                actual_output,
-                atol=1e-8,
-                err_msg=f"Max diff: {max_diff} at index {max_diff_index:,}",
-            )
-        except AssertionError:
-            import matplotlib.pyplot as plt
-
-            plt.plot(expected_output[0], label="expected")
-            plt.plot(actual_output[0], label="actual")
-            diff = expected_output[0] - actual_output[0]
-            plt.plot(
-                diff[max_diff_index - 100 : max_diff_index + 100],
-                label=f"difference ({max_diff_index} ± 100)",
-            )
-            plt.title(
-                f"{quality}, "
-                f"{sample_rate}Hz to {target_sample_rate}Hz "
-                f"avg diff = {avg_diff}"
-            )
-            plt.legend()
-            plt.show()
-            raise
-
-
-def test_simd_linear_accuracy_hardcoded():
-    linear_resampler = StreamResampler(44100, 32000, 1, Resample.Quality.Linear)
-    _input = np.expand_dims(np.arange(0, 10, dtype=np.float32), 0)
-
-    actual_output = np.concatenate(
-        [linear_resampler.process(_input), linear_resampler.process(None)], axis=1
-    )
-    np.testing.assert_allclose(
-        np.array([[0.378125, 1.756250, 3.134375, 4.512500, 5.890625, 7.268750]]),
-        actual_output,
-        atol=1e-9,
-    )
+    # np.testing.assert_allclose(actual_output, expected_output, atol=1e-5)

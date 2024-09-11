@@ -37,24 +37,27 @@ namespace Pedalboard {
 static inline int inputBufferSizeFor(ResamplingQuality quality) {
   switch (quality) {
   case ResamplingQuality::ZeroOrderHold:
-  case ResamplingQuality::FastZeroOrderHold:
-  case ResamplingQuality::LegacyZeroOrderHold:
-  case ResamplingQuality::SlowZeroOrderHold:
     return 1;
   case ResamplingQuality::Linear:
-  case ResamplingQuality::FastLinear:
-  case ResamplingQuality::LegacyLinear:
-  case ResamplingQuality::SlowLinear:
     return 2;
   case ResamplingQuality::CatmullRom:
-  case ResamplingQuality::FastCatmullRom:
-  case ResamplingQuality::LegacyCatmullRom:
-  case ResamplingQuality::SlowCatmullRom:
     return 4;
   case ResamplingQuality::Lagrange:
     return 5;
   case ResamplingQuality::WindowedSinc:
     return 200;
+  case ResamplingQuality::WindowedSinc256:
+    return 256 * 4;
+  case ResamplingQuality::WindowedSinc128:
+    return 128 * 4;
+  case ResamplingQuality::WindowedSinc64:
+    return 64 * 4;
+  case ResamplingQuality::WindowedSinc32:
+    return 32 * 4;
+  case ResamplingQuality::WindowedSinc16:
+    return 16 * 4;
+  case ResamplingQuality::WindowedSinc8:
+    return 8 * 4;
   default:
     throw std::runtime_error("Unknown resampling quality (" +
                              std::to_string((int)quality) +
@@ -258,6 +261,16 @@ public:
                               /* keepExistingContent */ true,
                               /* clearExtraSpace */ false,
                               /* avoidReallocating */ true);
+
+        if (samplesRead < inputSamplesRequired) {
+          for (int c = 0; c < audioFile->getNumChannels(); c++) {
+            contiguousSourceSampleBufferPointers[c] =
+                contiguousSourceSampleBuffer.data() + (c * samplesRead);
+          }
+          sourceSamples = juce::AudioBuffer<float>(
+              contiguousSourceSampleBufferPointers.data(),
+              audioFile->getNumChannels(), samplesRead);
+        }
 
         // If the underlying source ran out of samples, tell the resampler that
         // we're done by feeding in an empty optional rather than an empty
