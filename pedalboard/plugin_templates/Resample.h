@@ -45,8 +45,8 @@ enum class ResamplingQuality {
   // The higher the number used as the suffix
   WindowedSinc256 = 5,
   WindowedSinc128 = 6,
-  WindowedSinc64 = 7, // This is the new default as of Pedalboard v0.9.14
-  WindowedSinc32 = 8,
+  WindowedSinc64 = 7,
+  WindowedSinc32 = 8, // This is the new default as of Pedalboard v0.9.15
   WindowedSinc16 = 9,
   WindowedSinc8 = 10,
 };
@@ -254,7 +254,7 @@ private:
  */
 template <typename SampleType> class Passthrough : public Plugin {
 public:
-  virtual ~Passthrough() {};
+  virtual ~Passthrough(){};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {}
 
@@ -276,7 +276,7 @@ template <typename T = Passthrough<float>, typename SampleType = float,
           int DefaultSampleRate = 8000>
 class Resample : public Plugin {
 public:
-  virtual ~Resample() {};
+  virtual ~Resample(){};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) {
     bool specChanged = lastSpec.sampleRate != spec.sampleRate ||
@@ -553,7 +553,7 @@ public:
 private:
   T plugin;
   float targetSampleRate = (float)DefaultSampleRate;
-  ResamplingQuality quality = ResamplingQuality::WindowedSinc;
+  ResamplingQuality quality = ResamplingQuality::WindowedSinc32;
 
   double resamplerRatio = 1.0;
   double inverseResamplerRatio = 1.0;
@@ -594,61 +594,135 @@ inline void init_resample(py::module &m) {
           "then upsamples it back to the original sample rate. Various quality "
           "settings will produce audible distortion and aliasing effects.");
 
-  py::enum_<ResamplingQuality>(
-      resample, "Quality", "Indicates a specific resampling algorithm to use.")
-      .value("ZeroOrderHold", ResamplingQuality::ZeroOrderHold,
-             "The lowest quality and fastest resampling method, with lots of "
-             "audible artifacts.\n\nZero-order hold resampling chooses the "
-             "next value to use based on the last value, without any "
-             "interpolation. Think of it like nearest-neighbor resampling.")
+  py::enum_<ResamplingQuality>(resample, "Quality", R"(
+Indicates which specific resampling algorithm to use.
+
+Resampling algorithms each provide a different tradeoff between speed and quality.
+Pedalboard provides two different types of resampling algorithms:
+ - `Aliasing` algorithms, which cause high frequencies to appear as
+   lower frequencies.
+ - Non-aliasing algorithms, which filter out high frequencies when downsampling
+   and avoid introducing extra high-frequency content when upsampling. (These
+   algorithms were introduced in Pedalboard v0.9.15.)
+
+Aliasing algorithms include :py:class:`ZeroOrderHold`, :py:class:`Linear`,
+:py:class:`CatmullRom`, :py:class:`Lagrange`, and :py:class:`WindowedSinc`.
+
+Non-aliasing algorithms include :py:class:`WindowedSinc256`, :py:class:`WindowedSinc128`,
+:py:class:`WindowedSinc64`, :py:class:`WindowedSinc32`, :py:class:`WindowedSinc16`, and
+:py:class:`WindowedSinc8`.
+
+Choosing an algorithm to use depends on the signal being resampled, the relationship
+between the source and target sample rates, and the application of the resampled signal.
+
+ - If downsampling by an integer factor (i.e.: from 44.1kHz to 22050Hz, or 48kHz to 24kHz),
+   and if the source signal has no high-frequency content above half of the target sample
+   rate the :py:class:`ZeroOrderHold` algorithm will be the fastest by far and will produce
+   no artifacts.
+ - In all other cases, any of the numbered :py:class:`WindowedSinc` algorithms
+   (i.e.: :py:class:`WindowedSinc256`, :py:class:`WindowedSinc64`) will produce
+   a clean signal with no artifacts. Higher numbers will produce a cleaner signal with less
+   roll-off of high frequency content near the Nyquist frequency of the new sample rate.
+
+However, depending on your application, the artifacts introduced by each resampling method
+may be acceptable. Test each method to determine which is the best tradeoff between speed
+and accuracy for your use case.
+
+To provide a good balance between speed and accuracy, :py:class:`WindowedSinc32` is the
+default from Pedalboard v0.9.15 onwards. (Previously, :py:class:`WindowedSinc` was the default.)
+
+)")
+      .value(
+          "ZeroOrderHold", ResamplingQuality::ZeroOrderHold,
+          "The lowest quality and fastest resampling method, with lots of "
+          "audible artifacts.\n\nZero-order hold resampling chooses the "
+          "next value to use based on the last value, without any "
+          "interpolation. Think of it like nearest-neighbor "
+          "resampling.\n\n.. warning::\n\n   This algorithm produces aliasing "
+          "artifacts when downsampling.")
       .value(
           "Linear", ResamplingQuality::Linear,
           "A resampling method slightly less noisy than the simplest "
           "method.\n\nLinear resampling takes the average of the two nearest "
           "values to the desired sample, which is reasonably good for "
-          "downsampling.")
+          "downsampling.\n\n.. warning::\n\n   This algorithm produces "
+          "aliasing "
+          "artifacts when downsampling.")
       .value("CatmullRom", ResamplingQuality::CatmullRom,
              "A moderately good-sounding resampling method which is fast to "
              "run. Slightly slower than Linear resampling, but slightly higher "
-             "quality.")
+             "quality.\n\n.. warning::\n\n   This algorithm produces aliasing "
+             "artifacts when downsampling.")
       .value("Lagrange", ResamplingQuality::Lagrange,
              "A moderately good-sounding resampling method which is slow to "
              "run. Slower than CatmullRom resampling, but slightly higher "
-             "quality.")
-      .value("WindowedSinc", ResamplingQuality::WindowedSinc,
-             "A very high quality (and the slowest) resampling method, with no "
-             "audible artifacts.\n\nThis resampler applies a windowed sinc "
-             "filter design with 100 zero-crossings of the sinc function to "
-             "approimate an ideal brick-wall low-pass filter.")
-      .value("WindowedSinc256", ResamplingQuality::WindowedSinc256,
-             "Higher quality than WindowedSinc, with no audible "
-             "artifacts.\n\nThis resampler applies a windowed sinc filter "
-             "with 256 zero-crossings to approimate an ideal brick-wall "
-             "low-pass filter. This filter is faster than WindowedSinc due to "
-             "an optimized implementation and has a steeper frequency response "
-             "(i.e.: fewer artifacts).")
-      .value("WindowedSinc128", ResamplingQuality::WindowedSinc128,
-             "Higher quality than WindowedSinc, with no audible "
-             "artifacts.\n\nThis resampler applies a windowed sinc filter "
-             "with 128 zero-crossings to approimate an ideal brick-wall "
-             "low-pass filter. This filter is faster than WindowedSinc due to "
-             "an optimized implementation and has a steeper frequency response "
-             "(i.e.: fewer artifacts).")
+             "quality.\n\n.. warning::\n\n   This algorithm produces aliasing "
+             "artifacts when downsampling.")
+      .value(
+          "WindowedSinc", ResamplingQuality::WindowedSinc,
+          "A very high quality (and the slowest) resampling method, with no "
+          "audible artifacts when upsampling.\n\nThis resampler applies a "
+          "windowed sinc filter design with 100 zero-crossings of the sinc "
+          "function to approximate an ideal brick-wall low-pass filter.\n\n"
+          ".. warning::\n\n   This algorithm produces aliasing artifacts when "
+          "downsampling.\n\n.. note::\n\n   This method was the default in "
+          "versions of Pedalboard prior to v0.9.15.")
+      .value(
+          "WindowedSinc256", ResamplingQuality::WindowedSinc256,
+          "The highest possible quality resampling algorithm, with no audible "
+          "artifacts when upsampling or downsampling.\n\nThis resampler "
+          "applies a windowed sinc filter with 256 zero-crossings to "
+          "approximate an ideal brick-wall low-pass filter. This filter does "
+          "not produce aliasing artifacts when upsampling or "
+          "downsampling.\n\nCompare this in speed and quality to Resampy's "
+          "``kaiser_best`` method.")
+      .value(
+          "WindowedSinc128", ResamplingQuality::WindowedSinc128,
+          "A very high quality resampling algorithm, with no audible "
+          "artifacts when upsampling or downsampling.\n\nThis resampler "
+          "applies a windowed sinc filter with 128 zero-crossings to "
+          "approximate an ideal brick-wall low-pass filter. This filter does "
+          "not produce aliasing artifacts when upsampling or "
+          "downsampling.\n\nThis method is roughly as fast as Resampy's "
+          "``kaiser_fast`` method, while producing results roughly equal in "
+          "quality to Resampy's ``kaiser_best`` method.")
       .value(
           "WindowedSinc64", ResamplingQuality::WindowedSinc64,
-          "Roughly equal quality to WindowedSinc, but faster, with no audible "
-          "artifacts.\n\nThis resampler applies a windowed sinc filter "
-          "with 64 zero-crossings to approimate an ideal brick-wall "
-          "low-pass filter. This filter is about 2-3x faster than WindowedSinc "
-          "due to an optimized implementation and has a nearly identical "
-          "frequency"
-          "response (i.e.: fewer artifacts).")
-      .value("WindowedSinc32", ResamplingQuality::WindowedSinc32,
-             "A faster version of WindowedSinc with slightly more artifacts.")
+          "A very high quality resampling algorithm, with few audible "
+          "artifacts when upsampling or downsampling.\n\nThis resampler "
+          "applies a windowed sinc filter with 64 zero-crossings to "
+          "approximate an ideal brick-wall low-pass filter. This filter does "
+          "not produce aliasing artifacts when upsampling or "
+          "downsampling.\n\nThis method is (on average) faster than Resampy's "
+          "``kaiser_fast`` method, and roughly equal in quality.")
+      .value(
+          "WindowedSinc32", ResamplingQuality::WindowedSinc32,
+          "A reasonably high quality resampling algorithm, with few audible "
+          "artifacts when upsampling or downsampling.\n\nThis resampler "
+          "applies a windowed sinc filter with 32 zero-crossings to "
+          "approximate an ideal brick-wall low-pass filter. This filter "
+          "produces very few aliasing artifacts when upsampling or "
+          "downsampling.\n\nThis method is always faster than Resampy's "
+          "``kaiser_fast`` method, while being reasonable in quality.\n\n.. "
+          "note::\n\n   This method is the default in Pedalboard v0.9.15 and "
+          "later.")
       .value("WindowedSinc16", ResamplingQuality::WindowedSinc16,
-             "An even faster version of WindowedSinc with many more artifacts.")
+             "A medium quality resampling algorithm, with few audible "
+             "artifacts when upsampling or downsampling.\n\nThis resampler "
+             "applies a windowed sinc filter with 16 zero-crossings to "
+             "approximate an ideal brick-wall low-pass filter. This filter "
+             "produces some aliasing artifacts when upsampling or "
+             "downsampling.\n\nThis method is faster than Resampy's "
+             "``kaiser_fast`` method, while being acceptable in quality.")
       .value("WindowedSinc8", ResamplingQuality::WindowedSinc8,
-             "A very fast version of WindowedSinc with many artifacts.")
+             "A low quality resampling algorithm, with few audible "
+             "artifacts when upsampling or downsampling.\n\nThis resampler "
+             "applies a windowed sinc filter with 16 zero-crossings to "
+             "approximate an ideal brick-wall low-pass filter. This filter "
+             "produces noticeable aliasing artifacts when upsampling or "
+             "downsampling.\n\nThis method can be more than 10x faster than "
+             "Resampy's ``kaiser_fast`` method, and is useful for applications "
+             "that are tolerant of some resampling artifacts.")
       .export_values();
 
   resample
@@ -660,7 +734,7 @@ inline void init_resample(py::module &m) {
              return resample;
            }),
            py::arg("target_sample_rate") = 8000.0,
-           py::arg("quality") = ResamplingQuality::WindowedSinc)
+           py::arg("quality") = ResamplingQuality::WindowedSinc32)
       .def("__repr__",
            [](const Resample<Passthrough<float>, float> &plugin) {
              std::ostringstream ss;
@@ -743,7 +817,7 @@ inline void init_resample_with_latency(py::module &m) {
            }),
            py::arg("target_sample_rate") = 8000.0,
            py::arg("internal_latency") = 1024,
-           py::arg("quality") = ResamplingQuality::WindowedSinc)
+           py::arg("quality") = ResamplingQuality::WindowedSinc32)
       .def("__repr__",
            [](Resample<AddLatency, float> &plugin) {
              std::ostringstream ss;

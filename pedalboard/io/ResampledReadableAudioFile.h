@@ -500,7 +500,7 @@ inline void init_resampled_readable_audio_file(
                      "class implements __new__.");
                }),
            py::arg("audio_file"), py::arg("target_sample_rate"),
-           py::arg("resampling_quality") = ResamplingQuality::WindowedSinc)
+           py::arg("resampling_quality") = ResamplingQuality::WindowedSinc32)
       .def_static(
           "__new__",
           [](const py::object *, std::shared_ptr<ReadableAudioFile> audioFile,
@@ -509,7 +509,7 @@ inline void init_resampled_readable_audio_file(
                 audioFile, targetSampleRate, quality);
           },
           py::arg("cls"), py::arg("audio_file"), py::arg("target_sample_rate"),
-          py::arg("resampling_quality") = ResamplingQuality::WindowedSinc)
+          py::arg("resampling_quality") = ResamplingQuality::WindowedSinc32)
       .def("read", &ResampledReadableAudioFile::read, py::arg("num_frames") = 0,
            R"(
 Read the given number of frames (samples in each channel, at the target sample rate)

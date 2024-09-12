@@ -55,7 +55,7 @@ private:
 
 class GSMFullRateCompressorInternal : public Plugin {
 public:
-  virtual ~GSMFullRateCompressorInternal(){};
+  virtual ~GSMFullRateCompressorInternal() {};
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) override {
     bool specChanged = lastSpec.sampleRate != spec.sampleRate ||
@@ -160,7 +160,7 @@ inline void init_gsm_full_rate_compressor(py::module &m) {
              plugin->getNestedPlugin().setQuality(quality);
              return plugin;
            }),
-           py::arg("quality") = ResamplingQuality::WindowedSinc)
+           py::arg("quality") = ResamplingQuality::WindowedSinc8)
       .def("__repr__",
            [](const GSMFullRateCompressor &plugin) {
              std::ostringstream ss;

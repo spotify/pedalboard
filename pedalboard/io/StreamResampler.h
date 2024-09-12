@@ -316,7 +316,7 @@ inline void init_stream_resampler(py::module &m) {
       }),
       py::arg("source_sample_rate"), py::arg("target_sample_rate"),
       py::arg("num_channels"),
-      py::arg("quality") = ResamplingQuality::WindowedSinc,
+      py::arg("quality") = ResamplingQuality::WindowedSinc32,
       "Create a new StreamResampler, capable of resampling a "
       "potentially-unbounded audio stream with a constant amount of memory. "
       "The source sample rate, target sample rate, quality, or number of "
