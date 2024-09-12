@@ -252,6 +252,7 @@ ALL_INCLUDES += [
 ALL_SOURCE_PATHS += [p for p in Path("vendors/libgsm/src").glob("*.c") if "toast" not in p.name]
 ALL_INCLUDES += ["vendors/libgsm/inc"]
 
+
 # Add platform-specific flags:
 if platform.system() == "Darwin":
     ALL_CPPFLAGS.append("-DMACOS=1")
@@ -275,6 +276,7 @@ else:
     raise NotImplementedError(
         "Not sure how to build JUCE on platform: {}!".format(platform.system())
     )
+
 
 if DEBUG:
     ALL_CPPFLAGS += ["-DDEBUG=1", "-D_DEBUG=1"]

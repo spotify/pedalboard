@@ -638,25 +638,24 @@ default from Pedalboard v0.9.15 onwards. (Previously, :py:class:`WindowedSinc` w
           "next value to use based on the last value, without any "
           "interpolation. Think of it like nearest-neighbor "
           "resampling.\n\n.. warning::\n\n   This algorithm produces aliasing "
-          "artifacts when downsampling.")
+          "artifacts.")
       .value(
           "Linear", ResamplingQuality::Linear,
           "A resampling method slightly less noisy than the simplest "
           "method.\n\nLinear resampling takes the average of the two nearest "
           "values to the desired sample, which is reasonably good for "
           "downsampling.\n\n.. warning::\n\n   This algorithm produces "
-          "aliasing "
-          "artifacts when downsampling.")
+          "aliasing artifacts.")
       .value("CatmullRom", ResamplingQuality::CatmullRom,
              "A moderately good-sounding resampling method which is fast to "
              "run. Slightly slower than Linear resampling, but slightly higher "
              "quality.\n\n.. warning::\n\n   This algorithm produces aliasing "
-             "artifacts when downsampling.")
+             "artifacts.")
       .value("Lagrange", ResamplingQuality::Lagrange,
              "A moderately good-sounding resampling method which is slow to "
              "run. Slower than CatmullRom resampling, but slightly higher "
              "quality.\n\n.. warning::\n\n   This algorithm produces aliasing "
-             "artifacts when downsampling.")
+             "artifacts.")
       .value(
           "WindowedSinc", ResamplingQuality::WindowedSinc,
           "A very high quality (and the slowest) resampling method, with no "
@@ -664,8 +663,8 @@ default from Pedalboard v0.9.15 onwards. (Previously, :py:class:`WindowedSinc` w
           "windowed sinc filter design with 100 zero-crossings of the sinc "
           "function to approximate an ideal brick-wall low-pass filter.\n\n"
           ".. warning::\n\n   This algorithm produces aliasing artifacts when "
-          "downsampling.\n\n.. note::\n\n   This method was the default in "
-          "versions of Pedalboard prior to v0.9.15.")
+          "downsampling, but not when upsampling.\n\n.. note::\n\n   This "
+          "method was the default in versions of Pedalboard prior to v0.9.15.")
       .value(
           "WindowedSinc256", ResamplingQuality::WindowedSinc256,
           "The highest possible quality resampling algorithm, with no audible "
