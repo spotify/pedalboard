@@ -42,7 +42,6 @@ enum class ResamplingQuality {
   // counterpart, and all properly handle downsampling without
   // aliasing. They also include significant speedups for the cases
   // in which the speed ratio is a nice fraction like 2/3 or 3/2.
-  // The higher the number used as the suffix
   WindowedSinc256 = 5,
   WindowedSinc128 = 6,
   WindowedSinc64 = 7,
@@ -288,15 +287,15 @@ public:
       nativeToTargetResamplers.resize(spec.numChannels);
       targetToNativeResamplers.resize(spec.numChannels);
 
-      resamplerRatio = spec.sampleRate / targetSampleRate;
-      inverseResamplerRatio = targetSampleRate / spec.sampleRate;
-
       for (int i = 0; i < spec.numChannels; i++) {
         nativeToTargetResamplers[i].setQuality(quality);
         nativeToTargetResamplers[i].reset();
         targetToNativeResamplers[i].setQuality(quality);
         targetToNativeResamplers[i].reset();
       }
+
+      resamplerRatio = spec.sampleRate / targetSampleRate;
+      inverseResamplerRatio = targetSampleRate / spec.sampleRate;
 
       maximumBlockSizeInTargetSampleRate =
           std::ceil(spec.maximumBlockSize / resamplerRatio);

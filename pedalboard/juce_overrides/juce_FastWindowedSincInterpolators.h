@@ -82,21 +82,6 @@ struct FastWindowedSincTraits {
                 double speedRatio,
                 const std::array<float, BufferSize> &sincValues) noexcept {
     double effectiveSpeedRatio = std::max(speedRatio, 1.0);
-    //     int inputIndices[BufferSize];
-    // #pragma clang loop vectorize(enable) interleave(enable)
-    //     for (int i = 0; i < BufferSize; i++) {
-    //       // inputIndices[i] = (indexBuffer + i) % BufferSize;
-    //       // Very neat trick: regular modular math is not vectorizable,
-    //       // but floating-point multiplication and subtraction is!
-    //       // So doing this in float32 space and then converting to int
-    //       // is about 4x faster, as the compiler can emit SIMD instructions.
-    //       // The result is identical as long as the range of the input
-    //       // is within the range of the mantissa of a float32.
-    //       const int d = indexBuffer + i;
-    //       const int index =
-    //           d - ((int)((float)(d) / (float)BufferSize) * BufferSize);
-    //       inputIndices[i] = index;
-    //     }
 
     // Copy from inputs in two contiguous chunks
     // ([indexBuffer, BufferSize), then [0, indexBuffer))
@@ -158,48 +143,10 @@ public:
     std::fill(std::begin(lastInputSamples), std::end(lastInputSamples), 0.0f);
   }
 
-  /** Resamples a stream of samples.
-
-      @param speedRatio                   the number of input samples to use for
-     each output sample
-      @param inputSamples                 the source data to read from. This
-     must contain at least (speedRatio * numOutputSamplesToProduce) samples.
-      @param outputSamples                the buffer to write the results into
-      @param numOutputSamplesToProduce    the number of output samples that
-     should be created
-
-      @returns the actual number of input samples that were used
-  */
   int process(double speedRatio, const float *inputSamples,
               float *outputSamples, int numOutputSamplesToProduce) noexcept {
     return interpolate(speedRatio, inputSamples, outputSamples,
                        numOutputSamplesToProduce);
-  }
-
-  /** Resamples a stream of samples.
-
-      @param speedRatio                   the number of input samples to use for
-     each output sample
-      @param inputSamples                 the source data to read from. This
-     must contain at least (speedRatio * numOutputSamplesToProduce) samples.
-      @param outputSamples                the buffer to write the results into
-      @param numOutputSamplesToProduce    the number of output samples that
-     should be created
-      @param numInputSamplesAvailable     the number of available input samples.
-     If it needs more samples than available, it either wraps back for
-     wrapAround samples, or it feeds zeroes
-      @param wrapAround                   if the stream exceeds available
-     samples, it wraps back for wrapAround samples. If wrapAround is set to 0,
-     it will feed zeroes.
-
-      @returns the actual number of input samples that were used
-  */
-  int process(double speedRatio, const float *inputSamples,
-              float *outputSamples, int numOutputSamplesToProduce,
-              int numInputSamplesAvailable, int wrapAround) noexcept {
-    return interpolate(speedRatio, inputSamples, outputSamples,
-                       numOutputSamplesToProduce, numInputSamplesAvailable,
-                       wrapAround);
   }
 
 private:

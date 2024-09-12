@@ -64,7 +64,6 @@ static inline int inputBufferSizeFor(ResamplingQuality quality) {
                              "); this is an internal "
                              "Pedalboard error and should be reported.");
   }
-  assert(false);
   return 0;
 }
 
