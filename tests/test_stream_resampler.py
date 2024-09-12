@@ -15,7 +15,6 @@
 # limitations under the License.
 
 
-import sys
 import time
 
 import numpy as np
@@ -210,95 +209,3 @@ def test_returned_sample_count(
         f"{output.shape[1]:,} samples were output by resampler (in chunks:"
         f" {[o.shape[1] for o in outputs]}) when {expected_output.shape[1]:,} were expected."
     )
-
-
-# generate_sine_at(6000, 440, num_channels=1, num_seconds=60 * 60)
-# generate_sine_at(44100, 440, num_channels=1, num_seconds=60 * 60)
-# generate_sine_at(96000, 440, num_channels=1, num_seconds=60 * 60)
-
-
-FAST_SIMD_INTERPOLATORS = [
-    Resample.Quality.WindowedSinc256,
-    Resample.Quality.WindowedSinc128,
-    Resample.Quality.WindowedSinc64,
-    Resample.Quality.WindowedSinc32,
-    Resample.Quality.WindowedSinc16,
-    Resample.Quality.WindowedSinc8,
-]
-
-
-@pytest.mark.parametrize("fundamental_hz", [440])
-@pytest.mark.parametrize("sample_rate", [11025, 22050, 32000, 44100, 48000, 96000])
-@pytest.mark.parametrize("target_sample_rate", [11025, 22050, 32000, 44100, 48000, 1234.56])
-@pytest.mark.parametrize("buffer_size", [1_000_000_000])
-@pytest.mark.parametrize("num_channels", [1])
-@pytest.mark.parametrize(
-    "quality", FAST_SIMD_INTERPOLATORS, ids=[q.name for q in FAST_SIMD_INTERPOLATORS]
-)
-@pytest.mark.skipif(True, reason="This test is only for performance comparison.")
-def test_speed(
-    fundamental_hz: float,
-    sample_rate: float,
-    target_sample_rate: float,
-    buffer_size: int,
-    num_channels: int,
-    quality,
-):
-    sine_wave = generate_sine_at(
-        sample_rate,
-        fundamental_hz,
-        num_channels=num_channels,
-        num_seconds=60,
-    ).astype(np.float32)
-    if num_channels == 1:
-        sine_wave = np.expand_dims(sine_wave, 0)
-
-    simd_timings = []
-    for _ in range(3):
-        resampler = StreamResampler(sample_rate, target_sample_rate, num_channels, quality)
-        a = time.time()
-        outputs = [
-            resampler.process(sine_wave[:, i : i + buffer_size])
-            for i in range(0, sine_wave.shape[1], buffer_size)
-        ]
-        outputs.append(resampler.process(None))
-        b = time.time()
-        actual_output = np.concatenate(outputs, axis=1)
-        simd_timings.append(b - a)
-    simd_time = np.mean(simd_timings)
-
-    original_quality = Resample.Quality.WindowedSinc
-    non_simd_timings = []
-    for _ in range(3):
-        slow_resampler = StreamResampler(
-            sample_rate,
-            target_sample_rate,
-            num_channels,
-            original_quality,
-        )
-        a = time.time()
-        outputs = [
-            slow_resampler.process(sine_wave[:, i : i + buffer_size])
-            for i in range(0, sine_wave.shape[1], buffer_size)
-        ]
-        outputs.append(slow_resampler.process(None))
-        b = time.time()
-        expected_output = np.concatenate(outputs, axis=1)
-        non_simd_timings.append(b - a)
-    non_simd_time = np.mean(non_simd_timings)
-
-    print(f"{quality}: {simd_time:.2f}s, {original_quality}: {non_simd_time:.2f}s")
-    if simd_time > non_simd_time:
-        if 1 - (non_simd_time / simd_time) > 0.05:
-            print(f"❌ {quality} is {(1 - (non_simd_time / simd_time)) * 100:.2f}% slower.")
-        else:
-            print(
-                f"☑️ {quality} is roughly the same ({(1 - (non_simd_time / simd_time)) * 100:.2f}% slower)."
-            )
-    else:
-        print(
-            f"✅ {quality} is {((non_simd_time / simd_time) - 1) * 100:.2f}% "
-            f"({non_simd_time / simd_time:.2f}x) faster."
-        )
-
-    # np.testing.assert_allclose(actual_output, expected_output, atol=1e-5)
