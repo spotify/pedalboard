@@ -252,36 +252,23 @@ ALL_INCLUDES += [
 ALL_SOURCE_PATHS += [p for p in Path("vendors/libgsm/src").glob("*.c") if "toast" not in p.name]
 ALL_INCLUDES += ["vendors/libgsm/inc"]
 
-# like -ffast-math, but without the negative side effects on other code in the same process:
-MOSTLY_FAST_MATH = [
-    "-fassociative-math",
-    "-fno-trapping-math",
-    "-fno-signed-zeros",
-    "-freciprocal-math",
-    "-fno-math-errno",
-]
-
 # Add platform-specific flags:
 if platform.system() == "Darwin":
     ALL_CPPFLAGS.append("-DMACOS=1")
     ALL_CPPFLAGS.append("-DHAVE_VDSP=1")
-    ALL_CPPFLAGS.extend(MOSTLY_FAST_MATH)
     if not DEBUG and not os.getenv("DISABLE_LTO"):
         ALL_CPPFLAGS.append("-flto=thin")
         ALL_LINK_ARGS.append("-flto=thin")
     ALL_LINK_ARGS.append("-fvisibility=hidden")
     ALL_CFLAGS += ["-Wno-comment"]
-    ALL_CFLAGS.extend(MOSTLY_FAST_MATH)
 elif platform.system() == "Linux":
     ALL_CPPFLAGS.append("-DLINUX=1")
-    ALL_CPPFLAGS.extend(MOSTLY_FAST_MATH)
     # We use GCC on Linux, which doesn't take a value for the -flto flag:
     if not DEBUG and not os.getenv("DISABLE_LTO"):
         ALL_CPPFLAGS.append("-flto")
         ALL_LINK_ARGS.append("-flto")
     ALL_LINK_ARGS.append("-fvisibility=hidden")
     ALL_CFLAGS += ["-Wno-comment"]
-    ALL_CFLAGS.extend(MOSTLY_FAST_MATH)
 elif platform.system() == "Windows":
     ALL_CPPFLAGS.append("-DWINDOWS=1")
 else:
