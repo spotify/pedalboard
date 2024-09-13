@@ -1502,32 +1502,148 @@ class Resample(Plugin):
 
     class Quality(Enum):
         """
-        Indicates a specific resampling algorithm to use.
+        Indicates which specific resampling algorithm to use.
+
+        Resampling algorithms each provide a different tradeoff between speed and quality.
+        Pedalboard provides two different types of resampling algorithms:
+         - `Aliasing` algorithms, which cause high frequencies to appear as
+           lower frequencies.
+         - Non-aliasing algorithms, which filter out high frequencies when downsampling
+           and avoid introducing extra high-frequency content when upsampling. (These
+           algorithms were introduced in Pedalboard v0.9.15.)
+
+        Aliasing algorithms include :py:class:`ZeroOrderHold`, :py:class:`Linear`,
+        :py:class:`CatmullRom`, :py:class:`Lagrange`, and :py:class:`WindowedSinc`.
+
+        Non-aliasing algorithms include :py:class:`WindowedSinc256`, :py:class:`WindowedSinc128`,
+        :py:class:`WindowedSinc64`, :py:class:`WindowedSinc32`, :py:class:`WindowedSinc16`, and
+        :py:class:`WindowedSinc8`.
+
+        Choosing an algorithm to use depends on the signal being resampled, the relationship
+        between the source and target sample rates, and the application of the resampled signal.
+
+         - If downsampling by an integer factor (i.e.: from 44.1kHz to 22050Hz, or 48kHz to 24kHz),
+           and if the source signal has no high-frequency content above half of the target sample
+           rate the :py:class:`ZeroOrderHold` algorithm will be the fastest by far and will produce
+           no artifacts.
+         - In all other cases, any of the numbered :py:class:`WindowedSinc` algorithms
+           (i.e.: :py:class:`WindowedSinc256`, :py:class:`WindowedSinc64`) will produce
+           a clean signal with no artifacts. Higher numbers will produce a cleaner signal with less
+           roll-off of high frequency content near the Nyquist frequency of the new sample rate.
+
+        However, depending on your application, the artifacts introduced by each resampling method
+        may be acceptable. Test each method to determine which is the best tradeoff between speed
+        and accuracy for your use case.
+
+        To provide a good balance between speed and accuracy, :py:class:`WindowedSinc32` is the
+        default from Pedalboard v0.9.15 onwards. (Previously, :py:class:`WindowedSinc` was the default.)
         """
 
         ZeroOrderHold = 0  # fmt: skip
         """
         The lowest quality and fastest resampling method, with lots of audible artifacts.
+
+        Zero-order hold resampling chooses the next value to use based on the last value, without any interpolation. Think of it like nearest-neighbor resampling.
+
+        .. warning::
+
+           This algorithm produces aliasing artifacts.
         """
         Linear = 1  # fmt: skip
         """
-        A resampling method slightly less noisy than the simplest method, but not by much.
+        A resampling method slightly less noisy than the simplest method.
+
+        Linear resampling takes the average of the two nearest values to the desired sample, which is reasonably good for downsampling.
+
+        .. warning::
+
+           This algorithm produces aliasing artifacts.
         """
         CatmullRom = 2  # fmt: skip
         """
-        A moderately good-sounding resampling method which is fast to run.
+        A moderately good-sounding resampling method which is fast to run. Slightly slower than Linear resampling, but slightly higher quality.
+
+        .. warning::
+
+           This algorithm produces aliasing artifacts.
         """
         Lagrange = 3  # fmt: skip
         """
-        A moderately good-sounding resampling method which is slow to run.
+        A moderately good-sounding resampling method which is slow to run. Slower than CatmullRom resampling, but slightly higher quality.
+
+        .. warning::
+
+           This algorithm produces aliasing artifacts.
         """
         WindowedSinc = 4  # fmt: skip
         """
-        The highest quality and slowest resampling method, with no audible artifacts.
+        A very high quality (and the slowest) resampling method, with no audible artifacts when upsampling.
+
+        This resampler applies a windowed sinc filter design with 100 zero-crossings of the sinc function to approximate an ideal brick-wall low-pass filter.
+
+        .. warning::
+
+           This algorithm produces aliasing artifacts when downsampling, but not when upsampling.
+
+        .. note::
+
+           This method was the default in versions of Pedalboard prior to v0.9.15.
+        """
+        WindowedSinc256 = 5  # fmt: skip
+        """
+        The highest possible quality resampling algorithm, with no audible artifacts when upsampling or downsampling.
+
+        This resampler applies a windowed sinc filter with 256 zero-crossings to approximate an ideal brick-wall low-pass filter. This filter does not produce aliasing artifacts when upsampling or downsampling.
+
+        Compare this in speed and quality to Resampy's ``kaiser_best`` method.
+        """
+        WindowedSinc128 = 6  # fmt: skip
+        """
+        A very high quality resampling algorithm, with no audible artifacts when upsampling or downsampling.
+
+        This resampler applies a windowed sinc filter with 128 zero-crossings to approximate an ideal brick-wall low-pass filter. This filter does not produce aliasing artifacts when upsampling or downsampling.
+
+        This method is roughly as fast as Resampy's ``kaiser_fast`` method, while producing results roughly equal in quality to Resampy's ``kaiser_best`` method.
+        """
+        WindowedSinc64 = 7  # fmt: skip
+        """
+        A very high quality resampling algorithm, with few audible artifacts when upsampling or downsampling.
+
+        This resampler applies a windowed sinc filter with 64 zero-crossings to approximate an ideal brick-wall low-pass filter. This filter does not produce aliasing artifacts when upsampling or downsampling.
+
+        This method is (on average) faster than Resampy's ``kaiser_fast`` method, and roughly equal in quality.
+        """
+        WindowedSinc32 = 8  # fmt: skip
+        """
+        A reasonably high quality resampling algorithm, with few audible artifacts when upsampling or downsampling.
+
+        This resampler applies a windowed sinc filter with 32 zero-crossings to approximate an ideal brick-wall low-pass filter. This filter produces very few aliasing artifacts when upsampling or downsampling.
+
+        This method is always faster than Resampy's ``kaiser_fast`` method, while being reasonable in quality.
+
+        .. note::
+
+           This method is the default in Pedalboard v0.9.15 and later.
+        """
+        WindowedSinc16 = 9  # fmt: skip
+        """
+        A medium quality resampling algorithm, with few audible artifacts when upsampling or downsampling.
+
+        This resampler applies a windowed sinc filter with 16 zero-crossings to approximate an ideal brick-wall low-pass filter. This filter produces some aliasing artifacts when upsampling or downsampling.
+
+        This method is faster than Resampy's ``kaiser_fast`` method, while being acceptable in quality.
+        """
+        WindowedSinc8 = 10  # fmt: skip
+        """
+        A low quality resampling algorithm, with few audible artifacts when upsampling or downsampling.
+
+        This resampler applies a windowed sinc filter with 16 zero-crossings to approximate an ideal brick-wall low-pass filter. This filter produces noticeable aliasing artifacts when upsampling or downsampling.
+
+        This method can be more than 10x faster than Resampy's ``kaiser_fast`` method, and is useful for applications that are tolerant of some resampling artifacts.
         """
 
     def __init__(
-        self, target_sample_rate: float = 8000.0, quality: Quality = Quality.WindowedSinc
+        self, target_sample_rate: float = 8000.0, quality: Quality = Quality.WindowedSinc32
     ) -> None: ...
     def __repr__(self) -> str: ...
     @property
@@ -1561,6 +1677,12 @@ class Resample(Plugin):
     Lagrange: pedalboard_native.Resample.Quality  # value = <Quality.Lagrange: 3>
     Linear: pedalboard_native.Resample.Quality  # value = <Quality.Linear: 1>
     WindowedSinc: pedalboard_native.Resample.Quality  # value = <Quality.WindowedSinc: 4>
+    WindowedSinc128: pedalboard_native.Resample.Quality  # value = <Quality.WindowedSinc128: 6>
+    WindowedSinc16: pedalboard_native.Resample.Quality  # value = <Quality.WindowedSinc16: 9>
+    WindowedSinc256: pedalboard_native.Resample.Quality  # value = <Quality.WindowedSinc256: 5>
+    WindowedSinc32: pedalboard_native.Resample.Quality  # value = <Quality.WindowedSinc32: 8>
+    WindowedSinc64: pedalboard_native.Resample.Quality  # value = <Quality.WindowedSinc64: 7>
+    WindowedSinc8: pedalboard_native.Resample.Quality  # value = <Quality.WindowedSinc8: 10>
     ZeroOrderHold: pedalboard_native.Resample.Quality  # value = <Quality.ZeroOrderHold: 0>
     pass
 
@@ -2220,7 +2342,7 @@ class GSMFullRateCompressor(Plugin):
     An audio degradation/compression plugin that applies the GSM "Full Rate" compression algorithm to emulate the sound of a 2G cellular phone connection. This plugin internally resamples the input audio to a fixed sample rate of 8kHz (required by the GSM Full Rate codec), although the quality of the resampling algorithm can be specified.
     """
 
-    def __init__(self, quality: Resample.Quality = Resample.Quality.WindowedSinc) -> None: ...
+    def __init__(self, quality: Resample.Quality = Resample.Quality.WindowedSinc8) -> None: ...
     def __repr__(self) -> str: ...
     @property
     def quality(self) -> Resample.Quality:

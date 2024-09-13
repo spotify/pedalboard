@@ -1033,7 +1033,7 @@ The duration of this file in seconds (``frames`` divided by ``samplerate``).
                 file, targetSampleRate, quality)};
           },
           py::arg("target_sample_rate"),
-          py::arg("quality") = ResamplingQuality::WindowedSinc,
+          py::arg("quality") = ResamplingQuality::WindowedSinc32,
           "Return a :class:`ResampledReadableAudioFile` that will "
           "automatically resample this :class:`ReadableAudioFile` to the "
           "provided `target_sample_rate`, using a constant amount of "

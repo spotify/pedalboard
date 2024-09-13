@@ -46,6 +46,23 @@ static inline int inputBufferSizeFor(ResamplingQuality quality) {
     return 5;
   case ResamplingQuality::WindowedSinc:
     return 200;
+  case ResamplingQuality::WindowedSinc256:
+    return 256 * 4;
+  case ResamplingQuality::WindowedSinc128:
+    return 128 * 4;
+  case ResamplingQuality::WindowedSinc64:
+    return 64 * 4;
+  case ResamplingQuality::WindowedSinc32:
+    return 32 * 4;
+  case ResamplingQuality::WindowedSinc16:
+    return 16 * 4;
+  case ResamplingQuality::WindowedSinc8:
+    return 8 * 4;
+  default:
+    throw std::runtime_error("Unknown resampling quality (" +
+                             std::to_string((int)quality) +
+                             "); this is an internal "
+                             "Pedalboard error and should be reported.");
   }
   return 0;
 }
@@ -243,6 +260,16 @@ public:
                               /* keepExistingContent */ true,
                               /* clearExtraSpace */ false,
                               /* avoidReallocating */ true);
+
+        if (samplesRead < inputSamplesRequired) {
+          for (int c = 0; c < audioFile->getNumChannels(); c++) {
+            contiguousSourceSampleBufferPointers[c] =
+                contiguousSourceSampleBuffer.data() + (c * samplesRead);
+          }
+          sourceSamples = juce::AudioBuffer<float>(
+              contiguousSourceSampleBufferPointers.data(),
+              audioFile->getNumChannels(), samplesRead);
+        }
 
         // If the underlying source ran out of samples, tell the resampler that
         // we're done by feeding in an empty optional rather than an empty
@@ -472,7 +499,7 @@ inline void init_resampled_readable_audio_file(
                      "class implements __new__.");
                }),
            py::arg("audio_file"), py::arg("target_sample_rate"),
-           py::arg("resampling_quality") = ResamplingQuality::WindowedSinc)
+           py::arg("resampling_quality") = ResamplingQuality::WindowedSinc32)
       .def_static(
           "__new__",
           [](const py::object *, std::shared_ptr<ReadableAudioFile> audioFile,
@@ -481,7 +508,7 @@ inline void init_resampled_readable_audio_file(
                 audioFile, targetSampleRate, quality);
           },
           py::arg("cls"), py::arg("audio_file"), py::arg("target_sample_rate"),
-          py::arg("resampling_quality") = ResamplingQuality::WindowedSinc)
+          py::arg("resampling_quality") = ResamplingQuality::WindowedSinc32)
       .def("read", &ResampledReadableAudioFile::read, py::arg("num_frames") = 0,
            R"(
 Read the given number of frames (samples in each channel, at the target sample rate)

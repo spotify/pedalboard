@@ -15,10 +15,12 @@
 # limitations under the License.
 
 
-import pytest
 import numpy as np
+import pytest
+
 from pedalboard import Resample
 from pedalboard_native._internal import ResampleWithLatency
+
 from .utils import generate_sine_at
 
 TOLERANCE_PER_QUALITY = {
@@ -27,7 +29,21 @@ TOLERANCE_PER_QUALITY = {
     Resample.Quality.CatmullRom: 0.16,
     Resample.Quality.Lagrange: 0.16,
     Resample.Quality.WindowedSinc: 0.151,
+    Resample.Quality.WindowedSinc256: 0.170,
+    Resample.Quality.WindowedSinc128: 0.153,
+    Resample.Quality.WindowedSinc64: 0.153,
+    Resample.Quality.WindowedSinc32: 0.163,
+    Resample.Quality.WindowedSinc16: 0.153,
+    Resample.Quality.WindowedSinc8: 0.153,
 }
+
+QUALITIES_THAT_SUPPORT_EXTREME_RESAMPLING = [
+    Resample.Quality.ZeroOrderHold,
+    Resample.Quality.Linear,
+    Resample.Quality.CatmullRom,
+    Resample.Quality.Lagrange,
+    Resample.Quality.WindowedSinc,
+]
 
 DURATIONS = [0.345678]
 
@@ -38,7 +54,9 @@ DURATIONS = [0.345678]
 @pytest.mark.parametrize("buffer_size", [1, 32, 8192, 1_000_000])
 @pytest.mark.parametrize("duration", DURATIONS)
 @pytest.mark.parametrize("num_channels", [1, 2])
-@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+@pytest.mark.parametrize(
+    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
+)
 @pytest.mark.parametrize("plugin_class", [Resample, ResampleWithLatency])
 def test_resample(
     fundamental_hz: float,
@@ -66,7 +84,9 @@ def test_resample(
 @pytest.mark.parametrize("target_sample_rate", [1234.56, 8000, 11025, 48000])
 @pytest.mark.parametrize("duration", DURATIONS)
 @pytest.mark.parametrize("num_channels", [1, 2])
-@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+@pytest.mark.parametrize(
+    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
+)
 @pytest.mark.parametrize("plugin_class", [Resample, ResampleWithLatency])
 def test_resample_invariant_to_buffer_size(
     fundamental_hz: float,
@@ -126,7 +146,11 @@ def test_identical_noise_with_zero_order_hold(
 @pytest.mark.parametrize("buffer_size", [1_000_000])
 @pytest.mark.parametrize("duration", DURATIONS)
 @pytest.mark.parametrize("num_channels", [1])
-@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+@pytest.mark.parametrize(
+    "quality",
+    QUALITIES_THAT_SUPPORT_EXTREME_RESAMPLING,
+    ids=[q.name for q in QUALITIES_THAT_SUPPORT_EXTREME_RESAMPLING],
+)
 @pytest.mark.parametrize("plugin_class", [Resample, ResampleWithLatency])
 def test_extreme_resampling(
     fundamental_hz: float,

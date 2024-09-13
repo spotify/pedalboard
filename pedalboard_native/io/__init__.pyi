@@ -548,7 +548,7 @@ class ReadableAudioFile(AudioFile):
     def resampled_to(
         self,
         target_sample_rate: float,
-        quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc,
+        quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc32,
     ) -> typing.Union[ReadableAudioFile, ResampledReadableAudioFile]:
         """
         Return a :class:`ResampledReadableAudioFile` that will automatically resample this :class:`ReadableAudioFile` to the provided `target_sample_rate`, using a constant amount of memory.
@@ -745,14 +745,14 @@ class ResampledReadableAudioFile(AudioFile):
         self,
         audio_file: ReadableAudioFile,
         target_sample_rate: float,
-        resampling_quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc,
+        resampling_quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc32,
     ) -> None: ...
     @classmethod
     def __new__(
         cls,
         audio_file: ReadableAudioFile,
         target_sample_rate: float,
-        resampling_quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc,
+        resampling_quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc32,
     ) -> ResampledReadableAudioFile: ...
     def __repr__(self) -> str: ...
     def close(self) -> None:
@@ -926,7 +926,7 @@ class StreamResampler:
         source_sample_rate: float,
         target_sample_rate: float,
         num_channels: int,
-        quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc,
+        quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc32,
     ) -> None:
         """
         Create a new StreamResampler, capable of resampling a potentially-unbounded audio stream with a constant amount of memory. The source sample rate, target sample rate, quality, or number of channels cannot be changed once the resampler is instantiated.

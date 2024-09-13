@@ -6,7 +6,7 @@
 <meta property="og:title" content="The pedalboard API" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://spotify.github.io/pedalboard/reference/pedalboard.html" />
-<meta property="og:site_name" content="Pedalboard v0.9.14 Documentation" />
+<meta property="og:site_name" content="Pedalboard v0.9.15 Documentation" />
 <meta property="og:description" content="This module provides classes and functions for adding effects to audio. Most classes in this module are subclasses of Plugin, each of which allows applying effects to an audio buffer or stream. The..." />
 <meta property="og:image" content="https://repository-images.githubusercontent.com/383471193/0f79b949-9b91-4436-bfc4-05d30ef384cc" />
 <meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
@@ -14,7 +14,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="The pedalboard.io API" href="pedalboard.io.html" /><link rel="prev" title="Features" href="../index.html" />
 
     <link rel="shortcut icon" href="../_static/favicon.ico"/><meta name="generator" content="sphinx-5.3.0, furo 2022.09.29"/>
-        <title>The pedalboard API - Pedalboard v0.9.14 Documentation</title>
+        <title>The pedalboard API - Pedalboard v0.9.15 Documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=d81277517bee4d6b0349d71bb2661d4890b5617c" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
@@ -132,7 +132,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">Pedalboard v0.9.14 Documentation</div></a>
+      <a href="../index.html"><div class="brand">Pedalboard v0.9.15 Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -158,7 +158,7 @@
     <img class="sidebar-logo" src="../_static/pedalboard_logo_small.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">Pedalboard v0.9.14 Documentation</span>
+  <span class="sidebar-brand-text">Pedalboard v0.9.15 Documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
@@ -1341,7 +1341,7 @@ automatically invoke <a class="reference internal" href="#pedalboard.Distortion.
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.GSMFullRateCompressor">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">GSMFullRateCompressor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">quality</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pedalboard.Resample.Quality" title="pedalboard.Resample.Quality"><span class="pre">Quality</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">Quality.WindowedSinc</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.GSMFullRateCompressor" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">GSMFullRateCompressor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">quality</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pedalboard.Resample.Quality" title="pedalboard.Resample.Quality"><span class="pre">Quality</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">Quality.WindowedSinc8</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.GSMFullRateCompressor" title="Permalink to this definition">#</a></dt>
 <dd><p>An audio degradation/compression plugin that applies the GSM “Full Rate” compression algorithm to emulate the sound of a 2G cellular phone connection. This plugin internally resamples the input audio to a fixed sample rate of 8kHz (required by the GSM Full Rate codec), although the quality of the resampling algorithm can be specified.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="pedalboard.GSMFullRateCompressor.__call__">
@@ -2595,40 +2595,154 @@ automatically invoke <a class="reference internal" href="#pedalboard.PluginConta
 
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.Resample">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Resample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quality</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pedalboard.Resample.Quality" title="pedalboard.Resample.Quality"><span class="pre">Quality</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">Quality.WindowedSinc</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Resample" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.</span></span><span class="sig-name descname"><span class="pre">Resample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quality</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pedalboard.Resample.Quality" title="pedalboard.Resample.Quality"><span class="pre">Quality</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">Quality.WindowedSinc32</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Resample" title="Permalink to this definition">#</a></dt>
 <dd><p>A plugin that downsamples the input audio to the given sample rate, then upsamples it back to the original sample rate. Various quality settings will produce audible distortion and aliasing effects.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="pedalboard.Resample.Quality">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Quality</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pedalboard.Resample.Quality" title="Permalink to this definition">#</a></dt>
-<dd><p>Indicates a specific resampling algorithm to use.</p>
+<dd><p>Indicates which specific resampling algorithm to use.</p>
+<p>Resampling algorithms each provide a different tradeoff between speed and quality.
+Pedalboard provides two different types of resampling algorithms:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><cite>Aliasing</cite> algorithms, which cause high frequencies to appear as
+lower frequencies.</p></li>
+<li><p>Non-aliasing algorithms, which filter out high frequencies when downsampling
+and avoid introducing extra high-frequency content when upsampling. (These
+algorithms were introduced in Pedalboard v0.9.15.)</p></li>
+</ul>
+</div></blockquote>
+<p>Aliasing algorithms include <a class="reference internal" href="#pedalboard.Resample.Quality.ZeroOrderHold" title="pedalboard.Resample.Quality.ZeroOrderHold"><code class="xref py py-class docutils literal notranslate"><span class="pre">ZeroOrderHold</span></code></a>, <a class="reference internal" href="#pedalboard.Resample.Quality.Linear" title="pedalboard.Resample.Quality.Linear"><code class="xref py py-class docutils literal notranslate"><span class="pre">Linear</span></code></a>,
+<a class="reference internal" href="#pedalboard.Resample.Quality.CatmullRom" title="pedalboard.Resample.Quality.CatmullRom"><code class="xref py py-class docutils literal notranslate"><span class="pre">CatmullRom</span></code></a>, <a class="reference internal" href="#pedalboard.Resample.Quality.Lagrange" title="pedalboard.Resample.Quality.Lagrange"><code class="xref py py-class docutils literal notranslate"><span class="pre">Lagrange</span></code></a>, and <a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc" title="pedalboard.Resample.Quality.WindowedSinc"><code class="xref py py-class docutils literal notranslate"><span class="pre">WindowedSinc</span></code></a>.</p>
+<p>Non-aliasing algorithms include <a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc256" title="pedalboard.Resample.Quality.WindowedSinc256"><code class="xref py py-class docutils literal notranslate"><span class="pre">WindowedSinc256</span></code></a>, <a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc128" title="pedalboard.Resample.Quality.WindowedSinc128"><code class="xref py py-class docutils literal notranslate"><span class="pre">WindowedSinc128</span></code></a>,
+<a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc64" title="pedalboard.Resample.Quality.WindowedSinc64"><code class="xref py py-class docutils literal notranslate"><span class="pre">WindowedSinc64</span></code></a>, <a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc32" title="pedalboard.Resample.Quality.WindowedSinc32"><code class="xref py py-class docutils literal notranslate"><span class="pre">WindowedSinc32</span></code></a>, <a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc16" title="pedalboard.Resample.Quality.WindowedSinc16"><code class="xref py py-class docutils literal notranslate"><span class="pre">WindowedSinc16</span></code></a>, and
+<a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc8" title="pedalboard.Resample.Quality.WindowedSinc8"><code class="xref py py-class docutils literal notranslate"><span class="pre">WindowedSinc8</span></code></a>.</p>
+<p>Choosing an algorithm to use depends on the signal being resampled, the relationship
+between the source and target sample rates, and the application of the resampled signal.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>If downsampling by an integer factor (i.e.: from 44.1kHz to 22050Hz, or 48kHz to 24kHz),
+and if the source signal has no high-frequency content above half of the target sample
+rate the <a class="reference internal" href="#pedalboard.Resample.Quality.ZeroOrderHold" title="pedalboard.Resample.Quality.ZeroOrderHold"><code class="xref py py-class docutils literal notranslate"><span class="pre">ZeroOrderHold</span></code></a> algorithm will be the fastest by far and will produce
+no artifacts.</p></li>
+<li><p>In all other cases, any of the numbered <a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc" title="pedalboard.Resample.Quality.WindowedSinc"><code class="xref py py-class docutils literal notranslate"><span class="pre">WindowedSinc</span></code></a> algorithms
+(i.e.: <a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc256" title="pedalboard.Resample.Quality.WindowedSinc256"><code class="xref py py-class docutils literal notranslate"><span class="pre">WindowedSinc256</span></code></a>, <a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc64" title="pedalboard.Resample.Quality.WindowedSinc64"><code class="xref py py-class docutils literal notranslate"><span class="pre">WindowedSinc64</span></code></a>) will produce
+a clean signal with no artifacts. Higher numbers will produce a cleaner signal with less
+roll-off of high frequency content near the Nyquist frequency of the new sample rate.</p></li>
+</ul>
+</div></blockquote>
+<p>However, depending on your application, the artifacts introduced by each resampling method
+may be acceptable. Test each method to determine which is the best tradeoff between speed
+and accuracy for your use case.</p>
+<p>To provide a good balance between speed and accuracy, <a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc32" title="pedalboard.Resample.Quality.WindowedSinc32"><code class="xref py py-class docutils literal notranslate"><span class="pre">WindowedSinc32</span></code></a> is the
+default from Pedalboard v0.9.15 onwards. (Previously, <a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc" title="pedalboard.Resample.Quality.WindowedSinc"><code class="xref py py-class docutils literal notranslate"><span class="pre">WindowedSinc</span></code></a> was the default.)</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="pedalboard.Resample.Quality.ZeroOrderHold">
 <span class="sig-name descname"><span class="pre">ZeroOrderHold</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#pedalboard.Resample.Quality.ZeroOrderHold" title="Permalink to this definition">#</a></dt>
 <dd><p>The lowest quality and fastest resampling method, with lots of audible artifacts.</p>
+<p>Zero-order hold resampling chooses the next value to use based on the last value, without any interpolation. Think of it like nearest-neighbor resampling.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This algorithm produces aliasing artifacts.</p>
+</div>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="pedalboard.Resample.Quality.Linear">
 <span class="sig-name descname"><span class="pre">Linear</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#pedalboard.Resample.Quality.Linear" title="Permalink to this definition">#</a></dt>
-<dd><p>A resampling method slightly less noisy than the simplest method, but not by much.</p>
+<dd><p>A resampling method slightly less noisy than the simplest method.</p>
+<p>Linear resampling takes the average of the two nearest values to the desired sample, which is reasonably good for downsampling.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This algorithm produces aliasing artifacts.</p>
+</div>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="pedalboard.Resample.Quality.CatmullRom">
 <span class="sig-name descname"><span class="pre">CatmullRom</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#pedalboard.Resample.Quality.CatmullRom" title="Permalink to this definition">#</a></dt>
-<dd><p>A moderately good-sounding resampling method which is fast to run.</p>
+<dd><p>A moderately good-sounding resampling method which is fast to run. Slightly slower than Linear resampling, but slightly higher quality.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This algorithm produces aliasing artifacts.</p>
+</div>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="pedalboard.Resample.Quality.Lagrange">
 <span class="sig-name descname"><span class="pre">Lagrange</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></em><a class="headerlink" href="#pedalboard.Resample.Quality.Lagrange" title="Permalink to this definition">#</a></dt>
-<dd><p>A moderately good-sounding resampling method which is slow to run.</p>
+<dd><p>A moderately good-sounding resampling method which is slow to run. Slower than CatmullRom resampling, but slightly higher quality.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This algorithm produces aliasing artifacts.</p>
+</div>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="pedalboard.Resample.Quality.WindowedSinc">
 <span class="sig-name descname"><span class="pre">WindowedSinc</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></em><a class="headerlink" href="#pedalboard.Resample.Quality.WindowedSinc" title="Permalink to this definition">#</a></dt>
-<dd><p>The highest quality and slowest resampling method, with no audible artifacts.</p>
+<dd><p>A very high quality (and the slowest) resampling method, with no audible artifacts when upsampling.</p>
+<p>This resampler applies a windowed sinc filter design with 100 zero-crossings of the sinc function to approximate an ideal brick-wall low-pass filter.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This algorithm produces aliasing artifacts when downsampling, but not when upsampling.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This method was the default in versions of Pedalboard prior to v0.9.15.</p>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pedalboard.Resample.Quality.WindowedSinc256">
+<span class="sig-name descname"><span class="pre">WindowedSinc256</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">5</span></em><a class="headerlink" href="#pedalboard.Resample.Quality.WindowedSinc256" title="Permalink to this definition">#</a></dt>
+<dd><p>The highest possible quality resampling algorithm, with no audible artifacts when upsampling or downsampling.</p>
+<p>This resampler applies a windowed sinc filter with 256 zero-crossings to approximate an ideal brick-wall low-pass filter. This filter does not produce aliasing artifacts when upsampling or downsampling.</p>
+<p>Compare this in speed and quality to Resampy’s <code class="docutils literal notranslate"><span class="pre">kaiser_best</span></code> method.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pedalboard.Resample.Quality.WindowedSinc128">
+<span class="sig-name descname"><span class="pre">WindowedSinc128</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">6</span></em><a class="headerlink" href="#pedalboard.Resample.Quality.WindowedSinc128" title="Permalink to this definition">#</a></dt>
+<dd><p>A very high quality resampling algorithm, with no audible artifacts when upsampling or downsampling.</p>
+<p>This resampler applies a windowed sinc filter with 128 zero-crossings to approximate an ideal brick-wall low-pass filter. This filter does not produce aliasing artifacts when upsampling or downsampling.</p>
+<p>This method is roughly as fast as Resampy’s <code class="docutils literal notranslate"><span class="pre">kaiser_fast</span></code> method, while producing results roughly equal in quality to Resampy’s <code class="docutils literal notranslate"><span class="pre">kaiser_best</span></code> method.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pedalboard.Resample.Quality.WindowedSinc64">
+<span class="sig-name descname"><span class="pre">WindowedSinc64</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">7</span></em><a class="headerlink" href="#pedalboard.Resample.Quality.WindowedSinc64" title="Permalink to this definition">#</a></dt>
+<dd><p>A very high quality resampling algorithm, with few audible artifacts when upsampling or downsampling.</p>
+<p>This resampler applies a windowed sinc filter with 64 zero-crossings to approximate an ideal brick-wall low-pass filter. This filter does not produce aliasing artifacts when upsampling or downsampling.</p>
+<p>This method is (on average) faster than Resampy’s <code class="docutils literal notranslate"><span class="pre">kaiser_fast</span></code> method, and roughly equal in quality.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pedalboard.Resample.Quality.WindowedSinc32">
+<span class="sig-name descname"><span class="pre">WindowedSinc32</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">8</span></em><a class="headerlink" href="#pedalboard.Resample.Quality.WindowedSinc32" title="Permalink to this definition">#</a></dt>
+<dd><p>A reasonably high quality resampling algorithm, with few audible artifacts when upsampling or downsampling.</p>
+<p>This resampler applies a windowed sinc filter with 32 zero-crossings to approximate an ideal brick-wall low-pass filter. This filter produces very few aliasing artifacts when upsampling or downsampling.</p>
+<p>This method is always faster than Resampy’s <code class="docutils literal notranslate"><span class="pre">kaiser_fast</span></code> method, while being reasonable in quality.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This method is the default in Pedalboard v0.9.15 and later.</p>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pedalboard.Resample.Quality.WindowedSinc16">
+<span class="sig-name descname"><span class="pre">WindowedSinc16</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">9</span></em><a class="headerlink" href="#pedalboard.Resample.Quality.WindowedSinc16" title="Permalink to this definition">#</a></dt>
+<dd><p>A medium quality resampling algorithm, with few audible artifacts when upsampling or downsampling.</p>
+<p>This resampler applies a windowed sinc filter with 16 zero-crossings to approximate an ideal brick-wall low-pass filter. This filter produces some aliasing artifacts when upsampling or downsampling.</p>
+<p>This method is faster than Resampy’s <code class="docutils literal notranslate"><span class="pre">kaiser_fast</span></code> method, while being acceptable in quality.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pedalboard.Resample.Quality.WindowedSinc8">
+<span class="sig-name descname"><span class="pre">WindowedSinc8</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">10</span></em><a class="headerlink" href="#pedalboard.Resample.Quality.WindowedSinc8" title="Permalink to this definition">#</a></dt>
+<dd><p>A low quality resampling algorithm, with few audible artifacts when upsampling or downsampling.</p>
+<p>This resampler applies a windowed sinc filter with 16 zero-crossings to approximate an ideal brick-wall low-pass filter. This filter produces noticeable aliasing artifacts when upsampling or downsampling.</p>
+<p>This method can be more than 10x faster than Resampy’s <code class="docutils literal notranslate"><span class="pre">kaiser_fast</span></code> method, and is useful for applications that are tolerant of some resampling artifacts.</p>
 </dd></dl>
 
 </dd></dl>
@@ -3436,6 +3550,12 @@ the audio stream.</p>
 <li><a class="reference internal" href="#pedalboard.Resample.Quality.CatmullRom"><code class="docutils literal notranslate"><span class="pre">Resample.Quality.CatmullRom</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.Resample.Quality.Lagrange"><code class="docutils literal notranslate"><span class="pre">Resample.Quality.Lagrange</span></code></a></li>
 <li><a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc"><code class="docutils literal notranslate"><span class="pre">Resample.Quality.WindowedSinc</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc256"><code class="docutils literal notranslate"><span class="pre">Resample.Quality.WindowedSinc256</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc128"><code class="docutils literal notranslate"><span class="pre">Resample.Quality.WindowedSinc128</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc64"><code class="docutils literal notranslate"><span class="pre">Resample.Quality.WindowedSinc64</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc32"><code class="docutils literal notranslate"><span class="pre">Resample.Quality.WindowedSinc32</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc16"><code class="docutils literal notranslate"><span class="pre">Resample.Quality.WindowedSinc16</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.Resample.Quality.WindowedSinc8"><code class="docutils literal notranslate"><span class="pre">Resample.Quality.WindowedSinc8</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#pedalboard.Resample.__call__"><code class="docutils literal notranslate"><span class="pre">Resample.__call__()</span></code></a></li>

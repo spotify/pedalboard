@@ -62,7 +62,7 @@ class ResampleWithLatency(pedalboard_native.Plugin):
         self,
         target_sample_rate: float = 8000.0,
         internal_latency: int = 1024,
-        quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc,
+        quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc32,
     ) -> None: ...
     def __repr__(self) -> str: ...
     @property

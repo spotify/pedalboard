@@ -15,10 +15,12 @@
 # limitations under the License.
 
 
-import pytest
 import numpy as np
+import pytest
+
 from pedalboard import Resample
 from pedalboard.io import StreamResampler
+
 from .utils import generate_sine_at
 
 TOLERANCE_PER_QUALITY = {
@@ -35,7 +37,9 @@ TOLERANCE_PER_QUALITY = {
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67, 22050, 44100, 48000])
 @pytest.mark.parametrize("buffer_size", [4, 256, 8192, 1_000_000])
 @pytest.mark.parametrize("num_channels", [1, 2])
-@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+@pytest.mark.parametrize(
+    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
+)
 def test_stream_resample(
     fundamental_hz: float,
     sample_rate: float,
@@ -83,7 +87,9 @@ def test_stream_resample(
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67])
 @pytest.mark.parametrize("buffer_size", [256, 8192, 1_000_000])
 @pytest.mark.parametrize("num_channels", [1, 2])
-@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+@pytest.mark.parametrize(
+    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
+)
 def test_reset(
     fundamental_hz: float,
     sample_rate: float,
@@ -133,7 +139,9 @@ def test_reset(
 
 @pytest.mark.parametrize("sample_rate", [123.45, 8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [123.45, 8000, 11025, 12345.67, 22050, 44100, 48000])
-@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+@pytest.mark.parametrize(
+    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
+)
 def test_input_latency(sample_rate: float, target_sample_rate: float, quality: Resample.Quality):
     resampler = StreamResampler(sample_rate, target_sample_rate, 1, quality)
     _input = np.random.rand(int(resampler.input_latency)).astype(np.float32)
@@ -146,7 +154,9 @@ def test_input_latency(sample_rate: float, target_sample_rate: float, quality: R
 
 @pytest.mark.parametrize("sample_rate", [123.45, 8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [123.45, 8000, 11025, 12345.67, 22050, 44100, 48000])
-@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+@pytest.mark.parametrize(
+    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
+)
 def test_flush(sample_rate: float, target_sample_rate: float, quality: Resample.Quality):
     resampler = StreamResampler(sample_rate, target_sample_rate, 1, quality)
     _input = np.random.rand(int(sample_rate)).astype(np.float32)
@@ -165,7 +175,9 @@ def test_flush(sample_rate: float, target_sample_rate: float, quality: Resample.
 @pytest.mark.parametrize("sample_rate", [123.45, 8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [123.45, 8000, 11025, 12345.67, 22050, 44100, 48000])
 @pytest.mark.parametrize("chunk_size", [1, 4, 256, 8192, 1_000_000])
-@pytest.mark.parametrize("quality", TOLERANCE_PER_QUALITY.keys())
+@pytest.mark.parametrize(
+    "quality", TOLERANCE_PER_QUALITY.keys(), ids=[q.name for q in TOLERANCE_PER_QUALITY.keys()]
+)
 def test_returned_sample_count(
     sample_rate: float, target_sample_rate: float, chunk_size: int, quality
 ) -> np.ndarray:
