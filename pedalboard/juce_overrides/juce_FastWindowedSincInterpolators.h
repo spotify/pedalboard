@@ -1,9 +1,82 @@
 #include "../JuceHeader.h"
 
+inline double sinc(const double x) {
+  if (x == 0)
+    return 1;
+  return sin(juce::MathConstants<double>::pi * x) /
+         (juce::MathConstants<double>::pi * x);
+}
+
+inline double besselI0(int K, double x) {
+  // Modified Bessel function of order 0.
+  double sum = 0;
+  for (int k = 0; k < K; k++) {
+    sum += pow(pow(x, 2) / 4, k) / pow(tgamma(k + 1), 2);
+  }
+  return sum;
+}
+
+template <int NumZeros, int Precision>
+std::vector<float> calculateSincTable(double rolloff, double kaiserBeta,
+                                      int besselPrecision) {
+  const int n = Precision * NumZeros;
+
+  // Make the right hand side of the kaiser window with the provided beta:
+  std::vector<float> kaiserWindow(n + 1);
+  double besselI0OfBeta = besselI0(besselPrecision, kaiserBeta);
+  for (int i = 0; i <= n; i++) {
+    double alpha = (2 * n) / 2.0;
+    double x = (i - alpha) / alpha;
+    kaiserWindow[i] =
+        besselI0(besselPrecision, kaiserBeta * sqrt(1 - (x * x))) /
+        besselI0OfBeta;
+  }
+
+  std::vector<float> sinc_win(n + 1 // for the 0th element (magnitude 1)
+                              + 2 // for the two extra zero elements at the end
+  );
+  for (int i = 0; i <= n; i++) {
+    double linspace = NumZeros * ((double)i / (double)n);
+    sinc_win[i] = rolloff * sinc(linspace * rolloff) * kaiserWindow[n - i];
+  }
+  return sinc_win;
+}
+
+template <int NumZeros, int Precision>
+const std::vector<float> &getSincTable() {
+  float rolloff = 0.990;
+  float kaiserBeta = 8.00009;
+  int besselPrecision = 10;
+
+  if constexpr (NumZeros == 8) {
+    kaiserBeta = 19.9989;
+    besselPrecision = 32;
+  } else if constexpr (NumZeros == 16) {
+    kaiserBeta = 8.00113;
+    besselPrecision = 16;
+  } else if constexpr (NumZeros == 32) {
+    kaiserBeta = 8.0001;
+    besselPrecision = 16;
+  } else if constexpr (NumZeros == 64) {
+    kaiserBeta = 8.00264;
+    besselPrecision = 16;
+  } else if constexpr (NumZeros == 128) {
+    kaiserBeta = 8.00013;
+    besselPrecision = 16;
+  }
+
+  static std::vector<float> sinc_win = calculateSincTable<NumZeros, Precision>(
+      rolloff, kaiserBeta, besselPrecision);
+  return sinc_win;
+}
+
 namespace juce {
 
-template <int NumCrossings, int DistanceBetweenCrossings>
+template <int _NumCrossings, int _DistanceBetweenCrossings>
 struct FastWindowedSincTraits {
+  static constexpr int NumCrossings = _NumCrossings;
+  static constexpr int DistanceBetweenCrossings = _DistanceBetweenCrossings;
+
   static constexpr int LookupTableSize =
       NumCrossings * DistanceBetweenCrossings +
       1    // for the 0th element (magnitude 1)
@@ -14,7 +87,8 @@ struct FastWindowedSincTraits {
   static constexpr float algorithmicLatency =
       static_cast<float>(BufferSize / 2);
 
-  static inline float windowedSinc(float firstFrac, int index) noexcept {
+  static inline float windowedSinc(const float *lookupTable, float firstFrac,
+                                   int index) noexcept {
     auto value1 = lookupTable[index];
     auto value2 = lookupTable[index + 1];
     return value1 + (firstFrac * (value2 - value1));
@@ -38,7 +112,8 @@ struct FastWindowedSincTraits {
   }
 
   static std::array<float, BufferSize>
-  subsampleSincFilter(float offset, double speedRatio) noexcept {
+  subsampleSincFilter(const float *lookupTable, float offset,
+                      double speedRatio) noexcept {
     double effectiveSpeedRatio = std::max(speedRatio, 1.0);
     const float sincStart = 1.0f - offset - ((float)BufferSize / 2.0f);
     float sincPositions[BufferSize];
@@ -70,7 +145,7 @@ struct FastWindowedSincTraits {
 #pragma clang loop vectorize(enable) interleave(enable)
 #pragma unroll
     for (int i = 0; i < BufferSize; i++) {
-      sincValues[i] = windowedSinc(fracs[i], ints[i]);
+      sincValues[i] = windowedSinc(lookupTable, fracs[i], ints[i]);
     }
 
     return sincValues;
@@ -104,8 +179,6 @@ struct FastWindowedSincTraits {
 
     return result / effectiveSpeedRatio;
   }
-
-  static const float lookupTable[LookupTableSize];
 };
 
 /**
@@ -117,7 +190,11 @@ struct FastWindowedSincTraits {
 */
 template <class InterpolatorTraits> class FastWindowedSincInterpolator {
 public:
-  FastWindowedSincInterpolator() noexcept { reset(); }
+  FastWindowedSincInterpolator() noexcept {
+    lookupTable = &getSincTable<InterpolatorTraits::NumCrossings,
+                                InterpolatorTraits::DistanceBetweenCrossings>();
+    reset();
+  }
 
   FastWindowedSincInterpolator(FastWindowedSincInterpolator &&) noexcept =
       default;
@@ -164,6 +241,8 @@ private:
     auto pos = subSamplePos;
     int numUsed = 0;
 
+    const float *lookupTablePointer = lookupTable->data();
+
     // Pre-compute the sinc interpolation tables if possible:
     if (cachedSincValueTables.empty()) {
       static constexpr int MAX_CACHED_SINC_TABLES = 64;
@@ -186,7 +265,8 @@ private:
             // We have a common offset value, so we can precompute the sinc
             // table for this offset value:
             cachedSincValueTables[{speedRatio, pair.first}] =
-                InterpolatorTraits::subsampleSincFilter(pair.first, speedRatio);
+                InterpolatorTraits::subsampleSincFilter(lookupTablePointer,
+                                                        pair.first, speedRatio);
           }
         }
       }
@@ -204,8 +284,8 @@ private:
             cachedSincValueTables.end()) {
           // This should not happen; we should have precomputed all sinc tables
           // above. Create a new sinc table on the stack:
-          auto sincValues =
-              InterpolatorTraits::subsampleSincFilter((float)pos, speedRatio);
+          auto sincValues = InterpolatorTraits::subsampleSincFilter(
+              lookupTablePointer, (float)pos, speedRatio);
           *output++ = InterpolatorTraits::valueAtOffset(
               lastInputSamples, indexBuffer, speedRatio, sincValues);
         } else {
@@ -224,8 +304,8 @@ private:
           pos -= 1.0;
         }
 
-        auto sincValues =
-            InterpolatorTraits::subsampleSincFilter(pos, speedRatio);
+        auto sincValues = InterpolatorTraits::subsampleSincFilter(
+            lookupTablePointer, pos, speedRatio);
         *output++ = InterpolatorTraits::valueAtOffset(
             lastInputSamples, indexBuffer, speedRatio, sincValues);
         pos += speedRatio;
@@ -246,6 +326,8 @@ private:
   std::map<std::pair<double, float>,
            std::array<float, InterpolatorTraits::BufferSize>>
       cachedSincValueTables;
+
+  const std::vector<float> *lookupTable;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FastWindowedSincInterpolator)
 };

@@ -258,8 +258,8 @@ if platform.system() == "Darwin":
     ALL_CPPFLAGS.append("-DMACOS=1")
     ALL_CPPFLAGS.append("-DHAVE_VDSP=1")
     if not DEBUG and not os.getenv("DISABLE_LTO"):
-        ALL_CPPFLAGS.append("-flto=thin")
-        ALL_LINK_ARGS.append("-flto=thin")
+        ALL_CPPFLAGS.append("-flto")
+        ALL_LINK_ARGS.append("-flto")
     ALL_LINK_ARGS.append("-fvisibility=hidden")
     ALL_CFLAGS += ["-Wno-comment"]
 elif platform.system() == "Linux":
