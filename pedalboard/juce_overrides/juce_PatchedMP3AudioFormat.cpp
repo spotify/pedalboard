@@ -3323,6 +3323,10 @@ public:
       return false;
     }
 
+    if (numDestChannels == 0) {
+      return true;
+    }
+
     if (currentPosition != startSampleInFile) {
       if (!stream.seek((int)(startSampleInFile / samplesPerFrame - 1))) {
         currentPosition = -1;
