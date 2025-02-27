@@ -48,6 +48,7 @@ namespace py = pybind11;
 #include "plugins/Convolution.h"
 #include "plugins/Delay.h"
 #include "plugins/Distortion.h"
+#include "plugins/Fuzz.h"
 #include "plugins/GSMFullRateCompressor.h"
 #include "plugins/Gain.h"
 #include "plugins/HighpassFilter.h"
@@ -209,6 +210,7 @@ If the number of samples and the number of channels are the same, each
   init_convolution(m);
   init_delay(m);
   init_distortion(m);
+  init_fuzz(m);
   init_gain(m);
 
   // Init Resample before GSMFullRateCompressor, which uses Resample::Quality:

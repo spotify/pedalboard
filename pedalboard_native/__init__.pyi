@@ -42,6 +42,7 @@ __all__ = [
     "Convolution",
     "Delay",
     "Distortion",
+    "Fuzz",
     "ExternalPlugin",
     "GSMFullRateCompressor",
     "Gain",
@@ -391,6 +392,32 @@ class Distortion(Plugin):
 
     @drive_db.setter
     def drive_db(self, arg1: float) -> None:
+        pass
+    pass
+
+class Fuzz(Plugin):
+    """
+    A Fuzz effect emulating a classic fuzz pedal.
+    It features a two-stage clipping process: first a hard diode clipping (threshold=0.25),
+    then a soft clipping via tanh, followed by a tone control stage implemented as a low-pass filter.
+    """
+
+    def __init__(self, drive_db: float = 25, tone_hz: float = 800) -> None: ...
+    def __repr__(self) -> str: ...
+    @property
+    def drive_db(self) -> float:
+        """ """
+
+    @drive_db.setter
+    def drive_db(self, arg1: float) -> None:
+        pass
+
+    @property
+    def tone_hz(self) -> float:
+        """ """
+
+    @tone_hz.setter
+    def tone_hz(self, arg1: float) -> None:
         pass
     pass
 
