@@ -61,11 +61,10 @@ def test_fuzz_process_signal():
 
     audio_out = fuzz.process(audio_in, sample_rate)
     assert audio_out.shape == audio_in.shape, "The form of the output must be the same as the input"
-    with pytest.raises(AssertionError):
-        np.testing.assert_array_almost_equal(audio_out, audio_in, decimal=5)
+    assert not np.array_almost_equal(audio_out, audio_in, decimal=5)
 
 
-@pytest.mark.parametrize("drive_db", [25., 35., 45.])
+@pytest.mark.parametrize("drive_db", [25.0, 35.0, 45.0])
 @pytest.mark.parametrize("tone_hz", [800, 1000, 4000, 12000])
 def test_fuzz_in_pedalboard(drive_db, tone_hz):
     fuzz_effect = Fuzz(drive_db=drive_db, tone_hz=tone_hz)
