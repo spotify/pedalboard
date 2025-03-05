@@ -60,8 +60,8 @@ def test_fuzz_process_signal():
     audio_in = np.column_stack((_input, _input))
 
     audio_out = fuzz.process(audio_in, sample_rate)
-    assert audio_out.shape == audio_in.shape, "The form of the output must be the same as the input"
-    assert not np.array_almost_equal(audio_out, audio_in, decimal=5)
+    assert audio_out.shape == audio_in.shape, "The shape of the output must be the same as the input"
+    assert not np.allclose(audio_out, audio_in, atol=0.00001)
 
 
 @pytest.mark.parametrize("drive_db", [25.0, 35.0, 45.0])
