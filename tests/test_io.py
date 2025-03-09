@@ -986,9 +986,9 @@ def test_swapped_parameter_exception(tmp_path: pathlib.Path, extension: str, sam
     filename = str(tmp_path / f"test{extension}")
     with pytest.raises(ValueError) as e:
         pedalboard.io.WriteableAudioFile(filename, samplerate=1, num_channels=samplerate)
-    assert "reversing" in str(
-        e
-    ), "Expected exception to include details about reversing parameters."
+    assert "reversing" in str(e), (
+        "Expected exception to include details about reversing parameters."
+    )
 
 
 @pytest.mark.parametrize("dtype", [np.uint8, np.uint16, np.uint32, np.uint64])
