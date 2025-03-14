@@ -35,28 +35,62 @@ class Fuzz
           juce::dsp::IIR::Filter<SampleType> // Tone control (low-pass filter)
           >> {
 public:
-  Fuzz()
-      : driveDecibels(static_cast<SampleType>(25)),
-        toneHz(static_cast<SampleType>(800)) {}
+  Fuzz() {
+    // Set default values
+    currentDriveDecibels = static_cast<SampleType>(25);
+    currentToneHz = static_cast<SampleType>(800);
+    
+    // Apply default values to the DSP chain if possible
+    updateDSPParameters();
+  }
 
-  void setDriveDecibels(const float f) noexcept { driveDecibels = f; }
-  float getDriveDecibels() const noexcept { return driveDecibels; }
+  // Updated getters and setters to cache values and update DSP chain
+  void setDriveDecibels(const float f) noexcept { 
+    currentDriveDecibels = f;
+    // Update the DSP chain
+    this->getDSP().template get<gainIndex>().setGainDecibels(f);
+  }
+  
+  float getDriveDecibels() const noexcept { 
+    // Return cached value
+    return currentDriveDecibels;
+  }
 
-  void setToneHz(const float f) noexcept { toneHz = f; }
-  float getToneHz() const noexcept { return toneHz; }
+  void setToneHz(const float f) noexcept {
+    // Store new tone frequency
+    currentToneHz = f;
+    
+    // Update filter coefficients if we have a valid sample rate
+    if (currentSampleRate > 0) {
+      updateFilterCoefficients();
+    }
+  }
+  
+  float getToneHz() const noexcept { 
+    return currentToneHz;
+  }
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) override {
+    // Store sample rate for coefficient updates
+    currentSampleRate = spec.sampleRate;
+    
     // Prepare the four-stage DSP chain
     JucePlugin<juce::dsp::ProcessorChain<
         juce::dsp::Gain<SampleType>, juce::dsp::WaveShaper<SampleType>,
         juce::dsp::WaveShaper<SampleType>,
         juce::dsp::IIR::Filter<SampleType>>>::prepare(spec);
 
-    // First stage (1st): apply gain to drive
-    this->getDSP().template get<gainIndex>().setGainDecibels(
-        getDriveDecibels());
+    // Update all parameters in the DSP chain
+    updateDSPParameters();
+  }
 
-    // First stage (2nd): diode hard clipping with threshold 0.25
+private:
+  // Helper method to update all DSP parameters
+  void updateDSPParameters() {
+    // Update gain stage
+    this->getDSP().template get<gainIndex>().setGainDecibels(currentDriveDecibels);
+    
+    // Setup first clipper stage
     this->getDSP().template get<clipperIndex>().functionToUse =
         [](SampleType x) -> SampleType {
       constexpr SampleType threshold = static_cast<SampleType>(0.25);
@@ -67,22 +101,39 @@ public:
       return x;
     };
 
-    // Second stage: soft clipping via tanh
+    // Setup second shaper stage
     this->getDSP().template get<shaperIndex>().functionToUse =
         [](SampleType x) -> SampleType {
       return static_cast<SampleType>(std::tanh(x));
     };
 
-    // Third stage: Tone control via low-pass filter
-    auto coeffs = juce::dsp::IIR::Coefficients<SampleType>::makeLowPass(
-        spec.sampleRate, toneHz);
-    this->getDSP().template get<filterIndex>().coefficients = coeffs;
+    // Update filter coefficients if we have a valid sample rate
+    if (currentSampleRate > 0) {
+      updateFilterCoefficients();
+    }
   }
 
-private:
-  SampleType driveDecibels;
-  SampleType toneHz;
+  // Helper method to update filter coefficients
+  void updateFilterCoefficients() {
+    auto& filter = this->getDSP().template get<filterIndex>();
+    // Create new coefficients for the filter
+    auto coeffs = juce::dsp::IIR::Coefficients<SampleType>::makeLowPass(
+        currentSampleRate, currentToneHz);
+    
+    // Update the filter coefficients
+    if (filter.coefficients != nullptr) {
+      *filter.coefficients = *coeffs;
+    } else {
+      filter.coefficients = coeffs;
+    }
+  }
 
+  // Cache parameter values
+  SampleType currentDriveDecibels = static_cast<SampleType>(25);
+  SampleType currentToneHz = static_cast<SampleType>(800);
+  double currentSampleRate = 0.0;
+
+  // Indices for the processor chain
   enum { gainIndex, clipperIndex, shaperIndex, filterIndex };
 };
 
