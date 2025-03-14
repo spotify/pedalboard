@@ -184,7 +184,6 @@ def test_returned_sample_count(
     input_signal = np.linspace(0, 3, num=int(sample_rate), dtype=np.float32)
     resampler = StreamResampler(sample_rate, target_sample_rate, 1, quality)
 
-    print("input", input_signal)
     expected_output = np.concatenate(
         [resampler.process(input_signal), resampler.process(None)], axis=-1
     )
