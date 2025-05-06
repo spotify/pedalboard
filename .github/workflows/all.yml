@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.12']
-        os: ['ubuntu-20.04']
+        os: ['ubuntu-24.04']
     name: Lint Python
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -37,7 +37,7 @@ jobs:
         run: ruff format --check ${{ runner.workspace }}/pedalboard --exclude .git,dist,doc,build,JUCE,examples,vendors,'*.pyi' --diff --line-length 100
 
   lint-cpp:
-    runs-on: 'ubuntu-20.04'
+    runs-on: 'ubuntu-24.04'
     continue-on-error: true
     name: Lint C++
     steps:
@@ -57,7 +57,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - { os: ubuntu-20.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: ubuntu-24.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
     name: Pre-build on ${{ matrix.os }} with ${{ matrix.compiler }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -241,7 +241,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - { os: ubuntu-20.04, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
+          - { os: ubuntu-24.04, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
     name: Pre-build on ${{ matrix.os }} with ${{ matrix.compiler }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -342,7 +342,7 @@ jobs:
       - prime-ubuntu-build-caches
     strategy:
       matrix:
-        os: ["ubuntu-20.04"]
+        os: ["ubuntu-24.04"]
         python-version: ["3.12"]
         compiler: ["gcc"]
         cc: ["ccache gcc"]
@@ -462,12 +462,12 @@ jobs:
           - { os: macos-13, python-version: "3.11", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
           - { os: macos-13, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
           - { os: macos-13, python-version: "3.13.0-rc.1", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++" }
-          - { os: ubuntu-20.04, python-version: "3.8", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
-          - { os: ubuntu-20.04, python-version: "3.9", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
-          - { os: ubuntu-20.04, python-version: "3.10", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
-          - { os: ubuntu-20.04, python-version: "3.11", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
-          - { os: ubuntu-20.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
-          - { os: ubuntu-20.04, python-version: "3.13.0-rc.1", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: ubuntu-24.04, python-version: "3.8", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: ubuntu-24.04, python-version: "3.9", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: ubuntu-24.04, python-version: "3.10", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: ubuntu-24.04, python-version: "3.11", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: ubuntu-24.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
+          - { os: ubuntu-24.04, python-version: "3.13.0-rc.1", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           # - { os: windows-latest, python-version: "3.8", compiler: "msvc", cc: "msvc", cxx: "msvc" }
           # - { os: windows-latest, python-version: "3.9", compiler: "msvc", cc: "msvc", cxx: "msvc" }
           # - { os: windows-latest, python-version: "3.10", compiler: "msvc", cc: "msvc", cxx: "msvc" }
@@ -579,10 +579,10 @@ jobs:
           GCS_READER_SERVICE_ACCOUNT_KEY: ${{ secrets.GCS_READER_SERVICE_ACCOUNT_KEY }}
         run: python ./tests/download_test_plugins.py
       - name: Run tests
-        if: matrix.os != 'ubuntu-20.04' || matrix.python-version != '3.8'
+        if: matrix.os != 'ubuntu-24.04' || matrix.python-version != '3.8'
         run: pytest --maxfail=4 --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard --durations=100
       - name: Run tests with coverage reporting
-        if: matrix.os == 'ubuntu-20.04' && matrix.python-version == '3.8'
+        if: matrix.os == 'ubuntu-24.04' && matrix.python-version == '3.8'
         run: |
           pytest --maxfail=4 --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard \
           && coverage json --fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} \
@@ -590,7 +590,7 @@ jobs:
           && jq -r 'if .totals.percent_covered > ${{ env.MINIMUM_COVERAGE_PERCENTAGE }} then "COVERAGE_COLOR=green" else "COVERAGE_COLOR=red" end' coverage.json >> $GITHUB_ENV
       - name: Create coverage badge
         uses: schneegans/dynamic-badges-action@v1.1.0
-        if: matrix.os == 'ubuntu-20.04' && matrix.python-version == '3.8' && github.event_name == 'release' && github.event.action == 'published'
+        if: matrix.os == 'ubuntu-24.04' && matrix.python-version == '3.8' && github.event_name == 'release' && github.event.action == 'published'
         with:
           auth: ${{ secrets.COVERAGE_GIST_SECRET }}
           gistID: 8736467e9952991ef44a67915ee7c762
@@ -605,7 +605,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
-        os: ['ubuntu-20.04']
+        os: ['ubuntu-24.04']
     name: Test with Python ${{ matrix.python-version }} + Address Sanitizer
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -714,30 +714,30 @@ jobs:
         - { os: windows-latest, build: cp313-win_amd64 }
         # - { os: windows-latest, build: cp313t-win_amd64 }
         - { os: windows-latest, build: cp312-win32 }
-        - { os: 'ubuntu-20.04', build: cp39-manylinux_x86_64 }
-        - { os: 'ubuntu-20.04', build: cp39-manylinux_aarch64 }
-        # - { os: 'ubuntu-20.04', build: cp39-musllinux_x86_64 }
-        # - { os: 'ubuntu-20.04', build: cp39-musllinux_aarch64 }
-        - { os: 'ubuntu-20.04', build: cp310-manylinux_x86_64 }
-        - { os: 'ubuntu-20.04', build: cp310-manylinux_aarch64 }
-        - { os: 'ubuntu-20.04', build: cp310-musllinux_x86_64 }
-        - { os: 'ubuntu-20.04', build: cp310-musllinux_aarch64 }
-        - { os: 'ubuntu-20.04', build: cp311-manylinux_x86_64 }
-        - { os: 'ubuntu-20.04', build: cp311-manylinux_aarch64 }
-        # - { os: 'ubuntu-20.04', build: cp311-musllinux_x86_64 }
-        # - { os: 'ubuntu-20.04', build: cp311-musllinux_aarch64 }
-        - { os: 'ubuntu-20.04', build: cp312-manylinux_x86_64 }
-        - { os: 'ubuntu-20.04', build: cp312-manylinux_aarch64 }
-        - { os: 'ubuntu-20.04', build: cp312-musllinux_x86_64 }
-        - { os: 'ubuntu-20.04', build: cp312-musllinux_aarch64 }
-        - { os: 'ubuntu-20.04', build: cp313-manylinux_x86_64 }
-        - { os: 'ubuntu-20.04', build: cp313-manylinux_aarch64 }
-        # - { os: 'ubuntu-20.04', build: cp313-musllinux_x86_64 }
-        # - { os: 'ubuntu-20.04', build: cp313-musllinux_aarch64 }
-        - { os: 'ubuntu-20.04', build: cp313t-manylinux_x86_64 }
-        - { os: 'ubuntu-20.04', build: cp313t-manylinux_aarch64 }
-        # - { os: 'ubuntu-20.04', build: cp313t-musllinux_x86_64 }
-        # - { os: 'ubuntu-20.04', build: cp313t-musllinux_aarch64 }
+        - { os: 'ubuntu-24.04', build: cp39-manylinux_x86_64 }
+        - { os: 'ubuntu-24.04', build: cp39-manylinux_aarch64 }
+        # - { os: 'ubuntu-24.04', build: cp39-musllinux_x86_64 }
+        # - { os: 'ubuntu-24.04', build: cp39-musllinux_aarch64 }
+        - { os: 'ubuntu-24.04', build: cp310-manylinux_x86_64 }
+        - { os: 'ubuntu-24.04', build: cp310-manylinux_aarch64 }
+        - { os: 'ubuntu-24.04', build: cp310-musllinux_x86_64 }
+        - { os: 'ubuntu-24.04', build: cp310-musllinux_aarch64 }
+        - { os: 'ubuntu-24.04', build: cp311-manylinux_x86_64 }
+        - { os: 'ubuntu-24.04', build: cp311-manylinux_aarch64 }
+        # - { os: 'ubuntu-24.04', build: cp311-musllinux_x86_64 }
+        # - { os: 'ubuntu-24.04', build: cp311-musllinux_aarch64 }
+        - { os: 'ubuntu-24.04', build: cp312-manylinux_x86_64 }
+        - { os: 'ubuntu-24.04', build: cp312-manylinux_aarch64 }
+        - { os: 'ubuntu-24.04', build: cp312-musllinux_x86_64 }
+        - { os: 'ubuntu-24.04', build: cp312-musllinux_aarch64 }
+        - { os: 'ubuntu-24.04', build: cp313-manylinux_x86_64 }
+        - { os: 'ubuntu-24.04', build: cp313-manylinux_aarch64 }
+        # - { os: 'ubuntu-24.04', build: cp313-musllinux_x86_64 }
+        # - { os: 'ubuntu-24.04', build: cp313-musllinux_aarch64 }
+        - { os: 'ubuntu-24.04', build: cp313t-manylinux_x86_64 }
+        - { os: 'ubuntu-24.04', build: cp313t-manylinux_aarch64 }
+        # - { os: 'ubuntu-24.04', build: cp313t-musllinux_x86_64 }
+        # - { os: 'ubuntu-24.04', build: cp313t-musllinux_aarch64 }
     name: Build wheel for ${{ matrix.build }}
     steps:
       - uses: actions/checkout@v4
@@ -794,7 +794,7 @@ jobs:
 
   upload-pypi:
     needs: [merge, run-tests-with-address-sanitizer, run-tests]
-    runs-on: 'ubuntu-20.04'
+    runs-on: 'ubuntu-24.04'
     name: "Upload wheels to PyPI"
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
