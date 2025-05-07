@@ -1,9 +1,40 @@
-cmake_minimum_required(VERSION 3.15...3.27)
+cmake_minimum_required(VERSION 3.18...3.27)
 
-# Find Python and pybind11 first, as we need the interpreter
-find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
-find_package(pybind11 CONFIG REQUIRED)
+# Warn if the user invokes CMake directly
+if (NOT SKBUILD)
+  message(WARNING "\
+  This CMake file is meant to be executed using 'scikit-build-core'.
+  Running it directly will almost certainly not produce the desired
+  result. If you are a user trying to install this package, use the
+  command below, which will install all necessary build dependencies,
+  compile the package in an isolated environment, and then install it.
+  =====================================================================
+   $ pip install .
+  =====================================================================
+  If you are a software developer, and this is your own package, then
+  it is usually much more efficient to install the build dependencies
+  in your environment once and use the following command that avoids
+  a costly creation of a new virtual environment at every compilation:
+  =====================================================================
+   $ pip install pybind11 scikit-build-core[pyproject]
+   $ pip install --no-build-isolation -ve .
+  =====================================================================
+  You may optionally add -Ceditable.rebuild=true to auto-rebuild when
+  the package is imported. Otherwise, you need to rerun the above
+  after editing C++ files.")
+endif()
+
+if (CMAKE_VERSION VERSION_LESS 3.18)
+  set(DEV_MODULE Development)
+else()
+  set(DEV_MODULE Development.Module)
+endif()
+
+
 set(PYBIND11_FINDPYTHON ON)
+# Find Python and pybind11 first, as we need the interpreter
+find_package(Python 3.8 COMPONENTS Interpreter ${DEV_MODULE} REQUIRED)
+find_package(pybind11 CONFIG REQUIRED)
 
 # Set up ccache if available
 find_program(CCACHE_PROGRAM ccache)
@@ -269,7 +300,7 @@ endfunction()
 collect_sources()
 
 # Create the Python module
-pybind11_add_module(pedalboard_native ${ALL_SOURCES})
+pybind11_add_module(pedalboard_native MODULE ${ALL_SOURCES})
 
 # Add include directories
 target_include_directories(pedalboard_native PRIVATE ${ALL_INCLUDES})
