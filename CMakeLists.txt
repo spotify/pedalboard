@@ -305,6 +305,7 @@ if(APPLE)
     target_link_libraries(pedalboard_native PRIVATE ${MACOS_FRAMEWORKS})
 elseif(WIN32)
     target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES})
+    target_link_libraries(pedalboard_native PRIVATE ${Python_LIBRARIES})
 elseif(UNIX AND NOT APPLE)
     # Add libatomic for atomic operations on Linux
     target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES} atomic)
