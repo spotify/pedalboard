@@ -306,7 +306,8 @@ if(APPLE)
 elseif(WIN32)
     target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES})
 elseif(UNIX AND NOT APPLE)
-    target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES})
+    # Add libatomic for atomic operations on Linux
+    target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES} atomic)
 
     # Add missing FFTW-specific C flags for Linux
     target_compile_options(pedalboard_native PRIVATE
