@@ -24,7 +24,7 @@ import pedalboard
 # Very silly: even just creating an AudioStream object that reads from an `iPhone Microphone``
 # will cause a locally-present iPhone to emit a sound. Running `pytest` on my laptop makes my
 # phone ding.
-INPUT_DEVICE_NAMES_TO_SKIP = {"iPhone Microphone", "AirPods"}
+INPUT_DEVICE_NAMES_TO_SKIP = {"iPhone Microphone", "AirPods", "Open Sound System"}
 INPUT_DEVICE_NAMES = [
     n
     for n in pedalboard.io.AudioStream.input_device_names
@@ -37,7 +37,9 @@ ACCEPTABLE_ERRORS_ON_CI = {"No driver"}
 # Note: this test may do nothing on CI, because we don't have mock audio devices available.
 # This will run on Linux, macOS and probably Windows as long as at least one audio device is available.
 @pytest.mark.parametrize("input_device_name", INPUT_DEVICE_NAMES)
-@pytest.mark.parametrize("output_device_name", pedalboard.io.AudioStream.output_device_names)
+@pytest.mark.parametrize(
+    "output_device_name", pedalboard.io.AudioStream.output_device_names
+)
 def test_create_stream(input_device_name: str, output_device_name: str):
     try:
         stream = pedalboard.io.AudioStream(
@@ -130,7 +132,9 @@ def test_write_to_stream_without_opening():
 )
 def test_read_from_stream():
     try:
-        stream = pedalboard.io.AudioStream(pedalboard.io.AudioStream.default_input_device_name)
+        stream = pedalboard.io.AudioStream(
+            pedalboard.io.AudioStream.default_input_device_name
+        )
     except Exception as e:
         if any(substr in str(e) for substr in ACCEPTABLE_ERRORS_ON_CI):
             raise pytest.skip(str(e))
@@ -155,7 +159,9 @@ def test_read_from_stream():
 )
 def test_read_from_stream_measures_dropped_frames():
     try:
-        stream = pedalboard.io.AudioStream(pedalboard.io.AudioStream.default_input_device_name)
+        stream = pedalboard.io.AudioStream(
+            pedalboard.io.AudioStream.default_input_device_name
+        )
     except Exception as e:
         if any(substr in str(e) for substr in ACCEPTABLE_ERRORS_ON_CI):
             raise pytest.skip(str(e))
