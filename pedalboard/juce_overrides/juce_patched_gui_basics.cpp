@@ -44,6 +44,9 @@
 #define JUCE_GUI_BASICS_INCLUDE_XHEADERS 1
 #define JUCE_GUI_BASICS_INCLUDE_SCOPED_THREAD_DPI_AWARENESS_SETTER 1
 
+// Avoid error: ‘exchange’ is not a member of ‘std’:
+#include <utility>
+
 #include "../JUCE/modules/juce_gui_basics/juce_gui_basics.h"
 
 //==============================================================================
