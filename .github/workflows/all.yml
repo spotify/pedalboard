@@ -32,9 +32,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install ruff
       - name: Lint Python code
-        run: ruff check ${{ runner.workspace }}/pedalboard --ignore=E203,F541 --exclude .git,dist,doc,build,vendors,'*.pyi' --line-length 100 
+        run: ruff check ${{ github.workspace }}/pedalboard
       - name: Check Python formatting
-        run: ruff format --check ${{ runner.workspace }}/pedalboard --exclude .git,dist,doc,build,JUCE,examples,vendors,'*.pyi' --diff --line-length 100
+        run: ruff format --check ${{ github.workspace }}/pedalboard --diff
 
   lint-cpp:
     runs-on: 'ubuntu-24.04'

@@ -22,9 +22,7 @@ def main():
 
     GCS_READER_SERVICE_ACCOUNT_KEY = os.environ.get("GCS_READER_SERVICE_ACCOUNT_KEY")
     if not GCS_READER_SERVICE_ACCOUNT_KEY:
-        print(
-            "Missing GCS_READER_SERVICE_ACCOUNT_KEY environment variable! Not downloading."
-        )
+        print("Missing GCS_READER_SERVICE_ACCOUNT_KEY environment variable! Not downloading.")
         return
 
     json_acct_info = json.loads(GCS_READER_SERVICE_ACCOUNT_KEY)
@@ -32,22 +30,16 @@ def main():
     client = storage.Client(credentials=credentials)
 
     for plugin_type in ("effect", "instrument"):
-        target_filepath = os.path.join(
-            ".", "tests", "plugins", plugin_type, platform.system()
-        )
+        target_filepath = os.path.join(".", "tests", "plugins", plugin_type, platform.system())
         bucket = client.bucket(GCS_ASSET_BUCKET_NAME)
         prefix = f"test-plugins/{plugin_type}/{platform.system()}"
 
         # Manually iterate here instead of just calling gsutil on the command line as
         # GSUtil on Windows is not 100% guaranteed to install properly on GitHub Actions.
-        print(
-            f"Downloading test {plugin_type} plugin files from Google Cloud Storage..."
-        )
+        print(f"Downloading test {plugin_type} plugin files from Google Cloud Storage...")
         try:
             for blob in tqdm(list(bucket.list_blobs(prefix=prefix))):
-                local_path = os.path.join(
-                    target_filepath, blob.name.replace(prefix + "/", "")
-                )
+                local_path = os.path.join(target_filepath, blob.name.replace(prefix + "/", ""))
                 if local_path.endswith("/"):
                     os.makedirs(local_path, exist_ok=True)
                 else:

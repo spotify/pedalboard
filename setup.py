@@ -248,9 +248,7 @@ ALL_INCLUDES += [
 ]
 
 # libgsm
-ALL_SOURCE_PATHS += [
-    p for p in Path("vendors/libgsm/src").glob("*.c") if "toast" not in p.name
-]
+ALL_SOURCE_PATHS += [p for p in Path("vendors/libgsm/src").glob("*.c") if "toast" not in p.name]
 ALL_INCLUDES += ["vendors/libgsm/inc"]
 
 
@@ -335,8 +333,7 @@ if platform.system() == "Darwin":
                 [
                     cpp_source
                     for cpp_source in ALL_SOURCE_PATHS
-                    if os.path.splitext(objc_source.name)[0]
-                    == os.path.splitext(cpp_source.name)[0]
+                    if os.path.splitext(objc_source.name)[0] == os.path.splitext(cpp_source.name)[0]
                 ]
             ),
             None,
@@ -402,23 +399,16 @@ def patch_compile(original_compile):
             _cc_args = cc_args + ALL_CFLAGS
 
         # Code in JUCE or vendors should not even know we're using Python:
-        should_omit_python_header = any(
-            x in src for x in ("JUCE", "/juce_overrides/", "/vendors/")
-        )
+        should_omit_python_header = any(x in src for x in ("JUCE", "/juce_overrides/", "/vendors/"))
 
         # Remove the Python header from most files; we only need it when compiling
         # This speeds up compile times on CI as most of the objects don't need Python
         # headers at all, and including -I/include/python3.x/Python.h prevents us from
         # re-using the same object file for different Python versions.
-        if (
-            any("include/python3" in arg for arg in _cc_args)
-            and should_omit_python_header
-        ):
+        if any("include/python3" in arg for arg in _cc_args) and should_omit_python_header:
             _cc_args = [arg for arg in _cc_args if "include/python3" not in arg]
 
-        return original_compile(
-            obj, src, ext, _cc_args, extra_postargs, *args, **kwargs
-        )
+        return original_compile(obj, src, ext, _cc_args, extra_postargs, *args, **kwargs)
 
     return new_compile
 
