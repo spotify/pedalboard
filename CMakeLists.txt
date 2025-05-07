@@ -310,6 +310,7 @@ elseif(UNIX AND NOT APPLE)
 
     # Add missing FFTW-specific C flags for Linux
     target_compile_options(pedalboard_native PRIVATE
+        $<$<COMPILE_LANGUAGE:C>:
         -DHAVE_UINTPTR_T
         -DPACKAGE="FFTW"
         -DVERSION="0"
@@ -337,7 +338,7 @@ elseif(UNIX AND NOT APPLE)
         -DHAVE_SNPRINTF
         -DHAVE_STRCHR
         -DHAVE_SYSCTL
-        -DHAVE_GETTIMEOFDAY
+        -DHAVE_GETTIMEOFDAY>
     )
 endif()
 
