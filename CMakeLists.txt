@@ -307,6 +307,38 @@ elseif(WIN32)
     target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES})
 elseif(UNIX AND NOT APPLE)
     target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES})
+
+    # Add missing FFTW-specific C flags for Linux
+    target_compile_options(pedalboard_native PRIVATE
+        -DHAVE_UINTPTR_T
+        -DPACKAGE="FFTW"
+        -DVERSION="0"
+        -DPACKAGE_VERSION="00000"
+        -DFFTW_CC="clang"
+        -includestring.h
+        -includestdint.h
+        -includevendors/fftw3/dft/codelet-dft.h
+        -includevendors/fftw3/rdft/codelet-rdft.h
+        -DHAVE_INTTYPES_H
+        -DHAVE_STDINT_H
+        -DHAVE_STDLIB_H
+        -DHAVE_STRING_H
+        -DHAVE_TIME_H
+        -DHAVE_UNISTD_H
+        -DHAVE_DECL_DRAND48
+        -DHAVE_DECL_SRAND48
+        -DHAVE_DECL_COSL
+        -DHAVE_DECL_SINL
+        -DHAVE_DECL_POSIX_MEMALIGN
+        -DHAVE_DRAND48
+        -DHAVE_SRAND48
+        -DHAVE_POSIX_MEMALIGN
+        -DHAVE_ISNAN
+        -DHAVE_SNPRINTF
+        -DHAVE_STRCHR
+        -DHAVE_SYSCTL
+        -DHAVE_GETTIMEOFDAY
+    )
 endif()
 
 # Add LTO if not debugging and not explicitly disabled
