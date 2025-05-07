@@ -468,12 +468,12 @@ jobs:
           - { os: ubuntu-24.04, python-version: "3.11", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-24.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
           - { os: ubuntu-24.04, python-version: "3.13.0-rc.1", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++" }
-          # - { os: windows-latest, python-version: "3.8", compiler: "msvc", cc: "msvc", cxx: "msvc" }
-          # - { os: windows-latest, python-version: "3.9", compiler: "msvc", cc: "msvc", cxx: "msvc" }
-          # - { os: windows-latest, python-version: "3.10", compiler: "msvc", cc: "msvc", cxx: "msvc" }
-          # - { os: windows-latest, python-version: "3.11", compiler: "msvc", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.12", compiler: "msvc", cc: "msvc", cxx: "msvc" }
-          - { os: windows-latest, python-version: "3.13.0-rc.1", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # # - { os: windows-latest, python-version: "3.8", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # # - { os: windows-latest, python-version: "3.9", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # # - { os: windows-latest, python-version: "3.10", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # # - { os: windows-latest, python-version: "3.11", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # - { os: windows-latest, python-version: "3.12", compiler: "msvc", cc: "msvc", cxx: "msvc" }
+          # - { os: windows-latest, python-version: "3.13.0-rc.1", compiler: "msvc", cc: "msvc", cxx: "msvc" }
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -707,13 +707,13 @@ jobs:
         - { os: macos-12, build: cp313t-macosx_arm64 }
         # - { os: macos-12, build: pp38-macosx_x86_64 }
         # - { os: macos-12, build: pp39-macosx_x86_64 }
-        - { os: windows-latest, build: cp39-win_amd64 }
-        - { os: windows-latest, build: cp310-win_amd64 }
-        - { os: windows-latest, build: cp311-win_amd64 }
-        - { os: windows-latest, build: cp312-win_amd64 }
-        - { os: windows-latest, build: cp313-win_amd64 }
-        # - { os: windows-latest, build: cp313t-win_amd64 }
-        - { os: windows-latest, build: cp312-win32 }
+        # - { os: windows-latest, build: cp39-win_amd64 }
+        # - { os: windows-latest, build: cp310-win_amd64 }
+        # - { os: windows-latest, build: cp311-win_amd64 }
+        # - { os: windows-latest, build: cp312-win_amd64 }
+        # - { os: windows-latest, build: cp313-win_amd64 }
+        # # - { os: windows-latest, build: cp313t-win_amd64 }
+        # - { os: windows-latest, build: cp312-win32 }
         - { os: 'ubuntu-24.04', build: cp39-manylinux_x86_64 }
         - { os: 'ubuntu-24.04', build: cp39-manylinux_aarch64 }
         # - { os: 'ubuntu-24.04', build: cp39-musllinux_x86_64 }
