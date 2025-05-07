@@ -29,16 +29,13 @@ INPUT_DEVICE_NAMES_TO_SKIP = {
     "AirPods",
     # PulseAudio devices:
     "Open Sound System",
-    lambda n: n.startswith("Plugin for"),
+    "JACK Audio Connection Kit",
+    "plugin",
 }
 INPUT_DEVICE_NAMES = [
     n
     for n in pedalboard.io.AudioStream.input_device_names
-    if not any(
-        (isinstance(skip_condition, str) and skip_condition in n)
-        or (callable(skip_condition) and skip_condition(n))
-        for skip_condition in INPUT_DEVICE_NAMES_TO_SKIP
-    )
+    if not any(substring.lower() in n.lower() for substring in INPUT_DEVICE_NAMES_TO_SKIP)
 ]
 
 ACCEPTABLE_ERRORS_ON_CI = {"No driver"}

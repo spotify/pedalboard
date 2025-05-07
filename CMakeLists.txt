@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.15...3.27)
 # Find Python and pybind11 first, as we need the interpreter
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
+set(PYBIND11_FINDPYTHON ON)
 
 # Set up ccache if available
 find_program(CCACHE_PROGRAM ccache)
