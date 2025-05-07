@@ -105,21 +105,21 @@ jobs:
         with:
           enableCrossOsArchive: true
           path: |
-            ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
+            ${{ github.workspace }}/.ccache
+            ${{ github.workspace }}/pedalboard/build/lib*
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
-          CCACHE_DIR: ${{ runner.workspace }}/.ccache
-          CCACHE_BASEDIR: ${{ runner.workspace }}
-          CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ github.workspace }}
+          CCACHE_DEBUGDIR: ${{ github.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros,locale,random_seed,system_headers"
           CCACHE_COMPILERCHECK: none
           CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
-          CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
+          CCACHE_LOGFILE: ${{ github.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ${{ matrix.cc }}
@@ -127,11 +127,11 @@ jobs:
         run: python -m pip install -e .
       - name: Ensure ccache worked
         env:
-          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
         run: |
           ccache --show-stats --verbose
           ccache --zero-stats
-        #  cat ${{ runner.workspace }}/.ccache_log || true
+        #  cat ${{ github.workspace }}/.ccache_log || true
       # - name: Delete Existing Cache for ${{ runner.os }} Objects
       #   run: gh cache delete --repo ${{ github.repository }} ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
       #   env:
@@ -143,10 +143,10 @@ jobs:
         with:
           enableCrossOsArchive: true
           path: |
-            ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
+            ${{ github.workspace }}/.ccache
+            ${{ github.workspace }}/pedalboard/build/lib*
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
 
   prime-macos-build-caches:
@@ -183,16 +183,16 @@ jobs:
         with:
           enableCrossOsArchive: true
           path: |
-            ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
+            ${{ github.workspace }}/.ccache
+            ${{ github.workspace }}/pedalboard/build/lib*
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
-          CCACHE_DIR: ${{ runner.workspace }}/.ccache
-          CCACHE_BASEDIR: ${{ runner.workspace }}
-          CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ github.workspace }}
+          CCACHE_DEBUGDIR: ${{ github.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros,locale,random_seed,system_headers"
           CCACHE_COMPILERCHECK: none
           CCACHE_NOINODECACHE: 1
@@ -200,7 +200,7 @@ jobs:
           CCACHE_DEBUG: "1"
           # Use the minimum macOS deployment target supported by our version of PyBind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
-          CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
+          CCACHE_LOGFILE: ${{ github.workspace }}/.ccache_log
           # This build caching is only to speed up tests on CI, so we only care about x86_64 for now.
           # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
           # Fun fact: this is supported in Python itself! https://github.com/python/cpython/blob/893c9cc/Lib/_osx_support.py#L314-L328
@@ -211,12 +211,12 @@ jobs:
         run: python -m pip install -e .
       - name: Ensure ccache worked
         env:
-          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
         run: |
           ccache --show-stats --verbose
           ccache --zero-stats
-        #  cat ${{ runner.workspace }}/.ccache_log || true
-        #  ls -lashR ${{ runner.workspace }}/pedalboard
+        #  cat ${{ github.workspace }}/.ccache_log || true
+        #  ls -lashR ${{ github.workspace }}
       # - name: Delete Existing Cache for ${{ runner.os }} Objects
       #   run: gh cache delete --repo ${{ github.repository }} ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
       #   env:
@@ -228,10 +228,10 @@ jobs:
         with:
           enableCrossOsArchive: true
           path: |
-            ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
+            ${{ github.workspace }}/.ccache
+            ${{ github.workspace }}/pedalboard/build/lib*
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
 
   # Build the native module with ccache enabled so we can share object files between builds:
@@ -289,21 +289,21 @@ jobs:
         with:
           enableCrossOsArchive: true
           path: |
-            ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
+            ${{ github.workspace }}/.ccache
+            ${{ github.workspace }}/pedalboard/build/lib*
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
-          CCACHE_DIR: ${{ runner.workspace }}/.ccache
-          CCACHE_BASEDIR: ${{ runner.workspace }}
-          CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ github.workspace }}
+          CCACHE_DEBUGDIR: ${{ github.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros,locale,random_seed,system_headers"
           CCACHE_COMPILERCHECK: none
           CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
-          CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
+          CCACHE_LOGFILE: ${{ github.workspace }}/.ccache_log
           USE_ASAN: "1"
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ${{ matrix.cc }}
@@ -311,12 +311,12 @@ jobs:
         run: python -m pip install -e .
       - name: Ensure ccache worked
         env:
-          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
         run: |
           ccache --show-stats --verbose
           ccache --zero-stats
-        #  cat ${{ runner.workspace }}/.ccache_log || true
-        #  ls -lashR ${{ runner.workspace }}
+        #  cat ${{ github.workspace }}/.ccache_log || true
+        #  ls -lashR ${{ github.workspace }}
       # - name: Delete Existing Cache for ${{ runner.os }} Objects
       #   run: gh cache delete --repo ${{ github.repository }} ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
       #   env:
@@ -328,10 +328,10 @@ jobs:
         with:
           enableCrossOsArchive: true
           path: |
-            ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
+            ${{ github.workspace }}/.ccache
+            ${{ github.workspace }}/pedalboard/build/lib*
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
 
   # This initial job catches obvious failures faster by running tests in parallel on just Ubuntu.
@@ -393,52 +393,54 @@ jobs:
         with:
           enableCrossOsArchive: true
           path: |
-            ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
+            ${{ github.workspace }}/.ccache
+            ${{ github.workspace }}/pedalboard/build/lib*
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       - name: Print Restored ${{ runner.os }} Objects
-        run: ls -lashR ${{ runner.workspace }}
+        run: ls -lashR ${{ github.workspace }}
       # Without this, distutils will recompile the extension even though we already have the .so built:
       - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run: |
-          find ${{ runner.workspace }} -name '*.so' -exec touch {} \; || true
-          find ${{ runner.workspace }} -name '*.o' -exec touch {} \; || true
-          ls -lR ${{ runner.workspace }}/pedalboard
+          find ${{ github.workspace }} -name '*.so' -exec touch {} \; || true
+          find ${{ github.workspace }} -name '*.o' -exec touch {} \; || true
+          ls -lR ${{ github.workspace }}/pedalboard
       - name: Build pedalboard locally
         run: python -m pip install -e .
         env:
-          CCACHE_DIR: ${{ runner.workspace }}/.ccache
-          CCACHE_BASEDIR: ${{ runner.workspace }}
-          CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ github.workspace }}
+          CCACHE_DEBUGDIR: ${{ github.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros,locale,random_seed,system_headers"
           CCACHE_COMPILERCHECK: none
           CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
-          CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
+          CCACHE_LOGFILE: ${{ github.workspace }}/.ccache_log
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
       - name: Ensure ccache worked
         env:
-          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
         run: |
           ccache --show-stats --verbose
           ccache --zero-stats
-        #  cat ${{ runner.workspace }}/.ccache_log || true
-        #  ls -lashR ${{ runner.workspace }}
+        #  cat ${{ github.workspace }}/.ccache_log || true
+        #  ls -lashR ${{ github.workspace }}
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
           GCS_READER_SERVICE_ACCOUNT_KEY: ${{ secrets.GCS_READER_SERVICE_ACCOUNT_KEY }}
         run: python ./tests/download_test_plugins.py
-      - name: Setup dummy soundcard for testing
+      - name: Setup audio device for testing
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get install -y linux-modules-extra-$(uname -r)
-          sudo modprobe snd-dummy
+          sudo apt-get install -y pulseaudio
+          pulseaudio --start
+          pactl load-module module-null-sink sink_name=test
+          pactl set-default-sink test
       - name: Run tests
         env:
           TEST_WORKER_INDEX: ${{ matrix.runner_index }}
@@ -532,29 +534,29 @@ jobs:
         with:
           enableCrossOsArchive: true
           path: |
-            ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
+            ${{ github.workspace }}/.ccache
+            ${{ github.workspace }}/pedalboard/build/lib*
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
           key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
       # Without this, distutils will recompile the extension even though we already have the shared object built:
       - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run: |
-          find ${{ runner.workspace }} -name '*.so' -exec touch {} \; || true
-          find ${{ runner.workspace }} -name '*.o' -exec touch {} \; || true
-          ls -lR ${{ runner.workspace }}/pedalboard
+          find ${{ github.workspace }} -name '*.so' -exec touch {} \; || true
+          find ${{ github.workspace }} -name '*.o' -exec touch {} \; || true
+          ls -lR ${{ github.workspace }}/pedalboard
       - name: Build pedalboard locally
         run: python -m pip install -e .
         env:
-          CCACHE_DIR: ${{ runner.workspace }}/.ccache
-          CCACHE_BASEDIR: ${{ runner.workspace }}
-          CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ github.workspace }}
+          CCACHE_DEBUGDIR: ${{ github.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros,locale,random_seed,system_headers"
           CCACHE_COMPILERCHECK: none
           CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
-          CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
+          CCACHE_LOGFILE: ${{ github.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
           # Use the minimum macOS deployment target supported by our version of PyBind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
@@ -568,11 +570,11 @@ jobs:
       - name: Ensure ccache worked
         if: runner.os == 'Linux' || runner.os == 'macOS'
         env:
-          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
         run: |
           ccache --show-stats --verbose
           ccache --zero-stats
-        #  cat ${{ runner.workspace }}/.ccache_log || true
+        #  cat ${{ github.workspace }}/.ccache_log || true
       - name: Install VSTs for testing
         env:
           GCS_ASSET_BUCKET_NAME: ${{ secrets.GCS_ASSET_BUCKET_NAME }}
@@ -646,23 +648,23 @@ jobs:
         with:
           enableCrossOsArchive: true
           path: |
-            ${{ runner.workspace }}/.ccache
-            ${{ runner.workspace }}/pedalboard/build/lib*
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ runner.workspace }}/pedalboard/build/temp${{ runner.workspace }}/pedalboard/vendors
+            ${{ github.workspace }}/.ccache
+            ${{ github.workspace }}/pedalboard/build/lib*
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
+            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
           key: ${{ runner.os }}-clang-ccache
       - name: Build pedalboard locally
         env:
           DEBUG: "0"
           USE_ASAN: "1"
-          CCACHE_DIR: ${{ runner.workspace }}/.ccache
-          CCACHE_BASEDIR: ${{ runner.workspace }}
-          CCACHE_DEBUGDIR: ${{ runner.workspace }}/.ccache_debug
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ github.workspace }}
+          CCACHE_DEBUGDIR: ${{ github.workspace }}/.ccache_debug
           CCACHE_SLOPPINESS: "pch_defines,include_file_mtime,include_file_ctime,time_macros,locale,random_seed,system_headers"
           CCACHE_COMPILERCHECK: none
           CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
-          CCACHE_LOGFILE: ${{ runner.workspace }}/.ccache_log
+          CCACHE_LOGFILE: ${{ github.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ccache clang
@@ -670,11 +672,11 @@ jobs:
         run: python -m pip install -e .
       - name: Ensure ccache worked
         env:
-          CCACHE_DIR: ${{ runner.workspace }}/.ccache
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
         run: |
           ccache --show-stats --verbose
           ccache --zero-stats
-        #  cat ${{ runner.workspace }}/.ccache_log || true
+        #  cat ${{ github.workspace }}/.ccache_log || true
       - name: Run tests with ASan loaded
         # pytest can exit before all Python objects have been destroyed,
         # so we tell ASan to ignore leaks.
