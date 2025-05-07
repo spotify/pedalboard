@@ -218,11 +218,11 @@ function(collect_sources)
             list(FILTER CPP_SOURCES EXCLUDE REGEX ".*/${BASENAME}\\.cpp$")
         endforeach()
         list(APPEND CPP_SOURCES ${OBJC_SOURCES})
-
-        # We explicitly patch include_juce_gui_basics.{mm,cpp} with juce_patched_gui_basics.cpp,
-        # so remove the latter from the list of C++ sources
-        list(FILTER CPP_SOURCES EXCLUDE REGEX ".*juce_patched_gui_basics\\.cpp$")
     endif()
+
+    # We explicitly patch include_juce_gui_basics.{mm,cpp} with juce_patched_gui_basics.cpp,
+    # so remove the latter from the list of C++ sources
+    list(FILTER CPP_SOURCES EXCLUDE REGEX ".*juce_patched_gui_basics\\.cpp$")
     
     # Collect RubberBand sources
     file(GLOB RUBBERBAND_SOURCES "vendors/rubberband/single/*.cpp")
