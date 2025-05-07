@@ -186,6 +186,14 @@ list(APPEND JUCE_COMPILE_DEFINITIONS
     JUCE_MODAL_LOOPS_PERMITTED=1
 )
 
+if(DEFINED ENV{CIBW_BUILD} AND "$ENV{CIBW_BUILD}" MATCHES "musllinux")
+    # For Alpine/musllinux compatibility:
+    add_compile_definitions(
+        _NL_IDENTIFICATION_LANGUAGE=0x42
+        _NL_IDENTIFICATION_TERRITORY=0x43
+    )
+endif()
+
 # Rubber Band library flags
 list(APPEND RUBBERBAND_COMPILE_DEFINITIONS
     USE_BQRESAMPLER=1
