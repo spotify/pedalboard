@@ -315,10 +315,10 @@ elseif(UNIX AND NOT APPLE)
         -DVERSION="0"
         -DPACKAGE_VERSION="00000"
         -DFFTW_CC="clang"
-        -includestring.h
-        -includestdint.h
-        -includevendors/fftw3/dft/codelet-dft.h
-        -includevendors/fftw3/rdft/codelet-rdft.h
+        "-includestring.h"
+        "-includestdint.h"
+        "-include${CMAKE_CURRENT_SOURCE_DIR}/vendors/fftw3/dft/codelet-dft.h"
+        "-include${CMAKE_CURRENT_SOURCE_DIR}/vendors/fftw3/rdft/codelet-rdft.h"
         -DHAVE_INTTYPES_H
         -DHAVE_STDINT_H
         -DHAVE_STDLIB_H
