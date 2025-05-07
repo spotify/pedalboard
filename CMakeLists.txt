@@ -322,12 +322,12 @@ elseif(UNIX AND NOT APPLE)
         "-include${CMAKE_CURRENT_SOURCE_DIR}/vendors/fftw3/dft/codelet-dft.h"
         "-include${CMAKE_CURRENT_SOURCE_DIR}/vendors/fftw3/rdft/codelet-rdft.h"
         "-includesys/time.h"
-        "-includetime.h"
         -DHAVE_INTTYPES_H
         -DHAVE_STDINT_H
         -DHAVE_STDLIB_H
         -DHAVE_STRING_H
         -DHAVE_TIME_H
+        -DHAVE_SYS_TIME_H=1
         -DHAVE_UNISTD_H
         -DHAVE_DECL_DRAND48
         -DHAVE_DECL_SRAND48
