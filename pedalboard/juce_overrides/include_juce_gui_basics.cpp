@@ -1,1 +1,1 @@
-#include <juce_gui_basics/juce_gui_basics.cpp>
+#include "./juce_patched_gui_basics.cpp"

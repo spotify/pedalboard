@@ -1,16 +1,6 @@
 [build-system]
-requires = [
-    "setuptools>=59.6.0",
-    "wheel>=0.36.2",
-    'pybind11>=2.13; python_version>="3.9"',
-    'pybind11<=2.12; python_version<="3.8"',
-    # Building with NumPy 2 allows backwards compatibility with NumPy 1:
-    'numpy>=2.1.0rc1; python_version>="3.13"',
-    'numpy>=2; python_version>="3.9" and python_version<"3.13"',
-    'numpy<2; python_version<="3.8"',
-]
-
-build-backend = "setuptools.build_meta"
+requires = ["scikit-build-core>=0.5.0", "pybind11>=2.9.0"]
+build-backend = "scikit_build_core.build"
 
 # See: https://cibuildwheel.readthedocs.io/en/stable/options/#examples
 [tool.cibuildwheel.linux]
@@ -21,3 +11,57 @@ before-all = "yum install -y libsndfile libX11-devel libXrandr-devel libXinerama
 # (Note: this is experimental, as most VSTs require glibc and thus Alpine Linux isn't that useful)
 select = "*-musllinux*"
 before-all = "apk add libsndfile libx11-dev libxrandr-dev libxinerama-dev libxrender-dev libxcomposite-dev libxinerama-dev libxcursor-dev freetype-dev libexecinfo-dev alsa-lib-dev"
+
+[project]
+name = "pedalboard"
+authors = [{ name = "Peter Sobot", email = "psobot@spotify.com" }]
+description = "A Python library for adding effects to audio."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: C++",
+    "Programming Language :: Python",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = ["numpy"]
+version = "0.9.16"
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.scikit-build]
+cmake.build-type = "Release"
+wheel.packages = ["pedalboard", "pedalboard.io", "pedalboard_native"]
+sdist.include = [
+    "pedalboard/**/*.py",
+    "pedalboard_native/**/*.py",
+    "JUCE/**/*.cpp",
+    "JUCE/**/*.c",
+    "JUCE/**/*.h",
+    "JUCE/**/*.mm",
+    "JUCE/**/*.m",
+    "vendors/**/*.c",
+    "vendors/**/*.cpp",
+    "vendors/**/*.h",
+    "vendors/**/*.inc",
+]
+sdist.exclude = ["**/__pycache__"]
+
+[tool.scikit-build.cmake.define]
+SKBUILD = "ON"
+
+# [tool.scikit-build.include]
+# pedalboard = ["py.typed", "*.pyi", "**/*.pyi"]
+# pedalboard_native = ["py.typed", "*.pyi", "**/*.pyi"]
