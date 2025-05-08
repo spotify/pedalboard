@@ -472,7 +472,7 @@ jobs:
           # # - { os: windows-latest, python-version: "3.9", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
           # # - { os: windows-latest, python-version: "3.10", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
           # # - { os: windows-latest, python-version: "3.11", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
-          - os: windows-latest,
+          - os: windows-latest
             python-version: "3.12"
             compiler: "msvc"
             cc: "msvc"
