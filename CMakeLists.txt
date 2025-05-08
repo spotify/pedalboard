@@ -28,17 +28,8 @@ endif()
 
 # Find Python and pybind11 first, as we need the interpreter
 set(PYBIND11_FINDPYTHON ON)
+set(Python_LIBRARY "C:/hostedtoolcache/windows/Python/3.12.10/x64/libs/python312.lib")
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
-
-# on Windows, print out all of the files under: C:\hostedtoolcache\windows\Python\3.12.10\x64\
-if(WIN32)
-    message(STATUS "Files under C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\:")
-    file(GLOB_RECURSE PYTHON_FILES "C:/hostedtoolcache/windows/Python/3.12.10/x64/*")
-    foreach(FILE ${PYTHON_FILES})
-        message(STATUS "  ${FILE}")
-    endforeach()
-endif()
-
 find_package(pybind11 CONFIG REQUIRED)
 
 # Set up ccache if available
@@ -342,7 +333,6 @@ if(APPLE)
     target_link_libraries(pedalboard_native PRIVATE ${MACOS_FRAMEWORKS})
 elseif(WIN32)
     target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES})
-    target_link_libraries(pedalboard_native PRIVATE ${Python_LIBRARIES})
 elseif(UNIX AND NOT APPLE)
     # Add libatomic for atomic operations on Linux
     target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES} atomic)
