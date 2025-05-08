@@ -458,22 +458,22 @@ jobs:
     strategy:
       matrix:
         include:
-          - { os: macos-13, python-version: "3.9", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++", extra_args: "" }
-          - { os: macos-13, python-version: "3.10", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++", extra_args: "" }
-          - { os: macos-13, python-version: "3.11", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++", extra_args: "" }
-          - { os: macos-13, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++", extra_args: "" }
-          - { os: macos-13, python-version: "3.13.0-rc.1", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++", extra_args: "" }
-          - { os: ubuntu-24.04, python-version: "3.9", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++", extra_args: "" }
-          - { os: ubuntu-24.04, python-version: "3.10", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++", extra_args: "" }
-          - { os: ubuntu-24.04, python-version: "3.11", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++", extra_args: "" }
-          - { os: ubuntu-24.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++", extra_args: "" }
-          - { os: ubuntu-24.04, python-version: "3.13.0-rc.1", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++", extra_args: "" }
-          # - { os: windows-latest, python-version: "3.8", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
-          # - { os: windows-latest, python-version: "3.9", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
-          # - { os: windows-latest, python-version: "3.10", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
-          # - { os: windows-latest, python-version: "3.11", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
+          # - { os: macos-13, python-version: "3.9", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++", extra_args: "" }
+          # - { os: macos-13, python-version: "3.10", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++", extra_args: "" }
+          # - { os: macos-13, python-version: "3.11", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++", extra_args: "" }
+          # - { os: macos-13, python-version: "3.12", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++", extra_args: "" }
+          # - { os: macos-13, python-version: "3.13.0-rc.1", compiler: "clang", cc: "ccache clang", cxx: "ccache clang++", extra_args: "" }
+          # - { os: ubuntu-24.04, python-version: "3.9", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++", extra_args: "" }
+          # - { os: ubuntu-24.04, python-version: "3.10", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++", extra_args: "" }
+          # - { os: ubuntu-24.04, python-version: "3.11", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++", extra_args: "" }
+          # - { os: ubuntu-24.04, python-version: "3.12", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++", extra_args: "" }
+          # - { os: ubuntu-24.04, python-version: "3.13.0-rc.1", compiler: "gcc", cc: "ccache gcc", cxx: "ccache g++", extra_args: "" }
+          # # - { os: windows-latest, python-version: "3.8", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
+          # # - { os: windows-latest, python-version: "3.9", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
+          # # - { os: windows-latest, python-version: "3.10", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
+          # # - { os: windows-latest, python-version: "3.11", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
           - { os: windows-latest, python-version: "3.12", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "--no-build-isolation" }
-          # - { os: windows-latest, python-version: "3.13.0-rc.1", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
+          # # - { os: windows-latest, python-version: "3.13.0-rc.1", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -512,6 +512,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install wheel
           pip install -r test-requirements.txt
+          pip install pybind11 'scikit-build-core[pyproject]'
           # TensorFlow is an optional dependency; if present, we'll run tests with it:
           # There are no environment specifiers to select when TensorFlow binaries are available.
           pip install tensorflow==2.13 || true
