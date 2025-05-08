@@ -43,6 +43,8 @@ test = ["pytest"]
 
 [tool.scikit-build]
 cmake.build-type = "Release"
+build.verbose = true
+logging.level = "DEBUG"
 wheel.packages = ["pedalboard", "pedalboard.io", "pedalboard_native"]
 sdist.include = [
     "pedalboard/**/*.py",
@@ -58,9 +60,6 @@ sdist.include = [
     "vendors/**/*.inc",
 ]
 sdist.exclude = ["**/__pycache__"]
-
-[tool.scikit-build.cmake.define]
-SKBUILD = "ON"
 
 # [tool.scikit-build.include]
 # pedalboard = ["py.typed", "*.pyi", "**/*.pyi"]
