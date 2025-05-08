@@ -24,16 +24,19 @@ if (NOT SKBUILD)
   after editing C++ files.")
 endif()
 
-if (CMAKE_VERSION VERSION_LESS 3.18)
-  set(DEV_MODULE Development)
-else()
-  set(DEV_MODULE Development.Module)
+
+
+# Find Python and pybind11 first, as we need the interpreter
+find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+
+# On Windows, try to find python312.lib anywhere in this container (like find / -name python312.lib):
+if(WIN32)
+    execute_process(COMMAND find / -name python312.lib OUTPUT_VARIABLE PYTHON_LIBRARIES)
+    message(STATUS "Found python312.lib at: ${PYTHON_LIBRARIES}")
 endif()
 
 
 set(PYBIND11_FINDPYTHON ON)
-# Find Python and pybind11 first, as we need the interpreter
-find_package(Python 3.8 COMPONENTS Interpreter ${DEV_MODULE} REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
 # Set up ccache if available
@@ -300,7 +303,7 @@ endfunction()
 collect_sources()
 
 # Create the Python module
-pybind11_add_module(pedalboard_native MODULE ${ALL_SOURCES})
+pybind11_add_module(pedalboard_native ${ALL_SOURCES})
 
 # Add include directories
 target_include_directories(pedalboard_native PRIVATE ${ALL_INCLUDES})
