@@ -472,7 +472,15 @@ jobs:
           # # - { os: windows-latest, python-version: "3.9", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
           # # - { os: windows-latest, python-version: "3.10", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
           # # - { os: windows-latest, python-version: "3.11", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
-          - { os: windows-latest, python-version: "3.12", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "--no-build-isolation" }
+          - os: windows-latest,
+            python-version: "3.12"
+            compiler: "msvc"
+            cc: "msvc"
+            cxx: "msvc"
+            extra_args: "--no-build-isolation"
+            libdir: "C:/hostedtoolcache/windows/Python/3.12.10/x64/libs"
+            ldlibrary: "C:/hostedtoolcache/windows/Python/3.12.10/x64/libs/python312.lib"
+
           # # - { os: windows-latest, python-version: "3.13.0-rc.1", compiler: "msvc", cc: "msvc", cxx: "msvc", extra_args: "" }
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
@@ -557,6 +565,8 @@ jobs:
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ github.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
+          LIBDIR: ${{ matrix.libdir }}
+          LDLIBRARY: ${{ matrix.ldlibrary }}
           # Use the minimum macOS deployment target supported by our version of PyBind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
           # This build caching is only to speed up tests on CI, so we only care about x86_64 for now.
