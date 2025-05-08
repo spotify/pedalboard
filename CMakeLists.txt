@@ -27,16 +27,18 @@ endif()
 
 
 # Find Python and pybind11 first, as we need the interpreter
+set(PYBIND11_FINDPYTHON ON)
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 
-# On Windows, try to find python312.lib anywhere in this container (like find / -name python312.lib):
+# on Windows, print out all of the files under: C:\hostedtoolcache\windows\Python\3.12.10\x64\
 if(WIN32)
-    execute_process(COMMAND find / -name python312.lib OUTPUT_VARIABLE PYTHON_LIBRARIES)
-    message(STATUS "Found python312.lib at: ${PYTHON_LIBRARIES}")
+    message(STATUS "Files under C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\:")
+    file(GLOB_RECURSE PYTHON_FILES "C:/hostedtoolcache/windows/Python/3.12.10/x64/*")
+    foreach(FILE ${PYTHON_FILES})
+        message(STATUS "  ${FILE}")
+    endforeach()
 endif()
 
-
-set(PYBIND11_FINDPYTHON ON)
 find_package(pybind11 CONFIG REQUIRED)
 
 # Set up ccache if available
