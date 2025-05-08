@@ -356,7 +356,19 @@ if(APPLE)
     target_link_libraries(pedalboard_native PRIVATE ${MACOS_FRAMEWORKS})
 elseif(WIN32)
     target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES})
-    target_link_libraries(pedalboard_native PRIVATE ${Python_LIBRARIES})
+    # Link Python libraries
+    if(Python_LIBRARIES)
+        # This is the ideal case, FindPython worked as expected.
+        message(STATUS "DEBUG: Linking against Python_LIBRARIES: ${Python_LIBRARIES}")
+        target_link_libraries(pedalboard_native PRIVATE ${Python_LIBRARIES})
+    elseif(DEFINED Python_LIBRARY AND EXISTS "${Python_LIBRARY}")
+        # Fallback: Python_LIBRARIES is empty, but we have an explicit Python_LIBRARY path.
+        message(STATUS "DEBUG: Python_LIBRARIES is empty. Linking directly against Python_LIBRARY: ${Python_LIBRARY}")
+        target_link_libraries(pedalboard_native PRIVATE "${Python_LIBRARY}")
+    else()
+        # Critical error: No way to link Python library on Windows.
+        message(FATAL_ERROR "DEBUG: On Windows, Python_LIBRARIES is empty AND Python_LIBRARY is not set or path does not exist ('${Python_LIBRARY}'). Cannot link Python.")
+    endif()
 elseif(UNIX AND NOT APPLE)
     # Add libatomic for atomic operations on Linux
     target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES} atomic)
