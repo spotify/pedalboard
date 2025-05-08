@@ -49,16 +49,15 @@ if(WIN32 AND NOT DEFINED Python_LIBRARY)
     endif()
 
     # Split the version string into major, minor, and patch parts
-    string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" _ ${Python_VERSION})
+    string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.(.+)" _ ${Python_VERSION})
     set(Python_VERSION_MAJOR ${CMAKE_MATCH_1})
     set(Python_VERSION_MINOR ${CMAKE_MATCH_2})
     set(Python_VERSION_PATCH ${CMAKE_MATCH_3})
 
     set(DYNAMIC_PYTHON_LIB_FILENAME "python${Python_VERSION_MAJOR}${Python_VERSION_MINOR}.lib")
-    set(EXPECTED_PYTHON_VERSION_DIR "C:/hostedtoolcache/windows/Python/${Python_VERSION_STRING}/x64/libs")
+    set(EXPECTED_PYTHON_VERSION_DIR "C:/hostedtoolcache/windows/Python/${Python_VERSION}/x64/libs")
     set(Python_LIBRARY "${EXPECTED_PYTHON_VERSION_DIR}/${DYNAMIC_PYTHON_LIB_FILENAME}")
 
-    message(STATUS "DEBUG: On Windows, Python_VERSION_STRING: ${Python_VERSION_STRING}")
     message(STATUS "DEBUG: On Windows, constructed DYNAMIC_PYTHON_LIB_FILENAME: ${DYNAMIC_PYTHON_LIB_FILENAME}")
     message(STATUS "DEBUG: On Windows, constructed Python_LIBRARY path: ${Python_LIBRARY}")
 endif()
