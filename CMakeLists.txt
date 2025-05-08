@@ -28,7 +28,6 @@ endif()
 
 # Find Python and pybind11 first, as we need the interpreter
 set(PYBIND11_FINDPYTHON ON)
-set(Python_LIBRARY "C:/hostedtoolcache/windows/Python/3.12.10/x64/libs/python312.lib")
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
@@ -40,19 +39,28 @@ message(STATUS "DEBUG: Python_LIBRARIES: ${Python_LIBRARIES}")
 message(STATUS "DEBUG: Python_LIBRARY_DIRS: ${Python_LIBRARY_DIRS}")
 message(STATUS "DEBUG: Python_INCLUDE_DIRS: ${Python_INCLUDE_DIRS}")
 message(STATUS "DEBUG: Python_EXECUTABLE: ${Python_EXECUTABLE}")
+message(STATUS "DEBUG: Python_VERSION: ${Python_VERSION}")
 
-if(TARGET Python::Module)
-    message(STATUS "DEBUG: Python::Module target EXISTS.")
-    get_target_property(PYTHON_MODULE_LINK_LIBS Python::Module INTERFACE_LINK_LIBRARIES)
-    message(STATUS "DEBUG: Python::Module INTERFACE_LINK_LIBRARIES: ${PYTHON_MODULE_LINK_LIBS}")
-    get_target_property(PYTHON_MODULE_LINK_DIRS Python::Module INTERFACE_LINK_DIRECTORIES)
-    message(STATUS "DEBUG: Python::Module INTERFACE_LINK_DIRECTORIES: ${PYTHON_MODULE_LINK_DIRS}")
-    get_target_property(PYTHON_MODULE_IMPORTED_LOCATION_RELEASE Python::Module IMPORTED_LOCATION_RELEASE)
-    message(STATUS "DEBUG: Python::Module IMPORTED_LOCATION_RELEASE: ${PYTHON_MODULE_IMPORTED_LOCATION_RELEASE}")
-    get_target_property(PYTHON_MODULE_IMPORTED_LOCATION_DEBUG Python::Module IMPORTED_LOCATION_DEBUG)
-    message(STATUS "DEBUG: Python::Module IMPORTED_LOCATION_DEBUG: ${PYTHON_MODULE_IMPORTED_LOCATION_DEBUG}")
-else()
-    message(WARNING "DEBUG: Python::Module target DOES NOT EXIST.")
+# TODO(psobot): This shouldn't be necessary, but our CI build fails on Windows without it.
+if(WIN32 AND NOT DEFINED Python_LIBRARY)
+    # Dynamically construct the Python_LIBRARY path using version info from find_package(Python)
+    if (NOT Python_VERSION)
+        message(FATAL_ERROR "Python_VERSION not set after find_package(Python). Cannot construct Python library path.")
+    endif()
+
+    # Split the version string into major, minor, and patch parts
+    string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" _ ${Python_VERSION})
+    set(Python_VERSION_MAJOR ${CMAKE_MATCH_1})
+    set(Python_VERSION_MINOR ${CMAKE_MATCH_2})
+    set(Python_VERSION_PATCH ${CMAKE_MATCH_3})
+
+    set(DYNAMIC_PYTHON_LIB_FILENAME "python${Python_VERSION_MAJOR}${Python_VERSION_MINOR}.lib")
+    set(EXPECTED_PYTHON_VERSION_DIR "C:/hostedtoolcache/windows/Python/${Python_VERSION_STRING}/x64/libs")
+    set(Python_LIBRARY "${EXPECTED_PYTHON_VERSION_DIR}/${DYNAMIC_PYTHON_LIB_FILENAME}")
+
+    message(STATUS "DEBUG: On Windows, Python_VERSION_STRING: ${Python_VERSION_STRING}")
+    message(STATUS "DEBUG: On Windows, constructed DYNAMIC_PYTHON_LIB_FILENAME: ${DYNAMIC_PYTHON_LIB_FILENAME}")
+    message(STATUS "DEBUG: On Windows, constructed Python_LIBRARY path: ${Python_LIBRARY}")
 endif()
 
 # Set up ccache if available
@@ -420,10 +428,3 @@ endif()
 
 # Install targets
 install(TARGETS pedalboard_native DESTINATION .) 
-
-# Print all variables for debugging
-message("Python_EXECUTABLE: ${Python_EXECUTABLE}")
-message("Python_LIBRARY: ${Python_LIBRARY}")
-message("Python_LIBRARIES: ${Python_LIBRARIES}")
-message("Python_INCLUDE_DIR: ${Python_INCLUDE_DIR}")
-message("Python_VERSION: ${Python_VERSION}")
