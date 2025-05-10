@@ -308,9 +308,9 @@ def test_preset_parameters(plugin_filename: str, plugin_preset: str):
         actual = getattr(plugin, name)
         if math.isnan(actual):
             continue
-        assert (
-            actual != default
-        ), f"Expected attribute {name} to be different from default ({default}), but was {actual}"
+        assert actual != default, (
+            f"Expected attribute {name} to be different from default ({default}), but was {actual}"
+        )
 
 
 @pytest.mark.skipif(
@@ -322,9 +322,9 @@ def test_get_vst3_preset(plugin_filename: str):
     plugin = load_test_plugin(plugin_filename)
     preset_data: bytes = plugin.preset_data
 
-    assert (
-        preset_data[:4] == b"VST3"
-    ), "Preset data for {plugin_filename} is not in .vstpreset format"
+    assert preset_data[:4] == b"VST3", (
+        "Preset data for {plugin_filename} is not in .vstpreset format"
+    )
     # Check that the class ID (8 bytes into the data) is a 32-character hex string.
     cid = preset_data[8:][:32]
     assert all(c in b"0123456789ABCDEF" for c in cid), f"CID contains invalid characters: {cid}"
@@ -333,17 +333,17 @@ def test_get_vst3_preset(plugin_filename: str):
 @pytest.mark.skipif(not plugin_named("Magical8BitPlug"), reason="Missing Magical8BitPlug 2 plugin.")
 def test_set_vst3_preset():
     plugin_file = plugin_named("Magical8BitPlug")
-    assert (
-        plugin_file is not None and "vst3" in plugin_file
-    ), f"Expected a vst plugin: {plugin_file}"
+    assert plugin_file is not None and "vst3" in plugin_file, (
+        f"Expected a vst plugin: {plugin_file}"
+    )
     plugin = load_test_plugin(plugin_file)
 
     # Pick a known valid value for one of the plugin parameters.
     default_gain_value = plugin.gain
     new_gain_value = 1.0
-    assert (
-        default_gain_value != new_gain_value
-    ), f"Expected default gain to be different than {new_gain_value}"
+    assert default_gain_value != new_gain_value, (
+        f"Expected default gain to be different than {new_gain_value}"
+    )
 
     # Update the parameter and get the resulting .vstpreset bytes.
     plugin.gain = new_gain_value
@@ -353,17 +353,17 @@ def test_set_vst3_preset():
     plugin.gain = default_gain_value
 
     # Sanity check that the parameter was successfully set.
-    assert (
-        plugin.gain == default_gain_value
-    ), f"Expected gain to be reset to {default_gain_value}, but got {plugin.gain}"
+    assert plugin.gain == default_gain_value, (
+        f"Expected gain to be reset to {default_gain_value}, but got {plugin.gain}"
+    )
 
     # Load the .vstpreset bytes and make sure the parameter was
     # updated.
     plugin.preset_data = preset_data
 
-    assert (
-        plugin.gain == new_gain_value
-    ), f"Expected gain to be {new_gain_value}, but got {plugin.gain}"
+    assert plugin.gain == new_gain_value, (
+        f"Expected gain to be {new_gain_value}, but got {plugin.gain}"
+    )
 
 
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
@@ -832,9 +832,9 @@ def test_plugin_parameters_persist_between_calls(plugin_filename: str):
     plugin.process(noise, sr)
 
     for name, parameter in plugin.parameters.items():
-        assert (
-            getattr(plugin, name) == expected_values[name]
-        ), f"Expected {name} to match saved value"
+        assert getattr(plugin, name) == expected_values[name], (
+            f"Expected {name} to match saved value"
+        )
 
 
 @pytest.mark.parametrize("plugin_filename", sample(AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT, 1))
