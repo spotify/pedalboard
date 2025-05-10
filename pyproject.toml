@@ -5,7 +5,7 @@ build-backend = "scikit_build_core.build"
 [tool.cibuildwheel]
 free-threaded-support = true
 test-requires = ["-r test-requirements.txt"]
-test = "pytest {project}/tests"
+test-command = "pytest {project}/tests"
 # The manylinux container doesn't have a new enough glibc version,
 # so we can't run post-wheel-build tests there.
 # The musllinux containers on aarch64 take 6+ hours to test.
