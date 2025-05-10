@@ -2,9 +2,29 @@
 requires = ["scikit-build-core>=0.5.0", "pybind11>=2.9.0"]
 build-backend = "scikit_build_core.build"
 
+[tool.cibuildwheel]
+free-threaded-support = true
+test-requires = ["-r test-requirements.txt"]
+test = "pytest {project}/tests"
+# The manylinux container doesn't have a new enough glibc version,
+# so we can't run post-wheel-build tests there.
+# The musllinux containers on aarch64 take 6+ hours to test.
+# Also testing any pypy versions fails, as TensorFlow isn't pypy compatible.
+test-skip = "*manylinux* *musllinux_aarch* *pp* *-macosx_universal2:arm64"
+musllinux-x86_64-image = "quay.io/pypa/musllinux_1_1_x86_64:2024-04-29-07d05a0"
+musllinux-aarch64-image = "quay.io/pypa/musllinux_1_1_aarch64:2024-04-29-07d05a0"
+
 # See: https://cibuildwheel.readthedocs.io/en/stable/options/#examples
 [tool.cibuildwheel.linux]
 before-all = "yum install -y libsndfile libX11-devel libXrandr-devel libXinerama-devel libXrender-devel libXcomposite-devel libXinerama-devel libXcursor-devel freetype-devel alsa-lib-devel"
+repair-command = "pip install auditwheel-symbols && (auditwheel repair -w {dest_dir} {wheel} || auditwheel-symbols --manylinux 2010 {wheel})"
+archs = ["auto64", "aarch64"]
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64", "universal2"]
+
+[tool.cibuildwheel.windows]
+archs = ["auto"]
 
 [[tool.cibuildwheel.overrides]]
 # Use apk instead of yum when building on Alpine Linux
