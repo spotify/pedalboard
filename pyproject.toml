@@ -17,7 +17,7 @@ musllinux-aarch64-image = "quay.io/pypa/musllinux_1_1_aarch64:2024-04-29-07d05a0
 # See: https://cibuildwheel.readthedocs.io/en/stable/options/#examples
 [tool.cibuildwheel.linux]
 before-all = "yum install -y libsndfile libX11-devel libXrandr-devel libXinerama-devel libXrender-devel libXcomposite-devel libXinerama-devel libXcursor-devel freetype-devel alsa-lib-devel"
-repair-command = "pip install auditwheel-symbols && (auditwheel repair -w {dest_dir} {wheel} || auditwheel-symbols --manylinux 2010 {wheel})"
+repair-wheel-command = "pip install auditwheel-symbols && (auditwheel repair -w {dest_dir} {wheel} || auditwheel-symbols --manylinux 2010 {wheel})"
 archs = ["auto64", "aarch64"]
 
 [tool.cibuildwheel.macos]
