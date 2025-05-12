@@ -690,7 +690,6 @@ jobs:
     if: (github.event_name == 'release' && github.event.action == 'published') || contains(github.event.pull_request.labels.*.name, 'Also Test Wheels')
     strategy:
       matrix:
-        platform: [""] # Do not override by default
         include:
         - { os: 'ubuntu-24.04', build: cp312-pyodide_wasm32, platform: pyodide }
         # - { os: macos-13, build: cp39-macosx_x86_64 }
