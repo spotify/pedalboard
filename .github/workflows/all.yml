@@ -756,7 +756,7 @@ jobs:
         with:
           platforms: all
       - name: Build wheels
-        run: python -m cibuildwheel --output-dir wheelhouse
+        run: python -m cibuildwheel --output-dir wheelhouse --platform pyodide
         env:
           CIBW_BUILD: ${{ matrix.build }}
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
