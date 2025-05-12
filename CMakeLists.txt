@@ -263,13 +263,13 @@ list(APPEND JUCE_COMPILE_DEFINITIONS
 
 if(NOT EMSCRIPTEN)
     list(APPEND JUCE_COMPILE_DEFINITIONS
+        JUCE_MODULE_AVAILABLE_juce_audio_devices=1
         JUCE_MODULE_AVAILABLE_juce_audio_processors=1
         JUCE_MODULE_AVAILABLE_juce_data_structures=1
         JUCE_MODULE_AVAILABLE_juce_audio_formats=1
         JUCE_MODULE_AVAILABLE_juce_graphics=1
         JUCE_MODULE_AVAILABLE_juce_gui_basics=1
         JUCE_MODULE_AVAILABLE_juce_gui_extra=1
-        JUCE_MODULE_AVAILABLE_juce_audio_devices=1
     )
 endif()
 if((DEFINED ENV{CIBW_BUILD} AND "$ENV{CIBW_BUILD}" MATCHES "musllinux") OR EMSCRIPTEN)
