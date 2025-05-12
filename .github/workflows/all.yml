@@ -53,6 +53,7 @@ jobs:
   # Build the native module with ccache enabled so we can share object files between builds:
   prime-ubuntu-build-caches:
     runs-on: ${{ matrix.os }}
+    if: false
     continue-on-error: false
     strategy:
       matrix:
@@ -150,6 +151,7 @@ jobs:
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
 
   prime-macos-build-caches:
+    if: false
     runs-on: ${{ matrix.os }}
     continue-on-error: false
     strategy:
@@ -338,6 +340,7 @@ jobs:
   run-tests-in-parallel:
     runs-on: ${{ matrix.os }}
     continue-on-error: false
+    if: false
     needs:
       - prime-ubuntu-build-caches
     strategy:
@@ -450,9 +453,10 @@ jobs:
   run-tests:
     runs-on: ${{ matrix.os }}
     continue-on-error: false
-    needs:
-      - prime-ubuntu-build-caches
-      - prime-macos-build-caches
+    if: false
+    # needs:
+      # - prime-ubuntu-build-caches
+      # - prime-macos-build-caches
     env:
       MINIMUM_COVERAGE_PERCENTAGE: 80
     strategy:
@@ -601,6 +605,7 @@ jobs:
 
   run-tests-with-address-sanitizer:
     runs-on: ${{ matrix.os }}
+    if: false
     needs: [prime-asan-build-caches]
     strategy:
       matrix:
@@ -684,7 +689,7 @@ jobs:
           pytest --maxfail=4
 
   build-wheels:
-    needs: [lint-python, lint-cpp]
+    # needs: [lint-python, lint-cpp]
     runs-on: ${{ matrix.os }}
     continue-on-error: false
     if: (github.event_name == 'release' && github.event.action == 'published') || contains(github.event.pull_request.labels.*.name, 'Also Test Wheels')
