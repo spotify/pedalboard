@@ -25,6 +25,7 @@
 
 #define JUCE_GUI_BASICS_INCLUDE_XHEADERS 1
 #define JUCE_GUI_BASICS_INCLUDE_SCOPED_THREAD_DPI_AWARENESS_SETTER 1
+#ifndef JUCE_WASM
 
 #include "juce_PatchedVST3PluginFormat.h"
 
@@ -3783,3 +3784,4 @@ FileSearchPath PatchedVST3PluginFormat::getDefaultLocationsToSearch() {
 JUCE_END_NO_SANITIZE
 
 } // namespace juce
+#endif

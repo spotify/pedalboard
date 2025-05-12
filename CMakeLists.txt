@@ -175,7 +175,7 @@ elseif(WIN32)
         kernel32 user32 gdi32 winspool comdlg32 advapi32 shell32 
         ole32 oleaut32 uuid odbc32 odbccp32
     )
-elseif(UNIX AND NOT APPLE)
+elseif(UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
     # Linux specific flags
     add_compile_definitions(LINUX=1)
     
@@ -191,9 +191,9 @@ elseif(UNIX AND NOT APPLE)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(FREETYPE REQUIRED freetype2)
     find_package(ALSA REQUIRED)
-    
     include_directories(${FREETYPE_INCLUDE_DIRS})
     list(APPEND PLATFORM_LIBRARIES ${FREETYPE_LIBRARIES} ${ALSA_LIBRARIES})
+    
     
     # Processor-specific optimizations (x86 vs ARM)
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
@@ -205,6 +205,30 @@ elseif(UNIX AND NOT APPLE)
     
     # Additional Linux flags
     list(APPEND ALL_INCLUDES "vendors/fftw3/api/" "vendors/fftw3/")
+elseif(EMSCRIPTEN)
+    # Emscripten specific flags
+    
+    # Trick JUCE into thinking we're on Linux, which Emscripten emulates better than BSD:
+    # add_compile_definitions(LINUX=1)
+        
+    # FFTW support:
+    add_compile_definitions(
+        HAVE_FFTW3=1
+        LACK_SINCOS=1 
+        FFTW_DOUBLE_ONLY=1
+    )
+    find_package(PkgConfig REQUIRED)
+    list(APPEND ALL_INCLUDES "vendors/fftw3/api/" "vendors/fftw3/")
+
+
+    # Add shim directory for missing headers
+    list(APPEND ALL_INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/pedalboard/emscripten_shims")
+
+    list(APPEND JUCE_COMPILE_DEFINITIONS
+        JUCE_WASM=1
+        __wasm__=1
+        NO_THREADING=1
+    )
 endif()
 
 # JUCE-related flags
@@ -212,16 +236,9 @@ list(APPEND JUCE_COMPILE_DEFINITIONS
     JUCE_DISPLAY_SPLASH_SCREEN=1
     JUCE_USE_DARK_SPLASH_SCREEN=1
     JUCE_MODULE_AVAILABLE_juce_audio_basics=1
-    JUCE_MODULE_AVAILABLE_juce_audio_formats=1
-    JUCE_MODULE_AVAILABLE_juce_audio_processors=1
     JUCE_MODULE_AVAILABLE_juce_core=1
-    JUCE_MODULE_AVAILABLE_juce_data_structures=1
     JUCE_MODULE_AVAILABLE_juce_dsp=1
     JUCE_MODULE_AVAILABLE_juce_events=1
-    JUCE_MODULE_AVAILABLE_juce_graphics=1
-    JUCE_MODULE_AVAILABLE_juce_gui_basics=1
-    JUCE_MODULE_AVAILABLE_juce_gui_extra=1
-    JUCE_MODULE_AVAILABLE_juce_audio_devices=1
     JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
     JUCE_STRICT_REFCOUNTEDPOINTER=1
     JUCE_STANDALONE_APPLICATION=1
@@ -244,7 +261,18 @@ list(APPEND JUCE_COMPILE_DEFINITIONS
     JUCE_MODAL_LOOPS_PERMITTED=1
 )
 
-if(DEFINED ENV{CIBW_BUILD} AND "$ENV{CIBW_BUILD}" MATCHES "musllinux")
+if(NOT EMSCRIPTEN)
+    list(APPEND JUCE_COMPILE_DEFINITIONS
+        JUCE_MODULE_AVAILABLE_juce_audio_processors=1
+        JUCE_MODULE_AVAILABLE_juce_data_structures=1
+        JUCE_MODULE_AVAILABLE_juce_audio_formats=1
+        JUCE_MODULE_AVAILABLE_juce_graphics=1
+        JUCE_MODULE_AVAILABLE_juce_gui_basics=1
+        JUCE_MODULE_AVAILABLE_juce_gui_extra=1
+        JUCE_MODULE_AVAILABLE_juce_audio_devices=1
+    )
+endif()
+if((DEFINED ENV{CIBW_BUILD} AND "$ENV{CIBW_BUILD}" MATCHES "musllinux") OR EMSCRIPTEN)
     # For Alpine/musllinux compatibility:
     add_compile_definitions(
         _NL_IDENTIFICATION_LANGUAGE=0x42
@@ -296,7 +324,7 @@ function(collect_sources)
     list(FILTER GSM_SOURCES EXCLUDE REGEX ".*toast.*")
     
     # FFTW sources for Linux
-    if(UNIX AND NOT APPLE AND NOT DEFINED CIBW_BUILD OR NOT CIBW_BUILD MATCHES "musllinux")
+    if(UNIX AND NOT APPLE AND (NOT DEFINED CIBW_BUILD OR NOT CIBW_BUILD MATCHES "musllinux") AND NOT EMSCRIPTEN)
         file(GLOB_RECURSE FFTW_SOURCES "vendors/fftw3/*.c")
         
         # Exclude files depending on architecture
@@ -340,6 +368,11 @@ endif()
 target_compile_definitions(pedalboard_native PRIVATE ${JUCE_COMPILE_DEFINITIONS})
 target_compile_definitions(pedalboard_native PRIVATE ${RUBBERBAND_COMPILE_DEFINITIONS})
 
+if(EMSCRIPTEN)
+    # Force include the main emscripten header for access to emscripten_* functions
+    target_compile_options(pedalboard_native PRIVATE "-includeemscripten.h")
+endif()
+
 # LAME config
 if(WIN32)
     target_compile_definitions(pedalboard_native PRIVATE 
@@ -378,7 +411,9 @@ elseif(WIN32)
     endif()
 elseif(UNIX AND NOT APPLE)
     # Add libatomic for atomic operations on Linux
-    target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES} atomic)
+    if (NOT EMSCRIPTEN)
+        target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES} atomic)
+    endif()
 
     # Add missing FFTW-specific C flags for Linux
     target_compile_options(pedalboard_native PRIVATE
