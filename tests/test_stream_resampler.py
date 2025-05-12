@@ -199,8 +199,8 @@ def test_returned_sample_count(
 
     for i, (e, a) in enumerate(zip(expected_output[0], output[0])):
         assert e == a, (
-            f"First mismatch at index {i}:\nExpected: [..., {expected_output[0][i - 2: i + 2]},"
-            f" ...]\nActual:   [..., {output[0][i - 2: i + 2]}, ...]"
+            f"First mismatch at index {i}:\nExpected: [..., {expected_output[0][i - 2 : i + 2]},"
+            f" ...]\nActual:   [..., {output[0][i - 2 : i + 2]}, ...]"
         )
 
     assert output.shape[1] == expected_output.shape[1], (

@@ -4,11 +4,11 @@
 
 ## Core Developers
 
-- Peter Sobot ([@psobot](https://github.com/psobot), Spotify)
+- Peter Sobot ([@psobot](https://github.com/psobot), Spotify, psobot@spotify.com)
 
 ## Triagers
 
-- Peter Sobot ([@psobot](https://github.com/psobot), Spotify)
+- Peter Sobot ([@psobot](https://github.com/psobot), Spotify, psobot@spotify.com)
 
 ## Contributors
 

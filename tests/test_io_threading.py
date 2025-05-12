@@ -139,9 +139,10 @@ def test_simultaneous_reads_from_the_same_file(
             raise e
 
     lock = threading.Lock() if locking_scheme == "lock" else None
-    with ThreadPoolExecutor(num_workers) as e, AudioFile(buf).resampled_to(
-        sample_rate, Resample.Quality.ZeroOrderHold
-    ) as af:
+    with (
+        ThreadPoolExecutor(num_workers) as e,
+        AudioFile(buf).resampled_to(sample_rate, Resample.Quality.ZeroOrderHold) as af,
+    ):
         if raise_exceptions:
             should_error.set()
         futures = [e.submit(do_work, af, lock) for _ in range(num_workers)]

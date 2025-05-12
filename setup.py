@@ -220,10 +220,9 @@ elif platform.system() == "Linux":
             "-DHAVE_SNPRINTF",
             "-DHAVE_STRCHR",
             "-DHAVE_SYSCTL",
+            "-DHAVE_GETTIMEOFDAY",
         ]
     )
-    if platform.system() == "Linux":
-        ALL_CFLAGS.append("-DHAVE_GETTIMEOFDAY")
 
 ALL_SOURCE_PATHS += list(Path("vendors/rubberband/single").glob("*.cpp"))
 
