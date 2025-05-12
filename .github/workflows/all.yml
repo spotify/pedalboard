@@ -762,6 +762,15 @@ jobs:
           CIBW_ENVIRONMENT: NPY_BLAS_ORDER="" NPY_LAPACK_ORDER="" CIBW_BUILD="${{ matrix.build }}"
           # Use the minimum macOS deployment target supported by our version of PyBind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
+      - name: Ensure wheels have required files
+        run: |
+          for wheel in ./wheelhouse/*.whl; do
+            # Print the contents of the wheel for debugging:
+            unzip -l "$wheel"
+
+            # Check that the wheel has py.typed in it:
+            unzip -l "$wheel" | grep 'pedalboard_native/py.typed'
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-${{ matrix.build }}
