@@ -10,7 +10,7 @@ test-command = "pytest {project}/tests"
 # so we can't run post-wheel-build tests there.
 # The musllinux containers on aarch64 take 6+ hours to test.
 # Also testing any pypy versions fails, as TensorFlow isn't pypy compatible.
-test-skip = "*manylinux* *musllinux_aarch* *pp* *-macosx_universal2:arm64"
+test-skip = "*manylinux* *musllinux_aarch* *pp* *-macosx_universal2:arm64 *pyodide*"
 musllinux-x86_64-image = "quay.io/pypa/musllinux_1_1_x86_64:2024-04-29-07d05a0"
 musllinux-aarch64-image = "quay.io/pypa/musllinux_1_1_aarch64:2024-04-29-07d05a0"
 
