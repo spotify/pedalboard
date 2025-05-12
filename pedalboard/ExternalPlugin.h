@@ -172,14 +172,19 @@ An example of how to programmatically close an editor window::
 inline std::vector<std::string> findInstalledVSTPluginPaths() {
   // Ensure we have a MessageManager, which is required by the VST wrapper
   // Without this, we get an assert(false) from JUCE at runtime
+  std::vector<std::string> pluginPaths;
+
+#if HAS_PATCHED_VST3_PLUGIN_FORMAT
   juce::MessageManager::getInstance();
   juce::PatchedVST3PluginFormat format;
-  std::vector<std::string> pluginPaths;
+
   for (juce::String pluginIdentifier : format.searchPathsForPlugins(
            format.getDefaultLocationsToSearch(), true, false)) {
     pluginPaths.push_back(
         format.getNameOfPluginFromIdentifier(pluginIdentifier).toStdString());
   }
+#endif
+
   return pluginPaths;
 }
 
@@ -309,6 +314,7 @@ static bool audioUnitIsInstalled(const juce::String audioUnitFilePath) {
          audioUnitFilePath.contains("/Library/Audio/Plug-Ins/Components/");
 }
 
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_processors
 template <typename ExternalPluginType>
 static juce::OwnedArray<juce::PluginDescription>
 scanPluginDescriptions(std::string filename) {
@@ -371,19 +377,23 @@ scanPluginDescriptions(std::string filename) {
 
   return typesFound;
 }
+#endif
 
 template <typename ExternalPluginType>
 static std::vector<std::string> getPluginNamesForFile(std::string filename) {
+  std::vector<std::string> pluginNames;
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_processors
   juce::OwnedArray<juce::PluginDescription> typesFound =
       scanPluginDescriptions<ExternalPluginType>(filename);
-
-  std::vector<std::string> pluginNames;
   for (int i = 0; i < typesFound.size(); i++) {
     pluginNames.push_back(typesFound[i]->name.toStdString());
   }
+#endif
+
   return pluginNames;
 }
 
+#ifdef JUCE_MODULE_AVAILABLE_juce_gui_basics
 class StandalonePluginWindow : public juce::DocumentWindow {
 public:
   StandalonePluginWindow(juce::AudioProcessor &processor)
@@ -485,6 +495,7 @@ private:
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StandalonePluginWindow)
 };
+#endif
 
 enum class ExternalPluginReloadType {
   /**
@@ -518,6 +529,7 @@ public:
   AbstractExternalPlugin() : Plugin() {}
 };
 
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_processors
 template <typename ExternalPluginType>
 class ExternalPlugin : public AbstractExternalPlugin {
 public:
@@ -533,7 +545,9 @@ public:
     juce::MessageManager::getInstance();
 
     pluginFormatManager.addDefaultFormats();
+#if HAS_PATCHED_VST3_PLUGIN_FORMAT
     pluginFormatManager.addFormat(new juce::PatchedVST3PluginFormat());
+#endif
 
     auto pluginFileStripped =
         pathToPluginFile.trimCharactersAtEnd(juce::File::getSeparatorString());
@@ -1366,6 +1380,7 @@ public:
           "\") does not have an 'is_set' method.");
     }
 
+#ifdef JUCE_MODULE_AVAILABLE_juce_gui_basics
     {
       py::gil_scoped_release release;
       if (!juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()) {
@@ -1380,6 +1395,11 @@ public:
     }
 
     StandalonePluginWindow::openWindowAndWait(*pluginInstance, optionalEvent);
+#else
+    throw std::runtime_error(
+        "Editor cannot be shown - this build of Pedalboard does not support "
+        "showing plugin UIs.");
+#endif
   }
 
   ExternalPluginReloadType reloadType = ExternalPluginReloadType::Unknown;
@@ -1423,6 +1443,7 @@ private:
   long samplesProvided = 0;
   float initializationTimeout = DEFAULT_INITIALIZATION_TIMEOUT_SECONDS;
 };
+#endif
 
 inline void init_external_plugins(py::module &m) {
   py::enum_<ExternalPluginReloadType>(
@@ -1442,6 +1463,7 @@ inline void init_external_plugins(py::module &m) {
              "plugin every time reset is called.")
       .export_values();
 
+#ifdef JUCE_MODULE_AVAILABLE_juce_audio_processors
   py::class_<juce::AudioProcessorParameter>(
       m, "_AudioProcessorParameter",
       "An abstract base class for parameter objects that can be added to an "
@@ -1549,6 +1571,7 @@ inline void init_external_plugins(py::module &m) {
             return param.getCurrentValueAsText().toStdString();
           },
           "Returns the current value of the parameter as a string.");
+#endif
 
   py::object externalPlugin =
       py::class_<AbstractExternalPlugin, Plugin,
@@ -1620,7 +1643,7 @@ inline void init_external_plugins(py::module &m) {
               py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
               py::arg("reset") = true);
 
-#if (JUCE_MAC || JUCE_WINDOWS || JUCE_LINUX)
+#if (JUCE_MAC || JUCE_WINDOWS || JUCE_LINUX) && HAS_PATCHED_VST3_PLUGIN_FORMAT
   py::class_<ExternalPlugin<juce::PatchedVST3PluginFormat>,
              AbstractExternalPlugin,
              std::shared_ptr<ExternalPlugin<juce::PatchedVST3PluginFormat>>>(

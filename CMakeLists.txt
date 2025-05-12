@@ -207,9 +207,6 @@ elseif(UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
     list(APPEND ALL_INCLUDES "vendors/fftw3/api/" "vendors/fftw3/")
 elseif(EMSCRIPTEN)
     # Emscripten specific flags
-    
-    # Trick JUCE into thinking we're on Linux, which Emscripten emulates better than BSD:
-    # add_compile_definitions(LINUX=1)
         
     # FFTW support:
     add_compile_definitions(
