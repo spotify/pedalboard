@@ -6,5 +6,6 @@ recursive-include tests *.py
 graft pedalboard
 graft JUCE
 graft tests
+include pedalboard_native/py.typed
 
 exclude build-info.yaml service-info.yaml mkdocs.yml
