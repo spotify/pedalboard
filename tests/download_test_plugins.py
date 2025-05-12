@@ -4,12 +4,14 @@ that we can't embed in the repository itself, but we still want to use for
 testing purposes.
 """
 
-import os
 import json
-from tqdm import tqdm
+import os
 import platform
+
+from google.auth.exceptions import RefreshError
 from google.cloud import storage
 from google.oauth2 import service_account
+from tqdm import tqdm
 
 
 def main():
@@ -35,13 +37,25 @@ def main():
         # Manually iterate here instead of just calling gsutil on the command line as
         # GSUtil on Windows is not 100% guaranteed to install properly on GitHub Actions.
         print(f"Downloading test {plugin_type} plugin files from Google Cloud Storage...")
-        for blob in tqdm(list(bucket.list_blobs(prefix=prefix))):
-            local_path = os.path.join(target_filepath, blob.name.replace(prefix + "/", ""))
-            if local_path.endswith("/"):
-                os.makedirs(local_path, exist_ok=True)
-            else:
-                os.makedirs(os.path.dirname(local_path), exist_ok=True)
-                blob.download_to_filename(local_path)
+        try:
+            for blob in tqdm(list(bucket.list_blobs(prefix=prefix))):
+                local_path = os.path.join(target_filepath, blob.name.replace(prefix + "/", ""))
+                if local_path.endswith("/"):
+                    os.makedirs(local_path, exist_ok=True)
+                else:
+                    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+                    blob.download_to_filename(local_path)
+        except RefreshError as e:
+            raise ValueError(
+                "Test plugin download failed, likely due to access token expiration. \n"
+                "If you're a Spotify employee and are seeing this error, please "
+                "regenerate the GCS_READER_SERVICE_ACCOUNT_KEY environment variable "
+                "in the GitHub Actions secrets. The existing service account used for "
+                "this can be found by searching for a service account containing the "
+                "word 'Pedalboard' in the owning team's Google Cloud console IAM page. "
+                "If the service account has been deleted, create a new one and give it "
+                "read-only access to objects in the GCS_ASSET_BUCKET_NAME bucket."
+            ) from e
     print("Done!")
 
 
