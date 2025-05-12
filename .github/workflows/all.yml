@@ -690,6 +690,7 @@ jobs:
     if: (github.event_name == 'release' && github.event.action == 'published') || contains(github.event.pull_request.labels.*.name, 'Also Test Wheels')
     strategy:
       matrix:
+        platform: [""] # Do not override by default
         include:
         - { os: 'ubuntu-24.04', build: cp312-pyodide_wasm32, platform: pyodide }
         # - { os: macos-13, build: cp39-macosx_x86_64 }
@@ -756,13 +757,14 @@ jobs:
         with:
           platforms: all
       - name: Build wheels
-        run: python -m cibuildwheel --output-dir wheelhouse --platform pyodide
+        run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BUILD: ${{ matrix.build }}
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
-          CIBW_ENVIRONMENT: NPY_BLAS_ORDER="" NPY_LAPACK_ORDER="" CIBW_BUILD="${{ matrix.build }}"
+          CIBW_ENVIRONMENT: NPY_BLAS_ORDER="" NPY_LAPACK_ORDER="" CIBW_BUILD="${{ matrix.build }}" CIBW_PLATFORM="${{ matrix.platform }}"
           # Use the minimum macOS deployment target supported by our version of PyBind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
+          CIBW_PLATFORM: ${{ matrix.platform }}
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-${{ matrix.build }}

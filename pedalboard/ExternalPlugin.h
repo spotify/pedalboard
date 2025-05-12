@@ -29,7 +29,10 @@
 #include "Plugin.h"
 #include <pybind11/stl.h>
 
+#ifndef JUCE_WASM
 #include "juce_overrides/juce_PatchedVST3PluginFormat.h"
+#endif
+
 #include "process.h"
 
 #if JUCE_MAC

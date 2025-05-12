@@ -220,11 +220,20 @@ elseif(EMSCRIPTEN)
     find_package(PkgConfig REQUIRED)
     list(APPEND ALL_INCLUDES "vendors/fftw3/api/" "vendors/fftw3/")
 
+    # Remove JUCE include_juce_*.cpp files that can't be used on Emscripten anyways:
+    list(FILTER CPP_SOURCES EXCLUDE REGEX ".*include_juce_audio_devices\\.cpp$")
+    list(FILTER CPP_SOURCES EXCLUDE REGEX ".*include_juce_audio_processors\\.cpp$")
+    list(FILTER CPP_SOURCES EXCLUDE REGEX ".*include_juce_data_structures\\.cpp$")
+    list(FILTER CPP_SOURCES EXCLUDE REGEX ".*include_juce_graphics\\.cpp$")
+    list(FILTER CPP_SOURCES EXCLUDE REGEX ".*include_juce_gui_basics\\.cpp$")
+    list(FILTER CPP_SOURCES EXCLUDE REGEX ".*include_juce_gui_extra\\.cpp$")
+    list(FILTER CPP_SOURCES EXCLUDE REGEX ".*juce_PatchedVST3PluginFormat\\.cpp$")
 
     # Add shim directory for missing headers
     list(APPEND ALL_INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/pedalboard/emscripten_shims")
 
     list(APPEND JUCE_COMPILE_DEFINITIONS
+        WASM=1
         JUCE_WASM=1
         __wasm__=1
         NO_THREADING=1
