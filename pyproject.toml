@@ -3,7 +3,7 @@ requires = ["scikit-build-core>=0.5.0", "pybind11>=2.9.0"]
 build-backend = "scikit_build_core.build"
 
 [tool.cibuildwheel]
-free-threaded-support = true
+enable = ["cpython-freethreading"]
 test-requires = ["-r test-requirements.txt"]
 test-command = "pytest {project}/tests"
 # The manylinux container doesn't have a new enough glibc version,
@@ -69,6 +69,8 @@ wheel.packages = ["pedalboard", "pedalboard.io", "pedalboard_native"]
 sdist.include = [
     "pedalboard/**/*.py",
     "pedalboard_native/**/*.py",
+    "pedalboard/py.typed",
+    "pedalboard_native/py.typed",
     "JUCE/**/*.cpp",
     "JUCE/**/*.c",
     "JUCE/**/*.h",
