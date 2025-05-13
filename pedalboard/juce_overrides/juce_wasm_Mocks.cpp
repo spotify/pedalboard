@@ -38,6 +38,19 @@ URL::downloadToFile(File const &, URL::DownloadTaskOptions const &) {
   return nullptr;
 }
 
+class DirectoryIterator::NativeIterator::Pimpl {
+public:
+  Pimpl(const File &directory, const String &wc) {}
+
+  ~Pimpl() {}
+
+  bool next(String &filenameFound, bool *const isDir, bool *const isHidden,
+            int64 *const fileSize, Time *const modTime,
+            Time *const creationTime, bool *const isReadOnly) {
+    return false;
+  }
+};
+
 DirectoryIterator::NativeIterator::NativeIterator(File const &,
                                                   String const &) {}
 
