@@ -207,8 +207,10 @@ elseif(UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
     list(APPEND ALL_INCLUDES "vendors/fftw3/api/" "vendors/fftw3/")
 elseif(EMSCRIPTEN)
     # Emscripten specific flags
-    # By default, `throw` is an abort, so we have to set -fexceptions:
+    # By default, `throw` is an abort, so we have to set -fexceptions at compile time:
     add_compile_options(-fexceptions)
+    # ...and at link time:
+    add_link_options(-fexceptions)
 
     # FFTW support:
     add_compile_definitions(
