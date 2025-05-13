@@ -322,11 +322,14 @@ function(collect_sources)
     list(FILTER GSM_SOURCES EXCLUDE REGEX ".*toast.*")
     
     # FFTW sources for Linux
-    if(UNIX AND NOT APPLE AND (NOT DEFINED CIBW_BUILD OR NOT CIBW_BUILD MATCHES "musllinux") AND NOT EMSCRIPTEN)
+    if(UNIX AND NOT APPLE AND NOT DEFINED CIBW_BUILD OR NOT CIBW_BUILD MATCHES "musllinux")
         file(GLOB_RECURSE FFTW_SOURCES "vendors/fftw3/*.c")
         
         # Exclude files depending on architecture
-        if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
+        if(EMSCRIPTEN)
+            # Exclude all SIMD on Emscripten
+            list(FILTER FFTW_SOURCES EXCLUDE REGEX ".*(neon|avx|/sse).*")
+        elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
             list(FILTER FFTW_SOURCES EXCLUDE REGEX ".*(avx|/sse).*")
         else()
             list(FILTER FFTW_SOURCES EXCLUDE REGEX ".*neon.*")
