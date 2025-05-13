@@ -20,6 +20,7 @@
   ==============================================================================
 */
 
+#ifdef JUCE_WASM
 #include "../../JUCE/modules/juce_core/juce_core.h"
 
 namespace juce {
@@ -61,3 +62,4 @@ bool DirectoryIterator::NativeIterator::next(String &, bool *, bool *,
 }
 
 } // namespace juce
+#endif

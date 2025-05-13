@@ -292,8 +292,9 @@ list(APPEND RUBBERBAND_COMPILE_DEFINITIONS
 
 # Helper function to collect source files
 function(collect_sources)
-    # Collect all C++ source files
+    # Collect all source files
     file(GLOB_RECURSE CPP_SOURCES "pedalboard/*.cpp")
+    file(GLOB_RECURSE C_SOURCES "pedalboard/*.c")
     
     # Handle platform-specific sources
     if(APPLE)
@@ -346,6 +347,7 @@ function(collect_sources)
     # Combine all sources
     set(ALL_SOURCES 
         ${CPP_SOURCES} 
+        ${C_SOURCES}
         ${RUBBERBAND_SOURCES} 
         ${VENDOR_SOURCES} 
         ${LAME_SOURCES} 
