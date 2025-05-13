@@ -239,6 +239,7 @@ jobs:
   # Build the native module with ccache enabled so we can share object files between builds:
   prime-asan-build-caches:
     runs-on: ${{ matrix.os }}
+    if: false
     continue-on-error: false
     strategy:
       matrix:
