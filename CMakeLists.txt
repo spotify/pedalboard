@@ -212,6 +212,9 @@ elseif(EMSCRIPTEN)
     # ...and at link time:
     add_link_options(-fexceptions)
 
+    # Tell the Emscripten linker that undefined symbols are a hard fail:
+    add_link_options(-sERROR_ON_UNDEFINED_SYMBOLS=1)
+
     # FFTW support:
     add_compile_definitions(
         HAVE_FFTW3=1
