@@ -207,7 +207,9 @@ elseif(UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
     list(APPEND ALL_INCLUDES "vendors/fftw3/api/" "vendors/fftw3/")
 elseif(EMSCRIPTEN)
     # Emscripten specific flags
-        
+    # By default, `throw` is an abort, so we have to set -fexceptions:
+    add_compile_options(-fexceptions)
+
     # FFTW support:
     add_compile_definitions(
         HAVE_FFTW3=1
@@ -216,10 +218,8 @@ elseif(EMSCRIPTEN)
     )
     find_package(PkgConfig REQUIRED)
     list(APPEND ALL_INCLUDES "vendors/fftw3/api/" "vendors/fftw3/")
-
     # Add shim directory for missing headers
     list(APPEND ALL_INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/pedalboard/emscripten_shims")
-
     list(APPEND JUCE_COMPILE_DEFINITIONS
         JUCE_WASM=1
         __wasm__=1
