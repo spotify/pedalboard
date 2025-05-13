@@ -229,6 +229,7 @@ elseif(EMSCRIPTEN)
         JUCE_WASM=1
         __wasm__=1
         NO_THREADING=1
+        SUPPORT_AFFINITIES=0
     )
 endif()
 
