@@ -10,7 +10,7 @@ test-command = "pytest {project}/tests"
 # so we can't run post-wheel-build tests there.
 # The musllinux containers on aarch64 take 6+ hours to test.
 # Also testing any pypy versions fails, as TensorFlow isn't pypy compatible.
-test-skip = "*manylinux* *musllinux_aarch* *pp* *-macosx_universal2:arm64 *pyodide*"
+test-skip = "*manylinux* *musllinux_aarch* *pp* *-macosx_universal2:arm64"
 musllinux-x86_64-image = "quay.io/pypa/musllinux_1_1_x86_64:2024-04-29-07d05a0"
 musllinux-aarch64-image = "quay.io/pypa/musllinux_1_1_aarch64:2024-04-29-07d05a0"
 
@@ -31,6 +31,12 @@ archs = ["auto"]
 # (Note: this is experimental, as most VSTs require glibc and thus Alpine Linux isn't that useful)
 select = "*-musllinux*"
 before-all = "apk add libsndfile libx11-dev libxrandr-dev libxinerama-dev libxrender-dev libxcomposite-dev libxinerama-dev libxcursor-dev freetype-dev libexecinfo-dev alsa-lib-dev"
+
+[[tool.cibuildwheel.overrides]]
+# Just ensure we can load Pedalboard itself:
+select = "*pyodide*"
+test-requires = ["numpy"]
+test-command = "python3 -c 'import pedalboard'"
 
 [project]
 name = "pedalboard"
