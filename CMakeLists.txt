@@ -208,9 +208,12 @@ elseif(UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
 elseif(EMSCRIPTEN)
     # Emscripten specific flags
     # By default, `throw` is an abort, so we have to set -fexceptions at compile time:
-    add_compile_options(-fexceptions -fsanitize=address -sALLOW_MEMORY_GROWTH=1)
+    add_compile_options(-fexceptions -fsanitize=address)
     # ...and at link time:
     add_link_options(-fexceptions -fsanitize=address -sALLOW_MEMORY_GROWTH=1)
+    # Disable vectorization:
+    add_compile_options(-fno-vectorize)
+    add_link_options(-fno-vectorize)
 
     # Tell the Emscripten linker that undefined symbols are a hard fail:
     add_link_options(-sERROR_ON_UNDEFINED_SYMBOLS=1)
@@ -435,6 +438,8 @@ elseif(UNIX AND NOT APPLE)
         "-include${CMAKE_CURRENT_SOURCE_DIR}/vendors/fftw3/dft/codelet-dft.h"
         "-include${CMAKE_CURRENT_SOURCE_DIR}/vendors/fftw3/rdft/codelet-rdft.h"
         "-includesys/time.h"
+        # Ignore -Wcomment:
+        "-Wno-comment"
         -DHAVE_INTTYPES_H
         -DHAVE_STDINT_H
         -DHAVE_STDLIB_H
