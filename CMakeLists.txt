@@ -210,10 +210,14 @@ elseif(EMSCRIPTEN)
     # By default, `throw` is an abort, so we have to set -fexceptions at compile time:
     add_compile_options(-fexceptions -fsanitize=address)
     # ...and at link time:
-    add_link_options(-fexceptions -fsanitize=address -sALLOW_MEMORY_GROWTH=1)
-    # Disable vectorization:
-    add_compile_options(-fno-vectorize)
-    add_link_options(-fno-vectorize)
+    add_link_options(-fexceptions -fsanitize=address -sALLOW_MEMORY_GROWTH=1 -v -Wl,--verbose -Wl,--trace -error-limit=0)
+    
+    # Disable all auto-vectorization since it conflicts with ASan in WASM
+    add_compile_options(-fno-vectorize -fno-slp-vectorize -fno-tree-vectorize)
+    add_link_options(-fno-vectorize -fno-slp-vectorize -fno-tree-vectorize)
+    
+    # Define a flag that code can check to disable explicit vectorization pragmas
+    add_compile_definitions(DISABLE_EXPLICIT_VECTORIZATION=1)
 
     # Tell the Emscripten linker that undefined symbols are a hard fail:
     add_link_options(-sERROR_ON_UNDEFINED_SYMBOLS=1)
