@@ -208,9 +208,9 @@ elseif(UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
 elseif(EMSCRIPTEN)
     # Emscripten specific flags
     # By default, `throw` is an abort, so we have to set -fexceptions at compile time:
-    add_compile_options(-fexceptions)
+    add_compile_options(-fexceptions -fsanitize=address -sALLOW_MEMORY_GROWTH=1)
     # ...and at link time:
-    add_link_options(-fexceptions)
+    add_link_options(-fexceptions -fsanitize=address -sALLOW_MEMORY_GROWTH=1)
 
     # Tell the Emscripten linker that undefined symbols are a hard fail:
     add_link_options(-sERROR_ON_UNDEFINED_SYMBOLS=1)
