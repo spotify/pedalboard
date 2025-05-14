@@ -208,13 +208,9 @@ elseif(UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
 elseif(EMSCRIPTEN)
     # Emscripten specific flags
     # By default, `throw` is an abort, so we have to set -fexceptions at compile time:
-    add_compile_options(-fexceptions -fsanitize=address)
+    add_compile_options(-fexceptions -sSAFE_HEAP)
     # ...and at link time:
-    add_link_options(-fexceptions -fsanitize=address -sALLOW_MEMORY_GROWTH=1 -v -Wl,--verbose -Wl,--trace -error-limit=0)
-    
-    # Disable all auto-vectorization since it conflicts with ASan in WASM
-    add_compile_options(-fno-vectorize -fno-slp-vectorize -fno-tree-vectorize)
-    add_link_options(-fno-vectorize -fno-slp-vectorize -fno-tree-vectorize)
+    add_link_options(-fexceptions -sSAFE_HEAP -sALLOW_MEMORY_GROWTH=1 -error-limit=0)
     
     # Define a flag that code can check to disable explicit vectorization pragmas
     add_compile_definitions(DISABLE_EXPLICIT_VECTORIZATION=1)
