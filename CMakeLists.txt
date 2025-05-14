@@ -191,6 +191,7 @@ elseif(UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(FREETYPE REQUIRED freetype2)
     find_package(ALSA REQUIRED)
+
     include_directories(${FREETYPE_INCLUDE_DIRS})
     list(APPEND PLATFORM_LIBRARIES ${FREETYPE_LIBRARIES} ${ALSA_LIBRARIES})
     
