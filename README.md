@@ -305,7 +305,7 @@ To cite via BibTeX:
 ```
 
 ## License
-`pedalboard` is Copyright 2021-2024 Spotify AB.
+`pedalboard` is Copyright 2021-2025 Spotify AB.
 
 `pedalboard` is licensed under the [GNU General Public License v3](https://www.gnu.org/licenses/gpl-3.0.en.html). `pedalboard` includes a number of libraries that are statically compiled, and which carry the following licenses:
 
