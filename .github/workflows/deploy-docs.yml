@@ -45,7 +45,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install build wheel
           pip install -e .
-          pip install black mypy pybind11-stubgen sphinx psutil typing-extensions numpy
+          pip install -r docs-requirements.txt
 
       - name: Generate Documentation
         run: |
