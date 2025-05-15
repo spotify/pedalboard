@@ -568,8 +568,11 @@
           echo("Error loading micropip: " + e.toString());
         }
 
-        const relativePath = "/docs/pedalboard-0.9.17-cp312-cp312-pyodide_2024_0_wasm32.whl";
-        const absolutePath = window.location.origin + relativePath;
+        // Get the path to the example file; should be in the same directory as the index.html file:
+        const root = window.location.href.split("index.html")[0];
+
+        // TODO(psobot): Can we deploy this to some CDN ourselves?
+        const absolutePath = root + "pedalboard-0.9.17-cp312-cp312-pyodide_2024_0_wasm32.whl";
         try {
             await micropip.install(absolutePath);
         } catch (e) {
@@ -580,7 +583,7 @@
         // Set up the drag-and-drop file system
         setupFileSystem();
 
-        const path = window.location.origin + "/docs/example_file.mp3";
+        const path = root + "example_file.mp3";
         fetch(path)
           .then(response => response.arrayBuffer())
           .then(buffer => {
