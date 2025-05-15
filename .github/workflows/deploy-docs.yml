@@ -50,6 +50,8 @@ jobs:
       - name: Generate Documentation
         run: |
           python scripts/generate_type_stubs_and_docs.py
+          # Manually copy the demo directory into place:
+          cp -r docs/source/_static/demo docs/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
