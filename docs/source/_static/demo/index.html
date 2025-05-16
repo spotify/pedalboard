@@ -97,14 +97,6 @@
       
       /* Mobile optimizations */
       @media (max-width: 768px) {
-        .terminal {
-          --size: 2.5; /* Larger font for mobile */
-        }
-        
-        .cmd-cursor {
-          position: relative !important;
-        }
-        
         .terminal-output > div {
           min-height: auto !important;
         }
@@ -772,34 +764,6 @@
             term.error(s.trimEnd());
           };
           term.ready = Promise.resolve();
-          
-          // Improve terminal scrolling behavior
-          const originalScrollToBottom = term.scroll_to_bottom.bind(term);
-          term.scroll_to_bottom = function() {
-            // Only scroll if we're on a mobile device
-            if (window.innerWidth <= 768) {
-              // Delay the scroll to ensure the terminal layout has updated
-              setTimeout(() => {
-                // Get the position of the cursor
-                const cursor = $(".cmd-cursor");
-                if (cursor.length) {
-                  // Calculate cursor position relative to viewport
-                  const cursorTop = cursor.offset().top;
-                  const viewportHeight = window.innerHeight;
-                  const scrollTop = $(window).scrollTop();
-                  
-                  // If cursor is not visible in viewport, scroll to make it visible
-                  if (cursorTop < scrollTop || cursorTop > scrollTop + viewportHeight - 100) {
-                    // Position cursor in the middle of the screen
-                    $("html, body").scrollTop(Math.max(0, cursorTop - (viewportHeight / 2)));
-                  }
-                }
-              }, 100);
-            } else {
-              // Use default behavior for desktop
-              originalScrollToBottom();
-            }
-          };
           
           pyodide._api.on_fatal = async (e) => {
             if (e.name === "Exit") {
