@@ -626,11 +626,13 @@
             .then(buffer => {
               const uint8Content = new Uint8Array(buffer);
               pyodide.FS.writeFile(`/home/pyodide/example_file.mp3`, uint8Content);
+              const isMobile = window.innerWidth < 768;
               pyodide.runPython(`
                 example_file = AudioFile("example_file.mp3")
-                print("> Tip: example_file.mp3 is already loaded below:")
-                print(">>> example_file = AudioFile('example_file.mp3')")
-                print(repr(example_file))
+                print("> Tip: example_file.mp3 is loaded:")
+                if not ${isMobile}:
+                    print(">>> example_file = AudioFile('example_file.mp3')")
+                    print(repr(example_file))
                 print()
               `);
             });
@@ -786,6 +788,32 @@
           const searchParams = new URLSearchParams(window.location.search);
           if (searchParams.has("noblink")) {
             $(".cmd-cursor").addClass("noblink");
+          }
+
+          // Check if we're on mobile (width < 768px)
+          const isMobile = window.innerWidth < 768;
+          if (isMobile) {
+            // Show the initial imports to the user
+            echo("import numpy as np");
+            echo("from pedalboard import *");
+            echo("from pedalboard.io import *");
+            echo("");
+            echo("Welcome to the Pedalboard REPL!");
+            echo("> Type the variable name of any NumPy array to play it.");
+            echo("> See documentation at <a style='color: white;' target='_blank' href='https://spotify.github.io/pedalboard/'>spotify.github.io/pedalboard</a>.", {raw: true});
+            echo("");  
+          } else {
+            // Show the initial imports to the user
+            echo("import numpy as np          # Import numpy for array handling");
+            echo("from pedalboard import *    # Import pedalboard for audio processing");
+            echo("from pedalboard.io import * # Import pedalboard.io for audio input/output");
+            echo("");
+            echo("Welcome to the Pedalboard interactive Python environment!");
+            echo("> Drag any audio file (.wav, .mp3, .ogg, .flac, or .aiff) onto the page to load it.");
+            echo("> Call download() on any byte array to download it as a file.");
+            echo("> Type the variable name of any NumPy array to play it as audio in the browser.");
+            echo("> See <a style='color: white;' target='_blank' href='https://spotify.github.io/pedalboard/'>spotify.github.io/pedalboard</a> for documentation.", {raw: true});
+            echo("");
           }
 
           // Show the initial imports to the user
