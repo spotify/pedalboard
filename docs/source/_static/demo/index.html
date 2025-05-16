@@ -3,6 +3,7 @@
   <head>
     <title>Pedalboard REPL</title>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <script src="https://cdn.jsdelivr.net/npm/jquery"></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery.terminal@2.35.2/js/jquery.terminal.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery.terminal@2.35.2/js/unix_formatting.min.js"></script>
@@ -93,17 +94,59 @@
         --color: rgba(255, 255, 255, 0.8);
         --font: "Inconsolata", monospace;
       }
+      
+      /* Mobile optimizations */
+      @media (max-width: 768px) {
+        .terminal {
+          --size: 2.5; /* Larger font for mobile */
+        }
+        
+        .cmd-cursor {
+          position: relative !important;
+        }
+        
+        .terminal-output > div {
+          min-height: auto !important;
+        }
+      }
+      
       .noblink {
         --animation: terminal-none;
       }
       body {
         background-color: black;
         display: flex;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
       }
       #terminal-container {
         flex: 3;
         width: 100%;
         height: 100vh; /* Fill the entire viewport height */
+        position: relative;
+        overflow-y: auto;
+      }
+      
+      /* Mobile viewport fix */
+      @media (max-width: 768px) {
+        #terminal-container {
+          height: 100%;
+          max-height: calc(100% - 60px);
+          -webkit-overflow-scrolling: touch;
+        }
+        
+        html, body {
+          height: 100%;
+          position: fixed;
+          width: 100%;
+          overflow: hidden;
+        }
+        
+        .cmd {
+          position: relative;
+        }
       }
       
       .inline-audio-container {
@@ -396,384 +439,421 @@
       }
 
       async function main() {
-        let indexURL = "https://cdn.jsdelivr.net/pyodide/v0.27.5/full/";
+        try {
+          let indexURL = "https://cdn.jsdelivr.net/pyodide/v0.27.5/full/";
 
-        const echo = (msg, ...opts) =>
-          term.echo(
-            msg,
-            ...opts,
-          );
+          const echo = (msg, ...opts) =>
+            term.echo(
+              msg,
+              ...opts,
+            );
 
-        const ps1 = ">>> ";
-        const ps2 = "... ";
+          const ps1 = ">>> ";
+          const ps2 = "... ";
 
-        async function lock() {
-          let resolve;
-          const ready = term.ready;
-          term.ready = new Promise((res) => (resolve = res));
-          await ready;
-          return resolve;
-        }
-
-        async function interpreter(command) {
-          const unlock = await lock();
-          term.pause();
-          // multiline should be split (useful when pasting)
-          for (const c of command.split("\n")) {
-            const escaped = c.replaceAll(/\u00a0/g, " ");
-            const fut = pyconsole.push(escaped);
-            term.set_prompt(fut.syntax_check === "incomplete" ? ps2 : ps1);
-            switch (fut.syntax_check) {
-              case "syntax-error":
-                term.error(fut.formatted_error.trimEnd());
-                continue;
-              case "incomplete":
-                continue;
-              case "complete":
-                break;
-              default:
-                throw new Error(`Unexpected type ${ty}`);
-            }
-            // In JavaScript, await automatically also awaits any results of
-            // awaits, so if an async function returns a future, it will await
-            // the inner future too. This is not what we want so we
-            // temporarily put it into a list to protect it.
-            const wrapped = await_fut(fut);
-            // complete case, get result / error and print it.
-            try {
-              const [value] = await wrapped;
-              if (value !== undefined) {
-                echo(
-                  repr_shorten.callKwargs(value, {
-                    limit: 1000,
-                    separator: "\n\n[...]\n\n",
-                  }),
-                );
-                
-                // Check if the value is a numpy array suitable for audio
-                try {
-                  const audioArray = pyodide.runPython("get_audio_ndarray(_)");
-                  if (audioArray) {
-                    // Get the array data and create an audio element
-                    const arrayData = audioArray.toJs();
-                    if (arrayData) {
-                      let sampleRate = 44100; // Default sample rate, could be made configurable
-                      // Check if we can get the sample rate from global context
-                      try {
-                        const hasSampleRate = pyodide.runPython("'sr' in globals()");
-                        if (hasSampleRate) {
-                          const globalSampleRate = pyodide.runPython("sr");
-                          if (globalSampleRate && typeof globalSampleRate === 'number') {
-                            sampleRate = globalSampleRate;
-                          }
-                        }
-                      } catch (srErr) {
-                        console.warn("Couldn't determine sample rate:", srErr);
-                      }
-                      
-                      // Create audio HTML and display it inline
-                      const audioHtml = createAudioFromArray(arrayData, sampleRate);
-                      const audioId = 'audio-container-' + Date.now();
-                      echo(`<span id="${audioId}"></span>`, {
-                        raw: true,
-                        finalize: function(div) {
-                          document.getElementById(audioId).innerHTML = audioHtml;
-                        }
-                      });
-                    }
-                  }
-                } catch (err) {
-                  console.error("Error processing numpy array:", err);
-                }
-              }
-              if (value instanceof pyodide.ffi.PyProxy) {
-                value.destroy();
-              }
-            } catch (e) {
-              if (e.constructor.name === "PythonError") {
-                const message = fut.formatted_error || e.message;
-                term.error(message.trimEnd());
-              } else {
-                throw e;
-              }
-            } finally {
-              fut.destroy();
-              wrapped.destroy();
-            }
+          async function lock() {
+            let resolve;
+            const ready = term.ready;
+            term.ready = new Promise((res) => (resolve = res));
+            await ready;
+            return resolve;
           }
-          term.resume();
-          await sleep(10);
-          unlock();
-        }
 
-        const { loadPyodide } = await import(indexURL + "pyodide.mjs");
-        // to facilitate debugging
-        globalThis.loadPyodide = loadPyodide;
-
-        let term;
-
-        term = $("#terminal-container").terminal(interpreter, {
-          greetings: "",
-          prompt: ps1,
-          completionEscape: false,
-          completion: function (command, callback) {
-            callback(pyconsole.complete(command).toJs()[0]);
-          },
-          keymap: {
-            "CTRL+C": async function (event, original) {
-              pyconsole.buffer.clear();
-              term.enter();
-              echo("KeyboardInterrupt");
-              term.set_command("");
-              term.set_prompt(ps1);
-            },
-            TAB: (event, original) => {
-              const command = term.before_cursor();
-              // Disable completion for whitespaces.
-              if (command.trim() === "") {
-                term.insert("\t");
-                return false;
+          async function interpreter(command) {
+            const unlock = await lock();
+            term.pause();
+            // multiline should be split (useful when pasting)
+            for (const c of command.split("\n")) {
+              const escaped = c.replaceAll(/\u00a0/g, " ");
+              const fut = pyconsole.push(escaped);
+              term.set_prompt(fut.syntax_check === "incomplete" ? ps2 : ps1);
+              switch (fut.syntax_check) {
+                case "syntax-error":
+                  term.error(fut.formatted_error.trimEnd());
+                  continue;
+                case "incomplete":
+                  continue;
+                case "complete":
+                  break;
+                default:
+                  throw new Error(`Unexpected type ${ty}`);
               }
-              return original(event);
+              // In JavaScript, await automatically also awaits any results of
+              // awaits, so if an async function returns a future, it will await
+              // the inner future too. This is not what we want so we
+              // temporarily put it into a list to protect it.
+              const wrapped = await_fut(fut);
+              // complete case, get result / error and print it.
+              try {
+                const [value] = await wrapped;
+                if (value !== undefined) {
+                  echo(
+                    repr_shorten.callKwargs(value, {
+                      limit: 1000,
+                      separator: "\n\n[...]\n\n",
+                    }),
+                  );
+                  
+                  // Check if the value is a numpy array suitable for audio
+                  try {
+                    const audioArray = pyodide.runPython("get_audio_ndarray(_)");
+                    if (audioArray) {
+                      // Get the array data and create an audio element
+                      const arrayData = audioArray.toJs();
+                      if (arrayData) {
+                        let sampleRate = 44100; // Default sample rate, could be made configurable
+                        // Check if we can get the sample rate from global context
+                        try {
+                          const hasSampleRate = pyodide.runPython("'sr' in globals()");
+                          if (hasSampleRate) {
+                            const globalSampleRate = pyodide.runPython("sr");
+                            if (globalSampleRate && typeof globalSampleRate === 'number') {
+                              sampleRate = globalSampleRate;
+                            }
+                          }
+                        } catch (srErr) {
+                          console.warn("Couldn't determine sample rate:", srErr);
+                        }
+                        
+                        // Create audio HTML and display it inline
+                        const audioHtml = createAudioFromArray(arrayData, sampleRate);
+                        const audioId = 'audio-container-' + Date.now();
+                        echo(`<span id="${audioId}"></span>`, {
+                          raw: true,
+                          finalize: function(div) {
+                            document.getElementById(audioId).innerHTML = audioHtml;
+                          }
+                        });
+                      }
+                    }
+                  } catch (err) {
+                    console.error("Error processing numpy array:", err);
+                  }
+                }
+                if (value instanceof pyodide.ffi.PyProxy) {
+                  value.destroy();
+                }
+              } catch (e) {
+                if (e.constructor.name === "PythonError") {
+                  const message = fut.formatted_error || e.message;
+                  term.error(message.trimEnd());
+                } else {
+                  throw e;
+                }
+              } finally {
+                fut.destroy();
+                wrapped.destroy();
+              }
+            }
+            term.resume();
+            await sleep(10);
+            unlock();
+          }
+
+          const { loadPyodide } = await import(indexURL + "pyodide.mjs");
+          // to facilitate debugging
+          globalThis.loadPyodide = loadPyodide;
+
+          let term;
+
+          term = $("#terminal-container").terminal(interpreter, {
+            greetings: "",
+            prompt: ps1,
+            completionEscape: false,
+            completion: function (command, callback) {
+              callback(pyconsole.complete(command).toJs()[0]);
             },
-            "META+K": (event, original) => {
-              term.clear();
-              return false;
+            keymap: {
+              "CTRL+C": async function (event, original) {
+                pyconsole.buffer.clear();
+                term.enter();
+                echo("KeyboardInterrupt");
+                term.set_command("");
+                term.set_prompt(ps1);
+              },
+              TAB: (event, original) => {
+                const command = term.before_cursor();
+                // Disable completion for whitespaces.
+                if (command.trim() === "") {
+                  term.insert("\t");
+                  return false;
+                }
+                return original(event);
+              },
+              "META+K": (event, original) => {
+                term.clear();
+                return false;
+              },
             },
-          },
-        });
-        window.term = term;
-        $.terminal.syntax('python')
+          });
+          window.term = term;
+          $.terminal.syntax('python')
 
-        echo("Loading <img src='https://spotify.github.io/pedalboard/_static/pedalboard_logo_small.png' style='vertical-align: middle; height: 2em;'> Pedalboard in-browser Python environment...", {raw: true});
+          echo("Loading <img src='https://spotify.github.io/pedalboard/_static/pedalboard_logo_small.png' style='vertical-align: middle; height: 2em;'> Pedalboard in-browser Python environment...", {raw: true});
 
-        globalThis.pyodide = await loadPyodide({
-          stdin: () => {
-            let result = prompt();
-            echo(result);
-            return result;
-          },
-        });
-
-        pyodide.setStdout({ batched: (msg) => term.echo(msg) });
-        pyodide.setStderr({ batched: (msg) => term.error(msg) });
-
-        let { repr_shorten, BANNER, PyodideConsole } =
-          pyodide.pyimport("pyodide.console");
-        let micropip;
-        try {
-          await pyodide.loadPackage("micropip");
-          micropip = pyodide.pyimport("micropip");
-        } catch (e) {
-          echo("Error loading micropip: " + e.toString());
-        }
-
-        // Get the path to the example file; should be in the same directory as the index.html file:
-        const root = window.location.href.split("index.html")[0];
-
-        // TODO(psobot): Can we deploy this to some CDN ourselves?
-        const absolutePath = root + "pedalboard-0.9.17-cp312-cp312-pyodide_2024_0_wasm32.whl";
-        try {
-            await micropip.install(absolutePath);
-        } catch (e) {
-            console.error("Error installing pedalboard:");
-            echo("Error installing pedalboard: " + e.toString());
-        }
-
-        // Set up the drag-and-drop file system
-        setupFileSystem();
-
-        const path = root + "example_file.mp3";
-        fetch(path)
-          .then(response => response.arrayBuffer())
-          .then(buffer => {
-            const uint8Content = new Uint8Array(buffer);
-            pyodide.FS.writeFile(`/home/pyodide/example_file.mp3`, uint8Content);
-            pyodide.runPython(`
-              example_file = AudioFile("example_file.mp3")
-              print("> Tip: example_file.mp3 is already loaded below:")
-              print(">>> example_file = AudioFile('example_file.mp3')")
-              print(repr(example_file))
-              print()
-            `);
+          globalThis.pyodide = await loadPyodide({
+            stdin: () => {
+              let result = prompt();
+              echo(result);
+              return result;
+            },
           });
 
-        // Run and display initial imports
-        pyodide.runPython(`
-          import sys
-          import numpy as np
-          import pedalboard
-          from pedalboard import *
-          import pedalboard.io
-          from pedalboard.io import *`)
+          pyodide.setStdout({ batched: (msg) => term.echo(msg) });
+          pyodide.setStderr({ batched: (msg) => term.error(msg) });
 
-        pyodide.runPython(`
-          import numpy as np
-          # Define a global helper function to check if an object is a numpy array
-          def get_audio_ndarray(obj) -> np.ndarray:
-              if not isinstance(obj, np.ndarray):
-                  return None
-              # Check if it's a 1D array (mono audio) or 2D array with channels as rows
-              if obj.ndim == 1 or (obj.ndim == 2 and obj.shape[0] <= 2):  # Up to 2 channels
-                  if obj.ndim == 1:
-                      # Mono audio - just return as is
-                      return obj
-                  elif obj.ndim == 2:
-                      # Multi-channel audio - transpose if needed to ensure [channels, samples] shape
-                      if obj.shape[0] <= 2:  # Up to 2 channels in first dimension
-                          return obj  # Already in [channels, samples] format
-                  else:
-                      # Likely in [samples, channels] format, so transpose
-                      return obj.T
-              return None
-        `);
+          let { repr_shorten, BANNER, PyodideConsole } =
+            pyodide.pyimport("pyodide.console");
+          let micropip;
+          try {
+            await pyodide.loadPackage("micropip");
+            micropip = pyodide.pyimport("micropip");
+          } catch (e) {
+            echo("Error loading micropip: " + e.toString());
+          }
 
-        // Define download function for byte arrays
-        pyodide.runPython(`
-          import js
-          from js import Uint8Array, URL, document
-          from io import BytesIO
-          import numpy as np
+          // Get the path to the example file; should be in the same directory as the index.html file:
+          const root = window.location.href.split("index.html")[0];
+
+          // TODO(psobot): Can we deploy this to some CDN ourselves?
+          const absolutePath = root + "pedalboard-0.9.17-cp312-cp312-pyodide_2024_0_wasm32.whl";
+          try {
+              await micropip.install(absolutePath);
+          } catch (e) {
+              console.error("Error installing pedalboard:");
+              echo("Error installing pedalboard: " + e.toString());
+              throw e;
+          }
+
+          // Set up the drag-and-drop file system
+          setupFileSystem();
+
+          const path = root + "example_file.mp3";
+          fetch(path)
+            .then(response => response.arrayBuffer())
+            .then(buffer => {
+              const uint8Content = new Uint8Array(buffer);
+              pyodide.FS.writeFile(`/home/pyodide/example_file.mp3`, uint8Content);
+              pyodide.runPython(`
+                example_file = AudioFile("example_file.mp3")
+                print("> Tip: example_file.mp3 is already loaded below:")
+                print(">>> example_file = AudioFile('example_file.mp3')")
+                print(repr(example_file))
+                print()
+              `);
+            });
+
+          // Run and display initial imports
+          pyodide.runPython(`
+            import sys
+            import numpy as np
+            import pedalboard
+            from pedalboard import *
+            import pedalboard.io
+            from pedalboard.io import *`)
+
+          pyodide.runPython(`
+            import numpy as np
+            # Define a global helper function to check if an object is a numpy array
+            def get_audio_ndarray(obj) -> np.ndarray:
+                if not isinstance(obj, np.ndarray):
+                    return None
+                # Check if it's a 1D array (mono audio) or 2D array with channels as rows
+                if obj.ndim == 1 or (obj.ndim == 2 and obj.shape[0] <= 2):  # Up to 2 channels
+                    if obj.ndim == 1:
+                        # Mono audio - just return as is
+                        return obj
+                    elif obj.ndim == 2:
+                        # Multi-channel audio - transpose if needed to ensure [channels, samples] shape
+                        if obj.shape[0] <= 2:  # Up to 2 channels in first dimension
+                            return obj  # Already in [channels, samples] format
+                    else:
+                        # Likely in [samples, channels] format, so transpose
+                        return obj.T
+                return None
+          `);
+
+          // Define download function for byte arrays
+          pyodide.runPython(`
+            import js
+            from js import Uint8Array, URL, document
+            from io import BytesIO
+            import numpy as np
+            
+            def download(data, filename=None):
+                """
+                Download any bytes-like object or numpy array as a file.
+                
+                Parameters:
+                - data: A bytes-like object, BytesIO, or numpy array
+                - filename: The name of the file to download
+                
+                Examples:
+                - download(audio_bytes)
+                - download(np.array([...]))
+                """
+                # Convert data to bytes if it's not already
+                if isinstance(data, np.ndarray):
+                    binary_data = AudioFile.encode(data, 44100, data.shape[0], format="wav")
+                    if filename is None:
+                        filename = "audio_data.wav"
+                else:
+                    # If it's already a BytesIO, get the bytes
+                    if isinstance(data, BytesIO):
+                        binary_data = data.getvalue()
+                    elif isinstance(data, bytes) or isinstance(data, bytearray):
+                        binary_data = data
+                    else:
+                        try:
+                            binary_data = bytes(data)
+                        except:
+                            raise TypeError("Data must be bytes-like, BytesIO, or numpy array")
+                    if filename is None:
+                        if binary_data.startswith(b"FFIR"):
+                            raise NotImplementedError("Encoding WAV files is not supported yet in-browser; please use FLAC, MP3, or OGG.")
+                        if binary_data.startswith(b"RIFF"):
+                            filename = "audio_data.wav"
+                        elif binary_data.startswith(b"OggS"):
+                            filename = "audio_data.ogg"
+                        elif binary_data.startswith(b"fLaC"):
+                            filename = "audio_data.flac"
+                        elif binary_data.startswith(b"AIFF"):
+                            filename = "audio_data.aiff"
+                        elif binary_data.startswith(b"\\xff\\xfb"):
+                            filename = "audio_data.mp3"
+                        else:
+                            filename = "byte_data.bin"
+                
+                # Create Uint8Array from the binary data
+                js_array = Uint8Array.new(len(binary_data))
+                for i, b in enumerate(binary_data):
+                    js_array[i] = b
+                
+                # Create a blob URL for the data
+                blob = js.Blob.new([js_array], {type: "application/octet-stream"})
+                url = URL.createObjectURL(blob)
+                
+                # Create and click a temporary download link
+                a = document.createElement("a")
+                a.href = url
+                a.download = filename
+                a.style = "display: none"
+                document.body.appendChild(a)
+                a.click()
+                
+                # Clean up
+                URL.revokeObjectURL(url)
+                document.body.removeChild(a)
+                print(f"Downloaded {filename} ({len(binary_data)} bytes)")
+          `);
+
+          const pyconsole = PyodideConsole(pyodide.globals);
+
+          const namespace = pyodide.globals.get("dict")();
+          const await_fut = pyodide.runPython(
+            `
+            import builtins
+            from pyodide.ffi import to_js
+
+            async def await_fut(fut):
+                res = await fut
+                if res is not None:
+                    builtins._ = res
+                return to_js([res], depth=1)
+
+            await_fut
+            `,
+            { globals: namespace },
+          );
+          namespace.destroy();
+
+          pyconsole.stdout_callback = (s) => echo(s, { newline: false });
+          pyconsole.stderr_callback = (s) => {
+            term.error(s.trimEnd());
+          };
+          term.ready = Promise.resolve();
           
-          def download(data, filename=None):
-              """
-              Download any bytes-like object or numpy array as a file.
-              
-              Parameters:
-              - data: A bytes-like object, BytesIO, or numpy array
-              - filename: The name of the file to download
-              
-              Examples:
-              - download(audio_bytes)
-              - download(np.array([...]))
-              """
-              # Convert data to bytes if it's not already
-              if isinstance(data, np.ndarray):
-                  binary_data = AudioFile.encode(data, 44100, data.shape[0], format="wav")
-                  if filename is None:
-                      filename = "audio_data.wav"
-              else:
-                  # If it's already a BytesIO, get the bytes
-                  if isinstance(data, BytesIO):
-                      binary_data = data.getvalue()
-                  elif isinstance(data, bytes) or isinstance(data, bytearray):
-                      binary_data = data
-                  else:
-                      try:
-                          binary_data = bytes(data)
-                      except:
-                          raise TypeError("Data must be bytes-like, BytesIO, or numpy array")
-                  if filename is None:
-                      if binary_data.startswith(b"FFIR"):
-                          raise NotImplementedError("Encoding WAV files is not supported yet in-browser; please use FLAC, MP3, or OGG.")
-                      if binary_data.startswith(b"RIFF"):
-                          filename = "audio_data.wav"
-                      elif binary_data.startswith(b"OggS"):
-                          filename = "audio_data.ogg"
-                      elif binary_data.startswith(b"fLaC"):
-                          filename = "audio_data.flac"
-                      elif binary_data.startswith(b"AIFF"):
-                          filename = "audio_data.aiff"
-                      elif binary_data.startswith(b"\\xff\\xfb"):
-                          filename = "audio_data.mp3"
-                      else:
-                          filename = "byte_data.bin"
-              
-              # Create Uint8Array from the binary data
-              js_array = Uint8Array.new(len(binary_data))
-              for i, b in enumerate(binary_data):
-                  js_array[i] = b
-              
-              # Create a blob URL for the data
-              blob = js.Blob.new([js_array], {type: "application/octet-stream"})
-              url = URL.createObjectURL(blob)
-              
-              # Create and click a temporary download link
-              a = document.createElement("a")
-              a.href = url
-              a.download = filename
-              a.style = "display: none"
-              document.body.appendChild(a)
-              a.click()
-              
-              # Clean up
-              URL.revokeObjectURL(url)
-              document.body.removeChild(a)
-              print(f"Downloaded {filename} ({len(binary_data)} bytes)")
-        `);
+          // Improve terminal scrolling behavior
+          const originalScrollToBottom = term.scroll_to_bottom.bind(term);
+          term.scroll_to_bottom = function() {
+            // Only scroll if we're on a mobile device
+            if (window.innerWidth <= 768) {
+              // Delay the scroll to ensure the terminal layout has updated
+              setTimeout(() => {
+                // Get the position of the cursor
+                const cursor = $(".cmd-cursor");
+                if (cursor.length) {
+                  // Calculate cursor position relative to viewport
+                  const cursorTop = cursor.offset().top;
+                  const viewportHeight = window.innerHeight;
+                  const scrollTop = $(window).scrollTop();
+                  
+                  // If cursor is not visible in viewport, scroll to make it visible
+                  if (cursorTop < scrollTop || cursorTop > scrollTop + viewportHeight - 100) {
+                    // Position cursor in the middle of the screen
+                    $("html, body").scrollTop(Math.max(0, cursorTop - (viewportHeight / 2)));
+                  }
+                }
+              }, 100);
+            } else {
+              // Use default behavior for desktop
+              originalScrollToBottom();
+            }
+          };
+          
+          pyodide._api.on_fatal = async (e) => {
+            if (e.name === "Exit") {
+              term.error(e);
+              term.error("Pyodide exited and can no longer be used.");
+            } else {
+              term.error(
+                "Pyodide has suffered a fatal error. Please report this to the Pyodide maintainers.",
+              );
+              term.error("The cause of the fatal error was:");
+              term.error(e);
+              term.error("Look in the browser console for more details.");
+            }
+            await term.ready;
+            term.pause();
+            await sleep(15);
+            term.pause();
+          };
 
-        const pyconsole = PyodideConsole(pyodide.globals);
-
-        const namespace = pyodide.globals.get("dict")();
-        const await_fut = pyodide.runPython(
-          `
-          import builtins
-          from pyodide.ffi import to_js
-
-          async def await_fut(fut):
-              res = await fut
-              if res is not None:
-                  builtins._ = res
-              return to_js([res], depth=1)
-
-          await_fut
-          `,
-          { globals: namespace },
-        );
-        namespace.destroy();
-
-        pyconsole.stdout_callback = (s) => echo(s, { newline: false });
-        pyconsole.stderr_callback = (s) => {
-          term.error(s.trimEnd());
-        };
-        term.ready = Promise.resolve();
-        pyodide._api.on_fatal = async (e) => {
-          if (e.name === "Exit") {
-            term.error(e);
-            term.error("Pyodide exited and can no longer be used.");
-          } else {
-            term.error(
-              "Pyodide has suffered a fatal error. Please report this to the Pyodide maintainers.",
-            );
-            term.error("The cause of the fatal error was:");
-            term.error(e);
-            term.error("Look in the browser console for more details.");
+          const searchParams = new URLSearchParams(window.location.search);
+          if (searchParams.has("noblink")) {
+            $(".cmd-cursor").addClass("noblink");
           }
-          await term.ready;
-          term.pause();
-          await sleep(15);
-          term.pause();
-        };
 
-        const searchParams = new URLSearchParams(window.location.search);
-        if (searchParams.has("noblink")) {
-          $(".cmd-cursor").addClass("noblink");
+          // Show the initial imports to the user
+          echo("import numpy as np          # Import numpy for array handling");
+          echo("from pedalboard import *    # Import pedalboard for audio processing");
+          echo("from pedalboard.io import * # Import pedalboard.io for audio input/output");
+          echo("");
+          echo("Welcome to the Pedalboard interactive Python environment!");
+          echo("> Drag any audio file (.wav, .mp3, .ogg, .flac, or .aiff) onto the page to load it.");
+          echo("> Call download() on any byte array to download it as a file.");
+          echo("> Type the variable name of any NumPy array to play it as audio in the browser.");
+          echo("> See <a style='color: white;' target='_blank' href='https://spotify.github.io/pedalboard/'>spotify.github.io/pedalboard</a> for documentation.", {raw: true});
+          echo("");
+
+          
+          // Add handler to focus terminal when clicking on body
+          document.body.addEventListener('click', function(e) {
+            // Only handle clicks directly on the body
+            if (e.target === document.body) {
+              // Focus the terminal
+              term.focus();
+            }
+          });
+          // Hide the loading spinner once initialization is complete
+          document.getElementById('loading').remove();
+        } catch (e) {
+          console.error("Error initializing terminal:", e);
+          window.term.error("Error initializing terminal:", e);// Hide the loading spinner once initialization is complete
+          document.getElementById('loading').remove();
         }
-
-        // Show the initial imports to the user
-        echo("import numpy as np          # Import numpy for array handling");
-        echo("from pedalboard import *    # Import pedalboard for audio processing");
-        echo("from pedalboard.io import * # Import pedalboard.io for audio input/output");
-        echo("");
-        echo("Welcome to the Pedalboard interactive Python environment!");
-        echo("> Drag any audio file (.wav, .mp3, .ogg, .flac, or .aiff) onto the page to load it.");
-        echo("> Call download() on any byte array to download it as a file.");
-        echo("> Type the variable name of any NumPy array to play it as audio in the browser.");
-        echo("> See <a style='color: white;' target='_blank' href='https://spotify.github.io/pedalboard/'>spotify.github.io/pedalboard</a> for documentation.", {raw: true});
-        echo("");
-
+          
         
-        // Add handler to focus terminal when clicking on body
-        document.body.addEventListener('click', function(e) {
-          // Only handle clicks directly on the body
-          if (e.target === document.body) {
-            // Focus the terminal
-            term.focus();
-          }
-        });
-        
-        // Hide the loading spinner once initialization is complete
-        document.getElementById('loading').remove();
       }
 
       // File system management
