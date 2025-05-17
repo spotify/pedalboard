@@ -1,1 +1,3 @@
+#if JUCE_MODULE_AVAILABLE_juce_data_structures
 #include <juce_data_structures/juce_data_structures.cpp>
+#endif

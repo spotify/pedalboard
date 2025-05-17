@@ -31,12 +31,16 @@ from typing import (
     no_type_check,
 )
 
-from pedalboard_native import (  # type: ignore
-    ExternalPlugin,
-    Plugin,
-    _AudioProcessorParameter,
-)
+from pedalboard_native import ExternalPlugin, Plugin  # type: ignore
 from pedalboard_native.utils import Chain  # type: ignore
+
+try:
+    # Not available on Emscripten:
+    from pedalboard_native import _AudioProcessorParameter
+except ImportError:
+
+    class _AudioProcessorParameter:
+        pass
 
 
 class Pedalboard(Chain):

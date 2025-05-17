@@ -100,8 +100,17 @@ public:
     // around to the GSM decoder.
     short frame[GSM_FRAME_SIZE_SAMPLES];
 
+#if JUCE_WASM
+    // convertFloatToInt16LE seems to do the wrong thing on WASM,
+    // so we'll use a custom implementation instead.
+    float *input = ioBlock.getChannelPointer(0);
+    for (int i = 0; i < GSM_FRAME_SIZE_SAMPLES; i++) {
+      frame[i] = (short)(input[i] * 32767.0f);
+    }
+#else
     juce::AudioDataConverters::convertFloatToInt16LE(
         ioBlock.getChannelPointer(0), frame, GSM_FRAME_SIZE_SAMPLES);
+#endif
 
     // Actually do the GSM processing!
     gsm_frame encodedFrame;
@@ -111,9 +120,17 @@ public:
       throw std::runtime_error("GSM decoder could not decode frame!");
     }
 
+#if JUCE_WASM
+    // convertInt16LEToFloat seems to do the wrong thing on WASM,
+    // so we'll use a custom implementation instead.
+    float *output = ioBlock.getChannelPointer(0);
+    for (int i = 0; i < GSM_FRAME_SIZE_SAMPLES; i++) {
+      output[i] = (float)frame[i] / 32767.0f;
+    }
+#else
     juce::AudioDataConverters::convertInt16LEToFloat(
         frame, ioBlock.getChannelPointer(0), GSM_FRAME_SIZE_SAMPLES);
-
+#endif
     return GSM_FRAME_SIZE_SAMPLES;
   }
 

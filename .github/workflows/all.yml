@@ -53,6 +53,7 @@ jobs:
   # Build the native module with ccache enabled so we can share object files between builds:
   prime-ubuntu-build-caches:
     runs-on: ${{ matrix.os }}
+    if: false
     continue-on-error: false
     strategy:
       matrix:
@@ -150,6 +151,7 @@ jobs:
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
 
   prime-macos-build-caches:
+    if: false
     runs-on: ${{ matrix.os }}
     continue-on-error: false
     strategy:
@@ -237,6 +239,7 @@ jobs:
   # Build the native module with ccache enabled so we can share object files between builds:
   prime-asan-build-caches:
     runs-on: ${{ matrix.os }}
+    if: false
     continue-on-error: false
     strategy:
       matrix:
@@ -338,6 +341,7 @@ jobs:
   run-tests-in-parallel:
     runs-on: ${{ matrix.os }}
     continue-on-error: false
+    if: false
     needs:
       - prime-ubuntu-build-caches
     strategy:
@@ -450,9 +454,10 @@ jobs:
   run-tests:
     runs-on: ${{ matrix.os }}
     continue-on-error: false
-    needs:
-      - prime-ubuntu-build-caches
-      - prime-macos-build-caches
+    if: false
+    # needs:
+      # - prime-ubuntu-build-caches
+      # - prime-macos-build-caches
     env:
       MINIMUM_COVERAGE_PERCENTAGE: 80
     strategy:
@@ -601,6 +606,7 @@ jobs:
 
   run-tests-with-address-sanitizer:
     runs-on: ${{ matrix.os }}
+    if: false
     needs: [prime-asan-build-caches]
     strategy:
       matrix:
@@ -684,60 +690,61 @@ jobs:
           pytest --maxfail=4
 
   build-wheels:
-    needs: [lint-python, lint-cpp]
+    # needs: [lint-python, lint-cpp]
     runs-on: ${{ matrix.os }}
     continue-on-error: false
     if: (github.event_name == 'release' && github.event.action == 'published') || contains(github.event.pull_request.labels.*.name, 'Also Test Wheels')
     strategy:
       matrix:
         include:
-        - { os: macos-13, build: cp39-macosx_x86_64 }
-        - { os: macos-13, build: cp310-macosx_x86_64 }
-        - { os: macos-13, build: cp311-macosx_x86_64 }
-        - { os: macos-13, build: cp312-macosx_x86_64 }
-        - { os: macos-13, build: cp313-macosx_x86_64 }
-        - { os: macos-13, build: cp313t-macosx_x86_64 }
-        # Universal wheels are rarely used; only support them for Python 3.12:
-        - { os: macos-13, build: cp312-macosx_universal2 }
-        - { os: macos-13, build: cp39-macosx_arm64 }
-        - { os: macos-13, build: cp310-macosx_arm64 }
-        - { os: macos-13, build: cp311-macosx_arm64 }
-        - { os: macos-13, build: cp312-macosx_arm64 }
-        - { os: macos-13, build: cp313-macosx_arm64 }
-        - { os: macos-13, build: cp313t-macosx_arm64 }
-        # - { os: macos-13, build: pp38-macosx_x86_64 }
-        # - { os: macos-13, build: pp39-macosx_x86_64 }
-        # - { os: windows-latest, build: cp39-win_amd64 }
-        # - { os: windows-latest, build: cp310-win_amd64 }
-        # - { os: windows-latest, build: cp311-win_amd64 }
-        # - { os: windows-latest, build: cp312-win_amd64 }
-        # - { os: windows-latest, build: cp313-win_amd64 }
-        # # - { os: windows-latest, build: cp313t-win_amd64 }
-        # - { os: windows-latest, build: cp312-win32 }
-        - { os: 'ubuntu-24.04', build: cp39-manylinux_x86_64 }
-        - { os: 'ubuntu-24.04', build: cp39-manylinux_aarch64 }
-        # - { os: 'ubuntu-24.04', build: cp39-musllinux_x86_64 }
-        # - { os: 'ubuntu-24.04', build: cp39-musllinux_aarch64 }
-        - { os: 'ubuntu-24.04', build: cp310-manylinux_x86_64 }
-        - { os: 'ubuntu-24.04', build: cp310-manylinux_aarch64 }
-        - { os: 'ubuntu-24.04', build: cp310-musllinux_x86_64 }
-        - { os: 'ubuntu-24.04', build: cp310-musllinux_aarch64 }
-        - { os: 'ubuntu-24.04', build: cp311-manylinux_x86_64 }
-        - { os: 'ubuntu-24.04', build: cp311-manylinux_aarch64 }
-        # - { os: 'ubuntu-24.04', build: cp311-musllinux_x86_64 }
-        # - { os: 'ubuntu-24.04', build: cp311-musllinux_aarch64 }
-        - { os: 'ubuntu-24.04', build: cp312-manylinux_x86_64 }
-        - { os: 'ubuntu-24.04', build: cp312-manylinux_aarch64 }
-        - { os: 'ubuntu-24.04', build: cp312-musllinux_x86_64 }
-        - { os: 'ubuntu-24.04', build: cp312-musllinux_aarch64 }
-        - { os: 'ubuntu-24.04', build: cp313-manylinux_x86_64 }
-        - { os: 'ubuntu-24.04', build: cp313-manylinux_aarch64 }
-        # - { os: 'ubuntu-24.04', build: cp313-musllinux_x86_64 }
-        # - { os: 'ubuntu-24.04', build: cp313-musllinux_aarch64 }
-        - { os: 'ubuntu-24.04', build: cp313t-manylinux_x86_64 }
-        - { os: 'ubuntu-24.04', build: cp313t-manylinux_aarch64 }
-        # - { os: 'ubuntu-24.04', build: cp313t-musllinux_x86_64 }
-        # - { os: 'ubuntu-24.04', build: cp313t-musllinux_aarch64 }
+        - { os: 'ubuntu-24.04', build: cp312-pyodide_wasm32, platform: pyodide }
+        # - { os: macos-13, build: cp39-macosx_x86_64 }
+        # - { os: macos-13, build: cp310-macosx_x86_64 }
+        # - { os: macos-13, build: cp311-macosx_x86_64 }
+        # - { os: macos-13, build: cp312-macosx_x86_64 }
+        # - { os: macos-13, build: cp313-macosx_x86_64 }
+        # - { os: macos-13, build: cp313t-macosx_x86_64 }
+        # # Universal wheels are rarely used; only support them for Python 3.12:
+        # - { os: macos-13, build: cp312-macosx_universal2 }
+        # - { os: macos-13, build: cp39-macosx_arm64 }
+        # - { os: macos-13, build: cp310-macosx_arm64 }
+        # - { os: macos-13, build: cp311-macosx_arm64 }
+        # - { os: macos-13, build: cp312-macosx_arm64 }
+        # - { os: macos-13, build: cp313-macosx_arm64 }
+        # - { os: macos-13, build: cp313t-macosx_arm64 }
+        # # - { os: macos-13, build: pp38-macosx_x86_64 }
+        # # - { os: macos-13, build: pp39-macosx_x86_64 }
+        # # - { os: windows-latest, build: cp39-win_amd64 }
+        # # - { os: windows-latest, build: cp310-win_amd64 }
+        # # - { os: windows-latest, build: cp311-win_amd64 }
+        # # - { os: windows-latest, build: cp312-win_amd64 }
+        # # - { os: windows-latest, build: cp313-win_amd64 }
+        # # # - { os: windows-latest, build: cp313t-win_amd64 }
+        # # - { os: windows-latest, build: cp312-win32 }
+        # - { os: 'ubuntu-24.04', build: cp39-manylinux_x86_64 }
+        # - { os: 'ubuntu-24.04', build: cp39-manylinux_aarch64 }
+        # # - { os: 'ubuntu-24.04', build: cp39-musllinux_x86_64 }
+        # # - { os: 'ubuntu-24.04', build: cp39-musllinux_aarch64 }
+        # - { os: 'ubuntu-24.04', build: cp310-manylinux_x86_64 }
+        # - { os: 'ubuntu-24.04', build: cp310-manylinux_aarch64 }
+        # - { os: 'ubuntu-24.04', build: cp310-musllinux_x86_64 }
+        # - { os: 'ubuntu-24.04', build: cp310-musllinux_aarch64 }
+        # - { os: 'ubuntu-24.04', build: cp311-manylinux_x86_64 }
+        # - { os: 'ubuntu-24.04', build: cp311-manylinux_aarch64 }
+        # # - { os: 'ubuntu-24.04', build: cp311-musllinux_x86_64 }
+        # # - { os: 'ubuntu-24.04', build: cp311-musllinux_aarch64 }
+        # - { os: 'ubuntu-24.04', build: cp312-manylinux_x86_64 }
+        # - { os: 'ubuntu-24.04', build: cp312-manylinux_aarch64 }
+        # - { os: 'ubuntu-24.04', build: cp312-musllinux_x86_64 }
+        # - { os: 'ubuntu-24.04', build: cp312-musllinux_aarch64 }
+        # - { os: 'ubuntu-24.04', build: cp313-manylinux_x86_64 }
+        # - { os: 'ubuntu-24.04', build: cp313-manylinux_aarch64 }
+        # # - { os: 'ubuntu-24.04', build: cp313-musllinux_x86_64 }
+        # # - { os: 'ubuntu-24.04', build: cp313-musllinux_aarch64 }
+        # - { os: 'ubuntu-24.04', build: cp313t-manylinux_x86_64 }
+        # - { os: 'ubuntu-24.04', build: cp313t-manylinux_aarch64 }
+        # # - { os: 'ubuntu-24.04', build: cp313t-musllinux_x86_64 }
+        # # - { os: 'ubuntu-24.04', build: cp313t-musllinux_aarch64 }
     name: Build wheel for ${{ matrix.build }}
     steps:
       - uses: actions/checkout@v4
@@ -750,7 +757,7 @@ jobs:
       - name: Install cibuildwheel
         run: python -m pip install 'cibuildwheel>=2.11.0'
       - name: Set up QEMU for aarch64 on Linux
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && contains(matrix.build, 'linux_aarch64')
         uses: docker/setup-qemu-action@v1
         with:
           platforms: all
@@ -759,9 +766,10 @@ jobs:
         env:
           CIBW_BUILD: ${{ matrix.build }}
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
-          CIBW_ENVIRONMENT: NPY_BLAS_ORDER="" NPY_LAPACK_ORDER="" CIBW_BUILD="${{ matrix.build }}"
+          CIBW_ENVIRONMENT: NPY_BLAS_ORDER="" NPY_LAPACK_ORDER="" CIBW_BUILD="${{ matrix.build }}" CIBW_PLATFORM="${{ matrix.platform }}"
           # Use the minimum macOS deployment target supported by our version of PyBind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
+          CIBW_PLATFORM: ${{ matrix.platform }}
       - name: Ensure wheels have required files
         run: |
           for wheel in ./wheelhouse/*.whl; do

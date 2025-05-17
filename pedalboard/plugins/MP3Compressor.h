@@ -111,10 +111,20 @@ public:
       }
 
       for (int c = 0; c < outputBlock.getNumChannels(); c++) {
+#if JUCE_WASM
+        // convertInt16LEToFloat seems to do the wrong thing on WASM,
+        // so we'll use a custom implementation instead.
+        float *output = outputBlock.getChannelPointer(c) + offsetInOutputBuffer;
+        short *input = (short *)outputBuffers[c].getData();
+        for (int i = 0; i < samplesToOutput; i++) {
+          output[i] = (float)input[i] / 32767.0f;
+        }
+#else
         juce::AudioDataConverters::convertInt16LEToFloat(
             (short *)outputBuffers[c].getData(),
             outputBlock.getChannelPointer(c) + offsetInOutputBuffer,
             samplesToOutput);
+#endif
       }
 
       // Move the remaining content in the output buffer to the left hand side:

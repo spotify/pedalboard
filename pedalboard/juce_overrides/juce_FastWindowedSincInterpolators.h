@@ -117,8 +117,10 @@ struct FastWindowedSincTraits {
     double effectiveSpeedRatio = std::max(speedRatio, 1.0);
     const float sincStart = 1.0f - offset - ((float)BufferSize / 2.0f);
     float sincPositions[BufferSize];
+#ifndef DISABLE_EXPLICIT_VECTORIZATION
 #pragma clang loop vectorize(enable) interleave(enable)
 #pragma unroll
+#endif
     for (int i = 0; i < BufferSize; i++) {
       sincPositions[i] = float2absf(sincStart + i);
     }
@@ -128,8 +130,10 @@ struct FastWindowedSincTraits {
 
     float sincTableHop = DistanceBetweenCrossings / effectiveSpeedRatio;
 
+#ifndef DISABLE_EXPLICIT_VECTORIZATION
 #pragma clang loop vectorize(enable) interleave(enable)
 #pragma unroll
+#endif
     for (int i = 0; i < BufferSize; i++) {
       const float indexFloat = std::min((float)(LookupTableSize - 2),
                                         sincPositions[i] * sincTableHop);
@@ -142,8 +146,10 @@ struct FastWindowedSincTraits {
     // Pre-compute sinc values and indices
     std::array<float, BufferSize> sincValues;
 
+#ifndef DISABLE_EXPLICIT_VECTORIZATION
 #pragma clang loop vectorize(enable) interleave(enable)
 #pragma unroll
+#endif
     for (int i = 0; i < BufferSize; i++) {
       sincValues[i] = windowedSinc(lookupTable, fracs[i], ints[i]);
     }
@@ -171,8 +177,10 @@ struct FastWindowedSincTraits {
 
     // Main computation loop
     float result = 0.0f;
+#ifndef DISABLE_EXPLICIT_VECTORIZATION
 #pragma clang loop vectorize(enable) interleave(enable)
 #pragma unroll
+#endif
     for (int i = 0; i < BufferSize; i++) {
       result += inputsBuffer[i] * sincValues[i];
     }

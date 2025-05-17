@@ -32,6 +32,12 @@ archs = ["auto"]
 select = "*-musllinux*"
 before-all = "apk add libsndfile libx11-dev libxrandr-dev libxinerama-dev libxrender-dev libxcomposite-dev libxinerama-dev libxcursor-dev freetype-dev libexecinfo-dev alsa-lib-dev"
 
+[[tool.cibuildwheel.overrides]]
+# Just ensure we can load Pedalboard itself:
+select = "*pyodide*"
+test-requires = ["numpy"]
+test-command = "python3 -c 'import pedalboard'"
+
 [project]
 name = "pedalboard"
 authors = [{ name = "Peter Sobot", email = "psobot@spotify.com" }]
