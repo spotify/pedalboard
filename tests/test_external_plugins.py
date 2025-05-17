@@ -288,6 +288,32 @@ def test_at_least_one_parameter(plugin_filename: str):
 
 
 @pytest.mark.parametrize(
+    "plugin_filename, sample_rate",
+    [
+        (plugin, sr)
+        for plugin in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
+        for sr in [44100, 48000, 96000]
+    ],
+)
+def test_load_plugin_sample_rate(plugin_filename: str, sample_rate: int):
+    # Test whether the plugin can be loaded with a given sample rate without crashing
+    load_test_plugin(plugin_filename, sample_rate=sample_rate)
+
+
+@pytest.mark.parametrize(
+    "plugin_filename, maximum_block_size",
+    [
+        (plugin, bs)
+        for plugin in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
+        for bs in [1024, 2048, 4096]
+    ],
+)
+def test_load_plugin_maximum_blocksize(plugin_filename: str, maximum_block_size: int):
+    # Test whether the plugin can be loaded with a given sample rate without crashing
+    load_test_plugin(plugin_filename, maximum_block_size=maximum_block_size)
+
+
+@pytest.mark.parametrize(
     "plugin_filename,plugin_preset",
     [
         (plugin, os.path.join(TEST_PRESET_BASE_PATH, plugin + ".vstpreset"))

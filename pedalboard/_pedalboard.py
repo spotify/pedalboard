@@ -755,6 +755,8 @@ def load_plugin(
     parameter_values: Dict[str, Union[str, int, float, bool]] = {},
     plugin_name: Union[str, None] = None,
     initialization_timeout: float = 10.0,
+    sample_rate: int = 44100,
+    maximum_block_size: int = 8192,
 ) -> ExternalPlugin:
     """
     Load an audio plugin.
@@ -785,6 +787,14 @@ def load_plugin(
             using larger values for this parameter can give these plugins time to
             load properly.
 
+        sample_rate (``int``):
+            The initial sample rate at which the plugin will be processing audio.
+            Some plugins might need this information to initialize properly.
+            It can be changed later when processing the plugin.
+
+        maximum_block_size (``int``):
+            The maximum block size that the plugin will be processing audio.
+
             *Introduced in v0.7.6.*
 
     Returns:
@@ -810,6 +820,8 @@ def load_plugin(
                 parameter_values=parameter_values,  # type: ignore
                 plugin_name=plugin_name,  # type: ignore
                 initialization_timeout=initialization_timeout,  # type: ignore
+                sample_rate=sample_rate,  # type: ignore
+                maximum_block_size=maximum_block_size,  # type: ignore
             )  # type: ignore
         except ImportError as e:
             exceptions.append(e)
