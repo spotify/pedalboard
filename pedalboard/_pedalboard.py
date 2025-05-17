@@ -183,6 +183,16 @@ def wrap_type(base_type):
             if hasattr(super(), "__getattr__"):
                 return super().__getattr__(name)
             raise AttributeError("'{}' has no attribute '{}'".format(base_type.__name__, name))
+        
+        def __setattr__(self, name, value):
+            if name == "_wrapped":
+                return super().__setattr__(name, value)
+            wrapped = self._wrapped()
+            if hasattr(wrapped, name):
+                return setattr(wrapped, name, value)
+            if hasattr(super(), "__setattr__"):
+                return super().__setattr__(name, value)
+            raise AttributeError("'{}' has no attribute '{}'".format(base_type.__name__, name))
 
         def __dir__(self) -> Iterable[str]:
             wrapped = self._wrapped()
