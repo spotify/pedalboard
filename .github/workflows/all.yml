@@ -31,12 +31,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install ruff pyright
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: uv sync
+        run: uv sync --locked --all-extras --dev
       - name: Lint Python code
         run: ruff check ${{ github.workspace }}/pedalboard
       - name: Check Python formatting
         run: ruff format --check ${{ github.workspace }}/pedalboard --diff
       - name: Check Python type hints
-        run: pyright ${{ github.workspace }}/pedalboard ${{ github.workspace }}/tests/*.py
+        run: uv run pyright ${{ github.workspace }}/pedalboard ${{ github.workspace }}/tests/*.py
 
   lint-cpp:
     runs-on: 'ubuntu-24.04'

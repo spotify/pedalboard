@@ -37,7 +37,7 @@ name = "pedalboard"
 authors = [{ name = "Peter Sobot", email = "psobot@spotify.com" }]
 description = "A Python library for adding effects to audio."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = { file = "LICENSE" }
 classifiers = [
     "Development Status :: 4 - Beta",
