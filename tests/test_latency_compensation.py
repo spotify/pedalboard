@@ -18,7 +18,7 @@
 import numpy as np
 import pytest
 
-from pedalboard_native._internal import AddLatency
+from pedalboard_native._internal import AddLatency  # type: ignore
 
 MAX_SAMPLE_RATE = 96000
 NUM_SECONDS = 3.0

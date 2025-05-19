@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 
 from pedalboard import Resample
-from pedalboard_native._internal import ResampleWithLatency
+from pedalboard_native._internal import ResampleWithLatency  # type: ignore
 
 from .utils import generate_sine_at
 

@@ -15,14 +15,19 @@
 # limitations under the License.
 
 
-import pytest
 import numpy as np
-from pedalboard import Pedalboard, Gain, Reverb
+import pytest
+
+from pedalboard import Gain, Pedalboard, Reverb
 
 
 @pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 4), (2, 4)])
 def test_no_transforms(shape, sr=44100):
-    _input = np.random.rand(*shape).astype(np.float32)
+    # This seems hacky, but it's a workaround for a bug in Pyright:
+    if len(shape) == 1:
+        _input = np.random.rand(shape[0]).astype(np.float32)
+    else:
+        _input = np.random.rand(shape[0], shape[1]).astype(np.float32)
 
     output = Pedalboard([]).process(_input, sr)
 
@@ -32,17 +37,17 @@ def test_no_transforms(shape, sr=44100):
 
 def test_fail_on_invalid_plugin():
     with pytest.raises(TypeError):
-        Pedalboard(["I want a reverb please"])
+        Pedalboard(["I want a reverb please"])  # type: ignore
 
 
 def test_fail_on_invalid_sample_rate():
     with pytest.raises(TypeError):
-        Pedalboard([]).process([], "fourty four one hundred")
+        Pedalboard([]).process([], "fourty four one hundred")  # type: ignore
 
 
 def test_fail_on_invalid_buffer_size():
     with pytest.raises(TypeError):
-        Pedalboard([]).process([], 44100, "very big buffer please")
+        Pedalboard([]).process([], 44100, "very big buffer please")  # type: ignore
 
 
 def test_repr():
@@ -82,7 +87,7 @@ def test_is_list_like():
     assert len(pb) == 2
 
     with pytest.raises(TypeError):
-        pb.append("not a plugin")
+        pb.append("not a plugin")  # type: ignore
 
     # Allow deleting elements, like a list:
     del pb[1]
@@ -96,4 +101,4 @@ def test_is_list_like():
     assert pb[0] is gain
 
     with pytest.raises(TypeError):
-        pb[0] = "not a plugin"
+        pb[0] = "not a plugin"  # type: ignore

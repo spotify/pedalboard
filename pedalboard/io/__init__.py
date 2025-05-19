@@ -4,4 +4,4 @@
 # it simultaneously. To work around this, we preload Numpy into the current Python
 # process so that Pybind11's lazy import is effectively a no-op.
 import numpy  # noqa
-from pedalboard_native.io import *  # noqa: F403, F401
+from pedalboard_native.io import *  # noqa: F403, F401 # type: ignore

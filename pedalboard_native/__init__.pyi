@@ -4,7 +4,7 @@ For audio I/O classes (i.e.: reading and writing audio files), see ``pedalboard.
 
 from __future__ import annotations
 import pedalboard_native
-
+import enum
 import typing
 
 original_overload = typing.overload
@@ -44,6 +44,7 @@ __all__ = [
     "Delay",
     "Distortion",
     "ExternalPlugin",
+    "ExternalPluginReloadType",
     "GSMFullRateCompressor",
     "Gain",
     "HighShelfFilter",
@@ -402,6 +403,29 @@ MIDIMessageLike = typing.Union[
     typing.Tuple[typing.List[int], float],
 ]
 
+class ExternalPluginReloadType(enum.Enum):
+    """
+    Unknown: we need to determine the reload type.
+    """
+    Unknown = 0
+
+    """
+    Most plugins are of this type: calling .reset() on them will clear their
+    internal state. This is quick and easy: to start processing a new buffer,
+    all we need to do is call .reset() and optionally prepareToPlay().
+    """
+    ClearsAudioOnReset = 1
+
+    """
+    This plugin type is a bit more of a pain to deal with; it could be argued
+   * that plugins that don't clear their internal buffers when reset() is called
+   * are buggy. To start processing a new buffer, we'll have to find another way
+   * to clear the buffer, usually by reloading the plugin from scratch and
+    persisting its parameters somehow.
+    """
+    PersistsAudioOnReset = 2
+
+
 class ExternalPlugin(Plugin):
     """
     A wrapper around a third-party effect plugin.
@@ -620,6 +644,13 @@ class ExternalPlugin(Plugin):
         reset: bool = True,
     ) -> NDArray[float32]: ...
     pass
+
+    @staticmethod
+    def get_plugin_names_for_file(filename: str) -> typing.List[str]:
+        """
+        Return a list of plugin names contained within a given VST3 plugin (i.e.: a ".vst3"). If the provided file cannot be scanned, an ImportError will be raised.
+        """
+        # Not implemented by the abstract base class, but implemented by the concrete subclasses.
 
 class Gain(Plugin):
     """

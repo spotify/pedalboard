@@ -30,11 +30,13 @@ jobs:
       - name: Install Ruff
         run: |
           python -m pip install --upgrade pip
-          pip install ruff
+          pip install ruff pyright
       - name: Lint Python code
         run: ruff check ${{ github.workspace }}/pedalboard
       - name: Check Python formatting
         run: ruff format --check ${{ github.workspace }}/pedalboard --diff
+      - name: Check Python type hints
+        run: pyright ${{ github.workspace }}/pedalboard ${{ github.workspace }}/tests/*.py
 
   lint-cpp:
     runs-on: 'ubuntu-24.04'

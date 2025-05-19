@@ -54,7 +54,7 @@ def test_gsm_compressor(
 ):
     signal = (
         generate_sine_at(sample_rate, fundamental_hz, duration, num_channels) * SINE_WAVE_VOLUME
-    )
+    ).astype(np.float32)
     output = GSMFullRateCompressor(quality=quality)(signal, sample_rate, buffer_size=buffer_size)
     np.testing.assert_allclose(signal, output, atol=GSM_ABSOLUTE_TOLERANCE)
 

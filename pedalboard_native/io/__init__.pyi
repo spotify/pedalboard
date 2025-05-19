@@ -463,13 +463,13 @@ class ReadableAudioFile(AudioFile):
     @typing.overload
     def __init__(self, filename: str) -> None: ...
     @typing.overload
-    def __init__(self, file_like: typing.BinaryIO) -> None: ...
+    def __init__(self, file_like: typing.Union[typing.BinaryIO, memoryview]) -> None: ...
 
     # These don't exist, but Pyright assumes they do:
     @typing.overload
     def __init__(self, filename: str, mode: Literal["r"]) -> None: ...
     @typing.overload
-    def __init__(self, file_like: typing.BinaryIO, mode: Literal["r"]) -> None: ...
+    def __init__(self, file_like: typing.Union[typing.BinaryIO, memoryview], mode: Literal["r"]) -> None: ...
 
     @classmethod
     @typing.overload
@@ -1091,10 +1091,11 @@ class WriteableAudioFile(AudioFile):
         self,
         file_like: typing.BinaryIO,
         mode: Literal["w"],
-        samplerate: float,
+        samplerate: typing.Optional[float] = None,
         num_channels: int = 1,
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
+        format: typing.Optional[str] = None,
     ) -> None: ...
 
     def __repr__(self) -> str: ...

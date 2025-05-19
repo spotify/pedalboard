@@ -15,8 +15,9 @@
 # limitations under the License.
 
 
-import pytest
 import numpy as np
+import pytest
+
 from pedalboard import Pedalboard, PitchShift
 
 
@@ -43,7 +44,7 @@ def test_pitch_shift_extremes_throws_errors(semitones):
 @pytest.mark.parametrize("sample_rate", [48000])
 @pytest.mark.parametrize("duration", [0.25])
 def test_pitch_shift_extremes(semitones, sample_rate, duration):
-    noise = np.random.rand(int(duration * sample_rate))
+    noise = np.random.rand(int(duration * sample_rate)).astype(np.float32)
     output = PitchShift(semitones).process(noise, sample_rate)
     assert np.all(np.isfinite(output))
 
