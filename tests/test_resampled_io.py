@@ -40,7 +40,9 @@ def expected_output(
 
 
 QUALITIES: list[Resample.Quality] = [
-    getattr(Resample.Quality, name) for name in dir(Resample.Quality) if not name.startswith("_")
+    getattr(Resample.Quality, name)
+    for name in dir(Resample.Quality)
+    if not name.startswith("_") and name[0].isupper()
 ]
 
 
