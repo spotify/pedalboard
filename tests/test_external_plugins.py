@@ -165,7 +165,7 @@ def find_plugin_path(plugin_filename: str) -> str:
 
 def load_test_plugin(
     plugin_filename: str, disable_caching: bool = False, *args, **kwargs
-) -> typing.Union[pedalboard.VST3Plugin, pedalboard.AudioUnitPlugin]:
+) -> typing.Union["pedalboard.VST3Plugin", "pedalboard.AudioUnitPlugin"]:
     """
     Load a plugin file from disk, or use an existing instance to save
     on test runtime if we already have one in memory.
