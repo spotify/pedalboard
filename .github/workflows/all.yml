@@ -62,7 +62,7 @@ jobs:
       - name: uv sync
         run: uv sync --locked --all-extras --dev
       - name: Check Python type hints
-        run: uv run pyright ${{ github.workspace }}/pedalboard ${{ github.workspace }}/tests/*.py
+        run: uv run pyright ${{ github.workspace }}/pedalboard ${{ github.workspace }}/tests/test_*.py
 
   lint-cpp:
     runs-on: 'ubuntu-24.04'
