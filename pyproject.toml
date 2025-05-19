@@ -59,7 +59,18 @@ dependencies = ["numpy"]
 version = "0.9.17"
 
 [project.optional-dependencies]
-test = ["pytest", "pyright"]
+test = [
+    "pytest",
+    "pyright",
+    "mutagen",
+    "pytest-cov",
+    "pytest-mock",
+    "tqdm",
+    "psutil",
+    "mypy",
+    "pyright",
+    "mido",
+]
 
 [tool.scikit-build]
 cmake.build-type = "Release"

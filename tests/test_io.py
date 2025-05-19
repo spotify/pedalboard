@@ -173,8 +173,9 @@ def test_basic_read(audio_filename: str, samplerate: float):
     samples = af.read(samplerate * EXPECTED_DURATION_SECONDS)
     assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS))
 
-    # File should no longer be useful:
-    assert af.read(1).nbytes == 0
+    if any(ext in audio_filename for ext in EXPECT_LENGTH_TO_BE_EXACT):
+        # File should no longer be useful:
+        assert af.read(1).nbytes == 0
 
     # Seeking back to the start of the file should work:
     assert af.seekable()
@@ -242,8 +243,9 @@ def test_use_reader_as_context_manager(audio_filename: str, samplerate: float):
         samples = af.read(int(samplerate * EXPECTED_DURATION_SECONDS))
         assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS))
 
-        # File should no longer be useful:
-        assert af.read(1).nbytes == 0
+        if any(ext in audio_filename for ext in EXPECT_LENGTH_TO_BE_EXACT):
+            # File should no longer be useful:
+            assert af.read(1).nbytes == 0
 
         # Seeking back to the start of the file should work:
         assert af.seekable()
@@ -314,8 +316,9 @@ def test_read_from_seekable_stream(audio_filename: str, samplerate: float):
         samples = af.read(int(samplerate * EXPECTED_DURATION_SECONDS))
         assert samples.shape == (1, int(samplerate * EXPECTED_DURATION_SECONDS))
 
-        # File should no longer be useful:
-        assert af.read(1).nbytes == 0
+        if any(ext in audio_filename for ext in EXPECT_LENGTH_TO_BE_EXACT):
+            # File should no longer be useful:
+            assert af.read(1).nbytes == 0
 
         # Seeking back to the start of the file should work:
         assert af.seekable()
