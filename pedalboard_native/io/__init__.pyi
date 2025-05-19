@@ -7,30 +7,11 @@ import pedalboard_native.io
 
 import typing
 
-original_overload = typing.overload
-__OVERLOADED_DOCSTRINGS = {}
-
-def patch_overload(func):
-    original_overload(func)
-    if func.__doc__:
-        __OVERLOADED_DOCSTRINGS[func.__qualname__] = func.__doc__
-    else:
-        func.__doc__ = __OVERLOADED_DOCSTRINGS.get(func.__qualname__)
-    if func.__doc__:
-        # Work around the fact that pybind11-stubgen generates
-        # duplicate docstrings sometimes, once for each overload:
-        docstring = func.__doc__
-        if docstring[len(docstring) // 2 :].strip() == docstring[: -len(docstring) // 2].strip():
-            func.__doc__ = docstring[len(docstring) // 2 :].strip()
-    return func
-
-typing.overload = patch_overload
-
 from typing_extensions import Literal
-from enum import Enum
-import threading
-import numpy
+import numpy as np
 import pedalboard_native.utils
+from numpy.typing import NDArray
+from numpy import float32
 
 _Shape = typing.Tuple[int, ...]
 
@@ -143,12 +124,15 @@ class AudioFile:
 
     @classmethod
     @typing.overload
-    def __new__(cls, filename: str, mode: Literal["r"] = "r") -> ReadableAudioFile:
-        """
-        Open an audio file for reading.
+    def __new__(cls, filename: str) -> ReadableAudioFile:
+        """Open an audio file for reading (mode 'r' is implied)."""
+        ...
 
-        Open a file-like object for reading. The provided object must have ``read``, ``seek``, ``tell``, and ``seekable`` methods, and must return binary data (i.e.: ``open(..., "w")`` or ``io.BytesIO``, etc.).
-        """
+    @classmethod
+    @typing.overload
+    def __new__(cls, filename: str, mode: Literal["r"]) -> ReadableAudioFile:
+        """Open an audio file for reading with an explicit mode 'r'."""
+        ...
 
     @classmethod
     @typing.overload
@@ -180,7 +164,7 @@ class AudioFile:
     ) -> WriteableAudioFile: ...
     @staticmethod
     def encode(
-        samples: numpy.ndarray,
+        samples: NDArray[typing.Union[np.int8, np.int16, np.int32, np.float32, np.float64]],
         samplerate: float,
         format: str,
         num_channels: int = 1,
@@ -312,7 +296,7 @@ class AudioStream:
 
     @staticmethod
     def play(
-        audio: numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]],
+        audio: NDArray[float32],
         sample_rate: float,
         output_device_name: typing.Optional[str] = None,
     ) -> None:
@@ -320,7 +304,7 @@ class AudioStream:
         Play audio data to the speaker, headphones, or other output device. This method will block until the audio is finished playing.
         """
 
-    def read(self, num_samples: int = 0) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+    def read(self, num_samples: int = 0) -> NDArray[float32]:
         """
         .. warning::
             Recording audio is a **real-time** operation, so if your code doesn't call :py:meth:`read` quickly enough, some audio will be lost. To warn about this, :py:meth:`read` will throw an exception if audio data is dropped. This behavior can be disabled by setting :py:attr:`ignore_dropped_input` to :py:const:`True`. The number of dropped samples since the last call to :py:meth:`read` can be retrieved by accessing the :py:attr:`dropped_input_frame_count` property.
@@ -332,7 +316,7 @@ class AudioStream:
         """
 
     def write(
-        self, audio: numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]], sample_rate: float
+        self, audio: NDArray[float32], sample_rate: float
     ) -> None:
         """
         If the provided sample rate does not match the output device's sample rate, an error will be thrown. In this case, you can use :py:class:`StreamResampler` to resample the audio before calling :py:meth:`write`.
@@ -477,6 +461,13 @@ class ReadableAudioFile(AudioFile):
     def __init__(self, filename: str) -> None: ...
     @typing.overload
     def __init__(self, file_like: typing.BinaryIO) -> None: ...
+
+    # These don't exist, but Pyright assumes they do:
+    @typing.overload
+    def __init__(self, filename: str, mode: Literal["r"]) -> None: ...
+    @typing.overload
+    def __init__(self, file_like: typing.BinaryIO, mode: Literal["r"]) -> None: ...
+
     @classmethod
     @typing.overload
     def __new__(cls, filename: str) -> ReadableAudioFile: ...
@@ -491,7 +482,7 @@ class ReadableAudioFile(AudioFile):
 
     def read(
         self, num_frames: typing.Union[float, int] = 0
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+    ) -> NDArray[float32]:
         """
         Read the given number of frames (samples in each channel) from this audio file at its current position.
 
@@ -519,7 +510,9 @@ class ReadableAudioFile(AudioFile):
             an exception will be thrown, as a fractional number of samples cannot be returned.
         """
 
-    def read_raw(self, num_frames: typing.Union[float, int] = 0) -> numpy.ndarray:
+    def read_raw(
+        self, num_frames: typing.Union[float, int] = 0
+    ) -> NDArray[typing.Union[np.int8, np.int16, np.int32, np.float32]]:
         """
         Read the given number of frames (samples in each channel) from this audio file at its current position.
 
@@ -762,7 +755,7 @@ class ResampledReadableAudioFile(AudioFile):
 
     def read(
         self, num_frames: typing.Union[float, int] = 0
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+    ) -> NDArray[float32]:
         """
         Read the given number of frames (samples in each channel, at the target sample rate)
         from this audio file at its current position, automatically resampling on-the-fly to
@@ -934,8 +927,8 @@ class StreamResampler:
 
     def __repr__(self) -> str: ...
     def process(
-        self, input: typing.Optional[numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]] = None
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+        self, input: typing.Optional[NDArray[float32]] = None
+    ) -> NDArray[float32]:
         """
         Resample a 32-bit floating-point audio buffer. The returned buffer may be smaller than the provided buffer depending on the quality method used. Call :meth:`process()` without any arguments to flush the internal buffers and return all remaining audio.
         """
@@ -1074,6 +1067,19 @@ class WriteableAudioFile(AudioFile):
         quality: typing.Optional[typing.Union[str, float]] = None,
         format: typing.Optional[str] = None,
     ) -> WriteableAudioFile: ...
+
+    # This overload does not actually exist; just makes Pyright happy as
+    # it assumes that __init__ is called with the same arguments as __new__:
+    @typing.overload
+    def __init__(
+        self,
+        filename: str,
+        mode: Literal["w"],
+        samplerate: float,
+        num_channels: int = 1,
+        bit_depth: int = 16,
+        quality: typing.Optional[typing.Union[str, float]] = None,
+    ) -> None: ...
     def __repr__(self) -> str: ...
     def close(self) -> None:
         """

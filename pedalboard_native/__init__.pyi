@@ -26,10 +26,11 @@ def patch_overload(func):
 
 typing.overload = patch_overload
 
-from typing_extensions import Literal
 from enum import Enum
 import threading
-import numpy
+from numpy import ndarray, float32
+from numpy.typing import NDArray
+
 
 _Shape = typing.Tuple[int, ...]
 
@@ -75,22 +76,22 @@ class Plugin:
 
     def __call__(
         self,
-        input_array: numpy.ndarray,
+        audio: NDArray[float32],
         sample_rate: float,
         buffer_size: int = 8192,
         reset: bool = True,
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+    ) -> NDArray[float32]:
         """
         Run an audio buffer through this plugin. Alias for :py:meth:`process`.
         """
 
     def process(
         self,
-        input_array: numpy.ndarray,
+        input_array: NDArray[float32],
         sample_rate: float,
         buffer_size: int = 8192,
         reset: bool = True,
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+    ) -> NDArray[float32]:
         """
         Run a 32-bit or 64-bit floating point audio buffer through this plugin.
         (If calling this multiple times with multiple plugins, consider creating a
@@ -317,7 +318,7 @@ class Convolution(Plugin):
     def __init__(
         self,
         impulse_response_filename: typing.Union[
-            str, numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]
+            str, NDArray[float32]
         ],
         mix: float = 1.0,
         sample_rate: typing.Optional[float] = None,
@@ -326,7 +327,7 @@ class Convolution(Plugin):
     @property
     def impulse_response(
         self,
-    ) -> typing.Optional[numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]]:
+    ) -> typing.Optional[NDArray[float32]]:
         """ """
 
     @property
@@ -394,6 +395,13 @@ class Distortion(Plugin):
         pass
     pass
 
+
+MIDIMessageLike = typing.Union[
+    "mido.Message",
+    typing.Tuple[bytes, float],
+    typing.Tuple[typing.List[int], float],
+]
+
 class ExternalPlugin(Plugin):
     """
     A wrapper around a third-party effect plugin.
@@ -404,37 +412,34 @@ class ExternalPlugin(Plugin):
     @typing.overload
     def __call__(
         self,
-        input_array: numpy.ndarray,
-        sample_rate: float,
+        midi_messages: typing.List[MIDIMessageLike],
+        duration: float,
+        sample_rate: float | int,
+        num_channels: int = 2,
         buffer_size: int = 8192,
         reset: bool = True,
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
-        """
-        Run an audio or MIDI buffer through this plugin, returning audio. Alias for :py:meth:`process`.
-
-        Run an audio or MIDI buffer through this plugin, returning audio. Alias for :py:meth:`process`.
-        """
+    ) -> NDArray[float32]: ...
 
     @typing.overload
     def __call__(
         self,
-        midi_messages: object,
-        duration: float,
-        sample_rate: float,
-        num_channels: int = 2,
+        input_array: NDArray[float32],
+        sample_rate: float | int,
         buffer_size: int = 8192,
         reset: bool = True,
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]: ...
+    ) -> NDArray[float32]:
+        """
+        Run an audio or MIDI buffer through this plugin, returning audio. Alias for :py:meth:`process`.
+        """
+
     @typing.overload
     def process(
         self,
-        midi_messages: object,
-        duration: float,
-        sample_rate: float,
-        num_channels: int = 2,
+        input_array: NDArray[float32],
+        sample_rate: float | int,
         buffer_size: int = 8192,
         reset: bool = True,
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+    ) -> NDArray[float32]:
         """
         Pass a buffer of audio (as a 32- or 64-bit NumPy array) *or* a list of
         MIDI messages to this plugin, returning audio.
@@ -607,11 +612,13 @@ class ExternalPlugin(Plugin):
     @typing.overload
     def process(
         self,
-        input_array: numpy.ndarray,
-        sample_rate: float,
+        midi_messages: typing.List[MIDIMessageLike],
+        duration: float,
+        sample_rate: float | int,
+        num_channels: int = 2,
         buffer_size: int = 8192,
         reset: bool = True,
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]: ...
+    ) -> NDArray[float32]: ...
     pass
 
 class Gain(Plugin):
@@ -1062,11 +1069,11 @@ class AudioUnitPlugin(ExternalPlugin):
     @typing.overload
     def __call__(
         self,
-        input_array: numpy.ndarray,
-        sample_rate: float,
+        input_array: NDArray[float32],
+        sample_rate: float | int,
         buffer_size: int = 8192,
         reset: bool = True,
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+    ) -> NDArray[float32]:
         """
         Run an audio or MIDI buffer through this plugin, returning audio. Alias for :py:meth:`process`.
 
@@ -1076,13 +1083,13 @@ class AudioUnitPlugin(ExternalPlugin):
     @typing.overload
     def __call__(
         self,
-        midi_messages: object,
+        midi_messages: typing.List[MIDIMessageLike],
         duration: float,
-        sample_rate: float,
+        sample_rate: float | int,
         num_channels: int = 2,
         buffer_size: int = 8192,
         reset: bool = True,
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]: ...
+    ) -> NDArray[float32]: ...
     def __init__(
         self,
         path_to_plugin_file: str,
@@ -1103,11 +1110,11 @@ class AudioUnitPlugin(ExternalPlugin):
     @typing.overload
     def process(
         self,
-        input_array: numpy.ndarray,
-        sample_rate: float,
+        input_array: NDArray[float32],
+        sample_rate: float | int,
         buffer_size: int = 8192,
         reset: bool = True,
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+    ) -> NDArray[float32]:
         """
         Pass a buffer of audio (as a 32- or 64-bit NumPy array) *or* a list of
         MIDI messages to this plugin, returning audio.
@@ -1280,13 +1287,13 @@ class AudioUnitPlugin(ExternalPlugin):
     @typing.overload
     def process(
         self,
-        midi_messages: object,
+        midi_messages: typing.List[MIDIMessageLike],
         duration: float,
-        sample_rate: float,
+        sample_rate: float | int,
         num_channels: int = 2,
         buffer_size: int = 8192,
         reset: bool = True,
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]: ...
+    ) -> NDArray[float32]: ...
     def show_editor(self, close_event: typing.Optional[threading.Event] = None) -> None:
         """
         Show the UI of this plugin as a native window.
@@ -1774,30 +1781,6 @@ class VST3Plugin(ExternalPlugin):
     *Support for running VST3® plugins on background threads introduced in v0.8.8.*
     """
 
-    @typing.overload
-    def __call__(
-        self,
-        input_array: numpy.ndarray,
-        sample_rate: float,
-        buffer_size: int = 8192,
-        reset: bool = True,
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
-        """
-        Run an audio or MIDI buffer through this plugin, returning audio. Alias for :py:meth:`process`.
-
-        Run an audio or MIDI buffer through this plugin, returning audio. Alias for :py:meth:`process`.
-        """
-
-    @typing.overload
-    def __call__(
-        self,
-        midi_messages: object,
-        duration: float,
-        sample_rate: float,
-        num_channels: int = 2,
-        buffer_size: int = 8192,
-        reset: bool = True,
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]: ...
     def __init__(
         self,
         path_to_plugin_file: str,
@@ -1821,11 +1804,11 @@ class VST3Plugin(ExternalPlugin):
     @typing.overload
     def process(
         self,
-        input_array: numpy.ndarray,
-        sample_rate: float,
+        input_array: NDArray[float32],
+        sample_rate: float | int,
         buffer_size: int = 8192,
         reset: bool = True,
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+    ) -> NDArray[float32]:
         """
         Pass a buffer of audio (as a 32- or 64-bit NumPy array) *or* a list of
         MIDI messages to this plugin, returning audio.
@@ -1998,13 +1981,13 @@ class VST3Plugin(ExternalPlugin):
     @typing.overload
     def process(
         self,
-        midi_messages: object,
+        midi_messages: typing.List[MIDIMessageLike],
         duration: float,
-        sample_rate: float,
+        sample_rate: float | int,
         num_channels: int = 2,
         buffer_size: int = 8192,
         reset: bool = True,
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]: ...
+    ) -> NDArray[float32]: ...
     def show_editor(self, close_event: typing.Optional[threading.Event] = None) -> None:
         """
         Show the UI of this plugin as a native window.
@@ -2314,12 +2297,12 @@ class _AudioProcessorParameter:
     pass
 
 def process(
-    input_array: numpy.ndarray,
+    input_array: ndarray,
     sample_rate: float,
     plugins: typing.List[Plugin],
     buffer_size: int = 8192,
     reset: bool = True,
-) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]:
+) -> NDArray[float32]:
     """
     Run a 32-bit or 64-bit floating point audio buffer through a
     list of Pedalboard plugins. If the provided buffer uses a 64-bit datatype,
