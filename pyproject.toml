@@ -59,7 +59,7 @@ dependencies = ["numpy"]
 version = "0.9.17"
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["pytest", "pyright"]
 
 [tool.scikit-build]
 cmake.build-type = "Release"
