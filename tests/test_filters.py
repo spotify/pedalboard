@@ -15,6 +15,8 @@
 # limitations under the License.
 
 
+from typing import Union
+
 import numpy as np
 import numpy.typing as npt
 import pytest
@@ -30,7 +32,7 @@ from pedalboard import (
 from .utils import db_to_gain, generate_sine_at
 
 
-def rms(x: np.ndarray) -> float | npt.NDArray[np.float32]:
+def rms(x: np.ndarray) -> Union[float, npt.NDArray[np.float32]]:
     if len(x.shape) == 1:
         return np.sqrt(np.mean(x**2)).astype(np.float32)
     else:
