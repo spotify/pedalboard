@@ -139,6 +139,7 @@ class AudioFile:
     def __new__(
         cls, file_like: typing.Union[typing.BinaryIO, memoryview], mode: Literal["r"] = "r"
     ) -> ReadableAudioFile: ...
+
     @classmethod
     @typing.overload
     def __new__(
@@ -150,6 +151,7 @@ class AudioFile:
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
     ) -> WriteableAudioFile: ...
+
     @classmethod
     @typing.overload
     def __new__(
@@ -162,6 +164,7 @@ class AudioFile:
         quality: typing.Optional[typing.Union[str, float]] = None,
         format: typing.Optional[str] = None,
     ) -> WriteableAudioFile: ...
+    
     @staticmethod
     def encode(
         samples: NDArray[typing.Union[np.int8, np.int16, np.int32, np.float32, np.float64]],
@@ -1080,6 +1083,20 @@ class WriteableAudioFile(AudioFile):
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
     ) -> None: ...
+
+    # This overload does not actually exist; just makes Pyright happy as
+    # it assumes that __init__ is called with the same arguments as __new__:
+    @typing.overload
+    def __init__(
+        self,
+        file_like: typing.BinaryIO,
+        mode: Literal["w"],
+        samplerate: float,
+        num_channels: int = 1,
+        bit_depth: int = 16,
+        quality: typing.Optional[typing.Union[str, float]] = None,
+    ) -> None: ...
+
     def __repr__(self) -> str: ...
     def close(self) -> None:
         """
