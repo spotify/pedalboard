@@ -741,7 +741,7 @@ jobs:
         - { os: windows-latest, build: cp312-win_amd64 }
         - { os: windows-latest, build: cp313-win_amd64 }
         # - { os: windows-latest, build: cp313t-win_amd64 }
-        - { os: windows-latest, build: cp312-win32 }
+        # - { os: windows-latest, build: cp312-win32 }
         - { os: 'ubuntu-24.04', build: cp39-manylinux_x86_64 }
         - { os: 'ubuntu-24.04', build: cp39-manylinux_aarch64 }
         # - { os: 'ubuntu-24.04', build: cp39-musllinux_x86_64 }
