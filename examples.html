@@ -1,0 +1,518 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+<meta property="og:title" content="Examples" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://spotify.github.io/pedalboard/examples.html" />
+<meta property="og:site_name" content="Pedalboard v0.9.17 Documentation" />
+<meta property="og:description" content="Note: If you’d rather watch a video instead of reading examples or documentation,. Quick start: Note: For more information about how to process audio through Pedalboard plugins, including how the r..." />
+<meta property="og:image" content="https://repository-images.githubusercontent.com/383471193/0f79b949-9b91-4436-bfc4-05d30ef384cc" />
+<meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
+<meta name="description" content="Note: If you’d rather watch a video instead of reading examples or documentation,. Quick start: Note: For more information about how to process audio through Pedalboard plugins, including how the r..." />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Frequently Asked Questions" href="faq.html" /><link rel="prev" title="The pedalboard.io API" href="reference/pedalboard.io.html" />
+
+    <link rel="shortcut icon" href="_static/favicon.ico"/><meta name="generator" content="sphinx-5.3.0, furo 2022.09.29"/>
+        <title>Examples - Pedalboard v0.9.17 Documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?digest=d81277517bee4d6b0349d71bb2661d4890b5617c" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?digest=30d1aed668e5c3a91c3e3bf6a60b675221979f0e" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-half" viewBox="0 0 24 24">
+    <title>Auto light/dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M13 12h5" />
+      <path d="M13 15h4" />
+      <path d="M13 18h1" />
+      <path d="M13 9h4" />
+      <path d="M13 6h1" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">Pedalboard v0.9.17 Documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand centered" href="index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="_static/pedalboard_logo_small.png" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">Pedalboard v0.9.17 Documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="reference/pedalboard.html">API Reference (Audio Plugins)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/pedalboard.io.html">API Reference (Audio I/O)</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="compatibility.html">Plugin Compatibility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="internals.html">Pedalboard Internals</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference external" href="http://github.com/spotify/pedalboard">GitHub Repo</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main">
+          <section id="examples">
+<h1>Examples<a class="headerlink" href="#examples" title="Permalink to this heading">#</a></h1>
+<blockquote>
+<div><p><strong>Note</strong>: If you’d rather watch a video instead of reading examples or documentation, <span class="raw-html-m2r"><strong>watch <a href="https://www.youtube.com/watch?v=NYhkqXpFAlg" target="_blank"><em>Working with Audio in Python (feat. Pedalboard)</em> on YouTube</a></strong></span>.</p>
+</div></blockquote>
+<section id="quick-start">
+<h2>Quick start<a class="headerlink" href="#quick-start" title="Permalink to this heading">#</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pedalboard</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pedalboard</span><span class="p">,</span> <span class="n">Chorus</span><span class="p">,</span> <span class="n">Reverb</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pedalboard.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">AudioFile</span>
+
+<span class="c1"># Make a Pedalboard object, containing multiple audio plugins:</span>
+<span class="n">board</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span><span class="n">Chorus</span><span class="p">(),</span> <span class="n">Reverb</span><span class="p">(</span><span class="n">room_size</span><span class="o">=</span><span class="mf">0.25</span><span class="p">)])</span>
+
+<span class="c1"># Open an audio file for reading, just like a regular file:</span>
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;some-file.wav&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+
+  <span class="c1"># Open an audio file to write to:</span>
+  <span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;output.wav&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">num_channels</span><span class="p">)</span> <span class="k">as</span> <span class="n">o</span><span class="p">:</span>
+
+    <span class="c1"># Read one second of audio at a time, until the file is empty:</span>
+    <span class="k">while</span> <span class="n">f</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">f</span><span class="o">.</span><span class="n">frames</span><span class="p">:</span>
+      <span class="n">chunk</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+
+      <span class="c1"># Run the audio through our pedalboard:</span>
+      <span class="n">effected</span> <span class="o">=</span> <span class="n">board</span><span class="p">(</span><span class="n">chunk</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span> <span class="n">reset</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+      <span class="c1"># Write the output to our output file:</span>
+      <span class="n">o</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">effected</span><span class="p">)</span>
+</pre></div>
+</div>
+<blockquote>
+<div><p><strong>Note</strong>: For more information about how to process audio through
+Pedalboard plugins, including how the <code class="docutils literal notranslate"><span class="pre">reset</span></code> parameter works,
+see <span class="raw-html-m2r"><a href="https://spotify.github.io/pedalboard/reference/pedalboard.html#pedalboard.Plugin.process">
+the documentation for <code class="docutils literal"><span class="pre">pedalboard.Plugin.process</span></code></a></span>.</p>
+</div></blockquote>
+</section>
+<section id="making-a-guitar-style-pedalboard">
+<h2>Making a guitar-style pedalboard<a class="headerlink" href="#making-a-guitar-style-pedalboard" title="Permalink to this heading">#</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Don&#39;t do import *! (It just makes this example smaller)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pedalboard</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pedalboard.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">AudioFile</span>
+
+<span class="c1"># Read in a whole file, resampling to our desired sample rate:</span>
+<span class="n">samplerate</span> <span class="o">=</span> <span class="mf">44100.0</span>
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;guitar-input.wav&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">resampled_to</span><span class="p">(</span><span class="n">samplerate</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+  <span class="n">audio</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span>
+
+<span class="c1"># Make a pretty interesting sounding guitar pedalboard:</span>
+<span class="n">board</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span>
+    <span class="n">Compressor</span><span class="p">(</span><span class="n">threshold_db</span><span class="o">=-</span><span class="mi">50</span><span class="p">,</span> <span class="n">ratio</span><span class="o">=</span><span class="mi">25</span><span class="p">),</span>
+    <span class="n">Gain</span><span class="p">(</span><span class="n">gain_db</span><span class="o">=</span><span class="mi">30</span><span class="p">),</span>
+    <span class="n">Chorus</span><span class="p">(),</span>
+    <span class="n">LadderFilter</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">LadderFilter</span><span class="o">.</span><span class="n">Mode</span><span class="o">.</span><span class="n">HPF12</span><span class="p">,</span> <span class="n">cutoff_hz</span><span class="o">=</span><span class="mi">900</span><span class="p">),</span>
+    <span class="n">Phaser</span><span class="p">(),</span>
+    <span class="n">Convolution</span><span class="p">(</span><span class="s2">&quot;./guitar_amp.wav&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+    <span class="n">Reverb</span><span class="p">(</span><span class="n">room_size</span><span class="o">=</span><span class="mf">0.25</span><span class="p">),</span>
+<span class="p">])</span>
+
+<span class="c1"># Pedalboard objects behave like lists, so you can add plugins:</span>
+<span class="n">board</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Compressor</span><span class="p">(</span><span class="n">threshold_db</span><span class="o">=-</span><span class="mi">25</span><span class="p">,</span> <span class="n">ratio</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
+<span class="n">board</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Gain</span><span class="p">(</span><span class="n">gain_db</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
+<span class="n">board</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Limiter</span><span class="p">())</span>
+
+<span class="c1"># ... or change parameters easily:</span>
+<span class="n">board</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">threshold_db</span> <span class="o">=</span> <span class="o">-</span><span class="mi">40</span>
+
+<span class="c1"># Run the audio through this pedalboard!</span>
+<span class="n">effected</span> <span class="o">=</span> <span class="n">board</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">)</span>
+
+<span class="c1"># Write the audio back as a wav file:</span>
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s1">&#39;processed-output.wav&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">,</span> <span class="n">effected</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+  <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">effected</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="using-vst3-or-audio-unit-instrument-and-effect-plugins">
+<h2>Using VST3® or Audio Unit instrument and effect plugins<a class="headerlink" href="#using-vst3-or-audio-unit-instrument-and-effect-plugins" title="Permalink to this heading">#</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pedalboard</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pedalboard</span><span class="p">,</span> <span class="n">Reverb</span><span class="p">,</span> <span class="n">load_plugin</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pedalboard.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">AudioFile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mido</span><span class="w"> </span><span class="kn">import</span> <span class="n">Message</span> <span class="c1"># not part of Pedalboard, but convenient!</span>
+
+<span class="c1"># Load a VST3 or Audio Unit plugin from a known path on disk:</span>
+<span class="n">instrument</span> <span class="o">=</span> <span class="n">load_plugin</span><span class="p">(</span><span class="s2">&quot;./VSTs/Magical8BitPlug2.vst3&quot;</span><span class="p">)</span>
+<span class="n">effect</span> <span class="o">=</span> <span class="n">load_plugin</span><span class="p">(</span><span class="s2">&quot;./VSTs/RoughRider3.vst3&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">effect</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+<span class="c1"># dict_keys([</span>
+<span class="c1">#   &#39;sc_hpf_hz&#39;, &#39;input_lvl_db&#39;, &#39;sensitivity_db&#39;,</span>
+<span class="c1">#   &#39;ratio&#39;, &#39;attack_ms&#39;, &#39;release_ms&#39;, &#39;makeup_db&#39;,</span>
+<span class="c1">#   &#39;mix&#39;, &#39;output_lvl_db&#39;, &#39;sc_active&#39;,</span>
+<span class="c1">#   &#39;full_bandwidth&#39;, &#39;bypass&#39;, &#39;program&#39;,</span>
+<span class="c1"># ])</span>
+
+<span class="c1"># Set the &quot;ratio&quot; parameter to 15</span>
+<span class="n">effect</span><span class="o">.</span><span class="n">ratio</span> <span class="o">=</span> <span class="mi">15</span>
+
+<span class="c1"># Render some audio by passing MIDI to an instrument:</span>
+<span class="n">sample_rate</span> <span class="o">=</span> <span class="mi">44100</span>
+<span class="n">audio</span> <span class="o">=</span> <span class="n">instrument</span><span class="p">(</span>
+  <span class="p">[</span><span class="n">Message</span><span class="p">(</span><span class="s2">&quot;note_on&quot;</span><span class="p">,</span> <span class="n">note</span><span class="o">=</span><span class="mi">60</span><span class="p">),</span> <span class="n">Message</span><span class="p">(</span><span class="s2">&quot;note_off&quot;</span><span class="p">,</span> <span class="n">note</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="mi">5</span><span class="p">)],</span>
+  <span class="n">duration</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="c1"># seconds</span>
+  <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Apply effects to this audio:</span>
+<span class="n">effected</span> <span class="o">=</span> <span class="n">effect</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">)</span>
+
+<span class="c1"># ...or put the effect into a chain with other plugins:</span>
+<span class="n">board</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span><span class="n">effect</span><span class="p">,</span> <span class="n">Reverb</span><span class="p">()])</span>
+<span class="c1"># ...and run that pedalboard with the same VST instance!</span>
+<span class="n">effected</span> <span class="o">=</span> <span class="n">board</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="creating-parallel-effects-chains">
+<h2>Creating parallel effects chains<a class="headerlink" href="#creating-parallel-effects-chains" title="Permalink to this heading">#</a></h2>
+<p>This example creates a delayed pitch-shift effect by running
+multiple Pedalboards in parallel on the same audio. <code class="docutils literal notranslate"><span class="pre">Pedalboard</span></code>
+objects are themselves <code class="docutils literal notranslate"><span class="pre">Plugin</span></code> objects, so you can nest them
+as much as you like:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pedalboard</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pedalboard</span><span class="p">,</span> <span class="n">Compressor</span><span class="p">,</span> <span class="n">Delay</span><span class="p">,</span> <span class="n">Distortion</span><span class="p">,</span> <span class="n">Gain</span><span class="p">,</span> <span class="n">PitchShift</span><span class="p">,</span> <span class="n">Reverb</span><span class="p">,</span> <span class="n">Mix</span>
+
+<span class="n">passthrough</span> <span class="o">=</span> <span class="n">Gain</span><span class="p">(</span><span class="n">gain_db</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">delay_and_pitch_shift</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span>
+  <span class="n">Delay</span><span class="p">(</span><span class="n">delay_seconds</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">mix</span><span class="o">=</span><span class="mf">1.0</span><span class="p">),</span>
+  <span class="n">PitchShift</span><span class="p">(</span><span class="n">semitones</span><span class="o">=</span><span class="mi">7</span><span class="p">),</span>
+  <span class="n">Gain</span><span class="p">(</span><span class="n">gain_db</span><span class="o">=-</span><span class="mi">3</span><span class="p">),</span>
+<span class="p">])</span>
+
+<span class="n">delay_longer_and_more_pitch_shift</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span>
+  <span class="n">Delay</span><span class="p">(</span><span class="n">delay_seconds</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">mix</span><span class="o">=</span><span class="mf">1.0</span><span class="p">),</span>
+  <span class="n">PitchShift</span><span class="p">(</span><span class="n">semitones</span><span class="o">=</span><span class="mi">12</span><span class="p">),</span>
+  <span class="n">Gain</span><span class="p">(</span><span class="n">gain_db</span><span class="o">=-</span><span class="mi">6</span><span class="p">),</span>
+<span class="p">])</span>
+
+<span class="n">board</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span>
+  <span class="c1"># Put a compressor at the front of the chain:</span>
+  <span class="n">Compressor</span><span class="p">(),</span>
+  <span class="c1"># Run all of these pedalboards simultaneously with the Mix plugin:</span>
+  <span class="n">Mix</span><span class="p">([</span>
+    <span class="n">passthrough</span><span class="p">,</span>
+    <span class="n">delay_and_pitch_shift</span><span class="p">,</span>
+    <span class="n">delay_longer_and_more_pitch_shift</span><span class="p">,</span>
+  <span class="p">]),</span>
+  <span class="c1"># Add a reverb on the final mix:</span>
+  <span class="n">Reverb</span><span class="p">()</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+</section>
+<section id="running-pedalboard-on-live-audio">
+<h2>Running Pedalboard on Live Audio<a class="headerlink" href="#running-pedalboard-on-live-audio" title="Permalink to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">pedalboard</span></code> supports streaming live audio through
+<span class="raw-html-m2r"><a href="https://spotify.github.io/pedalboard/reference/pedalboard.io.html#pedalboard.io.AudioStream">
+an <code class="docutils literal"><span class="pre">AudioStream</span></code> object</a></span>,
+allowing for real-time manipulation of audio by adding effects in Python.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pedalboard</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pedalboard</span><span class="p">,</span> <span class="n">Chorus</span><span class="p">,</span> <span class="n">Compressor</span><span class="p">,</span> <span class="n">Delay</span><span class="p">,</span> <span class="n">Gain</span><span class="p">,</span> <span class="n">Reverb</span><span class="p">,</span> <span class="n">Phaser</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pedalboard.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">AudioStream</span>
+
+<span class="c1"># Open up an audio stream:</span>
+<span class="k">with</span> <span class="n">AudioStream</span><span class="p">(</span>
+  <span class="n">input_device_name</span><span class="o">=</span><span class="s2">&quot;Apogee Jam+&quot;</span><span class="p">,</span>  <span class="c1"># Guitar interface</span>
+  <span class="n">output_device_name</span><span class="o">=</span><span class="s2">&quot;MacBook Pro Speakers&quot;</span>
+<span class="p">)</span> <span class="k">as</span> <span class="n">stream</span><span class="p">:</span>
+  <span class="c1"># Audio is now streaming through this pedalboard and out of your speakers!</span>
+  <span class="n">stream</span><span class="o">.</span><span class="n">plugins</span> <span class="o">=</span> <span class="n">Pedalboard</span><span class="p">([</span>
+      <span class="n">Compressor</span><span class="p">(</span><span class="n">threshold_db</span><span class="o">=-</span><span class="mi">50</span><span class="p">,</span> <span class="n">ratio</span><span class="o">=</span><span class="mi">25</span><span class="p">),</span>
+      <span class="n">Gain</span><span class="p">(</span><span class="n">gain_db</span><span class="o">=</span><span class="mi">30</span><span class="p">),</span>
+      <span class="n">Chorus</span><span class="p">(),</span>
+      <span class="n">Phaser</span><span class="p">(),</span>
+      <span class="n">Convolution</span><span class="p">(</span><span class="s2">&quot;./guitar_amp.wav&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+      <span class="n">Reverb</span><span class="p">(</span><span class="n">room_size</span><span class="o">=</span><span class="mf">0.25</span><span class="p">),</span>
+  <span class="p">])</span>
+  <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Press enter to stop streaming...&quot;</span><span class="p">)</span>
+
+<span class="c1"># The live AudioStream is now closed, and audio has stopped.</span>
+</pre></div>
+</div>
+</section>
+<section id="using-pedalboard-in-tf-data-pipelines">
+<h2>Using Pedalboard in <code class="docutils literal notranslate"><span class="pre">tf.data</span></code> Pipelines<a class="headerlink" href="#using-pedalboard-in-tf-data-pipelines" title="Permalink to this heading">#</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">tensorflow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tf</span>
+
+<span class="n">sr</span> <span class="o">=</span> <span class="mi">48000</span>
+
+<span class="c1"># Put whatever plugins you like in here:</span>
+<span class="n">plugins</span> <span class="o">=</span> <span class="n">pedalboard</span><span class="o">.</span><span class="n">Pedalboard</span><span class="p">([</span><span class="n">pedalboard</span><span class="o">.</span><span class="n">Gain</span><span class="p">(),</span> <span class="n">pedalboard</span><span class="o">.</span><span class="n">Reverb</span><span class="p">()])</span>
+
+<span class="c1"># Make a dataset containing random noise:</span>
+<span class="c1"># NOTE: for real training, here&#39;s where you&#39;d want to load your audio somehow:</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="o">.</span><span class="n">from_tensor_slices</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">sr</span><span class="p">)])</span>
+
+<span class="c1"># Apply our Pedalboard instance to the tf.data Pipeline:</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">audio</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">numpy_function</span><span class="p">(</span><span class="n">plugins</span><span class="o">.</span><span class="n">process</span><span class="p">,</span> <span class="p">[</span><span class="n">audio</span><span class="p">,</span> <span class="n">sr</span><span class="p">],</span> <span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+
+<span class="c1"># Create and train a (dummy) ML model on this audio:</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Sequential</span><span class="p">([</span><span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">InputLayer</span><span class="p">(</span><span class="n">input_shape</span><span class="o">=</span><span class="p">(</span><span class="n">sr</span><span class="p">,)),</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Dense</span><span class="p">(</span><span class="mi">1</span><span class="p">)])</span>
+<span class="n">model</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s2">&quot;mse&quot;</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">effected</span><span class="p">:</span> <span class="p">(</span><span class="n">effected</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">batch</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For more examples, see:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/spotify/pedalboard/tree/master/examples">the “examples” folder of this repository</a></p></li>
+<li><p><a class="reference external" href="https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_lOfG99Xs3qWVrhch">the “Pedalboard Demo” Colab notebook</a></p></li>
+<li><p><a class="reference external" href="https://www.youtube.com/watch?v=NYhkqXpFAlg">*Working with Audio in Python (feat. Pedalboard)* by Peter Sobot at EuroPython 2022</a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/spaces/akhaliq/pedalboard">an interactive web demo on Hugging Face Spaces and Gradio</a> (via <a class="reference external" href="https://github.com/AK391">&#64;AK391</a>)</p></li>
+</ul>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="faq.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Frequently Asked Questions</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="reference/pedalboard.io.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">The <code class="docutils literal notranslate"><span class="pre">pedalboard.io</span></code> API</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2021-2025, Spotify AB
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            <div class="icons">
+              <a class="muted-link " href="https://github.com/spotify/pedalboard" aria-label="GitHub">
+                <svg stroke="currentColor" fill="currentColor"
+                     stroke-width="0" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+                </svg>
+            </a>
+              
+            </div>
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Examples</a><ul>
+<li><a class="reference internal" href="#quick-start">Quick start</a></li>
+<li><a class="reference internal" href="#making-a-guitar-style-pedalboard">Making a guitar-style pedalboard</a></li>
+<li><a class="reference internal" href="#using-vst3-or-audio-unit-instrument-and-effect-plugins">Using VST3® or Audio Unit instrument and effect plugins</a></li>
+<li><a class="reference internal" href="#creating-parallel-effects-chains">Creating parallel effects chains</a></li>
+<li><a class="reference internal" href="#running-pedalboard-on-live-audio">Running Pedalboard on Live Audio</a></li>
+<li><a class="reference internal" href="#using-pedalboard-in-tf-data-pipelines">Using Pedalboard in <code class="docutils literal notranslate"><span class="pre">tf.data</span></code> Pipelines</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/scripts/furo.js"></script>
+    <script src="_static/clipboard.min.js"></script>
+    <script src="_static/copybutton.js"></script>
+    </body>
+</html>
