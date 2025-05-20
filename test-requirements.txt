@@ -16,6 +16,8 @@ google-cloud-storage
 tqdm
 psutil
 mypy
+pyright
+# ty  # Uncomment to enable Astral type checker (still in early development)
 
 # For MIDI support - only in test though!
 mido

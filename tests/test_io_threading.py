@@ -75,7 +75,7 @@ def one_minute_buffer(allow_memoryview: bool, should_error: threading.Event) -> 
     buf.seek(0)
     if not allow_memoryview:
         # Avoid triggering the fast-path for memoryview, which releases the GIL:
-        buf.getbuffer = lambda: False
+        buf.getbuffer = lambda: False  # type: ignore
     return patch_bytes_io(buf, should_error)
 
 

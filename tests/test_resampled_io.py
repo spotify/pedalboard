@@ -39,7 +39,11 @@ def expected_output(
     return output
 
 
-QUALITIES = [v[0] for v in Resample.Quality.__entries.values()]
+QUALITIES: list[Resample.Quality] = [
+    getattr(Resample.Quality, name)
+    for name in dir(Resample.Quality)
+    if not name.startswith("_") and name[0].isupper()
+]
 
 
 def test_read_resampled_constructor():
@@ -117,7 +121,7 @@ def test_read_resampled(
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67, 22050, 44100, 48000])
 @pytest.mark.parametrize("chunk_size", [10, 100])
 @pytest.mark.parametrize("quality", QUALITIES, ids=[q.name for q in QUALITIES])
-def test_tell_resampled(sample_rate: float, target_sample_rate: float, chunk_size: int, quality):
+def test_tell_resampled(sample_rate: int, target_sample_rate: float, chunk_size: int, quality):
     signal = np.linspace(1, sample_rate, sample_rate).astype(np.float32)
 
     read_buffer = BytesIO()
@@ -138,7 +142,7 @@ def test_tell_resampled(sample_rate: float, target_sample_rate: float, chunk_siz
 @pytest.mark.parametrize("chunk_size", [2, 10, 50, 100, 1_000_000])
 @pytest.mark.parametrize("quality", QUALITIES, ids=[q.name for q in QUALITIES])
 def test_seek_resampled(
-    sample_rate: float, target_sample_rate: float, offset: int, chunk_size: int, quality
+    sample_rate: int, target_sample_rate: float, offset: int, chunk_size: int, quality
 ):
     signal = np.linspace(1, sample_rate, sample_rate).astype(np.float32)
 
@@ -158,7 +162,7 @@ def test_seek_resampled(
 
 @pytest.mark.parametrize("sample_rate", [8000, 11025])
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67])
-def test_seek_resampled_is_constant_time(sample_rate: float, target_sample_rate: float):
+def test_seek_resampled_is_constant_time(sample_rate: int, target_sample_rate: float):
     signal = np.random.rand(sample_rate * 60).astype(np.float32)
 
     read_buffer = BytesIO()
@@ -228,7 +232,7 @@ def test_read_resampled_with_tiny_chunks(
 @pytest.mark.parametrize("sample_rate", [8000, 11025, 22050, 44100, 48000])
 @pytest.mark.parametrize("target_sample_rate", [8000, 11025, 12345.67, 22050, 44100, 48000])
 @pytest.mark.parametrize("quality", QUALITIES, ids=[q.name for q in QUALITIES])
-def test_frame_count(sample_rate: float, target_sample_rate: float, quality):
+def test_frame_count(sample_rate: int, target_sample_rate: float, quality):
     signal = np.linspace(1, sample_rate, sample_rate).astype(np.float32)
     expected_signal = expected_output(signal, sample_rate, target_sample_rate, 1, quality)
 

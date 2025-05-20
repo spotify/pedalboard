@@ -18,7 +18,7 @@
 import numpy as np
 import pytest
 
-from pedalboard_native._internal import PrimeWithSilenceTestPlugin
+from pedalboard_native._internal import PrimeWithSilenceTestPlugin  # type: ignore
 
 NUM_SECONDS = 1
 MAX_SAMPLE_RATE = 48000

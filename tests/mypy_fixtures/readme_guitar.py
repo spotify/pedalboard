@@ -2,14 +2,14 @@
 
 # Don't do import *! (It just makes this example smaller)
 from pedalboard import (
-    Pedalboard,
-    Compressor,
-    Gain,
     Chorus,
+    Compressor,
+    Convolution,
+    Gain,
     LadderFilter,
     Limiter,
+    Pedalboard,
     Phaser,
-    Convolution,
     Reverb,
 )
 from pedalboard.io import AudioFile

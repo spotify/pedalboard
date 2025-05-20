@@ -181,7 +181,10 @@ def test_read_from_stream_measures_dropped_frames():
         assert stream.running
         assert stream.dropped_input_frame_count == 0
         time.sleep(5 * stream.buffer_size / stream.sample_rate)
-        assert stream.buffered_input_sample_count > 0
+        assert (
+            stream.buffered_input_sample_count is not None
+            and stream.buffered_input_sample_count > 0
+        )
         dropped_count = stream.dropped_input_frame_count
         assert dropped_count > 0
     # The input buffer was cleared on __exit__, so the buffer count should be zero:

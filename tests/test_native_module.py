@@ -76,7 +76,11 @@ ALL_BUILTIN_PLUGINS = [
 
 @pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 44100), (2, 44100)])
 def test_no_transforms(shape, sr=44100):
-    _input = np.random.rand(*shape).astype(np.float32)
+    # This seems hacky, but it's a workaround for a bug in Pyright:
+    if len(shape) == 1:
+        _input = np.random.rand(shape[0]).astype(np.float32)
+    else:
+        _input = np.random.rand(shape[0], shape[1]).astype(np.float32)
 
     output = process(_input, sr, [])
 
@@ -86,7 +90,11 @@ def test_no_transforms(shape, sr=44100):
 
 @pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 44100), (2, 44100)])
 def test_noise_gain(shape, sr=44100):
-    full_scale_noise = np.random.rand(*shape).astype(np.float32)
+    # This seems hacky, but it's a workaround for a bug in Pyright:
+    if len(shape) == 1:
+        full_scale_noise = np.random.rand(shape[0]).astype(np.float32)
+    else:
+        full_scale_noise = np.random.rand(shape[0], shape[1]).astype(np.float32)
 
     # Use the Gain transform to scale down the noise by 6dB (0.5x)
     half_noise = process(full_scale_noise, sr, [Gain(-6)])
@@ -155,13 +163,18 @@ def test_convolution_impulse_response_storage():
     ir = np.random.rand(2, 12345).astype(np.float32)
     conv = Convolution(ir, 0.5, 44100)
     assert conv.impulse_response_filename is None
+    assert conv.impulse_response is not None
     np.testing.assert_allclose(conv.impulse_response, ir)
 
 
 @pytest.mark.parametrize("gain_db", [-12, -6, 0, 1.1, 6, 12, 24, 48, 96])
 @pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 44100), (2, 44100)])
 def test_distortion(gain_db, shape, sr=44100):
-    full_scale_noise = np.random.rand(*shape).astype(np.float32)
+    # This seems hacky, but it's a workaround for a bug in Pyright:
+    if len(shape) == 1:
+        full_scale_noise = np.random.rand(shape[0]).astype(np.float32)
+    else:
+        full_scale_noise = np.random.rand(shape[0], shape[1]).astype(np.float32)
 
     # Use the Distortion transform with ±0dB, which should change nothing:
     result = process(full_scale_noise, sr, [Distortion(gain_db)])
@@ -173,7 +186,12 @@ def test_distortion(gain_db, shape, sr=44100):
 
 @pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 44100), (2, 44100)])
 def test_invert(shape, sr=44100):
-    full_scale_noise = np.random.rand(*shape).astype(np.float32)
+    # This seems hacky, but it's a workaround for a bug in Pyright:
+    if len(shape) == 1:
+        full_scale_noise = np.random.rand(shape[0]).astype(np.float32)
+    else:
+        full_scale_noise = np.random.rand(shape[0], shape[1]).astype(np.float32)
+
     result = Invert()(full_scale_noise, sr)
     np.testing.assert_allclose(full_scale_noise * -1, result, rtol=4e-7, atol=2e-7)
 
@@ -211,8 +229,8 @@ def test_plugin_state_not_cleared_between_invocations(reset: bool):
     """
     reverb = Reverb()
     sr = 44100
-    noise = np.random.rand(sr)
-    silence = np.zeros_like(noise)
+    noise = np.random.rand(sr).astype(np.float32)
+    silence = np.zeros_like(noise).astype(np.float32)
 
     # Assert that reverb adds nothing if no signal was present already:
     assert np.amax(np.abs(reverb(silence, sr, reset=reset))) == 0.0
@@ -235,8 +253,8 @@ def test_plugin_state_not_cleared_if_passed_smaller_buffer():
     """
     reverb = Reverb()
     sr = 44100
-    noise = np.random.rand(sr)
-    silence = np.zeros_like(noise)
+    noise = np.random.rand(sr).astype(np.float32)
+    silence = np.zeros_like(noise).astype(np.float32)
 
     # Assert that reverb adds nothing if no signal was present already:
     assert np.amax(np.abs(reverb(silence, sr, reset=False))) == 0.0

@@ -22,14 +22,14 @@ import pedalboard
 
 def test_can_be_called_in_tensorflow_data_pipeline():
     try:
-        import tensorflow as tf
+        import tensorflow as tf  # type: ignore
     except ImportError:
         pytest.skip("TensorFlow not installed.")
 
     sr = 48000
     plugins = pedalboard.Pedalboard([pedalboard.Gain(), pedalboard.Reverb()])
 
-    noise = np.random.rand(sr)
+    noise = np.random.rand(sr).astype(np.float32)
 
     ds = tf.data.Dataset.from_tensor_slices([noise]).map(
         lambda audio: tf.numpy_function(plugins.process, [audio, sr], tf.float32)

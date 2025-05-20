@@ -180,7 +180,7 @@ def test_flush(sample_rate: float, target_sample_rate: float, quality: Resample.
 )
 def test_returned_sample_count(
     sample_rate: float, target_sample_rate: float, chunk_size: int, quality
-) -> np.ndarray:
+):
     input_signal = np.linspace(0, 3, num=int(sample_rate), dtype=np.float32)
     resampler = StreamResampler(sample_rate, target_sample_rate, 1, quality)
 

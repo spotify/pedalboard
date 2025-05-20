@@ -14,6 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Ignore types for this entire file:
+# TODO(psobot): fix types for this file
+# pyright: reportAttributeAccessIssue=false
+# pyright: reportOptionalMemberAccess=false
+# pyright: reportCallIssue=false
+# pyright: reportUnboundVariable=false
+# pyright: reportArgumentType=false
+# pyright: reportGeneralTypeIssues=false
+# pyright: reportMissingImports=false
+# pyright: reportReturnType=false
+
 
 import atexit
 import math
@@ -26,6 +37,7 @@ import subprocess
 import sys
 import threading
 import time
+import typing
 from concurrent.futures import ThreadPoolExecutor
 from glob import glob
 from pathlib import Path
@@ -151,7 +163,9 @@ def find_plugin_path(plugin_filename: str) -> str:
     return plugin_path
 
 
-def load_test_plugin(plugin_filename: str, disable_caching: bool = False, *args, **kwargs):
+def load_test_plugin(
+    plugin_filename: str, disable_caching: bool = False, *args, **kwargs
+) -> typing.Union["pedalboard.VST3Plugin", "pedalboard.AudioUnitPlugin"]:
     """
     Load a plugin file from disk, or use an existing instance to save
     on test runtime if we already have one in memory.

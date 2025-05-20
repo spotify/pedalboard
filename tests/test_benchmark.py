@@ -44,7 +44,7 @@ class timer(object):
 @pytest.mark.skip
 def test_pysox_performance_difference():
     try:
-        import sox
+        import sox  # type: ignore
     except ImportError:
         pytest.skip("SoX is not installed")
     transformer = sox.Transformer()

@@ -15,6 +15,8 @@
 # limitations under the License.
 
 
+from typing import cast
+
 import numpy as np
 import pytest
 
@@ -29,7 +31,7 @@ from pedalboard import (
     PitchShift,
     Reverb,
 )
-from pedalboard_native._internal import AddLatency
+from pedalboard_native._internal import AddLatency  # type: ignore
 
 NUM_SECONDS = 1
 MAX_SAMPLE_RATE = 96000
@@ -53,11 +55,12 @@ def test_chain_access_like_list():
     assert pb[1] is d
     assert pb[-2] is d
 
-    assert pb[1][0] is b
-    assert pb[1][-2] is b
+    assert isinstance(pb[1], Chain)
+    assert cast(Chain, pb[1])[0] is b
+    assert cast(Chain, pb[1])[-2] is b
 
-    assert pb[1][1] is c
-    assert pb[1][-1] is c
+    assert cast(Chain, pb[1])[1] is c
+    assert cast(Chain, pb[1])[-1] is c
 
     assert pb[2] is e
     assert pb[-1] is e
@@ -71,21 +74,21 @@ def test_nested_chain():
     output = pb(_input, sr)
 
     assert isinstance(pb[0], Gain)
-    assert pb[0].gain_db == 6
+    assert cast(Gain, pb[0]).gain_db == 6
 
     assert isinstance(pb[1], Chain)
-    assert pb[1][0].gain_db == -6
-    assert pb[1][1].gain_db == 1
+    assert cast(Gain, cast(Chain, pb[1])[0]).gain_db == -6
+    assert cast(Gain, cast(Chain, pb[1])[1]).gain_db == 1
 
     assert isinstance(pb[2], Gain)
-    assert pb[2].gain_db == -1
+    assert cast(Gain, pb[2]).gain_db == -1
 
     np.testing.assert_allclose(_input, output, rtol=0.01)
 
 
 def test_nested_list_raises_error():
     with pytest.raises(TypeError):
-        Pedalboard([Gain(6), [Gain(-6), Gain(1)], Gain(-1)])
+        Pedalboard([Gain(6), [Gain(-6), Gain(1)], Gain(-1)])  # type: ignore
 
 
 def test_nested_mix():
@@ -96,13 +99,13 @@ def test_nested_mix():
     output = pb(_input, sr)
 
     assert isinstance(pb[0], Gain)
-    assert pb[0].gain_db == 6
+    assert cast(Gain, pb[0]).gain_db == 6
 
     assert isinstance(pb[1], Mix)
-    assert set([plugin.gain_db for plugin in pb[1]]) == set([-6, -6])
+    assert set([cast(Gain, plugin).gain_db for plugin in cast(Mix, pb[1])]) == set([-6, -6])
 
     assert isinstance(pb[2], Gain)
-    assert pb[2].gain_db == -6
+    assert cast(Gain, pb[2]).gain_db == -6
 
     np.testing.assert_allclose(_input, output, rtol=0.01)
 
@@ -220,7 +223,7 @@ def test_readme_example_does_not_crash(sample_rate, buffer_size):
     )
 
     original_plus_delayed_harmonies = Pedalboard(
-        Mix([passthrough, delay_and_pitch_shift, delay_longer_and_more_pitch_shift])
+        [Mix([passthrough, delay_and_pitch_shift, delay_longer_and_more_pitch_shift])]
     )
     original_plus_delayed_harmonies(noise, sample_rate=sample_rate, buffer_size=buffer_size)
 
