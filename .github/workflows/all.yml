@@ -735,13 +735,13 @@ jobs:
         - { os: macos-13, build: cp313t-macosx_arm64 }
         # - { os: macos-13, build: pp38-macosx_x86_64 }
         # - { os: macos-13, build: pp39-macosx_x86_64 }
-        # - { os: windows-latest, build: cp39-win_amd64 }
-        # - { os: windows-latest, build: cp310-win_amd64 }
-        # - { os: windows-latest, build: cp311-win_amd64 }
-        # - { os: windows-latest, build: cp312-win_amd64 }
-        # - { os: windows-latest, build: cp313-win_amd64 }
-        # # - { os: windows-latest, build: cp313t-win_amd64 }
-        # - { os: windows-latest, build: cp312-win32 }
+        - { os: windows-latest, build: cp39-win_amd64 }
+        - { os: windows-latest, build: cp310-win_amd64 }
+        - { os: windows-latest, build: cp311-win_amd64 }
+        - { os: windows-latest, build: cp312-win_amd64 }
+        - { os: windows-latest, build: cp313-win_amd64 }
+        # - { os: windows-latest, build: cp313t-win_amd64 }
+        - { os: windows-latest, build: cp312-win32 }
         - { os: 'ubuntu-24.04', build: cp39-manylinux_x86_64 }
         - { os: 'ubuntu-24.04', build: cp39-manylinux_aarch64 }
         # - { os: 'ubuntu-24.04', build: cp39-musllinux_x86_64 }
