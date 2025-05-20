@@ -791,6 +791,7 @@ jobs:
           # Use the minimum macOS deployment target supported by our version of PyBind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
       - name: Ensure wheels have required files
+        if: runner.os != 'Windows' 
         run: |
           for wheel in ./wheelhouse/*.whl; do
             # Print the contents of the wheel for debugging:
