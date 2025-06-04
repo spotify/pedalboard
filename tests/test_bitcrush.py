@@ -119,3 +119,21 @@ def test_bitcrush_with_low_sample_rate():
 
     assert processed_audio.shape == audio.shape, "Processed audio shape should match input for low sample rate"
     assert not np.array_equal(audio, processed_audio), "Audio should be altered by bitcrushing at low sample rate"
+def test_bitcrush_with_stereo_audio():
+    # Generate stereo audio (two channels)
+    audio = np.vstack((generate_sine_wave(), generate_sine_wave(frequency=880))).T
+    effect = Bitcrush(bit_depth=8)
+
+    processed_audio = effect(audio, 44100)
+
+    assert processed_audio.shape == audio.shape, "Processed stereo audio shape should match input"
+    assert not np.array_equal(audio, processed_audio), "Stereo audio should be altered by bitcrushing"
+def test_bitcrush_with_mono_audio():
+    # Generate mono audio (single channel)
+    audio = generate_sine_wave()
+    effect = Bitcrush(bit_depth=8)
+
+    processed_audio = effect(audio, 44100)
+
+    assert processed_audio.shape == audio.shape, "Processed mono audio shape should match input"
+    assert not np.array_equal(audio, processed_audio), "Mono audio should be altered by bitcrushing"
