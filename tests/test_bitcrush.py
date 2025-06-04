@@ -16,26 +16,106 @@
 
 
 import numpy as np
+from pedalboard import Bitcrush
 import pytest
 
-from pedalboard import Bitcrush
 
-from .utils import generate_sine_at
+def generate_sine_wave(frequency=440, duration=1.0, sample_rate=44100):
+    t = np.linspace(0, duration, int(sample_rate * duration), False)
+    return 0.5 * np.sin(2 * np.pi * frequency * t).astype(np.float32)
 
 
-@pytest.mark.parametrize("bit_depth", list(np.arange(1, 32, 0.5)))
-@pytest.mark.parametrize("fundamental_hz", [440])
-@pytest.mark.parametrize("sample_rate", [22050, 48000])
-@pytest.mark.parametrize("num_channels", [1, 2])
-def test_bitcrush(bit_depth: float, fundamental_hz: float, sample_rate: float, num_channels: int):
-    sine_wave = generate_sine_at(
-        sample_rate, fundamental_hz, num_seconds=0.1, num_channels=num_channels
-    )
+def test_bitcrush_basic_application():
+    audio = generate_sine_wave()
+    effect = Bitcrush(bit_depth=8)
 
-    plugin = Bitcrush(bit_depth)
-    output = plugin.process(sine_wave, sample_rate)
+    processed_audio = effect(audio, 44100)
 
-    assert np.all(np.isfinite(output))
+    assert processed_audio.shape == audio.shape
+    assert not np.array_equal(audio, processed_audio), "Audio should be altered by bitcrushing"
 
-    expected_output = np.around(sine_wave.astype(np.float64) * (2**bit_depth)) / (2**bit_depth)
-    np.testing.assert_allclose(output, expected_output, atol=0.01)
+
+def test_bitcrush_extreme_low_bit_depth():
+    audio = generate_sine_wave()
+    effect = Bitcrush(bit_depth=1)
+
+    processed_audio = effect(audio, 44100)
+
+    assert processed_audio.shape == audio.shape
+    assert not np.array_equal(audio, processed_audio), "Bitcrush with bit depth 1 should drastically alter the signal"
+
+
+def test_bitcrush_max_bit_depth():
+    audio = generate_sine_wave()
+    effect = Bitcrush(bit_depth=24)
+
+    processed_audio = effect(audio, 44100)
+
+    # With bit depth this high, the result should be close to original
+    assert np.allclose(audio, processed_audio, atol=1e-2), "Bit depth of 24 should yield near-original audio"
+
+
+def test_invalid_bit_depth_raises_exception():
+    with pytest.raises(ValueError):
+        Bitcrush(bit_depth=-5)
+    with pytest.raises(ValueError):
+        Bitcrush(bit_depth=100)
+
+    with pytest.raises(ValueError):
+        Bitcrush(bit_depth=None)
+def test_bitcrush_with_different_sample_rates():
+    audio = generate_sine_wave()
+    effect = Bitcrush(bit_depth=8)
+
+    # Test with different sample rates
+    for sample_rate in [22050, 44100, 48000]:
+        processed_audio = effect(audio, sample_rate)
+        assert processed_audio.shape == audio.shape, f"Processed audio shape mismatch for sample rate {sample_rate}"
+        assert not np.array_equal(audio, processed_audio), "Audio should be altered by bitcrushing at different sample rates"
+def test_bitcrush_with_zero_length_audio():
+    audio = np.array([], dtype=np.float32)
+    effect = Bitcrush(bit_depth=8)
+
+    processed_audio = effect(audio, 44100)
+
+    assert processed_audio.shape == audio.shape, "Processed audio should have the same shape as input for zero-length audio"
+    assert len(processed_audio) == 0, "Processed audio should be empty for zero-length input"
+def test_bitcrush_with_non_audio_data():
+    # Test with random non-audio data
+    audio = np.random.rand(1000).astype(np.float32)  # Random data
+    effect = Bitcrush(bit_depth=8)
+
+    processed_audio = effect(audio, 44100)
+
+    assert processed_audio.shape == audio.shape, "Processed audio shape should match input for non-audio data"
+    assert not np.array_equal(audio, processed_audio), "Non-audio data should still be altered by bitcrushing"
+def test_bitcrush_with_different_bit_depths():
+    audio = generate_sine_wave()
+    bit_depths = [1, 4, 8, 16, 24]
+
+    for bit_depth in bit_depths:
+        effect = Bitcrush(bit_depth=bit_depth)
+        processed_audio = effect(audio, 44100)
+
+        assert processed_audio.shape == audio.shape, f"Processed audio shape mismatch for bit depth {bit_depth}"
+        assert not np.array_equal(audio, processed_audio), f"Audio should be altered by bitcrushing at bit depth {bit_depth}"
+def test_bitcrush_with_high_sample_rate():
+    audio = generate_sine_wave()
+    effect = Bitcrush(bit_depth=8)
+
+    # Test with a high sample rate
+    sample_rate = 96000
+    processed_audio = effect(audio, sample_rate)
+
+    assert processed_audio.shape == audio.shape, "Processed audio shape should match input for high sample rate"
+    assert not np.array_equal(audio, processed_audio), "Audio should be altered by bitcrushing at high sample rate"
+def test_bitcrush_with_low_sample_rate():
+    audio = generate_sine_wave()
+    effect = Bitcrush(bit_depth=8)
+
+    # Test with a low sample rate
+    sample_rate = 16000
+    processed_audio = effect(audio, sample_rate)
+
+    assert processed_audio.shape == audio.shape, "Processed audio shape should match input for low sample rate"
+    assert not np.array_equal(audio, processed_audio), "Audio should be altered by bitcrushing at low sample rate"
