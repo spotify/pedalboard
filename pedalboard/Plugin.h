@@ -15,6 +15,11 @@
  * limitations under the License.
  */
 
+// This header defines the base Plugin interface used throughout Pedalboard.
+// As of version 0.10.0 it has been extended with optional MIDI input support
+// so that effect plugins can react to MIDI messages in the same way
+// instrument plugins already could.
+
 #pragma once
 
 #include "BufferUtils.h"
@@ -48,6 +53,20 @@ public:
    */
   virtual int
   process(const juce::dsp::ProcessContextReplacing<float> &context) = 0;
+
+  /**
+   * Process a block of audio while also providing MIDI messages.
+   *
+   * By default this simply calls ``process`` and ignores the MIDI data,
+   * allowing existing plugins that don't react to MIDI to continue working
+   * without modification. Plugins that wish to consume MIDI should override
+   * this method instead of the single-argument variant.
+   */
+  virtual int process(const juce::dsp::ProcessContextReplacing<float> &context,
+                      const juce::MidiBuffer &midiMessages) {
+    juce::ignoreUnused(midiMessages);
+    return process(context);
+  }
 
   /**
    * Reset this plugin's state, clearing any internal buffers or delay lines.

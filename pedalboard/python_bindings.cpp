@@ -87,10 +87,19 @@ PYBIND11_MODULE(pedalboard_native, m, py::mod_gil_not_used()) {
 
   m.def(
       "process",
+      // Wrapper exposed to Python; handles optional MIDI before calling C++
+      // processing routine.
       [](const py::array inputArray, double sampleRate,
          const std::vector<std::shared_ptr<Plugin>> plugins,
-         unsigned int bufferSize, bool reset) {
-        return process(inputArray, sampleRate, plugins, bufferSize, reset);
+         py::object midiMessages, unsigned int bufferSize, bool reset) {
+        juce::MidiBuffer midi;
+        juce::MidiBuffer *midiPtr = nullptr;
+        if (!midiMessages.is_none()) {
+          midi = parseMidiBufferFromPython(midiMessages, sampleRate);
+          midiPtr = &midi;
+        }
+        return process(inputArray, sampleRate, plugins, bufferSize, reset,
+                       midiPtr);
       },
       R"(
 Run a 32-bit or 64-bit floating point audio buffer through a
@@ -109,6 +118,7 @@ or buffer, set ``reset`` to ``False``.
 :meta private:
 )",
       py::arg("input_array"), py::arg("sample_rate"), py::arg("plugins"),
+      py::arg("midi_messages") = py::none(),
       py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true);
 
   plugin
@@ -134,9 +144,18 @@ or buffer, set ``reset`` to ``False``.
           "parameters will remain unchanged. ")
       .def(
           "process",
+          // Accept MIDI from Python and route it to the C++ processing layer.
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
-             double sampleRate, unsigned int bufferSize, bool reset) {
-            return process(inputArray, sampleRate, {self}, bufferSize, reset);
+             double sampleRate, py::object midiMessages, unsigned int bufferSize,
+             bool reset) {
+            juce::MidiBuffer midi;
+            juce::MidiBuffer *ptr = nullptr;
+            if (!midiMessages.is_none()) {
+              midi = parseMidiBufferFromPython(midiMessages, sampleRate);
+              ptr = &midi;
+            }
+            return process(inputArray, sampleRate, {self}, bufferSize, reset,
+                           ptr);
           },
           R"(
 Run a 32-bit or 64-bit floating point audio buffer through this plugin.
@@ -173,16 +192,27 @@ If the number of samples and the number of channels are the same, each
     automatically invoke :py:meth:`process` with the same arguments.
 )",
           py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("midi_messages") = py::none(),
           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
       .def(
           "__call__",
+          // Allow plugins to be called like functions while still accepting MIDI.
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
-             double sampleRate, unsigned int bufferSize, bool reset) {
-            return process(inputArray, sampleRate, {self}, bufferSize, reset);
+             double sampleRate, py::object midiMessages, unsigned int bufferSize,
+             bool reset) {
+            juce::MidiBuffer midi;
+            juce::MidiBuffer *ptr = nullptr;
+            if (!midiMessages.is_none()) {
+              midi = parseMidiBufferFromPython(midiMessages, sampleRate);
+              ptr = &midi;
+            }
+            return process(inputArray, sampleRate, {self}, bufferSize, reset,
+                           ptr);
           },
           "Run an audio buffer through this plugin. Alias for "
           ":py:meth:`process`.",
           py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("midi_messages") = py::none(),
           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
       .def_property_readonly(
           "is_effect",

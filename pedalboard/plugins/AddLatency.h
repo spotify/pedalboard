@@ -48,6 +48,14 @@ public:
                     std::max(0, (int)(samplesProvided - getDSP().getDelay())));
   }
 
+  virtual int process(const juce::dsp::ProcessContextReplacing<float> &context,
+                      const juce::MidiBuffer &midiMessages) override {
+    // AddLatency doesn't react to MIDI, but we accept the argument so this
+    // test plugin matches the Plugin interface.
+    juce::ignoreUnused(midiMessages);
+    return process(context);
+  }
+
   virtual int getLatencyHint() override { return getDSP().getDelay(); }
 
 private:
