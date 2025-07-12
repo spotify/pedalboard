@@ -16,8 +16,6 @@
  */
 #pragma once
 
-#pragma once
-
 #include "../JucePlugin.h"
 
 namespace Pedalboard {

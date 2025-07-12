@@ -63,6 +63,7 @@ Can Pedalboard plugins accept MIDI?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 As of version 0.7.4, both :class:`pedalboard.VST3Plugin` and :class:`pedalboard.AudioUnitPlugin` support passing MIDI
-messages to instrument plugins for audio rendering. However, effect plugins cannot yet be passed MIDI data.
-messages to instrument plugins for audio rendering. As of version 0.10.0, effect plugins can also receive MIDI data
+messages to instrument plugins for audio rendering.
+
+Now, effect plugins can also receive MIDI data
 alongside audio buffers for real-time control.
