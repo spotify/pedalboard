@@ -32,6 +32,7 @@ __all__ = [
     "FixedSizeBlockTestPlugin",
     "ForceMonoTestPlugin",
     "PrimeWithSilenceTestPlugin",
+    "MidiMonitor",
     "ResampleWithLatency",
 ]
 
@@ -50,6 +51,11 @@ class FixedSizeBlockTestPlugin(pedalboard_native.Plugin):
 
 class ForceMonoTestPlugin(pedalboard_native.Plugin):
     def __repr__(self) -> str: ...
+    pass
+
+class MidiMonitor(pedalboard_native.Plugin):
+    def __repr__(self) -> str: ...
+    def get_last_event_count(self) -> int: ...
     pass
 
 class PrimeWithSilenceTestPlugin(pedalboard_native.Plugin):
