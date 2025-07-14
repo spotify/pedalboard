@@ -86,6 +86,11 @@ PYBIND11_MODULE(pedalboard_native, m, py::mod_gil_not_used()) {
       "A generic audio processing plugin. Base class of all Pedalboard "
       "plugins.");
 
+  // ---------------------------------------------------------------------
+  // Expose the module-level ``process`` function with MIDI preceding
+  // ``buffer_size`` in the argument list.  This matches the historic calling
+  // convention and is kept for backwards compatibility.
+  // ---------------------------------------------------------------------
   m.def(
       "process",
       // Wrapper exposed to Python; handles optional MIDI before calling C++
@@ -121,6 +126,30 @@ or buffer, set ``reset`` to ``False``.
       py::arg("input_array"), py::arg("sample_rate"), py::arg("plugins"),
       py::arg("midi_messages") = py::none(),
       py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true);
+
+  // ---------------------------------------------------------------------
+  // Additional overload where the MIDI messages parameter is placed after the
+  // ``buffer_size`` argument.  This allows calls like
+  // ``process(audio, sr, plugins, 1024, midi_messages=messages)``.
+  // ---------------------------------------------------------------------
+  m.def(
+      "process",
+      [](const py::array inputArray, double sampleRate,
+         const std::vector<std::shared_ptr<Plugin>> plugins,
+         unsigned int bufferSize, py::object midiMessages, bool reset) {
+        juce::MidiBuffer midi;
+        juce::MidiBuffer *midiPtr = nullptr;
+        if (!midiMessages.is_none()) {
+          midi = parseMidiBufferFromPython(midiMessages, sampleRate);
+          midiPtr = &midi;
+        }
+        return process(inputArray, sampleRate, plugins, bufferSize, reset,
+                       midiPtr);
+      },
+      py::arg("input_array"), py::arg("sample_rate"), py::arg("plugins"),
+      py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+      py::arg("midi_messages") = py::none(),
+      py::arg("reset") = true);
 
   plugin
       .def(py::init([]() {
@@ -195,6 +224,28 @@ If the number of samples and the number of channels are the same, each
           py::arg("input_array"), py::arg("sample_rate"),
           py::arg("midi_messages") = py::none(),
           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
+      // -----------------------------------------------------------------
+      // Overload where MIDI messages follow ``buffer_size`` to support
+      // ``plugin.process(audio, sr, buffer_size, midi_messages)`` calls.
+      // -----------------------------------------------------------------
+      .def(
+          "process",
+          [](std::shared_ptr<Plugin> self, const py::array inputArray,
+             double sampleRate, unsigned int bufferSize, py::object midiMessages,
+             bool reset) {
+            juce::MidiBuffer midi;
+            juce::MidiBuffer *ptr = nullptr;
+            if (!midiMessages.is_none()) {
+              midi = parseMidiBufferFromPython(midiMessages, sampleRate);
+              ptr = &midi;
+            }
+            return process(inputArray, sampleRate, {self}, bufferSize, reset,
+                           ptr);
+          },
+          py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+          py::arg("midi_messages") = py::none(),
+          py::arg("reset") = true)
       .def(
           "__call__",
           // Allow plugins to be called like functions while still accepting MIDI.
@@ -215,6 +266,29 @@ If the number of samples and the number of channels are the same, each
           py::arg("input_array"), py::arg("sample_rate"),
           py::arg("midi_messages") = py::none(),
           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
+      // -----------------------------------------------------------------
+      // Alternate calling convention for ``__call__`` mirroring the new
+      // ``process`` overload where MIDI comes after ``buffer_size``.
+      // -----------------------------------------------------------------
+      .def(
+          "__call__",
+          [](std::shared_ptr<Plugin> self, const py::array inputArray,
+             double sampleRate, unsigned int bufferSize, py::object midiMessages,
+             bool reset) {
+            juce::MidiBuffer midi;
+            juce::MidiBuffer *ptr = nullptr;
+            if (!midiMessages.is_none()) {
+              midi = parseMidiBufferFromPython(midiMessages, sampleRate);
+              ptr = &midi;
+            }
+            return process(inputArray, sampleRate, {self}, bufferSize, reset,
+                           ptr);
+          },
+          "Run an audio buffer through this plugin. Alias for :py:meth:`process`.",
+          py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+          py::arg("midi_messages") = py::none(),
+          py::arg("reset") = true)
       .def_property_readonly(
           "is_effect",
           [](std::shared_ptr<Plugin> self) {
