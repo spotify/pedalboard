@@ -1,7 +1,7 @@
 import numpy  # noqa: F401
 from pedalboard_native.io import *  # noqa: F403, F401
 
-from pedalboard_native.io import AudioStream as _AudioStream  # 顯式給 Ruff
+from pedalboard_native.io import AudioStream as _AudioStream  # Explicitly alias for Ruff (linter)
 
 from ._device_helpers import is_device_alive  # noqa: E402
 

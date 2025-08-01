@@ -1,13 +1,13 @@
 """Utilities for querying PortAudio devices."""
 
 try:
-    import sounddevice as sd  # 可能找不到 PortAudio
+    import sounddevice as sd  # Might not find PortAudio
 except Exception:
-    sd = None  # 無聲卡環境 fail-open
+    sd = None  # Fail-open in environments without a sound card
 
 
 def is_device_alive(name: str) -> bool:
-    """True ↔ 裝置仍存在；PortAudio 不可用時保守回 True。"""
+    """True: device still available; PortAudio fallback to True when device not available."""
     if sd is None:
         return True
     try:
