@@ -1,18 +1,19 @@
-# In certain situations (including when using asyncio), Pedalboard's C++ code will
-# implicitly and lazily import NumPy via its Pybind11 bindings. This lazy import
-# can sometimes (!) cause a deadlock on the GIL if multiple threads are attempting
-# it simultaneously. To work around this, we preload Numpy into the current Python
-# process so that Pybind11's lazy import is effectively a no-op.
-import numpy  # noqa
-from pedalboard_native.io import *  # noqa: F403, F401 # type: ignore
+# 預載 NumPy，避免 Pybind11 懶載入死鎖
+import numpy  # noqa: F401
 
-# ➜ 新增這一行，讓 Ruff 確定 AudioStream 是誰
-from pedalboard.io import AudioStream as _AudioStream
+# 星號匯入仍保留
+from pedalboard_native.io import *  # noqa: F403, F401
 
-# ----- Monkey-patch AudioStream.write：裝置斷線時丟 RuntimeError -----
+# 顯式匯入 AudioStream，給 Ruff 一個確定參照
+from pedalboard_native.io import AudioStream as _AudioStream  # noqa: F401
+
+# ------------------------------------------------------------------
+# Monkey-patch AudioStream.write：裝置斷線時拋 RuntimeError
+# ------------------------------------------------------------------
+
 from ._device_helpers import is_device_alive  # noqa: E402
 
-_original_write = AudioStream.write  # 保存原本的方法
+_original_write = _AudioStream.write  # 保存原方法，Ruff 不再抱怨 F405
 
 
 def _patched_write(self, samples, sample_rate):
@@ -21,5 +22,5 @@ def _patched_write(self, samples, sample_rate):
     return _original_write(self, samples, sample_rate)
 
 
-AudioStream.write = _patched_write
-# --------------------------------------------------------------------
+_AudioStream.write = _patched_write  # 套用補丁
+# ------------------------------------------------------------------
