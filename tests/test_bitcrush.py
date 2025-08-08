@@ -42,5 +42,5 @@ def test_invalid_bit_depth_raises_exception():
         Bitcrush(bit_depth=-5)
     with pytest.raises(ValueError):
         Bitcrush(bit_depth=100)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         Bitcrush(bit_depth=None)
