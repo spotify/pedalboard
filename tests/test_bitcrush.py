@@ -18,6 +18,7 @@ import numpy as np
 import pytest
 
 from pedalboard import Bitcrush
+
 from .utils import generate_sine_at
 
 
