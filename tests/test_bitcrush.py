@@ -16,6 +16,7 @@
 
 import numpy as np
 import pytest
+
 from pedalboard import Bitcrush
 from .utils import generate_sine_at
 
@@ -28,12 +29,14 @@ def test_bitcrush(bit_depth: float, fundamental_hz: float, sample_rate: float, n
     sine_wave = generate_sine_at(
         sample_rate, fundamental_hz, num_seconds=0.1, num_channels=num_channels
     )
+
     plugin = Bitcrush(bit_depth)
     output = plugin.process(sine_wave, sample_rate)
 
+    assert np.all(np.isfinite(output))
+
     expected_output = np.around(sine_wave.astype(np.float64) * (2**bit_depth)) / (2**bit_depth)
     np.testing.assert_allclose(output, expected_output, atol=0.01)
-    assert np.all(np.isfinite(output))
 
 
 def test_invalid_bit_depth_raises_exception():
