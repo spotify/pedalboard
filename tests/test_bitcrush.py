@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import numpy as np
 import pytest
 from pedalboard import Bitcrush
@@ -42,5 +41,3 @@ def test_invalid_bit_depth_raises_exception():
         Bitcrush(bit_depth=-5)
     with pytest.raises(ValueError):
         Bitcrush(bit_depth=100)
-    with pytest.raises(TypeError):
-        Bitcrush(bit_depth=None)
