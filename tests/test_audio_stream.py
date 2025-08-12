@@ -24,11 +24,24 @@ import pedalboard
 # Very silly: even just creating an AudioStream object that reads from an `iPhone Microphone``
 # will cause a locally-present iPhone to emit a sound. Running `pytest` on my laptop makes my
 # phone ding.
-INPUT_DEVICE_NAMES_TO_SKIP = {"iPhone Microphone", "AirPods"}
+DEVICE_NAMES_TO_SKIP = {
+    "iPhone Microphone",
+    "AirPods",
+    # PulseAudio devices:
+    "Open Sound System",
+    "JACK Audio Connection Kit",
+    "plugin",
+}
 INPUT_DEVICE_NAMES = [
     n
     for n in pedalboard.io.AudioStream.input_device_names
-    if not any(substr in n for substr in INPUT_DEVICE_NAMES_TO_SKIP)
+    if not any(substring.lower() in n.lower() for substring in DEVICE_NAMES_TO_SKIP)
+]
+
+OUTPUT_DEVICE_NAMES = [
+    n
+    for n in pedalboard.io.AudioStream.output_device_names
+    if not any(substring.lower() in n.lower() for substring in DEVICE_NAMES_TO_SKIP)
 ]
 
 ACCEPTABLE_ERRORS_ON_CI = {"No driver"}
@@ -37,7 +50,7 @@ ACCEPTABLE_ERRORS_ON_CI = {"No driver"}
 # Note: this test may do nothing on CI, because we don't have mock audio devices available.
 # This will run on Linux, macOS and probably Windows as long as at least one audio device is available.
 @pytest.mark.parametrize("input_device_name", INPUT_DEVICE_NAMES)
-@pytest.mark.parametrize("output_device_name", pedalboard.io.AudioStream.output_device_names)
+@pytest.mark.parametrize("output_device_name", OUTPUT_DEVICE_NAMES)
 def test_create_stream(input_device_name: str, output_device_name: str):
     try:
         stream = pedalboard.io.AudioStream(
@@ -168,7 +181,10 @@ def test_read_from_stream_measures_dropped_frames():
         assert stream.running
         assert stream.dropped_input_frame_count == 0
         time.sleep(5 * stream.buffer_size / stream.sample_rate)
-        assert stream.buffered_input_sample_count > 0
+        assert (
+            stream.buffered_input_sample_count is not None
+            and stream.buffered_input_sample_count > 0
+        )
         dropped_count = stream.dropped_input_frame_count
         assert dropped_count > 0
     # The input buffer was cleared on __exit__, so the buffer count should be zero:

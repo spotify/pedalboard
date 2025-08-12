@@ -14,9 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-MAJOR = 0
-MINOR = 9
-PATCH = 16
-
-__version__ = "%d.%d.%d" % (MAJOR, MINOR, PATCH)
+__version__ = "0.9.17"
+# Done this way so we can use dynamic-metadata to parse the version above.
+MAJOR, MINOR, PATCH = (int(x) for x in __version__.split("."))

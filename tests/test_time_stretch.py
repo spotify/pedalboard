@@ -140,7 +140,9 @@ def test_time_stretch_with_array(
 def test_time_stretch_mismatched_buffer_length_and_stretch_factors():
     with pytest.raises(ValueError):
         time_stretch(
-            np.zeros((1, 10), dtype=np.float32), 44100, stretch_factor=np.linspace(0.1, 1.0, 11)
+            np.zeros((1, 10), dtype=np.float32),
+            44100,
+            stretch_factor=np.linspace(0.1, 1.0, 11).astype(np.float64),
         )
 
 
@@ -149,7 +151,7 @@ def test_time_stretch_mismatched_buffer_length_and_pitch_shift():
         time_stretch(
             np.zeros((1, 10), dtype=np.float32),
             44100,
-            pitch_shift_in_semitones=np.linspace(0.1, 1.0, 11),
+            pitch_shift_in_semitones=np.linspace(0.1, 1.0, 11).astype(np.float64),
         )
     assert "buffer" in str(e)
 
@@ -159,7 +161,7 @@ def test_time_stretch_variable_stretch_factor_out_of_range():
         time_stretch(
             np.zeros((1, 10), dtype=np.float32),
             44100,
-            stretch_factor=np.zeros((10,), dtype=np.float32),
+            stretch_factor=np.zeros((10,), dtype=np.float64),
         )
     assert "element at index 0 was 0" in str(e)
 
@@ -169,6 +171,6 @@ def test_time_stretch_variable_pitch_shift_out_of_range():
         time_stretch(
             np.zeros((1, 10), dtype=np.float32),
             44100,
-            pitch_shift_in_semitones=np.ones((10,), dtype=np.float32) * 73,
+            pitch_shift_in_semitones=np.ones((10,), dtype=np.float64) * 73,
         )
     assert "element at index 0 was 73" in str(e)

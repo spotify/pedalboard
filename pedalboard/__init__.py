@@ -33,7 +33,7 @@ except ImportError as _e:
         )
     else:
         raise
-from pedalboard_native.utils import *  # noqa: F403, F401
+from pedalboard_native.utils import *  # noqa: F403, F401 # type: ignore
 
 from ._pedalboard import (  # noqa: F401
     _AVAILABLE_PLUGIN_CLASSES,

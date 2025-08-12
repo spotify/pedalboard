@@ -18,7 +18,7 @@
 import numpy as np
 import pytest
 
-from pedalboard_native._internal import FixedSizeBlockTestPlugin
+from pedalboard_native._internal import FixedSizeBlockTestPlugin  # type: ignore
 
 from .utils import generate_sine_at
 

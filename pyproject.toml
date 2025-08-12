@@ -1,23 +1,114 @@
 [build-system]
-requires = [
-    "setuptools>=59.6.0",
-    "wheel>=0.36.2",
-    'pybind11>=2.13; python_version>="3.9"',
-    'pybind11<=2.12; python_version<="3.8"',
-    # Building with NumPy 2 allows backwards compatibility with NumPy 1:
-    'numpy>=2.1.0rc1; python_version>="3.13"',
-    'numpy>=2; python_version>="3.9" and python_version<"3.13"',
-    'numpy<2; python_version<="3.8"',
-]
+requires = ["scikit-build-core>=0.5.0", "pybind11>=2.9.0"]
+build-backend = "scikit_build_core.build"
 
-build-backend = "setuptools.build_meta"
+[tool.cibuildwheel]
+enable = ["cpython-freethreading"]
+test-requires = ["-r test-requirements.txt"]
+test-command = "pytest {project}/tests"
+# The manylinux container doesn't have a new enough glibc version,
+# so we can't run post-wheel-build tests there.
+# The musllinux containers on aarch64 take 6+ hours to test.
+# Also testing any pypy versions fails, as TensorFlow isn't pypy compatible.
+test-skip = "*manylinux* *musllinux_aarch* *pp* *-macosx_universal2:arm64"
+musllinux-x86_64-image = "quay.io/pypa/musllinux_1_1_x86_64:2024-04-29-07d05a0"
+musllinux-aarch64-image = "quay.io/pypa/musllinux_1_1_aarch64:2024-04-29-07d05a0"
 
 # See: https://cibuildwheel.readthedocs.io/en/stable/options/#examples
 [tool.cibuildwheel.linux]
 before-all = "yum install -y libsndfile libX11-devel libXrandr-devel libXinerama-devel libXrender-devel libXcomposite-devel libXinerama-devel libXcursor-devel freetype-devel alsa-lib-devel"
+repair-wheel-command = "pip install auditwheel-symbols && (auditwheel repair -w {dest_dir} {wheel} || auditwheel-symbols --manylinux 2010 {wheel})"
+archs = ["auto64", "aarch64"]
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64", "universal2"]
+
+[tool.cibuildwheel.windows]
+archs = ["auto"]
 
 [[tool.cibuildwheel.overrides]]
 # Use apk instead of yum when building on Alpine Linux
 # (Note: this is experimental, as most VSTs require glibc and thus Alpine Linux isn't that useful)
 select = "*-musllinux*"
 before-all = "apk add libsndfile libx11-dev libxrandr-dev libxinerama-dev libxrender-dev libxcomposite-dev libxinerama-dev libxcursor-dev freetype-dev libexecinfo-dev alsa-lib-dev"
+
+[project]
+name = "pedalboard"
+authors = [{ name = "Peter Sobot", email = "psobot@spotify.com" }]
+description = "A Python library for adding effects to audio."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: C++",
+    "Programming Language :: Python",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = ["numpy"]
+version = "0.9.17"
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pyright",
+    "mutagen",
+    "pytest-cov",
+    "pytest-mock",
+    "tqdm",
+    "psutil",
+    "mypy",
+    "pyright",
+    "mido",
+]
+
+[tool.scikit-build]
+cmake.build-type = "Release"
+build.verbose = true
+logging.level = "DEBUG"
+wheel.packages = ["pedalboard", "pedalboard.io", "pedalboard_native"]
+sdist.include = [
+    "pedalboard/**/*.py",
+    "pedalboard_native/**/*.py",
+    "pedalboard/py.typed",
+    "pedalboard_native/py.typed",
+    "JUCE/**/*.cpp",
+    "JUCE/**/*.c",
+    "JUCE/**/*.h",
+    "JUCE/**/*.mm",
+    "JUCE/**/*.m",
+    "vendors/**/*.c",
+    "vendors/**/*.cpp",
+    "vendors/**/*.h",
+    "vendors/**/*.inc",
+]
+sdist.exclude = ["**/__pycache__"]
+
+# [tool.scikit-build.include]
+# pedalboard = ["py.typed", "*.pyi", "**/*.pyi"]
+# pedalboard_native = ["py.typed", "*.pyi", "**/*.pyi"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+lint.extend-ignore = ["E203", "F541"]
+exclude = [
+    ".git",
+    "dist",
+    "doc",
+    "build",
+    "JUCE",
+    "examples",
+    "vendors",
+    "*.pyi",
+]

@@ -32,7 +32,7 @@ from typing import (
 )
 
 from pedalboard_native import (  # type: ignore
-    ExternalPlugin,
+    ExternalPlugin,  # type: ignore
     Plugin,
     _AudioProcessorParameter,
 )
@@ -288,6 +288,9 @@ class AudioProcessorParameter(object):
         self.ranges: Dict[Tuple[float, float], Union[str, float, bool]] = {}
 
         with self.__get_cpp_parameter() as cpp_parameter:
+            text_value: Optional[str] = None
+            start_of_range: float = 0
+
             for fetch_slow in (False, True):
                 start_of_range: float = 0
                 text_value: Optional[str] = None
@@ -390,7 +393,7 @@ class AudioProcessorParameter(object):
         same memory address every time we might need it. This Python wrapper
         looks it up dynamically.
         """
-        _parameter = self.__plugin._get_parameter(self.__parameter_name)
+        _parameter = self.__plugin._get_parameter(self.__parameter_name)  # type: ignore
         if _parameter and _parameter.name == self.__parameter_name:
             yield _parameter
             return
@@ -636,7 +639,12 @@ class _PythonExternalPluginMixin:
             if key not in parameters:
                 raise AttributeError(
                     'Parameter named "{}" not found. Valid options: {}'.format(
-                        key, ", ".join(self._parameter_weakrefs.keys())
+                        key,
+                        ", ".join(
+                            cast(
+                                Dict[str, AudioProcessorParameter], self._parameter_weakrefs
+                            ).keys()
+                        ),
                     )
                 )
             setattr(self, key, value)
@@ -654,12 +662,13 @@ class _PythonExternalPluginMixin:
             self.__python_to_cpp_names__ = {}
 
         parameters = {}
-        for cpp_parameter in self._parameters:
+        for cpp_parameter in self._parameters:  # type: ignore
             if any([regex.match(cpp_parameter.name) for regex in PARAMETER_NAME_REGEXES_TO_IGNORE]):
                 continue
             if cpp_parameter.name not in self.__python_parameter_cache__:
                 self.__python_parameter_cache__[cpp_parameter.name] = AudioProcessorParameter(
-                    self, cpp_parameter.name
+                    self,  # type: ignore
+                    cpp_parameter.name,
                 )
             parameter = self.__python_parameter_cache__[cpp_parameter.name]
             if parameter.python_name:
@@ -677,7 +686,7 @@ class _PythonExternalPluginMixin:
         if not cpp_name:
             return self._get_parameters().get(python_name)
 
-        cpp_parameter = self._get_parameter(cpp_name)
+        cpp_parameter = self._get_parameter(cpp_name)  # type: ignore
         if not cpp_parameter:
             return None
 
@@ -689,11 +698,11 @@ class _PythonExternalPluginMixin:
 
     def __dir__(self):
         parameter_names = []
-        for parameter in self._parameters:
+        for parameter in self._parameters:  # type: ignore
             name = to_python_parameter_name(parameter)
             if name:
                 parameter_names.append(name)
-        return super().__dir__() + parameter_names
+        return super().__dir__() + parameter_names  # type: ignore
 
     def __getattr__(self, name: str):
         if not name.startswith("_"):
@@ -702,12 +711,13 @@ class _PythonExternalPluginMixin:
                 string_value = parameter.string_value
                 if parameter.type is float:
                     return FloatWithParameter(
-                        float(strip_common_float_suffixes(string_value)), wrapped=parameter
+                        float(strip_common_float_suffixes(string_value)),
+                        wrapped=parameter,  # type: ignore
                     )  # type: ignore
                 elif parameter.type is bool:
                     return BooleanWithParameter(
                         parameter.raw_value >= 0.5,
-                        wrapped=parameter,
+                        wrapped=parameter,  # type: ignore
                     )  # type: ignore
                 elif parameter.type is str:
                     return StringWithParameter(str(string_value), wrapped=parameter)  # type: ignore

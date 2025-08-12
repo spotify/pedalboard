@@ -175,3 +175,10 @@ cython_debug/
 .vscode
 
 .DS_Store
+
+# Generated docs:
+docs/_images/
+docs/_sources/
+docs/_static/
+docs/*.html
+docs/*.js
