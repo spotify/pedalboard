@@ -15,6 +15,10 @@
  * limitations under the License.
  */
 
+// This header implements the ExternalPlugin wrapper used to host VST3 and
+// AudioUnit plugins. It now passes MIDI data to both instrument and effect
+// plugins so that effect processors can respond to incoming MIDI messages.
+
 #pragma once
 
 #include <mutex>
@@ -1035,7 +1039,7 @@ public:
       {
         juce::dsp::AudioBlock<float> block(audioBuffer);
         juce::dsp::ProcessContextReplacing<float> context(block);
-        process(context);
+        process(context, emptyMidiBuffer);
       }
     }
 
@@ -1058,7 +1062,7 @@ public:
       }
       juce::dsp::AudioBlock<float> block(audioBuffer);
       juce::dsp::ProcessContextReplacing<float> context(block);
-      process(context);
+      process(context, emptyMidiBuffer);
     }
 
     auto signalVolume = audioBuffer.getMagnitude(0, bufferSize);
@@ -1071,7 +1075,7 @@ public:
     {
       juce::dsp::AudioBlock<float> block(audioBuffer);
       juce::dsp::ProcessContextReplacing<float> context(block);
-      process(context);
+      process(context, emptyMidiBuffer);
     }
 
     auto magnitudeOfSilentBuffer = audioBuffer.getMagnitude(0, bufferSize);
@@ -1144,11 +1148,13 @@ public:
     }
   }
 
+  // Process audio for this external plugin instance. MIDI messages are now
+  // forwarded directly to the plugin so effects can react to them in real time.
   int process(
-      const juce::dsp::ProcessContextReplacing<float> &context) override {
+      const juce::dsp::ProcessContextReplacing<float> &context,
+      const juce::MidiBuffer &midiMessages) override {
 
     if (pluginInstance) {
-      juce::MidiBuffer emptyMidiBuffer;
 
       if (pluginInstance->getMainBusNumInputChannels() == 0 &&
           context.getInputBlock().getNumChannels() > 0) {
@@ -1210,7 +1216,8 @@ public:
                                            channelPointers.size(),
                                            outputBlock.getNumSamples());
 
-      pluginInstance->processBlock(audioBuffer, emptyMidiBuffer);
+      // Pass the MIDI data to JUCE so the plugin can react accordingly.
+      pluginInstance->processBlock(audioBuffer, midiMessages);
       samplesProvided += outputBlock.getNumSamples();
 
       // To compensate for any latency added by the plugin,
@@ -1579,12 +1586,19 @@ inline void init_external_plugins(py::module &m) {
           .def(
               "process",
               [](std::shared_ptr<Plugin> self, const py::array inputArray,
-                 double sampleRate, unsigned int bufferSize, bool reset) {
-                return process(inputArray, sampleRate, {self}, bufferSize,
-                               reset);
+                 double sampleRate, py::object midiMessages,
+                 unsigned int bufferSize, bool reset) {
+                juce::MidiBuffer midi;
+                juce::MidiBuffer *ptr = nullptr;
+                if (!midiMessages.is_none()) {
+                  midi = parseMidiBufferFromPython(midiMessages, sampleRate);
+                  ptr = &midi;
+                }
+                return process(inputArray, sampleRate, {self}, bufferSize, reset,
+                               ptr);
               },
               EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("input_array"),
-              py::arg("sample_rate"),
+              py::arg("sample_rate"), py::arg("midi_messages") = py::none(),
               py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
               py::arg("reset") = true)
           .def(
@@ -1810,21 +1824,38 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
       .def(
           "process",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
-             double sampleRate, unsigned int bufferSize, bool reset) {
-            return process(inputArray, sampleRate, {self}, bufferSize, reset);
+             double sampleRate, py::object midiMessages, unsigned int bufferSize,
+             bool reset) {
+            juce::MidiBuffer midi;
+            juce::MidiBuffer *ptr = nullptr;
+            if (!midiMessages.is_none()) {
+              midi = parseMidiBufferFromPython(midiMessages, sampleRate);
+              ptr = &midi;
+            }
+            return process(inputArray, sampleRate, {self}, bufferSize, reset,
+                           ptr);
           },
           EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("input_array"),
-          py::arg("sample_rate"), py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-          py::arg("reset") = true)
+          py::arg("sample_rate"), py::arg("midi_messages") = py::none(),
+          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
       .def(
           "__call__",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
-             double sampleRate, unsigned int bufferSize, bool reset) {
-            return process(inputArray, sampleRate, {self}, bufferSize, reset);
+             double sampleRate, py::object midiMessages, unsigned int bufferSize,
+             bool reset) {
+            juce::MidiBuffer midi;
+            juce::MidiBuffer *ptr = nullptr;
+            if (!midiMessages.is_none()) {
+              midi = parseMidiBufferFromPython(midiMessages, sampleRate);
+              ptr = &midi;
+            }
+            return process(inputArray, sampleRate, {self}, bufferSize, reset,
+                           ptr);
           },
           "Run an audio or MIDI buffer through this plugin, returning "
           "audio. Alias for :py:meth:`process`.",
           py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("midi_messages") = py::none(),
           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
       .def("process",
            &ExternalPlugin<juce::PatchedVST3PluginFormat>::renderMIDIMessages,
@@ -2036,21 +2067,39 @@ see :class:`pedalboard.VST3Plugin`.)
       .def(
           "process",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
-             double sampleRate, unsigned int bufferSize, bool reset) {
-            return process(inputArray, sampleRate, {self}, bufferSize, reset);
+             double sampleRate, py::object midiMessages, unsigned int bufferSize,
+             bool reset) {
+            juce::MidiBuffer midi;
+            juce::MidiBuffer *ptr = nullptr;
+            if (!midiMessages.is_none()) {
+              midi = parseMidiBufferFromPython(midiMessages, sampleRate);
+              ptr = &midi;
+            }
+            return process(inputArray, sampleRate, {self}, bufferSize, reset,
+                           ptr);
           },
           EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("input_array"),
-          py::arg("sample_rate"), py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+          py::arg("sample_rate"), py::arg("midi_messages") = py::none(),
+          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
           py::arg("reset") = true)
       .def(
           "__call__",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
-             double sampleRate, unsigned int bufferSize, bool reset) {
-            return process(inputArray, sampleRate, {self}, bufferSize, reset);
+             double sampleRate, py::object midiMessages, unsigned int bufferSize,
+             bool reset) {
+            juce::MidiBuffer midi;
+            juce::MidiBuffer *ptr = nullptr;
+            if (!midiMessages.is_none()) {
+              midi = parseMidiBufferFromPython(midiMessages, sampleRate);
+              ptr = &midi;
+            }
+            return process(inputArray, sampleRate, {self}, bufferSize, reset,
+                           ptr);
           },
           "Run an audio or MIDI buffer through this plugin, returning "
           "audio. Alias for :py:meth:`process`.",
           py::arg("input_array"), py::arg("sample_rate"),
+          py::arg("midi_messages") = py::none(),
           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
       .def("process",
            &ExternalPlugin<juce::AudioUnitPluginFormat>::renderMIDIMessages,
