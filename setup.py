@@ -404,7 +404,7 @@ def patch_compile(original_compile):
         # Remove the Python header from most files; we only need it when compiling
         # This speeds up compile times on CI as most of the objects don't need Python
         # headers at all, and including -I/include/python3.x/Python.h prevents us from
-        # re-using the same object file for different Python versions.
+        # reusing the same object file for different Python versions.
         if any("include/python3" in arg for arg in _cc_args) and should_omit_python_header:
             _cc_args = [arg for arg in _cc_args if "include/python3" not in arg]
 
