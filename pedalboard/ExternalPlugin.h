@@ -900,8 +900,8 @@ public:
    * loading assets from disk, etc). These background tasks may depend on the
    * event loop, which Pedalboard does not pump by default.
    *
-   * Returns true if the plugin rendered audio within the alloted timeout; false
-   * if no audio was received before the timeout expired.
+   * Returns true if the plugin rendered audio within the allotted timeout;
+   * false if no audio was received before the timeout expired.
    */
   bool attemptToWarmUp() {
     if (!pluginInstance || initializationTimeout <= 0)
@@ -919,7 +919,7 @@ public:
       return false;
     }
 
-    // Set input and output busses/channels appropriately:
+    // Set input and output buses/channels appropriately:
     int numOutputChannels =
         std::max(pluginInstance->getMainBusNumInputChannels(),
                  pluginInstance->getMainBusNumOutputChannels());
@@ -1019,7 +1019,7 @@ public:
       return ExternalPluginReloadType::Unknown;
     }
 
-    // Set input and output busses/channels appropriately:
+    // Set input and output buses/channels appropriately:
     setNumChannels(numInputChannels);
     pluginInstance->setNonRealtime(true);
     pluginInstance->prepareToPlay(sampleRate, bufferSize);
