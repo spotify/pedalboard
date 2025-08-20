@@ -900,8 +900,8 @@ public:
    * loading assets from disk, etc). These background tasks may depend on the
    * event loop, which Pedalboard does not pump by default.
    *
-   * Returns true if the plugin rendered audio within the allotted timeout; false
-   * if no audio was received before the timeout expired.
+   * Returns true if the plugin rendered audio within the allotted timeout;
+   * false if no audio was received before the timeout expired.
    */
   bool attemptToWarmUp() {
     if (!pluginInstance || initializationTimeout <= 0)
