@@ -1,0 +1,1319 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+<meta property="og:title" content="The pedalboard.io API" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://spotify.github.io/pedalboard/reference/pedalboard.io.html" />
+<meta property="og:site_name" content="Pedalboard v0.9.17 Documentation" />
+<meta property="og:description" content="This module provides classes and functions for reading and writing audio files or streams. pedalboard.io allows for reading and writing to audio files just like working with other types of files in..." />
+<meta property="og:image" content="https://repository-images.githubusercontent.com/383471193/0f79b949-9b91-4436-bfc4-05d30ef384cc" />
+<meta property="og:image:alt" content="🎛 🔊 Documentation for Pedalboard: A Python library for working with audio." />
+<meta name="description" content="This module provides classes and functions for reading and writing audio files or streams. pedalboard.io allows for reading and writing to audio files just like working with other types of files in..." />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Examples" href="../examples.html" /><link rel="prev" title="The pedalboard API" href="pedalboard.html" />
+
+    <link rel="shortcut icon" href="../_static/favicon.ico"/><meta name="generator" content="sphinx-5.3.0, furo 2022.09.29"/>
+        <title>The pedalboard.io API - Pedalboard v0.9.17 Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=d81277517bee4d6b0349d71bb2661d4890b5617c" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?digest=30d1aed668e5c3a91c3e3bf6a60b675221979f0e" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-half" viewBox="0 0 24 24">
+    <title>Auto light/dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M13 12h5" />
+      <path d="M13 15h4" />
+      <path d="M13 18h1" />
+      <path d="M13 9h4" />
+      <path d="M13 6h1" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">Pedalboard v0.9.17 Documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand centered" href="../index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="../_static/pedalboard_logo_small.png" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">Pedalboard v0.9.17 Documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="pedalboard.html">API Reference (Audio Plugins)</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">API Reference (Audio I/O)</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Plugin Compatibility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../internals.html">Pedalboard Internals</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+<li class="toctree-l1"><a class="reference external" href="http://github.com/spotify/pedalboard">GitHub Repo</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main">
+          <section id="the-pedalboard-io-api">
+<h1>The <code class="docutils literal notranslate"><span class="pre">pedalboard.io</span></code> API<a class="headerlink" href="#the-pedalboard-io-api" title="Permalink to this heading">#</a></h1>
+<p>This module provides classes and functions for reading and writing audio files or streams.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For audio effects, see the <a class="reference internal" href="pedalboard.html#module-pedalboard" title="pedalboard"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pedalboard</span></code></a> module.</p>
+</div>
+<p><a class="reference internal" href="#module-pedalboard.io" title="pedalboard.io"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pedalboard.io</span></code></a> allows for reading and writing to audio files
+just like working with other types of files in Python. Audio encoding
+and decoding is handled automatically behind the scenes in C++, providing
+high quality, high performance, thread-safe access to audio files.</p>
+<p>The goal of <a class="reference internal" href="#module-pedalboard.io" title="pedalboard.io"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pedalboard.io</span></code></a> is to direct access to audio like
+a regular file in Python:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pedalboard.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">AudioFile</span>
+
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;my_filename.mp3&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+   <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">duration</span><span class="p">)</span> <span class="c1"># =&gt; 30.0</span>
+   <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span> <span class="c1"># =&gt; 44100</span>
+   <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">num_channels</span><span class="p">)</span> <span class="c1"># =&gt; 2</span>
+   <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">*</span> <span class="mi">10</span><span class="p">))</span>
+   <span class="c1"># =&gt; returns a NumPy array of shape (2, 441_000):</span>
+   <span class="c1">#    [[ 0.  0.  0. ... -0. -0. -0.]</span>
+   <span class="c1">#     [ 0.  0.  0. ... -0. -0. -0.]]</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.io.AudioFile</span></code></a> class should be all that’s necessary for most use cases.</p>
+<ul class="simple">
+<li><p>Writing to a file can be accomplished by passing <code class="docutils literal notranslate"><span class="pre">&quot;w&quot;</span></code> as a second argument, just like with regular files in Python.</p></li>
+<li><p>Changing the sample rate of a file can be accomplished by calling <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.resampled_to" title="pedalboard.io.ReadableAudioFile.resampled_to"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pedalboard.io.ReadableAudioFile.resampled_to()</span></code></a>.</p></li>
+</ul>
+<p>If you find yourself importing <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.io.ReadableAudioFile</span></code></a>,
+<a class="reference internal" href="#pedalboard.io.WriteableAudioFile" title="pedalboard.io.WriteableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.io.WriteableAudioFile</span></code></a>, or <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.io.ResampledReadableAudioFile</span></code></a> directly,
+you <em>probably don’t need to do that</em> - <a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.io.AudioFile</span></code></a> has you covered.</p>
+</div>
+<p>The following documentation lists all of the available I/O classes.</p>
+<span class="target" id="module-pedalboard.io"></span><dl class="py class">
+<dt class="sig sig-object py" id="pedalboard.io.AudioFile">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.io.</span></span><span class="sig-name descname"><span class="pre">AudioFile</span></span><a class="headerlink" href="#pedalboard.io.AudioFile" title="Permalink to this definition">#</a></dt>
+<dd><p>A base class for readable and writeable audio files.</p>
+<p><a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> may be used just like a regular Python <code class="docutils literal notranslate"><span class="pre">open</span></code>
+function call, to open an audio file for reading (with the default <code class="docutils literal notranslate"><span class="pre">&quot;r&quot;</span></code> mode)
+or for writing (with the <code class="docutils literal notranslate"><span class="pre">&quot;w&quot;</span></code> mode).</p>
+<dl class="simple">
+<dt>Unlike a typical <code class="docutils literal notranslate"><span class="pre">open</span></code> call:</dt><dd><ul class="simple">
+<li><p><a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> objects can only be created in read (<code class="docutils literal notranslate"><span class="pre">&quot;r&quot;</span></code>) or write (<code class="docutils literal notranslate"><span class="pre">&quot;w&quot;</span></code>) mode.
+All audio files are binary (so a trailing <code class="docutils literal notranslate"><span class="pre">b</span></code> would be redundant) and appending to an
+existing audio file is not possible.</p></li>
+<li><p>If opening an audio file in write mode (<code class="docutils literal notranslate"><span class="pre">&quot;w&quot;</span></code>), one additional argument is required:
+the sample rate of the file.</p></li>
+<li><p>A file-like object can be provided to <a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a>, allowing for reading and
+writing to in-memory streams or buffers. The provided file-like object must be seekable
+and must be opened in binary mode (i.e.: <code class="docutils literal notranslate"><span class="pre">io.BytesIO</span></code> instead of <code class="docutils literal notranslate"><span class="pre">io.StringIO</span></code>).
+A <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">memoryview</span></code></a> object may also be provided when reading audio.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Opening an audio file on disk:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;my_file.mp3&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">first_ten_seconds</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">*</span> <span class="mi">10</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Opening a file-like object:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ogg_buffer</span><span class="p">:</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span> <span class="o">=</span> <span class="n">get_audio_buffer</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="n">ogg_buffer</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">first_ten_seconds</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">*</span> <span class="mi">10</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Opening an audio file on disk, while resampling on-the-fly:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;my_file.mp3&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">resampled_to</span><span class="p">(</span><span class="mi">22_050</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+   <span class="n">first_ten_seconds</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">*</span> <span class="mi">10</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Writing an audio file on disk:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;white_noise.wav&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="mi">44100</span><span class="p">,</span> <span class="n">num_channels</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">44100</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Writing encoded audio to a file-like object:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">wav_buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="n">wav_buffer</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">samplerate</span><span class="o">=</span><span class="mi">44100</span><span class="p">,</span> <span class="n">num_channels</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;wav&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">44100</span><span class="p">))</span>
+<span class="n">wav_buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>  <span class="c1"># do something with the file-like object</span>
+</pre></div>
+</div>
+<p>Encoding audio as <code class="docutils literal notranslate"><span class="pre">wav</span></code>, <code class="docutils literal notranslate"><span class="pre">ogg</span></code>, <code class="docutils literal notranslate"><span class="pre">mp3</span></code>, or <code class="docutils literal notranslate"><span class="pre">flac</span></code> as a <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code></a> buffer in one line:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sr</span> <span class="o">=</span> <span class="mi">44100</span>
+<span class="n">num_channels</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">audio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">num_channels</span><span class="p">,</span> <span class="n">sr</span><span class="p">)</span>
+
+<span class="n">wav_buffer</span> <span class="o">=</span> <span class="n">AudioFile</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">num_channels</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;wav&quot;</span><span class="p">)</span>
+<span class="n">ogg_buffer</span> <span class="o">=</span> <span class="n">AudioFile</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">num_channels</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;ogg&quot;</span><span class="p">)</span>
+<span class="n">mp3_buffer</span> <span class="o">=</span> <span class="n">AudioFile</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">num_channels</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;mp3&quot;</span><span class="p">)</span>
+<span class="n">flac_buffer</span> <span class="o">=</span> <span class="n">AudioFile</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">num_channels</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;flac&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Writing to an audio file while also specifying quality options for the codec:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span>
+    <span class="s2">&quot;white_noise.mp3&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;w&quot;</span><span class="p">,</span>
+    <span class="n">samplerate</span><span class="o">=</span><span class="mi">44100</span><span class="p">,</span>
+    <span class="n">num_channels</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">quality</span><span class="o">=</span><span class="mi">160</span><span class="p">,</span>  <span class="c1"># kilobits per second</span>
+<span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">44100</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Re-encoding a WAV file as an MP3 in four lines of Python:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;input.wav&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">i</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;output.mp3&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">i</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span> <span class="n">i</span><span class="o">.</span><span class="n">num_channels</span><span class="p">)</span> <span class="k">as</span> <span class="n">o</span><span class="p">:</span>
+        <span class="k">while</span> <span class="n">i</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">i</span><span class="o">.</span><span class="n">frames</span><span class="p">:</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1024</span><span class="p">))</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Calling the <a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> constructor does not actually return an
+<a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a>. If opening an audio file in read (“r”) mode, a
+<a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> will be returned. If opening an audio file
+in write (“w”) mode, a <a class="reference internal" href="#pedalboard.io.WriteableAudioFile" title="pedalboard.io.WriteableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">WriteableAudioFile</span></code></a> will be returned. See
+those classes below for documentation.</p>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.AudioFile.encode">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">samplerate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bit_depth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quality</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#pedalboard.io.AudioFile.encode" title="Permalink to this definition">#</a></dt>
+<dd><p>Encode an audio buffer to a Python <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code></a> object.</p>
+<p>This function will encode an entire audio buffer at once and return a <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code></a>
+object representing the bytes of the resulting audio file.</p>
+<p>This function produces identical output to the following code:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">buf</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">samplerate</span><span class="p">,</span> <span class="n">num_channels</span><span class="p">,</span> <span class="n">bit_depth</span><span class="p">,</span> <span class="nb">format</span><span class="p">,</span> <span class="n">quality</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>However, this function is much more efficient than the above code, as it writes
+to an in-memory buffer in C++ and avoids interacting with Python at all during the
+encoding process. This allows Python’s Global Interpreter Lock (GIL) to be
+released, which also makes this method much more performant in multi-threaded
+programs.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This function will encode the entire audio buffer at once, and may consume a
+large amount of memory if the input audio buffer is large.</p>
+<p>To avoid running out of memory with arbitrary-length inputs, it is
+recommended to stream the output into a file or file-like object by using
+<a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> class in write (<code class="docutils literal notranslate"><span class="pre">&quot;w&quot;</span></code>) mode instead.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.io.</span></span><span class="sig-name descname"><span class="pre">AudioStream</span></span><a class="headerlink" href="#pedalboard.io.AudioStream" title="Permalink to this definition">#</a></dt>
+<dd><p>A class that allows interacting with live streams of audio from an input
+audio device (i.e.: a microphone, audio interface, etc) and/or to an
+output device (speaker, headphones), allowing access to the audio
+stream from within Python code.</p>
+<p>Use <a class="reference internal" href="#pedalboard.io.AudioStream.play" title="pedalboard.io.AudioStream.play"><code class="xref py py-meth docutils literal notranslate"><span class="pre">AudioStream.play()</span></code></a> to play audio data to your speakers:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Play a 10-second chunk of an audio file:</span>
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;my_audio_file.mp3&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">chunk</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span>
+<span class="n">AudioStream</span><span class="o">.</span><span class="n">play</span><span class="p">(</span><span class="n">chunk</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">samplerate</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Or use <a class="reference internal" href="#pedalboard.io.AudioStream.write" title="pedalboard.io.AudioStream.write"><code class="xref py py-meth docutils literal notranslate"><span class="pre">AudioStream.write()</span></code></a> to stream audio in chunks:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Play an audio file by looping through it in chunks:</span>
+<span class="k">with</span> <span class="n">AudioStream</span><span class="p">(</span><span class="n">output_device</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">stream</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;my_audio_file.mp3&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">while</span> <span class="n">f</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">f</span><span class="o">.</span><span class="n">frames</span><span class="p">:</span>
+            <span class="c1"># Decode and play 512 samples at a time:</span>
+            <span class="n">stream</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">512</span><span class="p">))</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="#pedalboard.io.AudioStream" title="pedalboard.io.AudioStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioStream</span></code></a> may also be used to pass live audio through a <code class="xref py py-class docutils literal notranslate"><span class="pre">Pedalboard</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Pass both an input and output device name to connect both ends:</span>
+<span class="n">input_device_name</span> <span class="o">=</span> <span class="n">AudioStream</span><span class="o">.</span><span class="n">default_input_device_name</span>
+<span class="n">output_device_name</span> <span class="o">=</span> <span class="n">AudioStream</span><span class="o">.</span><span class="n">default_output_device_name</span>
+<span class="k">with</span> <span class="n">AudioStream</span><span class="p">(</span><span class="n">input_device_name</span><span class="p">,</span> <span class="n">output_device_name</span><span class="p">)</span> <span class="k">as</span> <span class="n">stream</span><span class="p">:</span>
+    <span class="c1"># In this block, audio is streaming through `stream`!</span>
+    <span class="c1"># Audio will be coming out of your speakers at this point.</span>
+
+    <span class="c1"># Add plugins to the live audio stream:</span>
+    <span class="n">reverb</span> <span class="o">=</span> <span class="n">Reverb</span><span class="p">()</span>
+    <span class="n">stream</span><span class="o">.</span><span class="n">plugins</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reverb</span><span class="p">)</span>
+
+    <span class="c1"># Change plugin properties as the stream is running:</span>
+    <span class="n">reverb</span><span class="o">.</span><span class="n">wet_level</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+    <span class="c1"># Delete plugins:</span>
+    <span class="k">del</span> <span class="n">stream</span><span class="o">.</span><span class="n">plugins</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="c1"># Or use AudioStream synchronously:</span>
+<span class="n">stream</span> <span class="o">=</span> <span class="n">AudioStream</span><span class="p">(</span><span class="n">input_device_name</span><span class="p">,</span> <span class="n">output_device_name</span><span class="p">)</span>
+<span class="n">stream</span><span class="o">.</span><span class="n">plugins</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Reverb</span><span class="p">(</span><span class="n">wet_level</span><span class="o">=</span><span class="mf">1.0</span><span class="p">))</span>
+<span class="n">stream</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>  <span class="c1"># Run the stream until Ctrl-C is received</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The <a class="reference internal" href="#pedalboard.io.AudioStream" title="pedalboard.io.AudioStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioStream</span></code></a> class implements a context manager interface
+to ensure that audio streams are never left “dangling” (i.e.: running in
+the background without being stopped).</p>
+<p>While it is possible to call the <a class="reference internal" href="#pedalboard.io.AudioStream.__enter__" title="pedalboard.io.AudioStream.__enter__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__enter__()</span></code></a> method directly to run an
+audio stream in the background, this can have some nasty side effects. If the
+<a class="reference internal" href="#pedalboard.io.AudioStream" title="pedalboard.io.AudioStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioStream</span></code></a> object is no longer reachable (not bound to a variable,
+not in scope, etc), the audio stream will continue to run forever, and
+won’t stop until the Python interpreter exits.</p>
+<p>To run an <a class="reference internal" href="#pedalboard.io.AudioStream" title="pedalboard.io.AudioStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioStream</span></code></a> in the background, use Python’s
+<a class="reference external" href="https://docs.python.org/3/library/threading.html#module-threading" title="(in Python v3.13)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">threading</span></code></a> module to run the stream object method on a
+background thread, allowing for easier cleanup.</p>
+</div>
+<p><em>Introduced in v0.7.0 for macOS and Windows. Linux support introduced in v0.9.14.</em></p>
+<p><a class="reference internal" href="#pedalboard.io.AudioStream.read" title="pedalboard.io.AudioStream.read"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read()</span></code></a> <em>and</em> <a class="reference internal" href="#pedalboard.io.AudioStream.write" title="pedalboard.io.AudioStream.write"><code class="xref py py-meth docutils literal notranslate"><span class="pre">write()</span></code></a> <em>methods introduced in v0.9.12.</em></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.__enter__">
+<span class="sig-name descname"><span class="pre">__enter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pedalboard.io.AudioStream" title="pedalboard.io.AudioStream"><span class="pre">pedalboard.io.AudioStream</span></a></span></span><a class="headerlink" href="#pedalboard.io.AudioStream.__enter__" title="Permalink to this definition">#</a></dt>
+<dd><p>Use this <a class="reference internal" href="#pedalboard.io.AudioStream" title="pedalboard.io.AudioStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioStream</span></code></a> as a context manager. Entering the context manager will immediately start the audio stream, sending audio through to the output device.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.__exit__">
+<span class="sig-name descname"><span class="pre">__exit__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><span class="pre">object</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><span class="pre">object</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><span class="pre">object</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.AudioStream.__exit__" title="Permalink to this definition">#</a></dt>
+<dd><p>Exit the context manager, ending the audio stream. Once called, the audio stream will be stopped (i.e.: <a class="reference internal" href="#pedalboard.io.AudioStream.running" title="pedalboard.io.AudioStream.running"><code class="xref py py-attr docutils literal notranslate"><span class="pre">running</span></code></a> will be <code class="xref py py-const docutils literal notranslate"><span class="pre">False</span></code>).</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.buffer_size">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">buffer_size</span></span><a class="headerlink" href="#pedalboard.io.AudioStream.buffer_size" title="Permalink to this definition">#</a></dt>
+<dd><p>The size (in frames) of the buffer used between the audio hardware and Python.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.buffered_input_sample_count">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">buffered_input_sample_count</span></span><a class="headerlink" href="#pedalboard.io.AudioStream.buffered_input_sample_count" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of frames of audio that are currently in the input buffer. This number will change rapidly, and will be <code class="xref py py-const docutils literal notranslate"><span class="pre">None</span></code> if no input device is connected.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.AudioStream.close" title="Permalink to this definition">#</a></dt>
+<dd><p>Close the audio stream, stopping the audio device and releasing any resources. After calling close, this AudioStream object is no longer usable.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.dropped_input_frame_count">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dropped_input_frame_count</span></span><a class="headerlink" href="#pedalboard.io.AudioStream.dropped_input_frame_count" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of frames of audio that were dropped since the last call to <a class="reference internal" href="#pedalboard.io.AudioStream.read" title="pedalboard.io.AudioStream.read"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read()</span></code></a>. To prevent audio from being dropped during recording, ensure that you call <a class="reference internal" href="#pedalboard.io.AudioStream.read" title="pedalboard.io.AudioStream.read"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read()</span></code></a> as often as possible or increase your buffer size.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.ignore_dropped_input">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ignore_dropped_input</span></span><a class="headerlink" href="#pedalboard.io.AudioStream.ignore_dropped_input" title="Permalink to this definition">#</a></dt>
+<dd><p>Controls the behavior of the <a class="reference internal" href="#pedalboard.io.AudioStream.read" title="pedalboard.io.AudioStream.read"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read()</span></code></a> method when audio data is dropped. If this property is false (the default), the <a class="reference internal" href="#pedalboard.io.AudioStream.read" title="pedalboard.io.AudioStream.read"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read()</span></code></a> method will raise a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError" title="(in Python v3.13)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">RuntimeError</span></code></a> if any audio data is dropped in between calls. If this property is true, the <a class="reference internal" href="#pedalboard.io.AudioStream.read" title="pedalboard.io.AudioStream.read"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read()</span></code></a> method will return the most recent audio data available, even if some audio data was dropped.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <a class="reference internal" href="#pedalboard.io.AudioStream.dropped_input_frame_count" title="pedalboard.io.AudioStream.dropped_input_frame_count"><code class="xref py py-attr docutils literal notranslate"><span class="pre">dropped_input_frame_count</span></code></a> property is unaffected by this setting.</p>
+</div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.num_input_channels">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_input_channels</span></span><a class="headerlink" href="#pedalboard.io.AudioStream.num_input_channels" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of input channels on the input device. Will be <code class="docutils literal notranslate"><span class="pre">0</span></code> if no input device is connected.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.num_output_channels">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_output_channels</span></span><a class="headerlink" href="#pedalboard.io.AudioStream.num_output_channels" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of output channels on the output device. Will be <code class="docutils literal notranslate"><span class="pre">0</span></code> if no output device is connected.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.play">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">play</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">audio</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_device_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.AudioStream.play" title="Permalink to this definition">#</a></dt>
+<dd><p>Play audio data to the speaker, headphones, or other output device. This method will block until the audio is finished playing.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.plugins">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">plugins</span></span><a class="headerlink" href="#pedalboard.io.AudioStream.plugins" title="Permalink to this definition">#</a></dt>
+<dd><p>The Pedalboard object that this AudioStream will use to process audio.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.read">
+<span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.io.AudioStream.read" title="Permalink to this definition">#</a></dt>
+<dd><p>Read (record) audio data from the input device. When called with no arguments, this method returns all of the available audio data in the buffer. If <cite>num_samples</cite> is provided, this method will block until the desired number of samples have been received. The audio is recorded at the <a class="reference internal" href="#pedalboard.io.AudioStream.sample_rate" title="pedalboard.io.AudioStream.sample_rate"><code class="xref py py-attr docutils literal notranslate"><span class="pre">sample_rate</span></code></a> of this stream.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Recording audio is a <strong>real-time</strong> operation, so if your code doesn’t call <a class="reference internal" href="#pedalboard.io.AudioStream.read" title="pedalboard.io.AudioStream.read"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read()</span></code></a> quickly enough, some audio will be lost. To warn about this, <a class="reference internal" href="#pedalboard.io.AudioStream.read" title="pedalboard.io.AudioStream.read"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read()</span></code></a> will throw an exception if audio data is dropped. This behavior can be disabled by setting <a class="reference internal" href="#pedalboard.io.AudioStream.ignore_dropped_input" title="pedalboard.io.AudioStream.ignore_dropped_input"><code class="xref py py-attr docutils literal notranslate"><span class="pre">ignore_dropped_input</span></code></a> to <code class="xref py py-const docutils literal notranslate"><span class="pre">True</span></code>. The number of dropped samples since the last call to <a class="reference internal" href="#pedalboard.io.AudioStream.read" title="pedalboard.io.AudioStream.read"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read()</span></code></a> can be retrieved by accessing the <a class="reference internal" href="#pedalboard.io.AudioStream.dropped_input_frame_count" title="pedalboard.io.AudioStream.dropped_input_frame_count"><code class="xref py py-attr docutils literal notranslate"><span class="pre">dropped_input_frame_count</span></code></a> property.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.AudioStream.run" title="Permalink to this definition">#</a></dt>
+<dd><p>Start streaming audio from input to output, passing the audio stream through the <a class="reference internal" href="#pedalboard.io.AudioStream.plugins" title="pedalboard.io.AudioStream.plugins"><code class="xref py py-attr docutils literal notranslate"><span class="pre">plugins</span></code></a> on this AudioStream object. This call will block the current thread until a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyboardInterrupt" title="(in Python v3.13)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">KeyboardInterrupt</span></code></a> (<code class="docutils literal notranslate"><span class="pre">Ctrl-C</span></code>) is received.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.running">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">running</span></span><a class="headerlink" href="#pedalboard.io.AudioStream.running" title="Permalink to this definition">#</a></dt>
+<dd><p><code class="xref py py-const docutils literal notranslate"><span class="pre">True</span></code> if this stream is currently streaming live audio, <code class="xref py py-const docutils literal notranslate"><span class="pre">False</span></code> otherwise.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.sample_rate">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sample_rate</span></span><a class="headerlink" href="#pedalboard.io.AudioStream.sample_rate" title="Permalink to this definition">#</a></dt>
+<dd><p>The sample rate that this stream is operating at.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.AudioStream.write">
+<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">audio</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.AudioStream.write" title="Permalink to this definition">#</a></dt>
+<dd><p>Write (play) audio data to the output device. This method will block until the provided audio buffer is played in its entirety.</p>
+<p>If the provided sample rate does not match the output device’s sample rate, an error will be thrown. In this case, you can use <a class="reference internal" href="#pedalboard.io.StreamResampler" title="pedalboard.io.StreamResampler"><code class="xref py py-class docutils literal notranslate"><span class="pre">StreamResampler</span></code></a> to resample the audio before calling <a class="reference internal" href="#pedalboard.io.AudioStream.write" title="pedalboard.io.AudioStream.write"><code class="xref py py-meth docutils literal notranslate"><span class="pre">write()</span></code></a>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.io.</span></span><span class="sig-name descname"><span class="pre">ReadableAudioFile</span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile" title="Permalink to this definition">#</a></dt>
+<dd><p>A class that wraps an audio file for reading, with native support for Ogg Vorbis,
+MP3, WAV, FLAC, and AIFF files on all operating systems. Other formats may also
+be readable depending on the operating system and installed system libraries:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>macOS: <code class="docutils literal notranslate"><span class="pre">.3g2</span></code>, <code class="docutils literal notranslate"><span class="pre">.3gp</span></code>, <code class="docutils literal notranslate"><span class="pre">.aac</span></code>, <code class="docutils literal notranslate"><span class="pre">.ac3</span></code>, <code class="docutils literal notranslate"><span class="pre">.adts</span></code>, <code class="docutils literal notranslate"><span class="pre">.aif</span></code>,
+<code class="docutils literal notranslate"><span class="pre">.aifc</span></code>, <code class="docutils literal notranslate"><span class="pre">.aiff</span></code>, <code class="docutils literal notranslate"><span class="pre">.amr</span></code>, <code class="docutils literal notranslate"><span class="pre">.au</span></code>, <code class="docutils literal notranslate"><span class="pre">.bwf</span></code>, <code class="docutils literal notranslate"><span class="pre">.caf</span></code>,
+<code class="docutils literal notranslate"><span class="pre">.ec3</span></code>, <code class="docutils literal notranslate"><span class="pre">.flac</span></code>, <code class="docutils literal notranslate"><span class="pre">.latm</span></code>, <code class="docutils literal notranslate"><span class="pre">.loas</span></code>, <code class="docutils literal notranslate"><span class="pre">.m4a</span></code>, <code class="docutils literal notranslate"><span class="pre">.m4b</span></code>,
+<code class="docutils literal notranslate"><span class="pre">.m4r</span></code>, <code class="docutils literal notranslate"><span class="pre">.mov</span></code>, <code class="docutils literal notranslate"><span class="pre">.mp1</span></code>, <code class="docutils literal notranslate"><span class="pre">.mp2</span></code>, <code class="docutils literal notranslate"><span class="pre">.mp3</span></code>, <code class="docutils literal notranslate"><span class="pre">.mp4</span></code>,
+<code class="docutils literal notranslate"><span class="pre">.mpa</span></code>, <code class="docutils literal notranslate"><span class="pre">.mpeg</span></code>, <code class="docutils literal notranslate"><span class="pre">.ogg</span></code>, <code class="docutils literal notranslate"><span class="pre">.qt</span></code>, <code class="docutils literal notranslate"><span class="pre">.sd2</span></code>,
+<code class="docutils literal notranslate"><span class="pre">.snd</span></code>, <code class="docutils literal notranslate"><span class="pre">.w64</span></code>, <code class="docutils literal notranslate"><span class="pre">.wav</span></code>, <code class="docutils literal notranslate"><span class="pre">.xhe</span></code></p></li>
+<li><p>Windows: <code class="docutils literal notranslate"><span class="pre">.aif</span></code>, <code class="docutils literal notranslate"><span class="pre">.aiff</span></code>, <code class="docutils literal notranslate"><span class="pre">.flac</span></code>, <code class="docutils literal notranslate"><span class="pre">.mp3</span></code>, <code class="docutils literal notranslate"><span class="pre">.ogg</span></code>,
+<code class="docutils literal notranslate"><span class="pre">.wav</span></code>, <code class="docutils literal notranslate"><span class="pre">.wma</span></code></p></li>
+<li><p>Linux: <code class="docutils literal notranslate"><span class="pre">.aif</span></code>, <code class="docutils literal notranslate"><span class="pre">.aiff</span></code>, <code class="docutils literal notranslate"><span class="pre">.flac</span></code>, <code class="docutils literal notranslate"><span class="pre">.mp3</span></code>, <code class="docutils literal notranslate"><span class="pre">.ogg</span></code>,
+<code class="docutils literal notranslate"><span class="pre">.wav</span></code></p></li>
+</ul>
+</div></blockquote>
+<p>Use <a class="reference internal" href="#pedalboard.io.get_supported_read_formats" title="pedalboard.io.get_supported_read_formats"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pedalboard.io.get_supported_read_formats()</span></code></a> to see which
+formats or file extensions are supported on the current platform.</p>
+<p>(Note that although an audio file may have a certain file extension, its
+contents may be encoded with a compression algorithm unsupported by
+Pedalboard.)</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You probably don’t want to use this class directly: passing the
+same arguments to <a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> will work too, and allows using
+<a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> just like you’d use <code class="docutils literal notranslate"><span class="pre">open(...)</span></code> in Python.</p>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.__enter__">
+<span class="sig-name descname"><span class="pre">__enter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><span class="pre">pedalboard.io.ReadableAudioFile</span></a></span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.__enter__" title="Permalink to this definition">#</a></dt>
+<dd><p>Use this <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> as a context manager, automatically closing the file and releasing resources when the context manager exits.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.__exit__">
+<span class="sig-name descname"><span class="pre">__exit__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><span class="pre">object</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><span class="pre">object</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><span class="pre">object</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.__exit__" title="Permalink to this definition">#</a></dt>
+<dd><p>Stop using this <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> as a context manager, close the file, release its resources.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.close" title="Permalink to this definition">#</a></dt>
+<dd><p>Close this file, rendering this object unusable.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.closed">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">closed</span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.closed" title="Permalink to this definition">#</a></dt>
+<dd><p>True iff this file is closed (and no longer usable), False otherwise.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.duration">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">duration</span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.duration" title="Permalink to this definition">#</a></dt>
+<dd><p>The duration of this file in seconds (<code class="docutils literal notranslate"><span class="pre">frames</span></code> divided by <code class="docutils literal notranslate"><span class="pre">samplerate</span></code>).</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.duration" title="pedalboard.io.ReadableAudioFile.duration"><code class="xref py py-attr docutils literal notranslate"><span class="pre">duration</span></code></a> may be an overestimate for certain MP3 files.
+Use <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.exact_duration_known" title="pedalboard.io.ReadableAudioFile.exact_duration_known"><code class="xref py py-attr docutils literal notranslate"><span class="pre">exact_duration_known</span></code></a> property to determine if
+<a class="reference internal" href="#pedalboard.io.ReadableAudioFile.duration" title="pedalboard.io.ReadableAudioFile.duration"><code class="xref py py-attr docutils literal notranslate"><span class="pre">duration</span></code></a> is accurate. (See the documentation for the
+<a class="reference internal" href="#pedalboard.io.ReadableAudioFile.frames" title="pedalboard.io.ReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> attribute for more details.)</p>
+</div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.exact_duration_known">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">exact_duration_known</span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.exact_duration_known" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns <code class="xref py py-const docutils literal notranslate"><span class="pre">True</span></code> if this file’s <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.frames" title="pedalboard.io.ReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> and
+<a class="reference internal" href="#pedalboard.io.ReadableAudioFile.duration" title="pedalboard.io.ReadableAudioFile.duration"><code class="xref py py-attr docutils literal notranslate"><span class="pre">duration</span></code></a> attributes are exact values, or <code class="xref py py-const docutils literal notranslate"><span class="pre">False</span></code> if the
+<a class="reference internal" href="#pedalboard.io.ReadableAudioFile.frames" title="pedalboard.io.ReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> and <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.duration" title="pedalboard.io.ReadableAudioFile.duration"><code class="xref py py-attr docutils literal notranslate"><span class="pre">duration</span></code></a> attributes are estimates based
+on the file’s size and bitrate.</p>
+<p>If <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.exact_duration_known" title="pedalboard.io.ReadableAudioFile.exact_duration_known"><code class="xref py py-attr docutils literal notranslate"><span class="pre">exact_duration_known</span></code></a> is <code class="xref py py-const docutils literal notranslate"><span class="pre">False</span></code>, this value will
+change to <code class="xref py py-const docutils literal notranslate"><span class="pre">True</span></code> once the file is read to completion. Once
+<code class="xref py py-const docutils literal notranslate"><span class="pre">True</span></code>, this value will not change back to <code class="xref py py-const docutils literal notranslate"><span class="pre">False</span></code>
+for the same <a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> object (even after calls to <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.seek" title="pedalboard.io.ReadableAudioFile.seek"><code class="xref py py-meth docutils literal notranslate"><span class="pre">seek()</span></code></a>).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.exact_duration_known" title="pedalboard.io.ReadableAudioFile.exact_duration_known"><code class="xref py py-attr docutils literal notranslate"><span class="pre">exact_duration_known</span></code></a> will only ever be <code class="xref py py-const docutils literal notranslate"><span class="pre">False</span></code>
+when reading certain MP3 files. For files in other formats than MP3,
+<a class="reference internal" href="#pedalboard.io.ReadableAudioFile.exact_duration_known" title="pedalboard.io.ReadableAudioFile.exact_duration_known"><code class="xref py py-attr docutils literal notranslate"><span class="pre">exact_duration_known</span></code></a> will always be equal to <code class="xref py py-const docutils literal notranslate"><span class="pre">True</span></code>.</p>
+</div>
+<p><em>Introduced in v0.7.2.</em></p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.file_dtype">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">file_dtype</span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.file_dtype" title="Permalink to this definition">#</a></dt>
+<dd><p>The data type (<code class="docutils literal notranslate"><span class="pre">&quot;int16&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;float32&quot;</span></code>, etc) stored natively by this file.</p>
+<p>Note that <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.read" title="pedalboard.io.ReadableAudioFile.read"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read()</span></code></a> will always return a <code class="docutils literal notranslate"><span class="pre">float32</span></code> array, regardless of the value of this property. Use <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.read_raw" title="pedalboard.io.ReadableAudioFile.read_raw"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read_raw()</span></code></a> to read data from the file in its <code class="docutils literal notranslate"><span class="pre">file_dtype</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.frames">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">frames</span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.frames" title="Permalink to this definition">#</a></dt>
+<dd><p>The total number of frames (samples per channel) in this file.</p>
+<p>For example, if this file contains 10 seconds of stereo audio at sample rate
+of 44,100 Hz, <code class="docutils literal notranslate"><span class="pre">frames</span></code> will return <code class="docutils literal notranslate"><span class="pre">441,000</span></code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>When reading certain MP3 files that have been encoded in constant bitrate mode,
+the <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.frames" title="pedalboard.io.ReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> and <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.duration" title="pedalboard.io.ReadableAudioFile.duration"><code class="xref py py-attr docutils literal notranslate"><span class="pre">duration</span></code></a> properties may initially be estimates
+and <strong>may change as the file is read</strong>. The <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.exact_duration_known" title="pedalboard.io.ReadableAudioFile.exact_duration_known"><code class="xref py py-attr docutils literal notranslate"><span class="pre">exact_duration_known</span></code></a>
+property indicates if the values of <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.frames" title="pedalboard.io.ReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> and <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.duration" title="pedalboard.io.ReadableAudioFile.duration"><code class="xref py py-attr docutils literal notranslate"><span class="pre">duration</span></code></a>
+are estimates or exact values.</p>
+<p>This discrepancy is due to the fact that MP3 files are not required to have
+headers that indicate the duration of the file. If an MP3 file is opened and a
+<code class="docutils literal notranslate"><span class="pre">Xing</span></code> or <code class="docutils literal notranslate"><span class="pre">Info</span></code> header frame is not found, the initial value of the
+<a class="reference internal" href="#pedalboard.io.ReadableAudioFile.frames" title="pedalboard.io.ReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> and <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.duration" title="pedalboard.io.ReadableAudioFile.duration"><code class="xref py py-attr docutils literal notranslate"><span class="pre">duration</span></code></a> attributes are estimates based on the file’s
+bitrate and size. This may result in an overestimate of the file’s duration
+if there is additional data present in the file after the audio stream is finished.</p>
+<p>If the exact number of frames in the file is required, read the entire file
+first before accessing the <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.frames" title="pedalboard.io.ReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> or <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.duration" title="pedalboard.io.ReadableAudioFile.duration"><code class="xref py py-attr docutils literal notranslate"><span class="pre">duration</span></code></a> properties.
+This operation forces each frame to be parsed and guarantees that
+<a class="reference internal" href="#pedalboard.io.ReadableAudioFile.frames" title="pedalboard.io.ReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> and <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.duration" title="pedalboard.io.ReadableAudioFile.duration"><code class="xref py py-attr docutils literal notranslate"><span class="pre">duration</span></code></a> are correct, at the expense of
+scanning the entire file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;my_file.mp3&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="k">while</span> <span class="n">f</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">f</span><span class="o">.</span><span class="n">frames</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+
+    <span class="c1"># f.frames is now guaranteed to be exact, as the entire file has been read:</span>
+    <span class="k">assert</span> <span class="n">f</span><span class="o">.</span><span class="n">exact_duration_known</span> <span class="o">==</span> <span class="kc">True</span>
+
+    <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">num_channels</span><span class="p">,</span> <span class="n">num_samples</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">assert</span> <span class="n">num_samples</span> <span class="o">==</span> <span class="n">f</span><span class="o">.</span><span class="n">frames</span>
+</pre></div>
+</div>
+<p>This behaviour is present in v0.7.2 and later; prior versions would
+raise an exception when trying to read the ends of MP3 files that contained
+trailing non-audio data and lacked <code class="docutils literal notranslate"><span class="pre">Xing</span></code> or <code class="docutils literal notranslate"><span class="pre">Info</span></code> headers.</p>
+</div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.name" title="Permalink to this definition">#</a></dt>
+<dd><p>The name of this file.</p>
+<p>If this <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> was opened from a file-like object, this will be <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.num_channels">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_channels</span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.num_channels" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of channels in this file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.read">
+<span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.read" title="Permalink to this definition">#</a></dt>
+<dd><p>Read the given number of frames (samples in each channel) from this audio file at its current position.</p>
+<p><code class="docutils literal notranslate"><span class="pre">num_frames</span></code> is a required argument, as audio files can be deceptively large. (Consider that
+an hour-long <code class="docutils literal notranslate"><span class="pre">.ogg</span></code> file may be only a handful of megabytes on disk, but may decompress to
+nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid
+hard-to-debug memory problems and out-of-memory crashes.</p>
+<p>Audio samples are returned as a multi-dimensional <code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.array</span></code> with the shape
+<code class="docutils literal notranslate"><span class="pre">(channels,</span> <span class="pre">samples)</span></code>; i.e.: a stereo audio file will have shape <code class="docutils literal notranslate"><span class="pre">(2,</span> <span class="pre">&lt;length&gt;)</span></code>.
+Returned data is always in the <code class="docutils literal notranslate"><span class="pre">float32</span></code> datatype.</p>
+<p>If the file does not contain enough audio data to fill <code class="docutils literal notranslate"><span class="pre">num_frames</span></code>, the returned
+<code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.array</span></code> will contain as many frames as could be read from the file. (In some cases,
+passing <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.frames" title="pedalboard.io.ReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> as <code class="docutils literal notranslate"><span class="pre">num_frames</span></code> may still return less data than expected. See documentation
+for <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.frames" title="pedalboard.io.ReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> and <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.exact_duration_known" title="pedalboard.io.ReadableAudioFile.exact_duration_known"><code class="xref py py-attr docutils literal notranslate"><span class="pre">exact_duration_known</span></code></a> for more information about situations
+in which this may occur.)</p>
+<p>For most (but not all) audio files, the minimum possible sample value will be <code class="docutils literal notranslate"><span class="pre">-1.0f</span></code> and the
+maximum sample value will be <code class="docutils literal notranslate"><span class="pre">+1.0f</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For convenience, the <code class="docutils literal notranslate"><span class="pre">num_frames</span></code> argument may be a floating-point number. However, if the
+provided number of frames contains a fractional part (i.e.: <code class="docutils literal notranslate"><span class="pre">1.01</span></code> instead of <code class="docutils literal notranslate"><span class="pre">1.00</span></code>) then
+an exception will be thrown, as a fractional number of samples cannot be returned.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.read_raw">
+<span class="sig-name descname"><span class="pre">read_raw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.read_raw" title="Permalink to this definition">#</a></dt>
+<dd><p>Read the given number of frames (samples in each channel) from this audio file at its current position.</p>
+<p><code class="docutils literal notranslate"><span class="pre">num_frames</span></code> is a required argument, as audio files can be deceptively large. (Consider that
+an hour-long <code class="docutils literal notranslate"><span class="pre">.ogg</span></code> file may be only a handful of megabytes on disk, but may decompress to
+nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid
+hard-to-debug memory problems and out-of-memory crashes.</p>
+<p>Audio samples are returned as a multi-dimensional <code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.array</span></code> with the shape
+<code class="docutils literal notranslate"><span class="pre">(channels,</span> <span class="pre">samples)</span></code>; i.e.: a stereo audio file will have shape <code class="docutils literal notranslate"><span class="pre">(2,</span> <span class="pre">&lt;length&gt;)</span></code>.
+Returned data is in the raw format stored by the underlying file (one of <code class="docutils literal notranslate"><span class="pre">int8</span></code>, <code class="docutils literal notranslate"><span class="pre">int16</span></code>,
+<code class="docutils literal notranslate"><span class="pre">int32</span></code>, or <code class="docutils literal notranslate"><span class="pre">float32</span></code>) and may have any magnitude.</p>
+<p>If the file does not contain enough audio data to fill <code class="docutils literal notranslate"><span class="pre">num_frames</span></code>, the returned
+<code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.array</span></code> will contain as many frames as could be read from the file. (In some cases,
+passing <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.frames" title="pedalboard.io.ReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> as <code class="docutils literal notranslate"><span class="pre">num_frames</span></code> may still return less data than expected. See documentation
+for <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.frames" title="pedalboard.io.ReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> and <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.exact_duration_known" title="pedalboard.io.ReadableAudioFile.exact_duration_known"><code class="xref py py-attr docutils literal notranslate"><span class="pre">exact_duration_known</span></code></a> for more information about situations
+in which this may occur.)</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For convenience, the <code class="docutils literal notranslate"><span class="pre">num_frames</span></code> argument may be a floating-point number. However, if the
+provided number of frames contains a fractional part (i.e.: <code class="docutils literal notranslate"><span class="pre">1.01</span></code> instead of <code class="docutils literal notranslate"><span class="pre">1.00</span></code>) then
+an exception will be thrown, as a fractional number of samples cannot be returned.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.resampled_to">
+<span class="sig-name descname"><span class="pre">resampled_to</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self:</span> <span class="pre">pedalboard.io.ReadableAudioFile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_sample_rate:</span> <span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quality:</span> <span class="pre">pedalboard.Resample.Quality</span> <span class="pre">=</span> <span class="pre">&lt;Quality.WindowedSinc32:</span> <span class="pre">8&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><span class="pre">pedalboard.io.ReadableAudioFile</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><span class="pre">pedalboard.io.ResampledReadableAudioFile</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.resampled_to" title="Permalink to this definition">#</a></dt>
+<dd><p>Return a <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a> that will automatically resample this <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> to the provided <cite>target_sample_rate</cite>, using a constant amount of memory.</p>
+<p>If <cite>target_sample_rate</cite> matches the existing sample rate of the file, the original file will be returned.</p>
+<p><em>Introduced in v0.6.0.</em></p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.samplerate">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">samplerate</span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.samplerate" title="Permalink to this definition">#</a></dt>
+<dd><p>The sample rate of this file in samples (per channel) per second (Hz). Sample rates are represented as floating-point numbers by default, but this property will be an integer if the file’s sample rate has no fractional part.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.seek">
+<span class="sig-name descname"><span class="pre">seek</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.seek" title="Permalink to this definition">#</a></dt>
+<dd><p>Seek this file to the provided location in frames. Future reads will start from this position.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.seekable">
+<span class="sig-name descname"><span class="pre">seekable</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.seekable" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns True if this file is currently open and calls to seek() will work.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ReadableAudioFile.tell">
+<span class="sig-name descname"><span class="pre">tell</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#pedalboard.io.ReadableAudioFile.tell" title="Permalink to this definition">#</a></dt>
+<dd><p>Return the current position of the read pointer in this audio file, in frames. This value will increase as <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.read" title="pedalboard.io.ReadableAudioFile.read"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read()</span></code></a> is called, and may decrease if <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.seek" title="pedalboard.io.ReadableAudioFile.seek"><code class="xref py py-meth docutils literal notranslate"><span class="pre">seek()</span></code></a> is called.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.io.</span></span><span class="sig-name descname"><span class="pre">ResampledReadableAudioFile</span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile" title="Permalink to this definition">#</a></dt>
+<dd><p>A class that wraps an audio file for reading, while resampling
+the audio stream on-the-fly to a new sample rate.</p>
+<p><em>Introduced in v0.6.0.</em></p>
+<p>Reading, seeking, and all other basic file I/O operations are supported (except for
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">read_raw()</span></code>).</p>
+<p><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a> should usually
+be used via the <code class="xref py py-meth docutils literal notranslate"><span class="pre">resampled_to()</span></code> method on <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;my_file.mp3&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">resampled_to</span><span class="p">(</span><span class="mi">22_050</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">samplerate</span> <span class="c1"># =&gt; 22050</span>
+    <span class="n">first_ten_seconds</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">samplerate</span> <span class="o">*</span> <span class="mi">10</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Fractional (real-valued, non-integer) sample rates are supported.</p>
+<p>Under the hood, <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a> uses a stateful
+<a class="reference internal" href="#pedalboard.io.StreamResampler" title="pedalboard.io.StreamResampler"><code class="xref py py-class docutils literal notranslate"><span class="pre">StreamResampler</span></code></a> instance, which uses a constant amount of
+memory to resample potentially-unbounded streams of audio. The audio
+output by <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a> will always be identical
+to the result obtained by passing the entire audio file through a
+<a class="reference internal" href="#pedalboard.io.StreamResampler" title="pedalboard.io.StreamResampler"><code class="xref py py-class docutils literal notranslate"><span class="pre">StreamResampler</span></code></a>, with the added benefits of allowing chunked
+reads, seeking through files, and using a constant amount of memory.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.__enter__">
+<span class="sig-name descname"><span class="pre">__enter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><span class="pre">pedalboard.io.ResampledReadableAudioFile</span></a></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.__enter__" title="Permalink to this definition">#</a></dt>
+<dd><p>Use this <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a> as a context manager, automatically closing the file and releasing resources when the context manager exits.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.__exit__">
+<span class="sig-name descname"><span class="pre">__exit__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><span class="pre">object</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><span class="pre">object</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><span class="pre">object</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.__exit__" title="Permalink to this definition">#</a></dt>
+<dd><p>Stop using this <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a> as a context manager, close the file, release its resources.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.close" title="Permalink to this definition">#</a></dt>
+<dd><p>Close this file, rendering this object unusable. Note that the <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> instance that is wrapped by this object will not be closed, and will remain usable.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.closed">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">closed</span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.closed" title="Permalink to this definition">#</a></dt>
+<dd><p>True iff either this file or its wrapped <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> instance are closed (and no longer usable), False otherwise.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.duration">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">duration</span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.duration" title="Permalink to this definition">#</a></dt>
+<dd><p>The duration of this file in seconds (<code class="docutils literal notranslate"><span class="pre">frames</span></code> divided by <code class="docutils literal notranslate"><span class="pre">samplerate</span></code>).</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>When reading certain MP3 files, the <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.frames" title="pedalboard.io.ResampledReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> and <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.duration" title="pedalboard.io.ResampledReadableAudioFile.duration"><code class="xref py py-attr docutils literal notranslate"><span class="pre">duration</span></code></a> properties may initially be estimates and <strong>may change as the file is read</strong>. See the documentation for <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.frames" title="pedalboard.io.ReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">ReadableAudioFile.frames</span></code></a> for more details.</p>
+</div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.exact_duration_known">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">exact_duration_known</span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.exact_duration_known" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns <code class="xref py py-const docutils literal notranslate"><span class="pre">True</span></code> if this file’s <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.frames" title="pedalboard.io.ResampledReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> and
+<a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.duration" title="pedalboard.io.ResampledReadableAudioFile.duration"><code class="xref py py-attr docutils literal notranslate"><span class="pre">duration</span></code></a> attributes are exact values, or <code class="xref py py-const docutils literal notranslate"><span class="pre">False</span></code> if the
+<a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.frames" title="pedalboard.io.ResampledReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> and <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.duration" title="pedalboard.io.ResampledReadableAudioFile.duration"><code class="xref py py-attr docutils literal notranslate"><span class="pre">duration</span></code></a> attributes are estimates based
+on the file’s size and bitrate.</p>
+<p><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.exact_duration_known" title="pedalboard.io.ResampledReadableAudioFile.exact_duration_known"><code class="xref py py-attr docutils literal notranslate"><span class="pre">exact_duration_known</span></code></a> will change from <code class="xref py py-const docutils literal notranslate"><span class="pre">False</span></code> to
+<code class="xref py py-const docutils literal notranslate"><span class="pre">True</span></code> as the file is read to completion. Once <code class="xref py py-const docutils literal notranslate"><span class="pre">True</span></code>,
+this value will not change back to <code class="xref py py-const docutils literal notranslate"><span class="pre">False</span></code> for the same
+<a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> object (even after calls to <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.seek" title="pedalboard.io.ResampledReadableAudioFile.seek"><code class="xref py py-meth docutils literal notranslate"><span class="pre">seek()</span></code></a>).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.exact_duration_known" title="pedalboard.io.ResampledReadableAudioFile.exact_duration_known"><code class="xref py py-attr docutils literal notranslate"><span class="pre">exact_duration_known</span></code></a> will only ever be <code class="xref py py-const docutils literal notranslate"><span class="pre">False</span></code>
+when reading certain MP3 files. For files in other formats than MP3,
+<a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.exact_duration_known" title="pedalboard.io.ResampledReadableAudioFile.exact_duration_known"><code class="xref py py-attr docutils literal notranslate"><span class="pre">exact_duration_known</span></code></a> will always be equal to <code class="xref py py-const docutils literal notranslate"><span class="pre">True</span></code>.</p>
+</div>
+<p><em>Introduced in v0.7.2.</em></p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.file_dtype">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">file_dtype</span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.file_dtype" title="Permalink to this definition">#</a></dt>
+<dd><p>The data type (<code class="docutils literal notranslate"><span class="pre">&quot;int16&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;float32&quot;</span></code>, etc) stored natively by this file.</p>
+<p>Note that <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.read" title="pedalboard.io.ResampledReadableAudioFile.read"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read()</span></code></a> will always return a <code class="docutils literal notranslate"><span class="pre">float32</span></code> array, regardless of the value of this property.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.frames">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">frames</span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.frames" title="Permalink to this definition">#</a></dt>
+<dd><p>The total number of frames (samples per channel) in this file, at the target sample rate.</p>
+<p>For example, if this file contains 10 seconds of stereo audio at sample rate of 44,100 Hz, and <code class="docutils literal notranslate"><span class="pre">target_sample_rate</span></code> is 22,050 Hz, <code class="docutils literal notranslate"><span class="pre">frames</span></code> will return <code class="docutils literal notranslate"><span class="pre">22,050</span></code>.</p>
+<p>Note that different <code class="docutils literal notranslate"><span class="pre">resampling_quality</span></code> values used for resampling may cause <code class="docutils literal notranslate"><span class="pre">frames</span></code> to differ by ± 1 from its expected value.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>When reading certain MP3 files, the <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.frames" title="pedalboard.io.ResampledReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> and <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.duration" title="pedalboard.io.ResampledReadableAudioFile.duration"><code class="xref py py-attr docutils literal notranslate"><span class="pre">duration</span></code></a> properties may initially be estimates and <strong>may change as the file is read</strong>. See the documentation for <a class="reference internal" href="#pedalboard.io.ReadableAudioFile.frames" title="pedalboard.io.ReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">ReadableAudioFile.frames</span></code></a> for more details.</p>
+</div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.name" title="Permalink to this definition">#</a></dt>
+<dd><p>The name of this file.</p>
+<p>If the <a class="reference internal" href="#pedalboard.io.ReadableAudioFile" title="pedalboard.io.ReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a> wrapped by this <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile" title="pedalboard.io.ResampledReadableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a> was opened from a file-like object, this will be <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.num_channels">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_channels</span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.num_channels" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of channels in this file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.read">
+<span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.read" title="Permalink to this definition">#</a></dt>
+<dd><p>Read the given number of frames (samples in each channel, at the target sample rate)
+from this audio file at its current position, automatically resampling on-the-fly to
+<code class="docutils literal notranslate"><span class="pre">target_sample_rate</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">num_frames</span></code> is a required argument, as audio files can be deceptively large. (Consider that
+an hour-long <code class="docutils literal notranslate"><span class="pre">.ogg</span></code> file may be only a handful of megabytes on disk, but may decompress to
+nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid
+hard-to-debug memory problems and out-of-memory crashes.</p>
+<p>Audio samples are returned as a multi-dimensional <code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.array</span></code> with the shape
+<code class="docutils literal notranslate"><span class="pre">(channels,</span> <span class="pre">samples)</span></code>; i.e.: a stereo audio file will have shape <code class="docutils literal notranslate"><span class="pre">(2,</span> <span class="pre">&lt;length&gt;)</span></code>.
+Returned data is always in the <code class="docutils literal notranslate"><span class="pre">float32</span></code> datatype.</p>
+<p>If the file does not contain enough audio data to fill <code class="docutils literal notranslate"><span class="pre">num_frames</span></code>, the returned
+<code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.array</span></code> will contain as many frames as could be read from the file. (In some cases,
+passing <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.frames" title="pedalboard.io.ResampledReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> as <code class="docutils literal notranslate"><span class="pre">num_frames</span></code> may still return less data than expected. See documentation
+for <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.frames" title="pedalboard.io.ResampledReadableAudioFile.frames"><code class="xref py py-attr docutils literal notranslate"><span class="pre">frames</span></code></a> and <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.exact_duration_known" title="pedalboard.io.ResampledReadableAudioFile.exact_duration_known"><code class="xref py py-attr docutils literal notranslate"><span class="pre">exact_duration_known</span></code></a> for more information about situations
+in which this may occur.)</p>
+<p>For most (but not all) audio files, the minimum possible sample value will be <code class="docutils literal notranslate"><span class="pre">-1.0f</span></code> and the
+maximum sample value will be <code class="docutils literal notranslate"><span class="pre">+1.0f</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For convenience, the <code class="docutils literal notranslate"><span class="pre">num_frames</span></code> argument may be a floating-point number. However, if the
+provided number of frames contains a fractional part (i.e.: <code class="docutils literal notranslate"><span class="pre">1.01</span></code> instead of <code class="docutils literal notranslate"><span class="pre">1.00</span></code>) then
+an exception will be thrown, as a fractional number of samples cannot be returned.</p>
+</div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.resampling_quality">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">resampling_quality</span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.resampling_quality" title="Permalink to this definition">#</a></dt>
+<dd><p>The resampling algorithm used to resample from the original file’s sample rate to the <code class="docutils literal notranslate"><span class="pre">target_sample_rate</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.samplerate">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">samplerate</span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.samplerate" title="Permalink to this definition">#</a></dt>
+<dd><p>The sample rate of this file in samples (per channel) per second (Hz). This will be equal to the <code class="docutils literal notranslate"><span class="pre">target_sample_rate</span></code> parameter passed when this object was created. Sample rates are represented as floating-point numbers by default, but this property will be an integer if the file’s target sample rate has no fractional part.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.seek">
+<span class="sig-name descname"><span class="pre">seek</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.seek" title="Permalink to this definition">#</a></dt>
+<dd><p>Seek this file to the provided location in frames at the target sample rate. Future reads will start from this position.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Prior to version 0.7.3, this method operated in linear time with respect to the seek position (i.e.: the file was seeked to its beginning and pushed through the resampler) to ensure that the resampled audio output was sample-accurate. This was optimized in version 0.7.3 to operate in effectively constant time while retaining sample-accuracy.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.seekable">
+<span class="sig-name descname"><span class="pre">seekable</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.seekable" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns True if this file is currently open and calls to seek() will work.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.ResampledReadableAudioFile.tell">
+<span class="sig-name descname"><span class="pre">tell</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#pedalboard.io.ResampledReadableAudioFile.tell" title="Permalink to this definition">#</a></dt>
+<dd><p>Return the current position of the read pointer in this audio file, in frames at the target sample rate. This value will increase as <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.read" title="pedalboard.io.ResampledReadableAudioFile.read"><code class="xref py py-meth docutils literal notranslate"><span class="pre">read()</span></code></a> is called, and may decrease if <a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.seek" title="pedalboard.io.ResampledReadableAudioFile.seek"><code class="xref py py-meth docutils literal notranslate"><span class="pre">seek()</span></code></a> is called.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.io.</span></span><span class="sig-name descname"><span class="pre">StreamResampler</span></span><a class="headerlink" href="#pedalboard.io.StreamResampler" title="Permalink to this definition">#</a></dt>
+<dd><p>A streaming resampler that can change the sample rate of multiple chunks of audio in series, while using constant memory.</p>
+<p>For a resampling plug-in that can be used in <code class="xref py py-class docutils literal notranslate"><span class="pre">Pedalboard</span></code> objects, see <a class="reference internal" href="pedalboard.html#pedalboard.Resample" title="pedalboard.Resample"><code class="xref py py-class docutils literal notranslate"><span class="pre">pedalboard.Resample</span></code></a>.</p>
+<p><em>Introduced in v0.6.0.</em></p>
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler.input_latency">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">input_latency</span></span><a class="headerlink" href="#pedalboard.io.StreamResampler.input_latency" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of samples (in the input sample rate) that must be supplied before this resampler will begin returning output.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler.num_channels">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_channels</span></span><a class="headerlink" href="#pedalboard.io.StreamResampler.num_channels" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of channels expected to be passed in every call to <a class="reference internal" href="#pedalboard.io.StreamResampler.process" title="pedalboard.io.StreamResampler.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler.process">
+<span class="sig-name descname"><span class="pre">process</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.io.StreamResampler.process" title="Permalink to this definition">#</a></dt>
+<dd><p>Resample a 32-bit floating-point audio buffer. The returned buffer may be smaller than the provided buffer depending on the quality method used. Call <a class="reference internal" href="#pedalboard.io.StreamResampler.process" title="pedalboard.io.StreamResampler.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> without any arguments to flush the internal buffers and return all remaining audio.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler.quality">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">quality</span></span><a class="headerlink" href="#pedalboard.io.StreamResampler.quality" title="Permalink to this definition">#</a></dt>
+<dd><p>The resampling algorithm used by this resampler.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler.reset">
+<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.StreamResampler.reset" title="Permalink to this definition">#</a></dt>
+<dd><p>Used to reset the internal state of this resampler. Call this method when resampling a new audio stream to prevent audio from leaking between streams.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler.source_sample_rate">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">source_sample_rate</span></span><a class="headerlink" href="#pedalboard.io.StreamResampler.source_sample_rate" title="Permalink to this definition">#</a></dt>
+<dd><p>The source sample rate of the input audio that this resampler expects to be passed to <a class="reference internal" href="#pedalboard.io.StreamResampler.process" title="pedalboard.io.StreamResampler.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.StreamResampler.target_sample_rate">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">target_sample_rate</span></span><a class="headerlink" href="#pedalboard.io.StreamResampler.target_sample_rate" title="Permalink to this definition">#</a></dt>
+<dd><p>The sample rate of the audio that this resampler will return from <a class="reference internal" href="#pedalboard.io.StreamResampler.process" title="pedalboard.io.StreamResampler.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pedalboard.io.</span></span><span class="sig-name descname"><span class="pre">WriteableAudioFile</span></span><a class="headerlink" href="#pedalboard.io.WriteableAudioFile" title="Permalink to this definition">#</a></dt>
+<dd><p>A class that wraps an audio file for writing, with native support for Ogg Vorbis,
+MP3, WAV, FLAC, and AIFF files on all operating systems.</p>
+<p>Use <a class="reference internal" href="#pedalboard.io.get_supported_write_formats" title="pedalboard.io.get_supported_write_formats"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pedalboard.io.get_supported_write_formats()</span></code></a> to see which
+formats or file extensions are supported on the current platform.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename_or_file_like</strong> – The path to an output file to write to, or a seekable file-like
+binary object (like <code class="docutils literal notranslate"><span class="pre">io.BytesIO</span></code>) to write to.</p></li>
+<li><p><strong>samplerate</strong> – The sample rate of the audio that will be written to this file.
+All calls to the <a class="reference internal" href="#pedalboard.io.WriteableAudioFile.write" title="pedalboard.io.WriteableAudioFile.write"><code class="xref py py-meth docutils literal notranslate"><span class="pre">write()</span></code></a> method will assume this sample rate
+is used.</p></li>
+<li><p><strong>num_channels</strong> – The number of channels in the audio that will be written to this file.
+All calls to the <a class="reference internal" href="#pedalboard.io.WriteableAudioFile.write" title="pedalboard.io.WriteableAudioFile.write"><code class="xref py py-meth docutils literal notranslate"><span class="pre">write()</span></code></a> method will expect audio with this many
+channels, and will throw an exception if the audio does not contain
+this number of channels.</p></li>
+<li><p><strong>bit_depth</strong> – The bit depth (number of bits per sample) that will be written
+to this file. Used for raw formats like WAV and AIFF. Will have no effect
+on compressed formats like MP3 or Ogg Vorbis.</p></li>
+<li><p><strong>quality</strong> – An optional string or number that indicates the quality level to use
+for the given audio compression codec. Different codecs have different
+compression quality values; numeric values like <code class="docutils literal notranslate"><span class="pre">128</span></code> and <code class="docutils literal notranslate"><span class="pre">256</span></code> will
+usually indicate the number of kilobits per second used by the codec.
+Some formats, like MP3, support more advanced options like <code class="docutils literal notranslate"><span class="pre">V2</span></code> (as
+specified by <a class="reference external" href="https://lame.sourceforge.io/">the LAME encoder</a>) which
+may be passed as a string. The strings <code class="docutils literal notranslate"><span class="pre">&quot;best&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;worst&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;fastest&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;slowest&quot;</span></code> will also work for any codec.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You probably don’t want to use this class directly: all of the parameters
+accepted by the <a class="reference internal" href="#pedalboard.io.WriteableAudioFile" title="pedalboard.io.WriteableAudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">WriteableAudioFile</span></code></a> constructor will be accepted by
+<a class="reference internal" href="#pedalboard.io.AudioFile" title="pedalboard.io.AudioFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">AudioFile</span></code></a> as well, as long as the <code class="docutils literal notranslate"><span class="pre">&quot;w&quot;</span></code> mode is passed as the
+second argument.</p>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile.__enter__">
+<span class="sig-name descname"><span class="pre">__enter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pedalboard.io.WriteableAudioFile" title="pedalboard.io.WriteableAudioFile"><span class="pre">pedalboard.io.WriteableAudioFile</span></a></span></span><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.__enter__" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile.__exit__">
+<span class="sig-name descname"><span class="pre">__exit__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><span class="pre">object</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><span class="pre">object</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><span class="pre">object</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.__exit__" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.close" title="Permalink to this definition">#</a></dt>
+<dd><p>Close this file, flushing its contents to disk and rendering this object unusable for further writing.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile.closed">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">closed</span></span><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.closed" title="Permalink to this definition">#</a></dt>
+<dd><p>If this file has been closed, this property will be True.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile.file_dtype">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">file_dtype</span></span><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.file_dtype" title="Permalink to this definition">#</a></dt>
+<dd><p>The data type stored natively by this file. Note that write(…) will accept multiple datatypes, regardless of the value of this property.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile.flush">
+<span class="sig-name descname"><span class="pre">flush</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.flush" title="Permalink to this definition">#</a></dt>
+<dd><p>Attempt to flush this audio file’s contents to disk. Not all formats support flushing, so this may throw a RuntimeError. (If this happens, closing the file will reliably force a flush to occur.)</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile.frames">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">frames</span></span><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.frames" title="Permalink to this definition">#</a></dt>
+<dd><p>The total number of frames (samples per channel) written to this file so far.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile.num_channels">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_channels</span></span><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.num_channels" title="Permalink to this definition">#</a></dt>
+<dd><p>The number of channels in this file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile.quality">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">quality</span></span><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.quality" title="Permalink to this definition">#</a></dt>
+<dd><p>The quality setting used to write this file. For many formats, this may be <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+<p>Quality options differ based on the audio codec used in the file. Most codecs specify a number of bits per second in 16- or 32-bit-per-second increments (128 kbps, 160 kbps, etc). Some codecs provide string-like options for variable bit-rate encoding (i.e. “V0” through “V9” for MP3). The strings <code class="docutils literal notranslate"><span class="pre">&quot;best&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;worst&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;fastest&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;slowest&quot;</span></code> will also work for any codec.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile.samplerate">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">samplerate</span></span><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.samplerate" title="Permalink to this definition">#</a></dt>
+<dd><p>The sample rate of this file in samples (per channel) per second (Hz). Sample rates are represented as floating-point numbers by default, but this property will be an integer if the file’s sample rate has no fractional part.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile.tell">
+<span class="sig-name descname"><span class="pre">tell</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.tell" title="Permalink to this definition">#</a></dt>
+<dd><p>Return the current position of the write pointer in this audio file, in frames at the target sample rate. This value will increase as <a class="reference internal" href="#pedalboard.io.WriteableAudioFile.write" title="pedalboard.io.WriteableAudioFile.write"><code class="xref py py-meth docutils literal notranslate"><span class="pre">write()</span></code></a> is called, and will never decrease.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pedalboard.io.WriteableAudioFile.write">
+<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#pedalboard.io.WriteableAudioFile.write" title="Permalink to this definition">#</a></dt>
+<dd><p>Encode an array of audio data and write it to this file. The number of channels in the array must match the number of channels used to open the file. The array may contain audio in any shape. If the file’s bit depth or format does not match the provided data type, the audio will be automatically converted.</p>
+<p>Arrays of type int8, int16, int32, float32, and float64 are supported. If an array of an unsupported <code class="docutils literal notranslate"><span class="pre">dtype</span></code> is provided, a <code class="docutils literal notranslate"><span class="pre">TypeError</span></code> will be raised.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If an array of shape <code class="docutils literal notranslate"><span class="pre">(num_channels,</span> <span class="pre">num_channels)</span></code> is passed to this method before any other audio data is provided, an exception will be thrown, as the method will not be able to infer which dimension of the input corresponds to the number of channels and which dimension corresponds to the number of samples.</p>
+<p>To avoid this, first call this method with an array where the number of samples does not match the number of channels.</p>
+<p>The channel layout from the most recently provided input will be cached on the <code class="xref py py-class docutils literal notranslate"><span class="pre">WritableAudioFile</span></code> object and will be used if necessary to disambiguate the array layout:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;my_file.mp3&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="mi">44100</span><span class="p">,</span> <span class="n">num_channels</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="c1"># This will throw an exception:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+    <span class="c1"># But this will work:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+    <span class="c1"># And now `f` expects an input shape of (num_channels, num_samples), so this works:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+
+<span class="c1"># Also an option: pass (0, num_channels) or (num_channels, 0) first</span>
+<span class="c1"># to hint that the input will be in that shape without writing anything:</span>
+<span class="k">with</span> <span class="n">AudioFile</span><span class="p">(</span><span class="s2">&quot;my_file.mp3&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="mi">44100</span><span class="p">,</span> <span class="n">num_channels</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="c1"># Pass a hint, but write nothing:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
+    <span class="c1"># And now `f` expects an input shape of (num_channels, num_samples), so this works:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+</pre></div>
+</div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pedalboard.io.get_supported_read_formats">
+<span class="sig-prename descclassname"><span class="pre">pedalboard.io.</span></span><span class="sig-name descname"><span class="pre">get_supported_read_formats</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.io.get_supported_read_formats" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pedalboard.io.get_supported_write_formats">
+<span class="sig-prename descclassname"><span class="pre">pedalboard.io.</span></span><span class="sig-name descname"><span class="pre">get_supported_write_formats</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pedalboard.io.get_supported_write_formats" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="../examples.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Examples</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="pedalboard.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">The <code class="docutils literal notranslate"><span class="pre">pedalboard</span></code> API</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2021-2025, Spotify AB
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            <div class="icons">
+              <a class="muted-link " href="https://github.com/spotify/pedalboard" aria-label="GitHub">
+                <svg stroke="currentColor" fill="currentColor"
+                     stroke-width="0" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+                </svg>
+            </a>
+              
+            </div>
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">The <code class="docutils literal notranslate"><span class="pre">pedalboard.io</span></code> API</a><ul>
+<li><a class="reference internal" href="#pedalboard.io.AudioFile"><code class="docutils literal notranslate"><span class="pre">AudioFile</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.io.AudioFile.encode"><code class="docutils literal notranslate"><span class="pre">AudioFile.encode()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream"><code class="docutils literal notranslate"><span class="pre">AudioStream</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.__enter__"><code class="docutils literal notranslate"><span class="pre">AudioStream.__enter__()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.__exit__"><code class="docutils literal notranslate"><span class="pre">AudioStream.__exit__()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.buffer_size"><code class="docutils literal notranslate"><span class="pre">AudioStream.buffer_size</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.buffered_input_sample_count"><code class="docutils literal notranslate"><span class="pre">AudioStream.buffered_input_sample_count</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.close"><code class="docutils literal notranslate"><span class="pre">AudioStream.close()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.dropped_input_frame_count"><code class="docutils literal notranslate"><span class="pre">AudioStream.dropped_input_frame_count</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.ignore_dropped_input"><code class="docutils literal notranslate"><span class="pre">AudioStream.ignore_dropped_input</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.num_input_channels"><code class="docutils literal notranslate"><span class="pre">AudioStream.num_input_channels</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.num_output_channels"><code class="docutils literal notranslate"><span class="pre">AudioStream.num_output_channels</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.play"><code class="docutils literal notranslate"><span class="pre">AudioStream.play()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.plugins"><code class="docutils literal notranslate"><span class="pre">AudioStream.plugins</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.read"><code class="docutils literal notranslate"><span class="pre">AudioStream.read()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.run"><code class="docutils literal notranslate"><span class="pre">AudioStream.run()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.running"><code class="docutils literal notranslate"><span class="pre">AudioStream.running</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.sample_rate"><code class="docutils literal notranslate"><span class="pre">AudioStream.sample_rate</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.AudioStream.write"><code class="docutils literal notranslate"><span class="pre">AudioStream.write()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.__enter__"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.__enter__()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.__exit__"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.__exit__()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.close"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.close()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.closed"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.closed</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.duration"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.duration</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.exact_duration_known"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.exact_duration_known</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.file_dtype"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.file_dtype</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.frames"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.frames</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.name"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.name</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.num_channels"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.num_channels</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.read"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.read()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.read_raw"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.read_raw()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.resampled_to"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.resampled_to()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.samplerate"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.samplerate</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.seek"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.seek()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.seekable"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.seekable()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ReadableAudioFile.tell"><code class="docutils literal notranslate"><span class="pre">ReadableAudioFile.tell()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.__enter__"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.__enter__()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.__exit__"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.__exit__()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.close"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.close()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.closed"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.closed</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.duration"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.duration</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.exact_duration_known"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.exact_duration_known</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.file_dtype"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.file_dtype</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.frames"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.frames</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.name"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.name</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.num_channels"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.num_channels</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.read"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.read()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.resampling_quality"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.resampling_quality</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.samplerate"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.samplerate</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.seek"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.seek()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.seekable"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.seekable()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.ResampledReadableAudioFile.tell"><code class="docutils literal notranslate"><span class="pre">ResampledReadableAudioFile.tell()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.io.StreamResampler"><code class="docutils literal notranslate"><span class="pre">StreamResampler</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.io.StreamResampler.input_latency"><code class="docutils literal notranslate"><span class="pre">StreamResampler.input_latency</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.StreamResampler.num_channels"><code class="docutils literal notranslate"><span class="pre">StreamResampler.num_channels</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.StreamResampler.process"><code class="docutils literal notranslate"><span class="pre">StreamResampler.process()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.StreamResampler.quality"><code class="docutils literal notranslate"><span class="pre">StreamResampler.quality</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.StreamResampler.reset"><code class="docutils literal notranslate"><span class="pre">StreamResampler.reset()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.StreamResampler.source_sample_rate"><code class="docutils literal notranslate"><span class="pre">StreamResampler.source_sample_rate</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.StreamResampler.target_sample_rate"><code class="docutils literal notranslate"><span class="pre">StreamResampler.target_sample_rate</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.io.WriteableAudioFile"><code class="docutils literal notranslate"><span class="pre">WriteableAudioFile</span></code></a><ul>
+<li><a class="reference internal" href="#pedalboard.io.WriteableAudioFile.__enter__"><code class="docutils literal notranslate"><span class="pre">WriteableAudioFile.__enter__()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.WriteableAudioFile.__exit__"><code class="docutils literal notranslate"><span class="pre">WriteableAudioFile.__exit__()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.WriteableAudioFile.close"><code class="docutils literal notranslate"><span class="pre">WriteableAudioFile.close()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.WriteableAudioFile.closed"><code class="docutils literal notranslate"><span class="pre">WriteableAudioFile.closed</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.WriteableAudioFile.file_dtype"><code class="docutils literal notranslate"><span class="pre">WriteableAudioFile.file_dtype</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.WriteableAudioFile.flush"><code class="docutils literal notranslate"><span class="pre">WriteableAudioFile.flush()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.WriteableAudioFile.frames"><code class="docutils literal notranslate"><span class="pre">WriteableAudioFile.frames</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.WriteableAudioFile.num_channels"><code class="docutils literal notranslate"><span class="pre">WriteableAudioFile.num_channels</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.WriteableAudioFile.quality"><code class="docutils literal notranslate"><span class="pre">WriteableAudioFile.quality</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.WriteableAudioFile.samplerate"><code class="docutils literal notranslate"><span class="pre">WriteableAudioFile.samplerate</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.WriteableAudioFile.tell"><code class="docutils literal notranslate"><span class="pre">WriteableAudioFile.tell()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.WriteableAudioFile.write"><code class="docutils literal notranslate"><span class="pre">WriteableAudioFile.write()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pedalboard.io.get_supported_read_formats"><code class="docutils literal notranslate"><span class="pre">get_supported_read_formats()</span></code></a></li>
+<li><a class="reference internal" href="#pedalboard.io.get_supported_write_formats"><code class="docutils literal notranslate"><span class="pre">get_supported_write_formats()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/scripts/furo.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    </body>
+</html>
