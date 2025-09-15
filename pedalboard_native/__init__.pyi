@@ -895,24 +895,62 @@ class LowpassFilter(Plugin):
         pass
     pass
 
+class MP3CompressorMode:
+    CBR: MP3CompressorMode
+    VBR: MP3CompressorMode
+    def __eq__(self, other: object) -> bool: ...
+    def __getstate__(self) -> int: ...
+    def __hash__(self) -> int: ...
+    def __index__(self) -> int: ...
+    def __init__(self, value: int) -> None: ...
+    def __int__(self) -> int: ...
+    def __ne__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+    def __setstate__(self, state: int) -> None: ...
+    def __str__(self) -> str: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def value(self) -> int: ...
+
 class MP3Compressor(Plugin):
     """
     An MP3 compressor plugin that runs the LAME MP3 encoder in real-time to add compression artifacts to the audio stream.
 
-    Currently only supports variable bit-rate mode (VBR) and accepts a floating-point VBR quality value (between 0.0 and 10.0; lower is better).
+    Supports both Variable Bit Rate (VBR) and Constant Bit Rate (CBR) modes:
+    - VBR mode: accepts a floating-point quality value (0.0-10.0; lower is better)
+    - CBR mode: accepts a bitrate in kbps (32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320)
 
     Note that the MP3 format only supports 8kHz, 11025Hz, 12kHz, 16kHz, 22050Hz, 24kHz, 32kHz, 44.1kHz, and 48kHz audio; if an unsupported sample rate is provided, an exception will be thrown at processing time.
     """
 
-    def __init__(self, vbr_quality: float = 2.0) -> None: ...
+    @typing.overload
+    def __init__(self, vbr_quality: float = 2.0) -> None:
+        """Create an MP3Compressor in VBR mode with the specified quality."""
+        ...
+    @typing.overload
+    def __init__(self, *, vbr_quality: float | None = None, bitrate: int | None = None) -> None:
+        """Create an MP3Compressor. Specify either vbr_quality (for VBR mode) or bitrate (for CBR mode)."""
+        ...
     def __repr__(self) -> str: ...
     @property
     def vbr_quality(self) -> float:
-        """ """
+        """VBR quality (0.0-10.0, lower is better). Setting this switches to VBR mode."""
 
     @vbr_quality.setter
     def vbr_quality(self, arg1: float) -> None:
         pass
+    @property
+    def bitrate(self) -> int:
+        """CBR bitrate in kbps. Setting this switches to CBR mode."""
+
+    @bitrate.setter
+    def bitrate(self, arg1: int) -> None:
+        pass
+    @property
+    def mode(self) -> MP3CompressorMode:
+        """Current encoding mode (VBR or CBR)."""
+
     pass
 
 class NoiseGate(Plugin):
