@@ -1592,3 +1592,68 @@ def test_write_two_by_two_buffer_with_hint():
         f.write(np.zeros((2, 2), dtype=np.float32))
 
         assert f.tell() == 2
+
+
+class ErrnoTriggeringFileLike:
+    """A file-like object that triggers errno to be set through real failed operations."""
+
+    def __init__(self, wrapped_file):
+        self._file = wrapped_file
+        self.name = getattr(wrapped_file, "name", None)
+        # Create a path that definitely doesn't exist for triggering ENOENT
+        self._nonexistent_path = str(pathlib.Path("definitely_does_not_exist_12345.txt"))
+
+    def _trigger_errno(self):
+        # Try to open a non-existent file, which sets errno to ENOENT (2)
+        # We catch the exception but errno remains set
+        try:
+            open(self._nonexistent_path, "rb")
+        except FileNotFoundError:
+            pass  # Expected - errno is now set to ENOENT
+
+    def read(self, *args, **kwargs):
+        result = self._file.read(*args, **kwargs)
+        self._trigger_errno()
+        return result
+
+    def seek(self, *args, **kwargs):
+        result = self._file.seek(*args, **kwargs)
+        self._trigger_errno()
+        return result
+
+    def tell(self):
+        result = self._file.tell()
+        self._trigger_errno()
+        return result
+
+    def seekable(self):
+        result = self._file.seekable()
+        self._trigger_errno()
+        return result
+
+
+@pytest.mark.parametrize("format_name", ["wav", "ogg"])
+def test_errno_cleared_after_python_file_operations(format_name: str):
+    """
+    Regression test to ensure that errno values set by Python file-like objects
+    don't leak through and cause codec failures. Before the fix (ClearErrnoBeforeReturn),
+    errno values set during Python file operations would cause mysterious failures in
+    codecs like Ogg Vorbis that check errno.
+
+    This test creates a file-like wrapper that intentionally sets errno to a non-zero
+    value after each operation, simulating what might happen with certain third-party
+    libraries or file systems. The fix ensures these errno values are cleared before
+    returning to codec code.
+    """
+
+    buf = io.BytesIO()
+    buf.name = f"test.{format_name}"
+    with pedalboard.io.AudioFile(buf, "w", 44100, 2, format=format_name) as af:
+        af.write(np.random.rand(2, 44100))
+
+    # Add some random garbage past the end of the file to trigger the bug:
+    buf.write(b"\x00\x00")
+    buf.seek(0)
+
+    with pedalboard.io.AudioFile(ErrnoTriggeringFileLike(buf)) as af:
+        assert af.samplerate == 44100
