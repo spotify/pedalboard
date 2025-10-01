@@ -1594,12 +1594,11 @@ def test_write_two_by_two_buffer_with_hint():
         assert f.tell() == 2
 
 
-class ErrnoTriggeringFileLike:
+class ErrnoTriggeringFileLike(BinaryIO):
     """A file-like object that triggers errno to be set through real failed operations."""
 
     def __init__(self, wrapped_file):
         self._file = wrapped_file
-        self.name = getattr(wrapped_file, "name", None)
         # Create a path that definitely doesn't exist for triggering ENOENT
         self._nonexistent_path = str(pathlib.Path("definitely_does_not_exist_12345.txt"))
 
