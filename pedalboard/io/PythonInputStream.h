@@ -63,6 +63,7 @@ public:
 
   juce::int64 getTotalLength() noexcept override {
     ScopedDowngradeToReadLockWithGIL lock(objectLock);
+    ClearErrnoBeforeReturn clearErrnoBeforeReturn;
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -99,6 +100,7 @@ public:
     // sign that something is broken!
     jassert(buffer != nullptr && bytesToRead >= 0);
     ScopedDowngradeToReadLockWithGIL lock(objectLock);
+    ClearErrnoBeforeReturn clearErrnoBeforeReturn;
 
     py::gil_scoped_acquire acquire;
     if (PythonException::isPending())
@@ -161,6 +163,7 @@ public:
     juce::int64 totalLength = getTotalLength();
 
     ScopedDowngradeToReadLockWithGIL lock(objectLock);
+    ClearErrnoBeforeReturn clearErrnoBeforeReturn;
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -183,6 +186,7 @@ public:
 
   juce::int64 getPosition() noexcept override {
     ScopedDowngradeToReadLockWithGIL lock(objectLock);
+    ClearErrnoBeforeReturn clearErrnoBeforeReturn;
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
@@ -201,6 +205,7 @@ public:
 
   bool setPosition(juce::int64 pos) noexcept override {
     ScopedDowngradeToReadLockWithGIL lock(objectLock);
+    ClearErrnoBeforeReturn clearErrnoBeforeReturn;
     py::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())

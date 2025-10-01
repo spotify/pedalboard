@@ -155,7 +155,7 @@ public:
         } else {
           ss << " has its stream position set to the end of the stream ("
              << originalStreamPosition;
-          ss << "bytes).";
+          ss << " bytes).";
         }
         ss << " Try seeking this file-like object back to its start before "
               "passing it to AudioFile";
