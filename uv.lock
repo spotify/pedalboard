@@ -325,7 +325,7 @@ wheels = [
 
 [[package]]
 name = "pedalboard"
-version = "0.9.18"
+version = "0.9.19"
 source = { editable = "." }
 dependencies = [
     { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
