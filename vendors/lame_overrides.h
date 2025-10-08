@@ -4,6 +4,8 @@
  * (i.e.: private) to the C file that contains them.
  */
 
+#define hip_global_struct mpstr_tag
+
 #include "lame/include/lame.h"
 
 /*
