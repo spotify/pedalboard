@@ -42,8 +42,15 @@ public:
     lastSpec = spec;
   }
 
-  virtual int
-  process(const juce::dsp::ProcessContextReplacing<float> &context) {
+  virtual int process(const juce::dsp::ProcessContextReplacing<float> &context) override {
+    // Maintain compatibility with older callers that do not supply MIDI data.
+    juce::MidiBuffer empty;
+    return process(context, empty);
+  }
+
+  // Forward MIDI to each contained plugin while processing the audio chain.
+  virtual int process(const juce::dsp::ProcessContextReplacing<float> &context,
+                      const juce::MidiBuffer &midiMessages) override {
     // assuming process context replacing
     auto ioBlock = context.getOutputBlock();
 
@@ -55,7 +62,8 @@ public:
 
     juce::AudioBuffer<float> ioBuffer(channels, ioBlock.getNumChannels(),
                                       ioBlock.getNumSamples());
-    return ::Pedalboard::process(ioBuffer, lastSpec, plugins, false);
+    return ::Pedalboard::process(ioBuffer, lastSpec, plugins, false,
+                                 &midiMessages);
   }
 
   virtual void reset() {
