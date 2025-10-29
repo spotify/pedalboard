@@ -1378,6 +1378,22 @@ public:
 
     StandalonePluginWindow::openWindowAndWait(*pluginInstance, optionalEvent);
   }
+ 
+  int getNumPrograms() {
+    return pluginInstance->getNumPrograms();
+  }
+  
+  int getCurrentProgram() {
+    return pluginInstance->getCurrentProgram();
+  }
+  
+  void setCurrentProgram(int index) {
+    pluginInstance->setCurrentProgram(index);
+  }
+  
+  std::string getProgramName(int index) {
+    return pluginInstance->getProgramName(index).toStdString();
+  }
 
   ExternalPluginReloadType reloadType = ExternalPluginReloadType::Unknown;
   juce::PluginDescription foundPluginDescription;
@@ -1847,7 +1863,16 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           "The behavior that this plugin exhibits when .reset() is called. "
           "This is an internal attribute which gets set on plugin "
           "instantiation and should only be accessed for debugging and "
-          "testing.");
+          "testing.")
+       .def("get_num_programs",
+            &ExternalPlugin<juce::PatchedVST3PluginFormat>::getNumPrograms,
+            "Return the number of programs supported by this plugin")
+       .def_property("current_program",
+                     &ExternalPlugin<juce::PatchedVST3PluginFormat>::getCurrentProgram,
+                     &ExternalPlugin<juce::PatchedVST3PluginFormat>::setCurrentProgram)
+       .def("get_program_name",
+            &ExternalPlugin<juce::PatchedVST3PluginFormat>::getProgramName,
+            "Return the name of the program at the specified index");
 #endif
 
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
@@ -2073,7 +2098,16 @@ see :class:`pedalboard.VST3Plugin`.)
           "The behavior that this plugin exhibits when .reset() is called. "
           "This is an internal attribute which gets set on plugin "
           "instantiation and should only be accessed for debugging and "
-          "testing.");
+          "testing.")
+      .def("get_num_programs",
+           &ExternalPlugin<juce::AudioUnitPluginFormat>::getNumPrograms,
+           "Return the number of programs supported by this plugin")
+      .def_property("current_program",
+                    &ExternalPlugin<juce::AudioUnitPluginFormat>::getCurrentProgram,
+                    &ExternalPlugin<juce::AudioUnitPluginFormat>::setCurrentProgram)
+      .def("get_program_name",
+           &ExternalPlugin<juce::AudioUnitPluginFormat>::getProgramName,
+           "Return the name of the program at the specified index");
 #endif
 }
 
