@@ -194,3 +194,10 @@ git submodule update --init
 - Ensure that you have Tox version 4 or greater installed
 - _or_ set `ignore_basepython_conflict=true` in `tox.ini`
 - _or_ install Tox using `pip` and not your system package manager
+
+###`Package freetype2 was not found in the pkg-config search path.`
+- Either you do not have the package freetype2 installed or you do not have access to freetype2 on your system. s
+- If you do not have access to freetype2 then you could try installing freetype package instead
+
+###`Python.h: No such file or directory`
+- Install one of the packages python-dev python-devel python3-dev python3-devel, which ever one is available to your installation.
