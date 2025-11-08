@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <cerrno>
 #include <mutex>
 #include <optional>
 
@@ -44,6 +45,31 @@ inline void raise() {
   }
 }
 }; // namespace PythonException
+
+/**
+ * @brief A helper class that clears the thread's errno when destructed.
+ *
+ * This is used to avoid failure when the following sequence of events occurs:
+ *
+ * 1. A Python file-like object is passed to Pedalboard, which could call any
+ * other native code in its methods
+ * 2. Pedalboard calls a Python file-like object's methods (e.g. read(), seek(),
+ * tell(), seekable())
+ * 3. The native code sets errno to a non-zero value, but does not clear it
+ * 4. Pedalboard's codecs (Ogg Vorbis, etc) check errno and fail to decode
+ * 5. The user is presented with a cryptic error message
+ *
+ * This makes it seem like we're ignoring errno, but we're not; the Python-level
+ * code should throw an exception if the file-like object has an error, and we
+ * handle errors at that level correctly.
+ *
+ * See also: https://en.wikipedia.org/wiki/Errno.h
+ */
+class ClearErrnoBeforeReturn {
+public:
+  ClearErrnoBeforeReturn() {}
+  ~ClearErrnoBeforeReturn() { errno = 0; }
+};
 
 /**
  * A tiny helper class that downgrades a write lock

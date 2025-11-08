@@ -34,7 +34,7 @@ namespace py = pybind11;
 namespace Pedalboard {
 
 // For pybind11-stubgen to properly parse the docstrings,
-// we have to delcare all of the AudioFile subclasses first before using
+// we have to declare all of the AudioFile subclasses first before using
 // their types (i.e.: as return types from `__new__`).
 // See:
 // https://pybind11.readthedocs.io/en/latest/advanced/misc.html#avoiding-cpp-types-in-docstrings

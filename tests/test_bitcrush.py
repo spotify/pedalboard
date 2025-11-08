@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import numpy as np
 import pytest
 
@@ -39,3 +38,10 @@ def test_bitcrush(bit_depth: float, fundamental_hz: float, sample_rate: float, n
 
     expected_output = np.around(sine_wave.astype(np.float64) * (2**bit_depth)) / (2**bit_depth)
     np.testing.assert_allclose(output, expected_output, atol=0.01)
+
+
+def test_invalid_bit_depth_raises_exception():
+    with pytest.raises(ValueError):
+        Bitcrush(bit_depth=-5)
+    with pytest.raises(ValueError):
+        Bitcrush(bit_depth=100)

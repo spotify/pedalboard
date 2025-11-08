@@ -55,7 +55,7 @@ inline void init_chorus(py::module &m) {
       "control, a feedback control, and the centre delay of the modulation. "
       "\n\n"
       "Note: To get classic chorus sounds try to use a centre delay time "
-      "around 7-8 ms with a low feeback volume and a low depth. This effect "
+      "around 7-8 ms with a low feedback volume and a low depth. This effect "
       "can also be used as a flanger with a lower centre delay time and a "
       "lot of feedback, and as a vibrato effect if the mix value is 1.")
       .def(py::init([](float rateHz, float depth, float centreDelayMs,

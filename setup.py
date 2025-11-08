@@ -404,7 +404,7 @@ def patch_compile(original_compile):
         # Remove the Python header from most files; we only need it when compiling
         # This speeds up compile times on CI as most of the objects don't need Python
         # headers at all, and including -I/include/python3.x/Python.h prevents us from
-        # re-using the same object file for different Python versions.
+        # reusing the same object file for different Python versions.
         if any("include/python3" in arg for arg in _cc_args) and should_omit_python_header:
             _cc_args = [arg for arg in _cc_args if "include/python3" not in arg]
 
@@ -482,12 +482,11 @@ setup(
         "Programming Language :: C++",
         "Programming Language :: Python",
         "Topic :: Multimedia :: Sound/Audio",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
     ],
     ext_modules=[pedalboard_cpp],
     install_requires=["numpy"],

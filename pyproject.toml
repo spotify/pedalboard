@@ -37,7 +37,7 @@ name = "pedalboard"
 authors = [{ name = "Peter Sobot", email = "psobot@spotify.com" }]
 description = "A Python library for adding effects to audio."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { file = "LICENSE" }
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -48,15 +48,14 @@ classifiers = [
     "Programming Language :: C++",
     "Programming Language :: Python",
     "Topic :: Multimedia :: Sound/Audio",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = ["numpy"]
-version = "0.9.17"
+version = "0.9.19"
 
 [project.optional-dependencies]
 test = [

@@ -167,9 +167,9 @@ int hip_decode_threadsafe(hip_t hip, unsigned char *buffer, size_t len,
 
   for (;;) {
     int ret = decode1_headersB_clipchoice(
-        hip, buffer, len, (char *)pcm_l + totsize, (char *)pcm_r + totsize,
-        &mp3data, &enc_delay, &enc_padding, out, OUTSIZE_CLIPPED, sizeof(short),
-        decodeMP3);
+        (PMPSTR)hip, buffer, len, (char *)pcm_l + totsize,
+        (char *)pcm_r + totsize, &mp3data, &enc_delay, &enc_padding, out,
+        OUTSIZE_CLIPPED, sizeof(short), decodeMP3);
 
     switch (ret) {
     case -1:
