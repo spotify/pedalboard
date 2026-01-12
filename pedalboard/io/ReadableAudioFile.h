@@ -277,12 +277,13 @@ public:
 
     long long numSamplesToKeep = numSamples;
 
-    py::buffer_info outputInfo = buffer.request();
+    // Get the data pointer directly without keeping a buffer_info reference
+    // that would prevent resizing later (needed for Python 3.14+ / NumPy 2.x)
+    float *outputPtr = buffer.mutable_data();
 
     {
       py::gil_scoped_release release;
-      numSamplesToKeep =
-          readInternal(numChannels, numSamples, (float *)outputInfo.ptr);
+      numSamplesToKeep = readInternal(numChannels, numSamples, outputPtr);
 
       // After this point, we no longer need to hold the read lock as we don't
       // interact with the reader object anymore. Releasing this early (before
