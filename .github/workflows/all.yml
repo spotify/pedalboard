@@ -143,7 +143,7 @@ jobs:
             ${{ github.workspace }}/pedalboard/build/lib*
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -227,7 +227,7 @@ jobs:
             ${{ github.workspace }}/pedalboard/build/lib*
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -339,7 +339,7 @@ jobs:
             ${{ github.workspace }}/pedalboard/build/lib*
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -444,7 +444,7 @@ jobs:
             ${{ github.workspace }}/pedalboard/build/lib*
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache
       - name: Print Restored ${{ runner.os }} Objects
         run: ls -lashR ${{ github.workspace }}
       # Without this, distutils will recompile the extension even though we already have the .so built:
@@ -673,7 +673,7 @@ jobs:
             ${{ github.workspace }}/pedalboard/build/lib*
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache
       # Without this, distutils will recompile the extension even though we already have the shared object built:
       - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
         if: runner.os == 'Linux' || runner.os == 'macOS'
@@ -787,7 +787,7 @@ jobs:
             ${{ github.workspace }}/pedalboard/build/lib*
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ runner.os }}-clang-ccache
+          key: ${{ matrix.os }}-clang-ccache
       - name: Build pedalboard locally
         env:
           DEBUG: "0"
