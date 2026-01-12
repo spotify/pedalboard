@@ -241,10 +241,10 @@ jobs:
           # Use the minimum macOS deployment target supported by our version of PyBind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
           CCACHE_LOGFILE: ${{ github.workspace }}/.ccache_log
-          # This build caching is only to speed up tests on CI, so we only care about x86_64 for now.
+          # This build caching is only to speed up tests on CI, so we only care about arm64 (macos-14 runners are ARM-based).
           # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
           # Fun fact: this is supported in Python itself! https://github.com/python/cpython/blob/893c9cc/Lib/_osx_support.py#L314-L328
-          ARCHFLAGS: -arch x86_64
+          ARCHFLAGS: -arch arm64
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
@@ -695,10 +695,10 @@ jobs:
           CCACHE_DEBUG: "1"
           # Use the minimum macOS deployment target supported by our version of PyBind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
-          # This build caching is only to speed up tests on CI, so we only care about x86_64 for now.
+          # This build caching is only to speed up tests on CI, so we only care about arm64 (macos-14 runners are ARM-based).
           # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
           # Fun fact: this is supported in Python itself! https://github.com/python/cpython/blob/893c9cc/Lib/_osx_support.py#L314-L328
-          ARCHFLAGS: -arch x86_64
+          ARCHFLAGS: -arch arm64
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
