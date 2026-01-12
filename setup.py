@@ -175,7 +175,13 @@ elif platform.system() == "Linux":
     else:
         # And on x86, ignore the ARM-specific SIMD code (and KCVI; not GCC or Clang compatible).
         fftw_paths = ignore_files_matching(fftw_paths, "neon")
-        ALL_CFLAGS.append("-march=native")
+        # Use -march=native for local builds to optimize for the current CPU,
+        # but use a portable baseline for CI builds to avoid "Illegal instruction" errors
+        # when ccache restores objects built on different runner hardware.
+        if os.getenv("USE_PORTABLE_SIMD"):
+            ALL_CFLAGS.append("-mavx")
+        else:
+            ALL_CFLAGS.append("-march=native")
         # Enable SIMD instructions:
         ALL_CFLAGS.extend(
             [

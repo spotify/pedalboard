@@ -351,6 +351,7 @@ jobs:
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ github.workspace }}/.ccache_log
           USE_ASAN: "1"
+          USE_PORTABLE_SIMD: "1" # Use portable SIMD to avoid "Illegal instruction" on different runner CPUs
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
@@ -791,6 +792,7 @@ jobs:
         env:
           DEBUG: "0"
           USE_ASAN: "1"
+          USE_PORTABLE_SIMD: "1" # Use portable SIMD to avoid "Illegal instruction" on different runner CPUs
           CCACHE_DIR: ${{ github.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ github.workspace }}
           CCACHE_DEBUGDIR: ${{ github.workspace }}/.ccache_debug
