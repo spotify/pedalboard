@@ -190,7 +190,7 @@ jobs:
       matrix:
         include:
           - {
-              os: macos-13,
+              os: macos-14,
               python-version: "3.12",
               compiler: "clang",
               cc: "ccache clang",
@@ -505,35 +505,35 @@ jobs:
       matrix:
         include:
           - {
-              os: macos-13,
+              os: macos-14,
               python-version: "3.10",
               compiler: "clang",
               cc: "ccache clang",
               cxx: "ccache clang++",
             }
           - {
-              os: macos-13,
+              os: macos-14,
               python-version: "3.11",
               compiler: "clang",
               cc: "ccache clang",
               cxx: "ccache clang++",
             }
           - {
-              os: macos-13,
+              os: macos-14,
               python-version: "3.12",
               compiler: "clang",
               cc: "ccache clang",
               cxx: "ccache clang++",
             }
           - {
-              os: macos-13,
+              os: macos-14,
               python-version: "3.13",
               compiler: "clang",
               cc: "ccache clang",
               cxx: "ccache clang++",
             }
           - {
-              os: macos-13,
+              os: macos-14,
               python-version: "3.14",
               compiler: "clang",
               cc: "ccache clang",
@@ -827,22 +827,22 @@ jobs:
     strategy:
       matrix:
         include:
-          - { os: macos-13, build: cp310-macosx_x86_64 }
-          - { os: macos-13, build: cp311-macosx_x86_64 }
-          - { os: macos-13, build: cp312-macosx_x86_64 }
-          - { os: macos-13, build: cp313-macosx_x86_64 }
-          - { os: macos-13, build: cp313t-macosx_x86_64 }
+          - { os: macos-14, build: cp310-macosx_x86_64 }
+          - { os: macos-14, build: cp311-macosx_x86_64 }
+          - { os: macos-14, build: cp312-macosx_x86_64 }
+          - { os: macos-14, build: cp313-macosx_x86_64 }
+          - { os: macos-14, build: cp313t-macosx_x86_64 }
           # Universal wheels are rarely used; only support them for Python 3.12:
-          - { os: macos-13, build: cp312-macosx_universal2 }
-          - { os: macos-13, build: cp310-macosx_arm64 }
-          - { os: macos-13, build: cp311-macosx_arm64 }
-          - { os: macos-13, build: cp312-macosx_arm64 }
-          - { os: macos-13, build: cp313-macosx_arm64 }
-          - { os: macos-13, build: cp313t-macosx_arm64 }
-          - { os: macos-13, build: cp314-macosx_arm64 }
-          - { os: macos-13, build: cp314t-macosx_arm64 }
-          # - { os: macos-13, build: pp38-macosx_x86_64 }
-          # - { os: macos-13, build: pp39-macosx_x86_64 }
+          - { os: macos-14, build: cp312-macosx_universal2 }
+          - { os: macos-14, build: cp310-macosx_arm64 }
+          - { os: macos-14, build: cp311-macosx_arm64 }
+          - { os: macos-14, build: cp312-macosx_arm64 }
+          - { os: macos-14, build: cp313-macosx_arm64 }
+          - { os: macos-14, build: cp313t-macosx_arm64 }
+          - { os: macos-14, build: cp314-macosx_arm64 }
+          - { os: macos-14, build: cp314t-macosx_arm64 }
+          # - { os: macos-14, build: pp38-macosx_x86_64 }
+          # - { os: macos-14, build: pp39-macosx_x86_64 }
           - { os: windows-latest, build: cp39-win_amd64 }
           - { os: windows-latest, build: cp310-win_amd64 }
           - { os: windows-latest, build: cp311-win_amd64 }
