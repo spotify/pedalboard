@@ -143,7 +143,7 @@ jobs:
             ${{ github.workspace }}/pedalboard/build/lib*
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -190,7 +190,7 @@ jobs:
       matrix:
         include:
           - {
-              os: macos-13,
+              os: macos-15-intel,
               python-version: "3.12",
               compiler: "clang",
               cc: "ccache clang",
@@ -227,7 +227,7 @@ jobs:
             ${{ github.workspace }}/pedalboard/build/lib*
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -241,7 +241,7 @@ jobs:
           # Use the minimum macOS deployment target supported by our version of PyBind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
           CCACHE_LOGFILE: ${{ github.workspace }}/.ccache_log
-          # This build caching is only to speed up tests on CI, so we only care about x86_64 for now.
+          # This build caching is only to speed up tests on CI, so we only care about x86_64 (macos-15-intel runners).
           # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
           # Fun fact: this is supported in Python itself! https://github.com/python/cpython/blob/893c9cc/Lib/_osx_support.py#L314-L328
           ARCHFLAGS: -arch x86_64
@@ -339,7 +339,7 @@ jobs:
             ${{ github.workspace }}/pedalboard/build/lib*
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -351,6 +351,7 @@ jobs:
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ github.workspace }}/.ccache_log
           USE_ASAN: "1"
+          USE_PORTABLE_SIMD: "1" # Use portable SIMD to avoid "Illegal instruction" on different runner CPUs
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
@@ -443,7 +444,7 @@ jobs:
             ${{ github.workspace }}/pedalboard/build/lib*
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache
       - name: Print Restored ${{ runner.os }} Objects
         run: ls -lashR ${{ github.workspace }}
       # Without this, distutils will recompile the extension even though we already have the .so built:
@@ -505,35 +506,35 @@ jobs:
       matrix:
         include:
           - {
-              os: macos-13,
+              os: macos-15-intel,
               python-version: "3.10",
               compiler: "clang",
               cc: "ccache clang",
               cxx: "ccache clang++",
             }
           - {
-              os: macos-13,
+              os: macos-15-intel,
               python-version: "3.11",
               compiler: "clang",
               cc: "ccache clang",
               cxx: "ccache clang++",
             }
           - {
-              os: macos-13,
+              os: macos-15-intel,
               python-version: "3.12",
               compiler: "clang",
               cc: "ccache clang",
               cxx: "ccache clang++",
             }
           - {
-              os: macos-13,
+              os: macos-15-intel,
               python-version: "3.13",
               compiler: "clang",
               cc: "ccache clang",
               cxx: "ccache clang++",
             }
           - {
-              os: macos-13,
+              os: macos-15-intel,
               python-version: "3.14",
               compiler: "clang",
               cc: "ccache clang",
@@ -672,7 +673,7 @@ jobs:
             ${{ github.workspace }}/pedalboard/build/lib*
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ runner.os }}-${{ matrix.compiler }}-ccache
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache
       # Without this, distutils will recompile the extension even though we already have the shared object built:
       - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
         if: runner.os == 'Linux' || runner.os == 'macOS'
@@ -694,7 +695,7 @@ jobs:
           CCACHE_DEBUG: "1"
           # Use the minimum macOS deployment target supported by our version of PyBind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
-          # This build caching is only to speed up tests on CI, so we only care about x86_64 for now.
+          # This build caching is only to speed up tests on CI, so we only care about x86_64 (macos-15-intel runners).
           # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
           # Fun fact: this is supported in Python itself! https://github.com/python/cpython/blob/893c9cc/Lib/_osx_support.py#L314-L328
           ARCHFLAGS: -arch x86_64
@@ -786,11 +787,12 @@ jobs:
             ${{ github.workspace }}/pedalboard/build/lib*
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
             ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ runner.os }}-clang-ccache
+          key: ${{ matrix.os }}-clang-ccache
       - name: Build pedalboard locally
         env:
           DEBUG: "0"
           USE_ASAN: "1"
+          USE_PORTABLE_SIMD: "1" # Use portable SIMD to avoid "Illegal instruction" on different runner CPUs
           CCACHE_DIR: ${{ github.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ github.workspace }}
           CCACHE_DEBUGDIR: ${{ github.workspace }}/.ccache_debug
@@ -827,22 +829,22 @@ jobs:
     strategy:
       matrix:
         include:
-          - { os: macos-13, build: cp310-macosx_x86_64 }
-          - { os: macos-13, build: cp311-macosx_x86_64 }
-          - { os: macos-13, build: cp312-macosx_x86_64 }
-          - { os: macos-13, build: cp313-macosx_x86_64 }
-          - { os: macos-13, build: cp313t-macosx_x86_64 }
+          - { os: macos-15-intel, build: cp310-macosx_x86_64 }
+          - { os: macos-15-intel, build: cp311-macosx_x86_64 }
+          - { os: macos-15-intel, build: cp312-macosx_x86_64 }
+          - { os: macos-15-intel, build: cp313-macosx_x86_64 }
+          - { os: macos-15-intel, build: cp313t-macosx_x86_64 }
           # Universal wheels are rarely used; only support them for Python 3.12:
-          - { os: macos-13, build: cp312-macosx_universal2 }
-          - { os: macos-13, build: cp310-macosx_arm64 }
-          - { os: macos-13, build: cp311-macosx_arm64 }
-          - { os: macos-13, build: cp312-macosx_arm64 }
-          - { os: macos-13, build: cp313-macosx_arm64 }
-          - { os: macos-13, build: cp313t-macosx_arm64 }
-          - { os: macos-13, build: cp314-macosx_arm64 }
-          - { os: macos-13, build: cp314t-macosx_arm64 }
-          # - { os: macos-13, build: pp38-macosx_x86_64 }
-          # - { os: macos-13, build: pp39-macosx_x86_64 }
+          - { os: macos-15-intel, build: cp312-macosx_universal2 }
+          - { os: macos-15-intel, build: cp310-macosx_arm64 }
+          - { os: macos-15-intel, build: cp311-macosx_arm64 }
+          - { os: macos-15-intel, build: cp312-macosx_arm64 }
+          - { os: macos-15-intel, build: cp313-macosx_arm64 }
+          - { os: macos-15-intel, build: cp313t-macosx_arm64 }
+          - { os: macos-15-intel, build: cp314-macosx_arm64 }
+          - { os: macos-15-intel, build: cp314t-macosx_arm64 }
+          # - { os: macos-15-intel, build: pp38-macosx_x86_64 }
+          # - { os: macos-15-intel, build: pp39-macosx_x86_64 }
           - { os: windows-latest, build: cp39-win_amd64 }
           - { os: windows-latest, build: cp310-win_amd64 }
           - { os: windows-latest, build: cp311-win_amd64 }
