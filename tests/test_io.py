@@ -1298,15 +1298,15 @@ def test_mp3_in_wav_format():
     This is a valid but unusual format where a WAV container holds MP3 data.
     Some audio software produces files in this format.
     """
-    filename = os.path.join(os.path.dirname(__file__), "audio", "correct", "mp3_in_wav_44100Hz.wav")
+    filename = os.path.join(os.path.dirname(__file__), "audio", "correct", "mp3_in_wav.wav")
     with pedalboard.io.AudioFile(filename) as f:
         assert f.samplerate == 44100
-        assert f.num_channels == 2
+        assert f.num_channels == 1
         assert f.frames >= 44100  # At least 1 second of audio
 
         # Read the audio and verify it's not silent
         audio = f.read(f.frames)
-        assert audio.shape[0] == 2
+        assert audio.shape[0] == 1
         assert np.amax(np.abs(audio)) > 0.1  # Should have actual audio content
 
 
