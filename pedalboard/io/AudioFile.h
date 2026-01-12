@@ -19,6 +19,7 @@
 
 #include "../juce_overrides/juce_PatchedFLACAudioFormat.h"
 #include "../juce_overrides/juce_PatchedMP3AudioFormat.h"
+#include "../juce_overrides/juce_PatchedWavAudioFormat.h"
 #include "AudioFile.h"
 #include "LameMP3AudioFormat.h"
 
@@ -32,7 +33,7 @@ static constexpr const unsigned int DEFAULT_AUDIO_BUFFER_SIZE_FRAMES = 8192;
  */
 void registerPedalboardAudioFormats(juce::AudioFormatManager &manager,
                                     bool forWriting) {
-  manager.registerFormat(new juce::WavAudioFormat(), true);
+  manager.registerFormat(new juce::PatchedWavAudioFormat(), true);
   manager.registerFormat(new juce::AiffAudioFormat(), false);
   manager.registerFormat(new juce::PatchedFlacAudioFormat(), false);
 
