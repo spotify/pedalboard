@@ -237,4 +237,3 @@ private:
 };
 
 } // namespace juce
-
