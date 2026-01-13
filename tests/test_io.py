@@ -1317,15 +1317,16 @@ def test_mp3_in_wav_format():
         "adpcm_ima.wav",  # IMA ADPCM (format tag 0x0011)
         "alaw.wav",  # A-law (format tag 0x0006)
         "mulaw.wav",  # µ-law (format tag 0x0007)
+        "float64.wav",  # 64-bit float (format tag 0x0003, not supported by JUCE)
     ],
 )
-def test_compressed_wav_formats(filename: str):
+def test_wav_formats_via_drwav(filename: str):
     """
-    Test reading WAV files that contain compressed audio data not natively
-    supported by JUCE (ADPCM, A-law, µ-law).
+    Test reading WAV files with formats not natively supported by JUCE,
+    decoded via dr_wav: ADPCM, A-law, µ-law, and 64-bit float.
 
-    These are valid WAV files using compression formats common in telephony,
-    older audio software, and some embedded systems.
+    These are valid WAV files using formats common in telephony, older audio
+    software, embedded systems, and high-precision audio applications.
     """
     filepath = os.path.join(os.path.dirname(__file__), "audio", "correct", filename)
     with pedalboard.io.AudioFile(filepath) as f:

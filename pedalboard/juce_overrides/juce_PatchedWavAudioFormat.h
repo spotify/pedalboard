@@ -259,6 +259,21 @@ public:
           return createDrWavReaderForWav(sourceStream, streamStartPos,
                                          deleteStreamIfOpeningFails);
 
+        case WavFormatTag::IEEEFloat: {
+          // JUCE doesn't support 64-bit float WAV, but dr_wav does.
+          // Read bitsPerSample from fmt chunk to check.
+          // fmt chunk layout after formatTag: channels(2), sampleRate(4),
+          // byteRate(4), blockAlign(2), bitsPerSample(2)
+          sourceStream->skipNextBytes(12);
+          auto bitsPerSample = (unsigned short)sourceStream->readShort();
+          if (bitsPerSample == 64) {
+            return createDrWavReaderForWav(sourceStream, streamStartPos,
+                                           deleteStreamIfOpeningFails);
+          }
+          // 32-bit float is handled fine by JUCE
+          return useDefaultReader();
+        }
+
         default:
           // Check for known-but-unsupported formats and throw helpful errors
           const char *unsupportedCodecName = getUnsupportedCodecName(format);
