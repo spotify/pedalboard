@@ -68,8 +68,17 @@ public:
     sampleRate = static_cast<double>(wav.sampleRate);
     numChannels = static_cast<unsigned int>(wav.channels);
     lengthInSamples = static_cast<int64>(wav.totalPCMFrameCount);
-    bitsPerSample = 32; // We decode to float
-    usesFloatingPointData = true;
+
+    // For IEEE float formats, report the original bits per sample (32 or 64)
+    // For other formats (ADPCM, A-law, µ-law), we decode to float32
+    if (wav.translatedFormatTag == DR_WAVE_FORMAT_IEEE_FLOAT) {
+      bitsPerSample = static_cast<unsigned int>(wav.fmt.bitsPerSample);
+      usesFloatingPointData = true;
+    } else {
+      // ADPCM, A-law, µ-law are decoded to float32
+      bitsPerSample = 32;
+      usesFloatingPointData = true;
+    }
   }
 
   ~DrWavAudioFormatReader() override {
