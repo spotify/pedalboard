@@ -1310,6 +1310,35 @@ def test_mp3_in_wav_format():
         assert np.amax(np.abs(audio)) > 0.1  # Should have actual audio content
 
 
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "adpcm_ms.wav",  # Microsoft ADPCM (format tag 0x0002)
+        "adpcm_ima.wav",  # IMA ADPCM (format tag 0x0011)
+        "alaw.wav",  # A-law (format tag 0x0006)
+        "mulaw.wav",  # µ-law (format tag 0x0007)
+    ],
+)
+def test_compressed_wav_formats(filename: str):
+    """
+    Test reading WAV files that contain compressed audio data not natively
+    supported by JUCE (ADPCM, A-law, µ-law).
+
+    These are valid WAV files using compression formats common in telephony,
+    older audio software, and some embedded systems.
+    """
+    filepath = os.path.join(os.path.dirname(__file__), "audio", "correct", filename)
+    with pedalboard.io.AudioFile(filepath) as f:
+        assert f.samplerate == 44100
+        assert f.num_channels == 1
+        assert f.frames >= 44100  # At least 1 second of audio
+
+        # Read the audio and verify it's not silent
+        audio = f.read(f.frames)
+        assert audio.shape[0] == 1
+        assert np.amax(np.abs(audio)) > 0.01  # Should have actual audio content
+
+
 @pytest.mark.parametrize("samplerate", [44100, 32000])
 @pytest.mark.parametrize("chunk_size", [1, 2, 16])
 @pytest.mark.parametrize("target_samplerate", [44100, 32000, 22050, 1234.56])

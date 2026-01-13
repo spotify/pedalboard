@@ -314,5 +314,6 @@ To cite via BibTeX:
  - The `PitchShift` plugin and `time_stretch` functions use [the Rubber Band Library](https://github.com/breakfastquay/rubberband), which is [dual-licensed under a commercial license](https://breakfastquay.com/technology/license.html) and the GPLv2 (or newer). [FFTW](https://www.fftw.org/) is also included to speed up Rubber Band, and [is licensed under the GPLv2 (or newer)](https://www.fftw.org/doc/License-and-Copyright.html).
  - The `MP3Compressor` plugin uses [libmp3lame from the LAME project](https://lame.sourceforge.io/), which is [licensed under the LGPLv2](https://github.com/lameproject/lame/blob/master/README) and [upgraded to the GPLv3 for inclusion in this project (as permitted by the LGPLv2)](https://www.gnu.org/licenses/gpl-faq.html#AllCompatibility).
  - The `GSMFullRateCompressor` plugin uses [libgsm](http://quut.com/gsm/), which is [licensed under the ISC license](https://github.com/timothytylee/libgsm/blob/master/COPYRIGHT) and [compatible with the GPLv3](https://www.gnu.org/licenses/license-list.en.html#ISC).
+ - Compressed WAV files (ADPCM, A-law, µ-law) are decoded using [dr_wav](https://github.com/mackron/dr_libs) by David Reid, which is released into the [public domain](https://unlicense.org/).
 
 _VST is a registered trademark of Steinberg Media Technologies GmbH._

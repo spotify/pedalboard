@@ -293,7 +293,7 @@ function(collect_sources)
     file(GLOB RUBBERBAND_SOURCES "vendors/rubberband/single/*.cpp")
     
     # Collect general vendor sources
-    file(GLOB VENDOR_SOURCES "vendors/*.c")
+    file(GLOB VENDOR_SOURCES "vendors/*.c" "vendors/*.cpp")
     
     # LAME/mpglib sources
     file(GLOB LAME_SOURCES "vendors/lame/libmp3lame/*.c" "vendors/lame/libmp3lame/vector/*.c" "vendors/lame/mpglib/*.c")

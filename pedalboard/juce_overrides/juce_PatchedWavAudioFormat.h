@@ -20,6 +20,10 @@
 #include "../JuceHeader.h"
 #include "juce_PatchedMP3AudioFormat.h"
 
+// dr_wav for ADPCM decoding (public domain / MIT-0)
+#include "dr_wav_config.h"
+#include "dr_wav.h"
+
 namespace juce {
 
 /**
@@ -40,11 +44,168 @@ enum class WavFormatTag : unsigned short {
 };
 
 /**
+ * An AudioFormatReader that uses dr_wav to decode ADPCM audio on-the-fly.
+ * This streams the audio data rather than loading it all into memory.
+ */
+class DrWavAudioFormatReader : public AudioFormatReader {
+public:
+  DrWavAudioFormatReader(InputStream *stream)
+      : AudioFormatReader(stream, "ADPCM WAV"), inputStream(stream) {
+
+    // Initialize dr_wav with our I/O callbacks
+    if (!drwav_init(&wav, drwavReadCallback, drwavSeekCallback,
+                    drwavTellCallback, this, nullptr)) {
+      // Failed to initialize - set invalid state
+      sampleRate = 0;
+      numChannels = 0;
+      lengthInSamples = 0;
+      return;
+    }
+
+    wavInitialized = true;
+
+    // Set up AudioFormatReader properties
+    sampleRate = static_cast<double>(wav.sampleRate);
+    numChannels = static_cast<unsigned int>(wav.channels);
+    lengthInSamples = static_cast<int64>(wav.totalPCMFrameCount);
+    bitsPerSample = 32; // We decode to float
+    usesFloatingPointData = true;
+  }
+
+  ~DrWavAudioFormatReader() override {
+    if (wavInitialized) {
+      drwav_uninit(&wav);
+    }
+    // Note: inputStream is owned by the base AudioFormatReader class
+    // and will be deleted in its destructor
+  }
+
+  bool readSamples(int **destChannels, int numDestChannels,
+                   int startOffsetInDestBuffer, int64 startSampleInFile,
+                   int numSamples) override {
+    if (!wavInitialized || numSamples <= 0) {
+      return false;
+    }
+
+    // Seek to the requested position if needed
+    if (startSampleInFile != currentPosition) {
+      if (!drwav_seek_to_pcm_frame(&wav,
+                                   static_cast<drwav_uint64>(startSampleInFile))) {
+        // Seek failed - fill with zeros
+        clearSamplesBeyondFile(destChannels, numDestChannels,
+                               startOffsetInDestBuffer, numSamples, 0);
+        return true;
+      }
+      currentPosition = startSampleInFile;
+    }
+
+    // Handle reading before start of file
+    if (startSampleInFile < 0) {
+      auto samplesToZero =
+          static_cast<int>(std::min(-startSampleInFile, (int64)numSamples));
+      clearSamplesBeyondFile(destChannels, numDestChannels,
+                             startOffsetInDestBuffer, samplesToZero, 0);
+      startOffsetInDestBuffer += samplesToZero;
+      numSamples -= samplesToZero;
+      if (numSamples <= 0)
+        return true;
+      startSampleInFile = 0;
+      currentPosition = 0;
+      drwav_seek_to_pcm_frame(&wav, 0);
+    }
+
+    // Allocate interleaved buffer for dr_wav output
+    auto totalChannels = static_cast<int>(wav.channels);
+    std::vector<float> interleavedBuffer(
+        static_cast<size_t>(numSamples * totalChannels));
+
+    // Read decoded samples
+    auto framesRead = drwav_read_pcm_frames_f32(
+        &wav, static_cast<drwav_uint64>(numSamples), interleavedBuffer.data());
+
+    currentPosition += static_cast<int64>(framesRead);
+
+    // De-interleave into destination channels
+    auto samplesRead = static_cast<int>(framesRead);
+    for (int ch = 0; ch < numDestChannels; ++ch) {
+      if (destChannels[ch] != nullptr) {
+        auto *dest =
+            reinterpret_cast<float *>(destChannels[ch]) + startOffsetInDestBuffer;
+
+        if (ch < totalChannels) {
+          // Copy from interleaved source
+          for (int i = 0; i < samplesRead; ++i) {
+            dest[i] = interleavedBuffer[static_cast<size_t>(i * totalChannels + ch)];
+          }
+        } else {
+          // Channel doesn't exist in source - zero fill
+          std::fill(dest, dest + samplesRead, 0.0f);
+        }
+
+        // Zero any samples beyond what we read
+        if (samplesRead < numSamples) {
+          std::fill(dest + samplesRead, dest + numSamples, 0.0f);
+        }
+      }
+    }
+
+    return true;
+  }
+
+private:
+  drwav wav{};
+  bool wavInitialized = false;
+  InputStream *inputStream; // Borrowed reference (owned by base class)
+  int64 currentPosition = 0;
+
+  void clearSamplesBeyondFile(int **destChannels, int numDestChannels,
+                              int startOffset, int numSamples,
+                              int samplesRead) {
+    for (int ch = 0; ch < numDestChannels; ++ch) {
+      if (destChannels[ch] != nullptr) {
+        auto *dest =
+            reinterpret_cast<float *>(destChannels[ch]) + startOffset + samplesRead;
+        std::fill(dest, dest + (numSamples - samplesRead), 0.0f);
+      }
+    }
+  }
+
+  // dr_wav I/O callbacks - bridge to JUCE InputStream
+  static size_t drwavReadCallback(void *pUserData, void *pBufferOut,
+                                  size_t bytesToRead) {
+    auto *reader = static_cast<DrWavAudioFormatReader *>(pUserData);
+    return static_cast<size_t>(
+        reader->inputStream->read(pBufferOut, static_cast<int>(bytesToRead)));
+  }
+
+  static drwav_bool32 drwavSeekCallback(void *pUserData, int offset,
+                                        drwav_seek_origin origin) {
+    auto *reader = static_cast<DrWavAudioFormatReader *>(pUserData);
+    int64 newPos;
+    if (origin == DRWAV_SEEK_SET) {
+      newPos = offset;
+    } else if (origin == DRWAV_SEEK_CUR) {
+      newPos = reader->inputStream->getPosition() + offset;
+    } else { // DRWAV_SEEK_END
+      newPos = reader->inputStream->getTotalLength() + offset;
+    }
+    return reader->inputStream->setPosition(newPos) ? DRWAV_TRUE : DRWAV_FALSE;
+  }
+
+  static drwav_bool32 drwavTellCallback(void *pUserData,
+                                        drwav_int64 *pCursor) {
+    auto *reader = static_cast<DrWavAudioFormatReader *>(pUserData);
+    *pCursor = static_cast<drwav_int64>(reader->inputStream->getPosition());
+    return DRWAV_TRUE;
+  }
+};
+
+/**
  * A patched version of WavAudioFormat that adds support for WAV files
- * containing compressed audio data (e.g.: WAVE_FORMAT_MPEGLAYER3).
- *
- * These files are valid WAV files that use MP3 compression for the audio
- * data, wrapped in a standard RIFF/WAV container.
+ * containing compressed audio data:
+ * - WAVE_FORMAT_MPEGLAYER3 (MP3 in WAV container)
+ * - WAVE_FORMAT_ADPCM (Microsoft ADPCM)
+ * - WAVE_FORMAT_DVI_ADPCM (IMA ADPCM)
  */
 class JUCE_API PatchedWavAudioFormat : public WavAudioFormat {
 public:
@@ -90,6 +251,13 @@ public:
         case WavFormatTag::MPEGLayer3:
           return createMP3ReaderForWav(sourceStream, chunkEnd, streamStartPos,
                                        deleteStreamIfOpeningFails);
+
+        case WavFormatTag::ADPCM:
+        case WavFormatTag::IMAADPCM:
+        case WavFormatTag::ALaw:
+        case WavFormatTag::MuLaw:
+          return createDrWavReaderForWav(sourceStream, streamStartPos,
+                                         deleteStreamIfOpeningFails);
 
         default:
           // Check for known-but-unsupported formats and throw helpful errors
@@ -156,6 +324,33 @@ private:
     return nullptr;
   }
 
+  /**
+   * Creates a dr_wav-based reader for WAV files containing compressed audio
+   * that JUCE doesn't natively support (ADPCM, A-law, µ-law).
+   * Uses dr_wav to decode the audio data on-the-fly (streaming).
+   */
+  AudioFormatReader *createDrWavReaderForWav(InputStream *sourceStream,
+                                             int64 streamStartPos,
+                                             bool deleteStreamIfOpeningFails) {
+    // Reset to start for dr_wav to parse the WAV header
+    sourceStream->setPosition(streamStartPos);
+
+    // Create the streaming reader
+    auto reader = std::make_unique<DrWavAudioFormatReader>(sourceStream);
+
+    // Check if initialization succeeded
+    if (reader->sampleRate == 0) {
+      // Failed to initialize - dr_wav couldn't parse the file
+      if (deleteStreamIfOpeningFails) {
+        // Don't delete here - the reader's destructor will handle it
+        // via the base class AudioFormatReader
+      }
+      return nullptr;
+    }
+
+    return reader.release();
+  }
+
   static constexpr int chunkName(const char *name) noexcept {
     return (int)ByteOrder::littleEndianInt(name);
   }
@@ -174,11 +369,7 @@ private:
     // clang-format off
     // Format tags from mmreg.h / RFC 2361: https://www.rfc-editor.org/rfc/rfc2361.html
     switch (format) {
-    case 0x0002: return "Microsoft ADPCM";
-    case 0x0006: return "A-law";
-    case 0x0007: return "mu-law (u-law)";
     case 0x0010: return "OKI ADPCM";
-    case 0x0011: return "IMA ADPCM (DVI ADPCM)";
     case 0x0012: return "MediaSpace ADPCM";
     case 0x0013: return "Sierra ADPCM";
     case 0x0014: return "G.723 ADPCM";
