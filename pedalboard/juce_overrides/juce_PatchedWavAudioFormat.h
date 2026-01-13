@@ -21,8 +21,8 @@
 #include "juce_PatchedMP3AudioFormat.h"
 
 // dr_wav for ADPCM decoding (public domain / MIT-0)
-#include "dr_wav_config.h"
 #include "dr_wav.h"
+#include "dr_wav_config.h"
 
 namespace juce {
 
@@ -89,8 +89,8 @@ public:
 
     // Seek to the requested position if needed
     if (startSampleInFile != currentPosition) {
-      if (!drwav_seek_to_pcm_frame(&wav,
-                                   static_cast<drwav_uint64>(startSampleInFile))) {
+      if (!drwav_seek_to_pcm_frame(
+              &wav, static_cast<drwav_uint64>(startSampleInFile))) {
         // Seek failed - fill with zeros
         clearSamplesBeyondFile(destChannels, numDestChannels,
                                startOffsetInDestBuffer, numSamples, 0);
@@ -129,13 +129,14 @@ public:
     auto samplesRead = static_cast<int>(framesRead);
     for (int ch = 0; ch < numDestChannels; ++ch) {
       if (destChannels[ch] != nullptr) {
-        auto *dest =
-            reinterpret_cast<float *>(destChannels[ch]) + startOffsetInDestBuffer;
+        auto *dest = reinterpret_cast<float *>(destChannels[ch]) +
+                     startOffsetInDestBuffer;
 
         if (ch < totalChannels) {
           // Copy from interleaved source
           for (int i = 0; i < samplesRead; ++i) {
-            dest[i] = interleavedBuffer[static_cast<size_t>(i * totalChannels + ch)];
+            dest[i] =
+                interleavedBuffer[static_cast<size_t>(i * totalChannels + ch)];
           }
         } else {
           // Channel doesn't exist in source - zero fill
@@ -163,8 +164,8 @@ private:
                               int samplesRead) {
     for (int ch = 0; ch < numDestChannels; ++ch) {
       if (destChannels[ch] != nullptr) {
-        auto *dest =
-            reinterpret_cast<float *>(destChannels[ch]) + startOffset + samplesRead;
+        auto *dest = reinterpret_cast<float *>(destChannels[ch]) + startOffset +
+                     samplesRead;
         std::fill(dest, dest + (numSamples - samplesRead), 0.0f);
       }
     }
@@ -192,8 +193,7 @@ private:
     return reader->inputStream->setPosition(newPos) ? DRWAV_TRUE : DRWAV_FALSE;
   }
 
-  static drwav_bool32 drwavTellCallback(void *pUserData,
-                                        drwav_int64 *pCursor) {
+  static drwav_bool32 drwavTellCallback(void *pUserData, drwav_int64 *pCursor) {
     auto *reader = static_cast<DrWavAudioFormatReader *>(pUserData);
     *pCursor = static_cast<drwav_int64>(reader->inputStream->getPosition());
     return DRWAV_TRUE;
