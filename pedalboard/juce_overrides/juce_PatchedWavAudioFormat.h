@@ -44,13 +44,14 @@ enum class WavFormatTag : unsigned short {
 };
 
 /**
- * An AudioFormatReader that uses dr_wav to decode ADPCM audio on-the-fly.
+ * An AudioFormatReader that uses dr_wav to decode audio formats not natively
+ * supported by JUCE: ADPCM (MS and IMA), A-law, µ-law, and 64-bit float.
  * This streams the audio data rather than loading it all into memory.
  */
 class DrWavAudioFormatReader : public AudioFormatReader {
 public:
   DrWavAudioFormatReader(InputStream *stream)
-      : AudioFormatReader(stream, "ADPCM WAV"), inputStream(stream) {
+      : AudioFormatReader(stream, "dr_wav"), inputStream(stream) {
 
     // Initialize dr_wav with our I/O callbacks
     if (!drwav_init(&wav, drwavReadCallback, drwavSeekCallback,
@@ -364,11 +365,10 @@ private:
 
     // Check if initialization succeeded
     if (reader->sampleRate == 0) {
-      // Failed to initialize - dr_wav couldn't parse the file
-      if (deleteStreamIfOpeningFails) {
-        // Don't delete here - the reader's destructor will handle it
-        // via the base class AudioFormatReader
-      }
+      // Failed to initialize - dr_wav couldn't parse the file.
+      // Note: we don't need to delete the stream here even if
+      // deleteStreamIfOpeningFails is true, because the reader's destructor
+      // will handle it via the base class AudioFormatReader.
       return nullptr;
     }
 
