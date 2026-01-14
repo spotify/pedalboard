@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../JucePlugin.h"
 
@@ -47,8 +47,8 @@ class Chorus : public JucePlugin<juce::dsp::Chorus<SampleType>> {
   });
 };
 
-inline void init_chorus(py::module &m) {
-  py::class_<Chorus<float>, Plugin, std::shared_ptr<Chorus<float>>>(
+inline void init_chorus(nb::module_ &m) {
+  nb::class_<Chorus<float>, Plugin>(
       m, "Chorus",
       "A basic chorus effect.\n\nThis audio effect can be controlled via the "
       "speed and depth of the LFO controlling the frequency response, a mix "
@@ -58,7 +58,7 @@ inline void init_chorus(py::module &m) {
       "around 7-8 ms with a low feedback volume and a low depth. This effect "
       "can also be used as a flanger with a lower centre delay time and a "
       "lot of feedback, and as a vibrato effect if the mix value is 1.")
-      .def(py::init([](float rateHz, float depth, float centreDelayMs,
+      .def(nb::init([](float rateHz, float depth, float centreDelayMs,
                        float feedback, float mix) {
              auto plugin = std::make_unique<Chorus<float>>();
              plugin->setRate(rateHz);
@@ -68,9 +68,9 @@ inline void init_chorus(py::module &m) {
              plugin->setMix(mix);
              return plugin;
            }),
-           py::arg("rate_hz") = 1.0, py::arg("depth") = 0.25,
-           py::arg("centre_delay_ms") = 7.0, py::arg("feedback") = 0.0,
-           py::arg("mix") = 0.5)
+           nb::arg("rate_hz") = 1.0, nb::arg("depth") = 0.25,
+           nb::arg("centre_delay_ms") = 7.0, nb::arg("feedback") = 0.0,
+           nb::arg("mix") = 0.5)
       .def("__repr__",
            [](const Chorus<float> &plugin) {
              std::ostringstream ss;
@@ -84,18 +84,18 @@ inline void init_chorus(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property(
+      .def_prop_rw(
           "rate_hz", &Chorus<float>::getRate, &Chorus<float>::setRate,
           "The speed of the chorus effect's low-frequency oscillator (LFO), in "
           "Hertz. This value must be between " TO_STRING(
               CHORUS_MIN_RATE_HZ) " Hz and " TO_STRING(CHORUS_MAX_RATE_HZ) " Hz"
                                                                            ".")
-      .def_property("depth", &Chorus<float>::getDepth, &Chorus<float>::setDepth)
-      .def_property("centre_delay_ms", &Chorus<float>::getCentreDelay,
-                    &Chorus<float>::setCentreDelay)
-      .def_property("feedback", &Chorus<float>::getFeedback,
-                    &Chorus<float>::setFeedback)
-      .def_property("mix", &Chorus<float>::getMix, &Chorus<float>::setMix);
+      .def_prop_rw("depth", &Chorus<float>::getDepth, &Chorus<float>::setDepth)
+      .def_prop_rw("centre_delay_ms", &Chorus<float>::getCentreDelay,
+                   &Chorus<float>::setCentreDelay)
+      .def_prop_rw("feedback", &Chorus<float>::getFeedback,
+                   &Chorus<float>::setFeedback)
+      .def_prop_rw("mix", &Chorus<float>::getMix, &Chorus<float>::setMix);
   ;
 }
 }; // namespace Pedalboard

@@ -21,7 +21,7 @@
 #include <mutex>
 #include <optional>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../JuceHeader.h"
 
@@ -30,18 +30,17 @@ namespace Pedalboard {
 namespace PythonException {
 // Check if there's a Python exception pending in the interpreter.
 inline bool isPending() {
-  py::gil_scoped_acquire acquire;
+  nb::gil_scoped_acquire acquire;
   return PyErr_Occurred() != nullptr;
 }
 
 // If an exception is pending, raise it as a C++ exception to break the current
 // control flow and result in an error being thrown in Python later.
 inline void raise() {
-  py::gil_scoped_acquire acquire;
+  nb::gil_scoped_acquire acquire;
 
   if (PyErr_Occurred()) {
-    py::error_already_set existingError;
-    throw existingError;
+    throw nb::python_error();
   }
 }
 }; // namespace PythonException
@@ -92,7 +91,7 @@ public:
       while (!lock->tryEnterWrite()) {
         // If we have the GIL, release it briefly to avoid deadlocks:
         if (PyGILState_Check() == true) {
-          py::gil_scoped_release release;
+          nb::gil_scoped_release release;
         }
       }
 
@@ -132,15 +131,15 @@ private:
  */
 class PythonFileLike {
 public:
-  PythonFileLike(py::object fileLike) : fileLike(fileLike) {}
+  PythonFileLike(nb::object fileLike) : fileLike(fileLike) {}
   virtual ~PythonFileLike() {}
 
   virtual std::string getRepresentation() {
     ScopedDowngradeToReadLockWithGIL lock(objectLock);
-    py::gil_scoped_acquire acquire;
+    nb::gil_scoped_acquire acquire;
     if (PythonException::isPending())
       return "<__repr__ failed>";
-    return py::repr(fileLike).cast<std::string>();
+    return nb::cast<std::string>(nb::repr(fileLike));
   }
 
   std::optional<std::string> getFilename() noexcept {
@@ -148,10 +147,10 @@ public:
     // If this object has that property, return its value;
     // otherwise return an empty optional.
     ScopedDowngradeToReadLockWithGIL lock(objectLock);
-    py::gil_scoped_acquire acquire;
+    nb::gil_scoped_acquire acquire;
 
-    if (!PythonException::isPending() && py::hasattr(fileLike, "name")) {
-      return py::str(fileLike.attr("name")).cast<std::string>();
+    if (!PythonException::isPending() && nb::hasattr(fileLike, "name")) {
+      return nb::cast<std::string>(nb::str(fileLike.attr("name")));
     } else {
       return {};
     }
@@ -159,15 +158,15 @@ public:
 
   virtual bool isSeekable() noexcept {
     ScopedDowngradeToReadLockWithGIL lock(objectLock);
-    py::gil_scoped_acquire acquire;
+    nb::gil_scoped_acquire acquire;
 
     if (!PythonException::isPending()) {
       try {
-        return fileLike.attr("seekable")().cast<bool>();
-      } catch (py::error_already_set e) {
+        return nb::cast<bool>(fileLike.attr("seekable")());
+      } catch (nb::python_error &e) {
         e.restore();
-      } catch (const py::builtin_exception &e) {
-        e.set_error();
+      } catch (const std::exception &e) {
+        PyErr_SetString(PyExc_RuntimeError, e.what());
       }
     }
 
@@ -176,15 +175,15 @@ public:
 
   virtual juce::int64 getPosition() noexcept {
     ScopedDowngradeToReadLockWithGIL lock(objectLock);
-    py::gil_scoped_acquire acquire;
+    nb::gil_scoped_acquire acquire;
 
     if (!PythonException::isPending()) {
       try {
-        return fileLike.attr("tell")().cast<juce::int64>();
-      } catch (py::error_already_set e) {
+        return nb::cast<juce::int64>(fileLike.attr("tell")());
+      } catch (nb::python_error &e) {
         e.restore();
-      } catch (const py::builtin_exception &e) {
-        e.set_error();
+      } catch (const std::exception &e) {
+        PyErr_SetString(PyExc_RuntimeError, e.what());
       }
     }
 
@@ -193,28 +192,28 @@ public:
 
   virtual bool setPosition(juce::int64 pos) noexcept {
     ScopedDowngradeToReadLockWithGIL lock(objectLock);
-    py::gil_scoped_acquire acquire;
+    nb::gil_scoped_acquire acquire;
 
     if (!PythonException::isPending()) {
       try {
         fileLike.attr("seek")(pos);
-        return fileLike.attr("tell")().cast<juce::int64>() == pos;
-      } catch (py::error_already_set e) {
+        return nb::cast<juce::int64>(fileLike.attr("tell")()) == pos;
+      } catch (nb::python_error &e) {
         e.restore();
-      } catch (const py::builtin_exception &e) {
-        e.set_error();
+      } catch (const std::exception &e) {
+        PyErr_SetString(PyExc_RuntimeError, e.what());
       }
     }
 
     return false;
   }
 
-  py::object getFileLikeObject() { return fileLike; }
+  nb::object getFileLikeObject() { return fileLike; }
 
   void setObjectLock(juce::ReadWriteLock *lock) { objectLock = lock; }
 
 protected:
-  py::object fileLike;
+  nb::object fileLike;
   juce::ReadWriteLock *objectLock = nullptr;
 };
 }; // namespace Pedalboard

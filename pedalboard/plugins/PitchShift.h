@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../RubberbandPlugin.h"
 #include "../plugin_templates/PrimeWithSilence.h"
@@ -58,19 +58,19 @@ public:
   }
 };
 
-inline void init_pitch_shift(py::module &m) {
-  py::class_<PitchShift, Plugin, std::shared_ptr<PitchShift>>(
+inline void init_pitch_shift(nb::module_ &m) {
+  nb::class_<PitchShift, Plugin>(
       m, "PitchShift",
       "A pitch shifting effect that can change the pitch of audio without "
       "affecting its duration.\n\nThis effect uses `Chris Cannam's wonderful "
       "*Rubber Band* library <https://breakfastquay.com/rubberband/>`_ audio "
       "stretching library.")
-      .def(py::init([](double scale) {
+      .def(nb::init([](double scale) {
              auto plugin = std::make_unique<PitchShift>();
              plugin->setSemitones(scale);
              return plugin;
            }),
-           py::arg("semitones") = 0.0)
+           nb::arg("semitones") = 0.0)
       .def("__repr__",
            [](const PitchShift &plugin) {
              std::ostringstream ss;
@@ -80,7 +80,7 @@ inline void init_pitch_shift(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("semitones", &PitchShift::getSemitones,
-                    &PitchShift::setSemitones);
+      .def_prop_rw("semitones", &PitchShift::getSemitones,
+                   &PitchShift::setSemitones);
 }
 }; // namespace Pedalboard

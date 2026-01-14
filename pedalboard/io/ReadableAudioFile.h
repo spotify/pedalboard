@@ -20,8 +20,11 @@
 #include <mutex>
 #include <optional>
 
-#include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/optional.h>
+#include <nanobind/stl/variant.h>
 
 #include "../BufferUtils.h"
 #include "../JuceHeader.h"
@@ -29,7 +32,7 @@
 #include "AudioFile.h"
 #include "PythonInputStream.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 namespace Pedalboard {
 
@@ -248,7 +251,7 @@ public:
 
   std::string getFileDatatype() const { return fileDatatype; }
 
-  py::array_t<float, py::array::c_style>
+  nb::ndarray_t<float, nb::ndarray::c_style>
   read(std::variant<double, long long> numSamplesVariant) {
     long long numSamples = parseNumSamples(numSamplesVariant);
 
@@ -272,8 +275,8 @@ public:
                               (lengthCorrection ? *lengthCorrection : 0)) -
                                  currentPosition);
 
-    py::array_t<float> buffer =
-        py::array_t<float>({(long long)numChannels, (long long)numSamples});
+    nb::ndarray_t<float> buffer =
+        nb::ndarray_t<float>({(long long)numChannels, (long long)numSamples});
 
     long long numSamplesToKeep = numSamples;
 
@@ -282,7 +285,7 @@ public:
     float *outputPtr = buffer.mutable_data();
 
     {
-      py::gil_scoped_release release;
+      nb::gil_scoped_release release;
       numSamplesToKeep = readInternal(numChannels, numSamples, outputPtr);
 
       // After this point, we no longer need to hold the read lock as we don't
@@ -302,7 +305,7 @@ public:
   /**
    * Read the given number of frames (samples in each channel) from this audio
    * file into the given output pointers. This method does not take or hold the
-   * GIL, as no Python methods (like the py::array_t constructor) are
+   * GIL, as no Python methods (like the nb::ndarray_t constructor) are
    * called directly (except for in the error case).
    *
    * @param numChannels The number of channels to read from the file
@@ -416,7 +419,7 @@ public:
     return numSamplesToKeep;
   }
 
-  py::array readRaw(std::variant<double, long long> numSamplesVariant) {
+  nb::ndarray readRaw(std::variant<double, long long> numSamplesVariant) {
     long long numSamples = parseNumSamples(numSamplesVariant);
     if (numSamples == 0)
       throw std::domain_error(
@@ -448,7 +451,7 @@ public:
   }
 
   template <typename SampleType>
-  py::array_t<SampleType> readInteger(long long numSamples) {
+  nb::ndarray_t<SampleType> readInteger(long long numSamples) {
     const juce::ScopedReadLock readLock(objectLock);
     if (reader->usesFloatingPointData) {
       throw std::runtime_error(
@@ -461,13 +464,13 @@ public:
         std::min(numSamples, (reader->lengthInSamples +
                               (lengthCorrection ? *lengthCorrection : 0)) -
                                  currentPosition);
-    py::array_t<SampleType> buffer = py::array_t<SampleType>(
+    nb::ndarray_t<SampleType> buffer = nb::ndarray_t<SampleType>(
         {(long long)numChannels, (long long)numSamples});
 
-    py::buffer_info outputInfo = buffer.request();
+    Py_buffer outputInfo = buffer.request();
 
     {
-      py::gil_scoped_release release;
+      nb::gil_scoped_release release;
       if (reader->bitsPerSample > 16) {
         if (sizeof(SampleType) < 4) {
           throw std::runtime_error("Output array not wide enough to store " +
@@ -565,7 +568,7 @@ public:
   }
 
   void seek(long long targetPosition) {
-    py::gil_scoped_release release;
+    nb::gil_scoped_release release;
     seekInternal(targetPosition);
   }
 
@@ -600,7 +603,7 @@ public:
   }
 
   long long tell() const {
-    py::gil_scoped_release release;
+    nb::gil_scoped_release release;
     const juce::ScopedReadLock scopedLock(objectLock);
     return currentPosition;
   }
@@ -618,13 +621,13 @@ public:
   }
 
   bool isClosed() const {
-    py::gil_scoped_release release;
+    nb::gil_scoped_release release;
     const juce::ScopedReadLock scopedLock(objectLock);
     return !reader;
   }
 
   bool isSeekable() const {
-    py::gil_scoped_release release;
+    nb::gil_scoped_release release;
     const juce::ScopedReadLock scopedLock(objectLock);
 
     // At the moment, ReadableAudioFile instances are always seekable, as
@@ -668,13 +671,13 @@ public:
 
   std::shared_ptr<ReadableAudioFile> enter() { return shared_from_this(); }
 
-  void exit(const py::object &type, const py::object &value,
-            const py::object &traceback) {
+  void exit(const nb::object &type, const nb::object &value,
+            const nb::object &traceback) {
     bool shouldThrow = PythonException::isPending();
     close();
 
     if (shouldThrow || PythonException::isPending())
-      throw py::error_already_set();
+      throw nb::python_error();
   }
 
 private:
@@ -746,10 +749,10 @@ private:
   std::optional<long long> lengthCorrection = {};
 };
 
-inline py::class_<ReadableAudioFile, AudioFile,
+inline nb::class_<ReadableAudioFile, AudioFile,
                   std::shared_ptr<ReadableAudioFile>>
-declare_readable_audio_file(py::module &m) {
-  return py::class_<ReadableAudioFile, AudioFile,
+declare_readable_audio_file(nb::module_ &m) {
+  return nb::class_<ReadableAudioFile, AudioFile,
                     std::shared_ptr<ReadableAudioFile>>(m, "ReadableAudioFile",
                                                         R"(
 A class that wraps an audio file for reading, with native support for Ogg Vorbis,
@@ -785,43 +788,43 @@ Pedalboard.)
 class ResampledReadableAudioFile;
 
 inline void init_readable_audio_file(
-    py::module &m,
-    py::class_<ReadableAudioFile, AudioFile, std::shared_ptr<ReadableAudioFile>>
+    nb::module_ &m,
+    nb::class_<ReadableAudioFile, AudioFile, std::shared_ptr<ReadableAudioFile>>
         &pyReadableAudioFile) {
   pyReadableAudioFile
-      .def(py::init([](std::string filename) -> ReadableAudioFile * {
+      .def(nb::init([](std::string filename) -> ReadableAudioFile * {
              // This definition is only here to provide nice docstrings.
              throw std::runtime_error(
                  "Internal error: __init__ should never be called, as this "
                  "class implements __new__.");
            }),
-           py::arg("filename"))
-      .def(py::init([](py::object filelike) -> ReadableAudioFile * {
+           nb::arg("filename"))
+      .def(nb::init([](nb::object filelike) -> ReadableAudioFile * {
              // This definition is only here to provide nice docstrings.
              throw std::runtime_error(
                  "Internal error: __init__ should never be called, as this "
                  "class implements __new__.");
            }),
-           py::arg("file_like"))
+           nb::arg("file_like"))
       .def_static(
           "__new__",
-          [](const py::object *, std::string filename) {
+          [](const nb::object *, std::string filename) {
             return std::make_shared<ReadableAudioFile>(filename);
           },
-          py::arg("cls"), py::arg("filename"))
+          nb::arg("cls"), nb::arg("filename"))
       .def_static(
           "__new__",
-          [](const py::object *, py::object filelike) {
+          [](const nb::object *, nb::object filelike) {
             if (!isReadableFileLike(filelike) &&
                 !tryConvertingToBuffer(filelike)) {
-              throw py::type_error(
+              throw nb::type_error(
                   "Expected either a filename, a file-like object (with "
                   "read, seek, seekable, and tell methods) or a memoryview, "
                   "but received: " +
-                  py::repr(filelike).cast<std::string>());
+                  nb::repr(filelike).attrstd::string>());
             }
 
-            if (std::optional<py::buffer> buf =
+            if (std::optional<BufferInfo> buf =
                     tryConvertingToBuffer(filelike)) {
               return std::make_shared<ReadableAudioFile>(
                   std::make_unique<PythonMemoryViewInputStream>(*buf,
@@ -831,8 +834,8 @@ inline void init_readable_audio_file(
                   std::make_unique<PythonInputStream>(filelike));
             }
           },
-          py::arg("cls"), py::arg("file_like"))
-      .def("read", &ReadableAudioFile::read, py::arg("num_frames") = 0, R"(
+          nb::arg("cls"), nb::arg("file_like"))
+      .def("read", &ReadableAudioFile::read, nb::arg("num_frames") = 0, R"(
 Read the given number of frames (samples in each channel) from this audio file at its current position.
 
 ``num_frames`` is a required argument, as audio files can be deceptively large. (Consider that 
@@ -858,7 +861,7 @@ maximum sample value will be ``+1.0f``.
     provided number of frames contains a fractional part (i.e.: ``1.01`` instead of ``1.00``) then
     an exception will be thrown, as a fractional number of samples cannot be returned.
 )")
-      .def("read_raw", &ReadableAudioFile::readRaw, py::arg("num_frames") = 0,
+      .def("read_raw", &ReadableAudioFile::readRaw, nb::arg("num_frames") = 0,
            R"(
 Read the given number of frames (samples in each channel) from this audio file at its current position.
 
@@ -886,7 +889,7 @@ in which this may occur.)
       .def("seekable", &ReadableAudioFile::isSeekable,
            "Returns True if this file is currently open and calls to seek() "
            "will work.")
-      .def("seek", &ReadableAudioFile::seek, py::arg("position"),
+      .def("seek", &ReadableAudioFile::seek, nb::arg("position"),
            "Seek this file to the provided location in frames. Future reads "
            "will start from this position.")
       .def("tell", &ReadableAudioFile::tell,
@@ -927,22 +930,22 @@ in which this may occur.)
              ss << ">";
              return ss.str();
            })
-      .def_property_readonly(
+      .def_prop_ro(
           "name", &ReadableAudioFile::getFilename,
           "The name of this file.\n\nIf this :class:`ReadableAudioFile` was "
           "opened from a file-like object, this will be ``None``.")
-      .def_property_readonly("closed", &ReadableAudioFile::isClosed,
+      .def_prop_ro("closed", &ReadableAudioFile::isClosed,
                              "True iff this file is closed (and no longer "
                              "usable), False otherwise.")
-      .def_property_readonly(
+      .def_prop_ro(
           "samplerate", &ReadableAudioFile::getSampleRate,
           "The sample rate of this file in samples (per channel) per second "
           "(Hz). Sample rates are represented as floating-point numbers by "
           "default, but this property will be an integer if the file's sample "
           "rate has no fractional part.")
-      .def_property_readonly("num_channels", &ReadableAudioFile::getNumChannels,
+      .def_prop_ro("num_channels", &ReadableAudioFile::getNumChannels,
                              "The number of channels in this file.")
-      .def_property_readonly("exact_duration_known",
+      .def_prop_ro("exact_duration_known",
                              &ReadableAudioFile::exactDurationKnown,
                              R"(
 Returns :py:const:`True` if this file's :py:attr:`frames` and
@@ -962,7 +965,7 @@ for the same :py:class:`AudioFile` object (even after calls to :meth:`seek`).
 
 *Introduced in v0.7.2.*
 )")
-      .def_property_readonly("frames", &ReadableAudioFile::getLengthInSamples,
+      .def_prop_ro("frames", &ReadableAudioFile::getLengthInSamples,
                              R"(
 The total number of frames (samples per channel) in this file.
 
@@ -1004,7 +1007,7 @@ of 44,100 Hz, ``frames`` will return ``441,000``.
     raise an exception when trying to read the ends of MP3 files that contained
     trailing non-audio data and lacked ``Xing`` or ``Info`` headers.
 )")
-      .def_property_readonly("duration", &ReadableAudioFile::getDuration,
+      .def_prop_ro("duration", &ReadableAudioFile::getDuration,
                              R"(
 The duration of this file in seconds (``frames`` divided by ``samplerate``).
 
@@ -1014,7 +1017,7 @@ The duration of this file in seconds (``frames`` divided by ``samplerate``).
     :py:attr:`duration` is accurate. (See the documentation for the
     :py:attr:`frames` attribute for more details.)
 )")
-      .def_property_readonly(
+      .def_prop_ro(
           "file_dtype", &ReadableAudioFile::getFileDatatype,
           "The data type (``\"int16\"``, ``\"float32\"``, etc) stored "
           "natively by this file.\n\nNote that :meth:`read` will always "
@@ -1033,8 +1036,8 @@ The duration of this file in seconds (``frames`` divided by ``samplerate``).
             return {std::make_shared<ResampledReadableAudioFile>(
                 file, targetSampleRate, quality)};
           },
-          py::arg("target_sample_rate"),
-          py::arg("quality") = ResamplingQuality::WindowedSinc32,
+          nb::arg("target_sample_rate"),
+          nb::arg("quality") = ResamplingQuality::WindowedSinc32,
           "Return a :class:`ResampledReadableAudioFile` that will "
           "automatically resample this :class:`ReadableAudioFile` to the "
           "provided `target_sample_rate`, using a constant amount of "

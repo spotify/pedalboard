@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../JucePlugin.h"
 
@@ -44,19 +44,18 @@ private:
   float cutoffFrequencyHz;
 };
 
-inline void init_lowpass(py::module &m) {
-  py::class_<LowpassFilter<float>, Plugin,
-             std::shared_ptr<LowpassFilter<float>>>(
+inline void init_lowpass(nb::module_ &m) {
+  nb::class_<LowpassFilter<float>, Plugin>(
       m, "LowpassFilter",
       "Apply a first-order low-pass filter with a roll-off of 6dB/octave. "
       "The cutoff frequency will be attenuated by -3dB (i.e.: 0.707x as "
       "loud).")
-      .def(py::init([](float cutoff_frequency_hz) {
+      .def(nb::init([](float cutoff_frequency_hz) {
              auto plugin = std::make_unique<LowpassFilter<float>>();
              plugin->setCutoffFrequencyHz(cutoff_frequency_hz);
              return plugin;
            }),
-           py::arg("cutoff_frequency_hz") = 50)
+           nb::arg("cutoff_frequency_hz") = 50)
       .def("__repr__",
            [](const LowpassFilter<float> &plugin) {
              std::ostringstream ss;
@@ -66,8 +65,8 @@ inline void init_lowpass(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("cutoff_frequency_hz",
-                    &LowpassFilter<float>::getCutoffFrequencyHz,
-                    &LowpassFilter<float>::setCutoffFrequencyHz);
+      .def_prop_rw("cutoff_frequency_hz",
+                   &LowpassFilter<float>::getCutoffFrequencyHz,
+                   &LowpassFilter<float>::setCutoffFrequencyHz);
 }
 }; // namespace Pedalboard

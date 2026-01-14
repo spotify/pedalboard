@@ -81,8 +81,8 @@ private:
   static constexpr int INNER_LOOP_DIMENSION = 16;
 };
 
-inline void init_bitcrush(py::module &m) {
-  py::class_<Bitcrush<float>, Plugin, std::shared_ptr<Bitcrush<float>>>(
+inline void init_bitcrush(nb::module_ &m) {
+  nb::class_<Bitcrush<float>, Plugin>(
       m, "Bitcrush",
       "A plugin that reduces the signal to a given bit depth, giving the audio "
       "a lo-fi, digitized sound. Floating-point bit depths are "
@@ -91,12 +91,12 @@ inline void init_bitcrush(py::module &m) {
       "represent each sample). For an effect that changes the \"horizontal\" "
       "resolution (i.e.: how many samples are available per second), see "
       ":class:`pedalboard.Resample`.")
-      .def(py::init([](float bitDepth) {
+      .def(nb::init([](float bitDepth) {
              auto bitcrush = std::make_unique<Bitcrush<float>>();
              bitcrush->setBitDepth(bitDepth);
              return bitcrush;
            }),
-           py::arg("bit_depth") = 8)
+           nb::arg("bit_depth") = 8)
       .def("__repr__",
            [](const Bitcrush<float> &plugin) {
              std::ostringstream ss;
@@ -106,7 +106,7 @@ inline void init_bitcrush(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property(
+      .def_prop_rw(
           "bit_depth", &Bitcrush<float>::getBitDepth,
           &Bitcrush<float>::setBitDepth,
           "The bit depth to quantize the signal to. Must be "

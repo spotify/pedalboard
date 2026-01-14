@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../JucePlugin.h"
 
@@ -57,8 +57,8 @@ class LadderFilter : public JucePlugin<juce::dsp::LadderFilter<SampleType>> {
   });
 };
 
-inline void init_ladderfilter(py::module &m) {
-  py::class_<LadderFilter<float>, Plugin, std::shared_ptr<LadderFilter<float>>>
+inline void init_ladderfilter(nb::module_ &m) {
+  nb::class_<LadderFilter<float>, Plugin>
       ladderFilter(
           m, "LadderFilter",
           "A multi-mode audio filter based on the classic Moog "
@@ -69,7 +69,7 @@ inline void init_ladderfilter(py::module &m) {
           "may cause peaks in the frequency response around the "
           "cutoff frequency.");
 
-  py::enum_<juce::dsp::LadderFilterMode>(
+  nb::enum_<juce::dsp::LadderFilterMode>(
       ladderFilter, "Mode", "The type of filter architecture to use.")
       .value("LPF12", juce::dsp::LadderFilterMode::LPF12,
              "A low-pass filter with 12 dB of attenuation per octave above the "
@@ -94,7 +94,7 @@ inline void init_ladderfilter(py::module &m) {
       .export_values();
 
   ladderFilter
-      .def(py::init([](juce::dsp::LadderFilterMode mode, float cutoffHz,
+      .def(nb::init([](juce::dsp::LadderFilterMode mode, float cutoffHz,
                        float resonance, float drive) {
              auto plugin = std::make_unique<LadderFilter<float>>();
              plugin->setMode(mode);
@@ -103,9 +103,9 @@ inline void init_ladderfilter(py::module &m) {
              plugin->setDrive(drive);
              return plugin;
            }),
-           py::arg("mode") = juce::dsp::LadderFilterMode::LPF12,
-           py::arg("cutoff_hz") = 200, py::arg("resonance") = 0,
-           py::arg("drive") = 1.0)
+           nb::arg("mode") = juce::dsp::LadderFilterMode::LPF12,
+           nb::arg("cutoff_hz") = 200, nb::arg("resonance") = 0,
+           nb::arg("drive") = 1.0)
       .def("__repr__",
            [](const LadderFilter<float> &plugin) {
              std::ostringstream ss;
@@ -141,14 +141,14 @@ inline void init_ladderfilter(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("mode", &LadderFilter<float>::getMode,
-                    &LadderFilter<float>::setMode)
-      .def_property("cutoff_hz", &LadderFilter<float>::getCutoffFrequencyHz,
-                    &LadderFilter<float>::setCutoffFrequencyHz)
-      .def_property("resonance", &LadderFilter<float>::getResonance,
-                    &LadderFilter<float>::setResonance)
-      .def_property("drive", &LadderFilter<float>::getDrive,
-                    &LadderFilter<float>::setDrive);
+      .def_prop_rw("mode", &LadderFilter<float>::getMode,
+                   &LadderFilter<float>::setMode)
+      .def_prop_rw("cutoff_hz", &LadderFilter<float>::getCutoffFrequencyHz,
+                   &LadderFilter<float>::setCutoffFrequencyHz)
+      .def_prop_rw("resonance", &LadderFilter<float>::getResonance,
+                   &LadderFilter<float>::setResonance)
+      .def_prop_rw("drive", &LadderFilter<float>::getDrive,
+                   &LadderFilter<float>::setDrive);
   ;
 }
 }; // namespace Pedalboard

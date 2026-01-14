@@ -303,16 +303,15 @@ private:
   int expectedBlockSize = 0;
 };
 
-inline void init_fixed_size_block_test_plugin(py::module &m) {
-  py::class_<FixedSizeBlockTestPlugin, Plugin,
-             std::shared_ptr<FixedSizeBlockTestPlugin>>(
+inline void init_fixed_size_block_test_plugin(nb::module_ &m) {
+  nb::class_<FixedSizeBlockTestPlugin, Plugin>(
       m, "FixedSizeBlockTestPlugin")
-      .def(py::init([](int expectedBlockSize) {
+      .def(nb::init([](int expectedBlockSize) {
              auto plugin = new FixedSizeBlockTestPlugin();
              plugin->setExpectedBlockSize(expectedBlockSize);
              return plugin;
            }),
-           py::arg("expected_block_size") = 160)
+           nb::arg("expected_block_size") = 160)
       .def("__repr__", [](const FixedSizeBlockTestPlugin &plugin) {
         std::ostringstream ss;
         ss << "<pedalboard.FixedSizeBlockTestPlugin";

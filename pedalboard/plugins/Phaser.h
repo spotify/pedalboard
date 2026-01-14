@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../JucePlugin.h"
 
@@ -32,16 +32,16 @@ class Phaser : public JucePlugin<juce::dsp::Phaser<SampleType>> {
   DEFINE_DSP_SETTER_AND_GETTER(SampleType, Mix, {});
 };
 
-inline void init_phaser(py::module &m) {
+inline void init_phaser(nb::module_ &m) {
 
-  py::class_<Phaser<float>, Plugin, std::shared_ptr<Phaser<float>>>(
+  nb::class_<Phaser<float>, Plugin>(
       m, "Phaser",
       "A 6 stage phaser that modulates first order all-pass filters to create "
       "sweeping notches in the magnitude frequency response. This audio effect "
       "can be controlled with standard phaser parameters: the speed and depth "
       "of the LFO controlling the frequency response, a mix control, a "
       "feedback control, and the centre frequency of the modulation.")
-      .def(py::init([](float rateHz, float depth, float centreFrequency,
+      .def(nb::init([](float rateHz, float depth, float centreFrequency,
                        float feedback, float mix) {
              auto plugin = std::make_unique<Phaser<float>>();
              plugin->setRate(rateHz);
@@ -51,9 +51,9 @@ inline void init_phaser(py::module &m) {
              plugin->setMix(mix);
              return plugin;
            }),
-           py::arg("rate_hz") = 1.0, py::arg("depth") = 0.5,
-           py::arg("centre_frequency_hz") = 1300.0, py::arg("feedback") = 0.0,
-           py::arg("mix") = 0.5)
+           nb::arg("rate_hz") = 1.0, nb::arg("depth") = 0.5,
+           nb::arg("centre_frequency_hz") = 1300.0, nb::arg("feedback") = 0.0,
+           nb::arg("mix") = 0.5)
       .def("__repr__",
            [](const Phaser<float> &plugin) {
              std::ostringstream ss;
@@ -67,12 +67,12 @@ inline void init_phaser(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("rate_hz", &Phaser<float>::getRate, &Phaser<float>::setRate)
-      .def_property("depth", &Phaser<float>::getDepth, &Phaser<float>::setDepth)
-      .def_property("centre_frequency_hz", &Phaser<float>::getCentreFrequency,
-                    &Phaser<float>::setCentreFrequency)
-      .def_property("feedback", &Phaser<float>::getFeedback,
-                    &Phaser<float>::setFeedback)
-      .def_property("mix", &Phaser<float>::getMix, &Phaser<float>::setMix);
+      .def_prop_rw("rate_hz", &Phaser<float>::getRate, &Phaser<float>::setRate)
+      .def_prop_rw("depth", &Phaser<float>::getDepth, &Phaser<float>::setDepth)
+      .def_prop_rw("centre_frequency_hz", &Phaser<float>::getCentreFrequency,
+                   &Phaser<float>::setCentreFrequency)
+      .def_prop_rw("feedback", &Phaser<float>::getFeedback,
+                   &Phaser<float>::setFeedback)
+      .def_prop_rw("mix", &Phaser<float>::getMix, &Phaser<float>::setMix);
 }
 }; // namespace Pedalboard

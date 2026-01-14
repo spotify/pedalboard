@@ -584,16 +584,15 @@ private:
   }
 };
 
-inline void init_resample(py::module &m) {
-  py::class_<Resample<Passthrough<float>, float>, Plugin,
-             std::shared_ptr<Resample<Passthrough<float>, float>>>
+inline void init_resample(nb::module_ &m) {
+  nb::class_<Resample<Passthrough<float>, float>, Plugin>
       resample(
           m, "Resample",
           "A plugin that downsamples the input audio to the given sample rate, "
           "then upsamples it back to the original sample rate. Various quality "
           "settings will produce audible distortion and aliasing effects.");
 
-  py::enum_<ResamplingQuality>(resample, "Quality", R"(
+  nb::enum_<ResamplingQuality>(resample, "Quality", R"(
 Indicates which specific resampling algorithm to use.
 
 Resampling algorithms each provide a different tradeoff between speed and quality.
@@ -724,15 +723,15 @@ default from Pedalboard v0.9.15 onwards. (Previously, :py:class:`WindowedSinc` w
       .export_values();
 
   resample
-      .def(py::init([](float targetSampleRate, ResamplingQuality quality) {
+      .def(nb::init([](float targetSampleRate, ResamplingQuality quality) {
              auto resample =
                  std::make_unique<Resample<Passthrough<float>, float>>();
              resample->setTargetSampleRate(targetSampleRate);
              resample->setQuality(quality);
              return resample;
            }),
-           py::arg("target_sample_rate") = 8000.0,
-           py::arg("quality") = ResamplingQuality::WindowedSinc32)
+           nb::arg("target_sample_rate") = 8000.0,
+           nb::arg("quality") = ResamplingQuality::WindowedSinc32)
       .def("__repr__",
            [](const Resample<Passthrough<float>, float> &plugin) {
              std::ostringstream ss;
@@ -781,7 +780,7 @@ default from Pedalboard v0.9.15 onwards. (Previously, :py:class:`WindowedSinc` w
              ss << ">";
              return ss.str();
            })
-      .def_property(
+      .def_prop_rw(
           "target_sample_rate",
           &Resample<Passthrough<float>, float>::getTargetSampleRate,
           &Resample<Passthrough<float>, float>::setTargetSampleRate,
@@ -790,20 +789,19 @@ default from Pedalboard v0.9.15 onwards. (Previously, :py:class:`WindowedSinc` w
           "will be used. Note that the output of this plugin will still be at "
           "the original sample rate; this is merely the sample rate used for "
           "quality reduction.")
-      .def_property("quality", &Resample<Passthrough<float>, float>::getQuality,
-                    &Resample<Passthrough<float>, float>::setQuality,
-                    "The resampling algorithm used to resample the audio.");
+      .def_prop_rw("quality", &Resample<Passthrough<float>, float>::getQuality,
+                   &Resample<Passthrough<float>, float>::setQuality,
+                   "The resampling algorithm used to resample the audio.");
 }
 
 /**
  * An internal test plugin that does nothing but add latency to the resampled
  * signal.
  */
-inline void init_resample_with_latency(py::module &m) {
-  py::class_<Resample<AddLatency, float>, Plugin,
-             std::shared_ptr<Resample<AddLatency, float>>>(
+inline void init_resample_with_latency(nb::module_ &m) {
+  nb::class_<Resample<AddLatency, float>, Plugin>(
       m, "ResampleWithLatency")
-      .def(py::init([](float targetSampleRate, int internalLatency,
+      .def(nb::init([](float targetSampleRate, int internalLatency,
                        ResamplingQuality quality) {
              auto plugin = std::make_unique<Resample<AddLatency, float>>();
              plugin->setTargetSampleRate(targetSampleRate);
@@ -813,9 +811,9 @@ inline void init_resample_with_latency(py::module &m) {
              plugin->setQuality(quality);
              return plugin;
            }),
-           py::arg("target_sample_rate") = 8000.0,
-           py::arg("internal_latency") = 1024,
-           py::arg("quality") = ResamplingQuality::WindowedSinc32)
+           nb::arg("target_sample_rate") = 8000.0,
+           nb::arg("internal_latency") = 1024,
+           nb::arg("quality") = ResamplingQuality::WindowedSinc32)
       .def("__repr__",
            [](Resample<AddLatency, float> &plugin) {
              std::ostringstream ss;
@@ -866,11 +864,11 @@ inline void init_resample_with_latency(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("target_sample_rate",
-                    &Resample<AddLatency, float>::getTargetSampleRate,
-                    &Resample<AddLatency, float>::setTargetSampleRate)
-      .def_property("quality", &Resample<AddLatency, float>::getQuality,
-                    &Resample<AddLatency, float>::setQuality);
+      .def_prop_rw("target_sample_rate",
+                   &Resample<AddLatency, float>::getTargetSampleRate,
+                   &Resample<AddLatency, float>::setTargetSampleRate)
+      .def_prop_rw("quality", &Resample<AddLatency, float>::getQuality,
+                   &Resample<AddLatency, float>::setQuality);
 }
 
 } // namespace Pedalboard

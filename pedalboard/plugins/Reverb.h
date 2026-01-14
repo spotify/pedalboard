@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../JucePlugin.h"
 
@@ -76,13 +76,13 @@ public:
   }
 };
 
-inline void init_reverb(py::module &m) {
-  py::class_<Reverb, Plugin, std::shared_ptr<Reverb>>(
+inline void init_reverb(nb::module_ &m) {
+  nb::class_<Reverb, Plugin>(
       m, "Reverb",
       "A simple reverb effect. Uses a simple stereo reverb algorithm, based on "
       "the technique and tunings used in `FreeVerb "
       "<https://ccrma.stanford.edu/~jos/pasp/Freeverb.html>_`.")
-      .def(py::init([](float roomSize, float damping, float wetLevel,
+      .def(nb::init([](float roomSize, float damping, float wetLevel,
                        float dryLevel, float width, float freezeMode) {
              auto plugin = std::make_unique<Reverb>();
              plugin->setRoomSize(roomSize);
@@ -93,9 +93,9 @@ inline void init_reverb(py::module &m) {
              plugin->setFreezeMode(freezeMode);
              return plugin;
            }),
-           py::arg("room_size") = 0.5, py::arg("damping") = 0.5,
-           py::arg("wet_level") = 0.33, py::arg("dry_level") = 0.4,
-           py::arg("width") = 1.0, py::arg("freeze_mode") = 0.0)
+           nb::arg("room_size") = 0.5, nb::arg("damping") = 0.5,
+           nb::arg("wet_level") = 0.33, nb::arg("dry_level") = 0.4,
+           nb::arg("width") = 1.0, nb::arg("freeze_mode") = 0.0)
       .def("__repr__",
            [](Reverb &plugin) {
              std::ostringstream ss;
@@ -110,12 +110,12 @@ inline void init_reverb(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("room_size", &Reverb::getRoomSize, &Reverb::setRoomSize)
-      .def_property("damping", &Reverb::getDamping, &Reverb::setDamping)
-      .def_property("wet_level", &Reverb::getWetLevel, &Reverb::setWetLevel)
-      .def_property("dry_level", &Reverb::getDryLevel, &Reverb::setDryLevel)
-      .def_property("width", &Reverb::getWidth, &Reverb::setWidth)
-      .def_property("freeze_mode", &Reverb::getFreezeMode,
-                    &Reverb::setFreezeMode);
+      .def_prop_rw("room_size", &Reverb::getRoomSize, &Reverb::setRoomSize)
+      .def_prop_rw("damping", &Reverb::getDamping, &Reverb::setDamping)
+      .def_prop_rw("wet_level", &Reverb::getWetLevel, &Reverb::setWetLevel)
+      .def_prop_rw("dry_level", &Reverb::getDryLevel, &Reverb::setDryLevel)
+      .def_prop_rw("width", &Reverb::getWidth, &Reverb::setWidth)
+      .def_prop_rw("freeze_mode", &Reverb::getFreezeMode,
+                   &Reverb::setFreezeMode);
 }
 }; // namespace Pedalboard

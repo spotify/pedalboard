@@ -16,7 +16,7 @@ if (NOT SKBUILD)
   in your environment once and use the following command that avoids
   a costly creation of a new virtual environment at every compilation:
   =====================================================================
-   $ pip install pybind11 scikit-build-core[pyproject]
+   $ pip install nanobind scikit-build-core[pyproject]
    $ pip install --no-build-isolation -ve .
   =====================================================================
   You may optionally add -Ceditable.rebuild=true to auto-rebuild when
@@ -24,43 +24,11 @@ if (NOT SKBUILD)
   after editing C++ files.")
 endif()
 
-
-
-# Find Python and pybind11 first, as we need the interpreter
-set(PYBIND11_FINDPYTHON ON)
+# Find Python and nanobind
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
-find_package(pybind11 CONFIG REQUIRED)
+find_package(nanobind CONFIG REQUIRED)
 
-message(STATUS "DEBUG: Python_FOUND: ${Python_FOUND}")
-message(STATUS "DEBUG: Python_Interpreter_FOUND: ${Python_Interpreter_FOUND}")
-message(STATUS "DEBUG: Python_Development_FOUND: ${Python_Development_FOUND}")
-message(STATUS "DEBUG: Python_Development.Module_FOUND: ${Python_Development.Module_FOUND}")
-message(STATUS "DEBUG: Python_LIBRARIES: ${Python_LIBRARIES}")
-message(STATUS "DEBUG: Python_LIBRARY_DIRS: ${Python_LIBRARY_DIRS}")
-message(STATUS "DEBUG: Python_INCLUDE_DIRS: ${Python_INCLUDE_DIRS}")
-message(STATUS "DEBUG: Python_EXECUTABLE: ${Python_EXECUTABLE}")
-message(STATUS "DEBUG: Python_VERSION: ${Python_VERSION}")
-
-# TODO(psobot): This shouldn't be necessary, but our CI build fails on Windows without it.
-if(WIN32 AND NOT DEFINED Python_LIBRARY)
-    # Dynamically construct the Python_LIBRARY path using version info from find_package(Python)
-    if (NOT Python_VERSION)
-        message(FATAL_ERROR "Python_VERSION not set after find_package(Python). Cannot construct Python library path.")
-    endif()
-
-    # Split the version string into major, minor, and patch parts
-    string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.(.+)" _ ${Python_VERSION})
-    set(Python_VERSION_MAJOR ${CMAKE_MATCH_1})
-    set(Python_VERSION_MINOR ${CMAKE_MATCH_2})
-    set(Python_VERSION_PATCH ${CMAKE_MATCH_3})
-
-    set(DYNAMIC_PYTHON_LIB_FILENAME "python${Python_VERSION_MAJOR}${Python_VERSION_MINOR}.lib")
-    set(EXPECTED_PYTHON_VERSION_DIR "C:/hostedtoolcache/windows/Python/${Python_VERSION}/x64/libs")
-    set(Python_LIBRARY "${EXPECTED_PYTHON_VERSION_DIR}/${DYNAMIC_PYTHON_LIB_FILENAME}")
-
-    message(STATUS "DEBUG: On Windows, constructed DYNAMIC_PYTHON_LIB_FILENAME: ${DYNAMIC_PYTHON_LIB_FILENAME}")
-    message(STATUS "DEBUG: On Windows, constructed Python_LIBRARY path: ${Python_LIBRARY}")
-endif()
+message(STATUS "Python found: ${Python_EXECUTABLE} (${Python_VERSION})")
 
 # Set up ccache if available
 find_program(CCACHE_PROGRAM ccache)
@@ -104,6 +72,13 @@ else()
     endif()
 endif()
 
+# Address Sanitizer support
+if(DEFINED ENV{USE_ASAN})
+    message(STATUS "Building with Address Sanitizer (ASan) enabled")
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer -g)
+    add_link_options(-fsanitize=address)
+endif()
+
 # Add flags based on compiler/platform
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(-Wall)
@@ -111,7 +86,6 @@ endif()
 
 # Set up includes and library sources
 set(ALL_INCLUDES
-    "vendors/pybind11/include/"
     "JUCE/modules/"
     "JUCE/modules/juce_audio_processors/format_types/VST3_SDK/"
     "JUCE/modules/juce_audio_formats/codecs/"
@@ -332,8 +306,9 @@ endfunction()
 # Call the function to collect all source files
 collect_sources()
 
-# Create the Python module
-pybind11_add_module(pedalboard_native ${ALL_SOURCES})
+# Create the Python module using nanobind
+# NB_SHARED creates a shared library (not using stable ABI for now)
+nanobind_add_module(pedalboard_native NB_SHARED ${ALL_SOURCES})
 
 # Add include directories
 target_include_directories(pedalboard_native PRIVATE ${ALL_INCLUDES})
@@ -370,19 +345,6 @@ if(APPLE)
     target_link_libraries(pedalboard_native PRIVATE ${MACOS_FRAMEWORKS})
 elseif(WIN32)
     target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES})
-    # Link Python libraries
-    if(Python_LIBRARIES)
-        # This is the ideal case, FindPython worked as expected.
-        message(STATUS "DEBUG: Linking against Python_LIBRARIES: ${Python_LIBRARIES}")
-        target_link_libraries(pedalboard_native PRIVATE ${Python_LIBRARIES})
-    elseif(DEFINED Python_LIBRARY AND EXISTS "${Python_LIBRARY}")
-        # Fallback: Python_LIBRARIES is empty, but we have an explicit Python_LIBRARY path.
-        message(STATUS "DEBUG: Python_LIBRARIES is empty. Linking directly against Python_LIBRARY: ${Python_LIBRARY}")
-        target_link_libraries(pedalboard_native PRIVATE "${Python_LIBRARY}")
-    else()
-        # Critical error: No way to link Python library on Windows.
-        message(FATAL_ERROR "DEBUG: On Windows, Python_LIBRARIES is empty AND Python_LIBRARY is not set or path does not exist ('${Python_LIBRARY}'). Cannot link Python.")
-    endif()
 elseif(UNIX AND NOT APPLE)
     # Add libatomic for atomic operations on Linux
     target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES} atomic)
@@ -432,5 +394,44 @@ if(NOT DEBUG AND NOT DEFINED ENV{DISABLE_LTO})
     endif()
 endif()
 
-# Install targets
-install(TARGETS pedalboard_native DESTINATION .) 
+# Install the module
+install(TARGETS pedalboard_native LIBRARY DESTINATION .)
+
+# Generate type stubs using nanobind's built-in stub generator
+# This creates .pyi files automatically from the module's docstrings and type information
+nanobind_add_stub(
+    pedalboard_native_stub
+    MODULE pedalboard_native
+    OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/pedalboard_native/__init__.pyi"
+    PYTHON_PATH $<TARGET_FILE_DIR:pedalboard_native>
+    DEPENDS pedalboard_native
+    VERBOSE
+)
+
+# Also generate stubs for submodules
+nanobind_add_stub(
+    pedalboard_native_io_stub
+    MODULE pedalboard_native.io
+    OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/pedalboard_native/io/__init__.pyi"
+    PYTHON_PATH $<TARGET_FILE_DIR:pedalboard_native>
+    DEPENDS pedalboard_native
+    VERBOSE
+)
+
+nanobind_add_stub(
+    pedalboard_native_utils_stub
+    MODULE pedalboard_native.utils
+    OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/pedalboard_native/utils/__init__.pyi"
+    PYTHON_PATH $<TARGET_FILE_DIR:pedalboard_native>
+    DEPENDS pedalboard_native
+    VERBOSE
+)
+
+nanobind_add_stub(
+    pedalboard_native_internal_stub
+    MODULE pedalboard_native._internal
+    OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/pedalboard_native/_internal/__init__.pyi"
+    PYTHON_PATH $<TARGET_FILE_DIR:pedalboard_native>
+    DEPENDS pedalboard_native
+    VERBOSE
+)

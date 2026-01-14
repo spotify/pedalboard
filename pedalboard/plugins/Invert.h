@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../Plugin.h"
 
@@ -33,8 +33,8 @@ template <typename SampleType> class Invert : public Plugin {
   void reset() noexcept override {}
 };
 
-inline void init_invert(py::module &m) {
-  py::class_<Invert<float>, Plugin, std::shared_ptr<Invert<float>>>(
+inline void init_invert(nb::module_ &m) {
+  nb::class_<Invert<float>, Plugin>(
       m, "Invert",
       "Flip the polarity of the signal. This effect is not audible on its own "
       "and takes no parameters. This effect is mathematically identical to "
@@ -44,7 +44,7 @@ inline void init_invert(py::module &m) {
       "for instance, ``Invert`` can be used with the ``Mix`` plugin to remove "
       "the original signal from an effects chain that contains multiple "
       "signals.")
-      .def(py::init([]() { return std::make_unique<Invert<float>>(); }))
+      .def(nb::init([]() { return std::make_unique<Invert<float>>(); }))
       .def("__repr__", [](const Invert<float> &plugin) {
         std::ostringstream ss;
         ss << "<pedalboard.Invert";

@@ -362,8 +362,8 @@ private:
   int mp3BufferBytesFilled = 0;
 };
 
-inline void init_mp3_compressor(py::module &m) {
-  py::class_<MP3Compressor, Plugin, std::shared_ptr<MP3Compressor>>(
+inline void init_mp3_compressor(nb::module_ &m) {
+  nb::class_<MP3Compressor, Plugin>(
       m, "MP3Compressor",
       "An MP3 compressor plugin that runs the LAME MP3 encoder in real-time to "
       "add compression artifacts to the audio stream.\n\nCurrently only "
@@ -372,12 +372,12 @@ inline void init_mp3_compressor(py::module &m) {
       "MP3 format only supports 8kHz, 11025Hz, 12kHz, 16kHz, 22050Hz, 24kHz, "
       "32kHz, 44.1kHz, and 48kHz audio; if an unsupported sample rate is "
       "provided, an exception will be thrown at processing time.")
-      .def(py::init([](float vbr_quality) {
+      .def(nb::init([](float vbr_quality) {
              auto plugin = std::make_unique<MP3Compressor>();
              plugin->setVBRQuality(vbr_quality);
              return plugin;
            }),
-           py::arg("vbr_quality") = 2.0)
+           nb::arg("vbr_quality") = 2.0)
       .def("__repr__",
            [](const MP3Compressor &plugin) {
              std::ostringstream ss;
@@ -387,8 +387,8 @@ inline void init_mp3_compressor(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("vbr_quality", &MP3Compressor::getVBRQuality,
-                    &MP3Compressor::setVBRQuality);
+      .def_prop_rw("vbr_quality", &MP3Compressor::getVBRQuality,
+                   &MP3Compressor::setVBRQuality);
 }
 
 }; // namespace Pedalboard

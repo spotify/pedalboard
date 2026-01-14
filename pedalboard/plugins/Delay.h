@@ -103,20 +103,20 @@ private:
   static constexpr int MAXIMUM_DELAY_TIME_SECONDS = 30;
 };
 
-inline void init_delay(py::module &m) {
-  py::class_<Delay<float>, Plugin, std::shared_ptr<Delay<float>>>(
+inline void init_delay(nb::module_ &m) {
+  nb::class_<Delay<float>, Plugin>(
       m, "Delay",
       "A digital delay plugin with controllable delay time, feedback "
       "percentage, and dry/wet mix.")
-      .def(py::init([](float delaySeconds, float feedback, float mix) {
+      .def(nb::init([](float delaySeconds, float feedback, float mix) {
              auto delay = std::make_unique<Delay<float>>();
              delay->setDelaySeconds(delaySeconds);
              delay->setFeedback(feedback);
              delay->setMix(mix);
              return delay;
            }),
-           py::arg("delay_seconds") = 0.5, py::arg("feedback") = 0.0,
-           py::arg("mix") = 0.5)
+           nb::arg("delay_seconds") = 0.5, nb::arg("feedback") = 0.0,
+           nb::arg("mix") = 0.5)
       .def("__repr__",
            [](const Delay<float> &plugin) {
              std::ostringstream ss;
@@ -128,10 +128,10 @@ inline void init_delay(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("delay_seconds", &Delay<float>::getDelaySeconds,
-                    &Delay<float>::setDelaySeconds)
-      .def_property("feedback", &Delay<float>::getFeedback,
-                    &Delay<float>::setFeedback)
-      .def_property("mix", &Delay<float>::getMix, &Delay<float>::setMix);
+      .def_prop_rw("delay_seconds", &Delay<float>::getDelaySeconds,
+                   &Delay<float>::setDelaySeconds)
+      .def_prop_rw("feedback", &Delay<float>::getFeedback,
+                   &Delay<float>::setFeedback)
+      .def_prop_rw("mix", &Delay<float>::getMix, &Delay<float>::setMix);
 }
 }; // namespace Pedalboard

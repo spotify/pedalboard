@@ -20,8 +20,11 @@
 #include <mutex>
 #include <optional>
 
-#include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/optional.h>
+#include <nanobind/stl/variant.h>
 
 #include "../BufferUtils.h"
 #include "../JuceHeader.h"
@@ -29,7 +32,7 @@
 #include "LameMP3AudioFormat.h"
 #include "PythonOutputStream.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 namespace Pedalboard {
 
@@ -231,14 +234,14 @@ public:
       std::unique_ptr<juce::OutputStream> providedOutputStream,
       double writeSampleRate, int numChannels = 1, int bitDepth = 16,
       std::optional<std::variant<std::string, float>> qualityInput = {}) {
-    pybind11::gil_scoped_release release;
+    nb::gil_scoped_release release;
 
     // This is kind of silly, as nobody else has a reference
     // to this object yet; but it prevents some juce assertions in debug builds:
     juce::ScopedWriteLock writeLock(objectLock);
 
     if (!isInteger(writeSampleRate)) {
-      throw py::type_error(
+      throw nb::type_error(
           "Opening an audio file for writing requires an integer sample rate.");
     }
 
@@ -445,42 +448,42 @@ public:
 
   /**
    * A generic type-dispatcher for all writes.
-   * pybind11 supports dispatch here, but both pybind11-stubgen
+   * nanobind supports dispatch here, but stubgen
    * and Sphinx currently (2022-07-16) struggle with how to render
    * docstrings of overloaded functions, so we don't overload.
    */
-  void write(py::array inputArray) {
+  void write(nb::ndarray inputArray) {
     switch (inputArray.dtype().char_()) {
     case 'f':
-      return write<float>(py::array_t<float>(inputArray.release(), false));
+      return write<float>(nb::ndarray_t<float>(inputArray.release(), false));
     case 'd':
-      return write<double>(py::array_t<double>(inputArray.release(), false));
+      return write<double>(nb::ndarray_t<double>(inputArray.release(), false));
     case 'b':
-      return write<int8_t>(py::array_t<int8_t>(inputArray.release(), false));
+      return write<int8_t>(nb::ndarray_t<int8_t>(inputArray.release(), false));
     case 'h':
-      return write<int16_t>(py::array_t<int16_t>(inputArray.release(), false));
+      return write<int16_t>(nb::ndarray_t<int16_t>(inputArray.release(), false));
     case 'i':
 #ifdef JUCE_WINDOWS
     // On 64-bit Windows, int32 is a "long".
     case 'l':
 #endif
-      return write<int32_t>(py::array_t<int32_t>(inputArray.release(), false));
+      return write<int32_t>(nb::ndarray_t<int32_t>(inputArray.release(), false));
     default:
-      throw py::type_error(
+      throw nb::type_error(
           "Writing audio requires an array with a datatype of int8, "
           "int16, int32, float32, or float64. (Got: " +
-          py::str(inputArray.attr("dtype")).cast<std::string>() + ")");
+          nb::str(inputArray.attr("dtype")).attrstd::string>() + ")");
     }
   }
 
   template <typename SampleType>
-  void write(py::array_t<SampleType, py::array::c_style> inputArray) {
+  void write(nb::ndarray_t<SampleType, nb::ndarray::c_style> inputArray) {
     const juce::ScopedReadLock scopedReadLock(objectLock);
 
     if (!writer)
       throw std::runtime_error("I/O operation on a closed file.");
 
-    py::buffer_info inputInfo = inputArray.request();
+    Py_buffer inputInfo = inputArray.request();
 
     unsigned int numChannels = 0;
     unsigned int numSamples = 0;
@@ -506,7 +509,7 @@ public:
 
     // Release the GIL when we do the writing, after we
     // already have a reference to the input array:
-    pybind11::gil_scoped_release release;
+    nb::gil_scoped_release release;
 
     if (inputInfo.ndim == 1) {
       numSamples = inputInfo.shape[0];
@@ -736,7 +739,7 @@ public:
 
     bool flushSucceeded = false;
     {
-      pybind11::gil_scoped_release release;
+      nb::gil_scoped_release release;
 
       ScopedTryWriteLock scopedTryWriteLock(objectLock);
       if (!scopedTryWriteLock.isLocked()) {
@@ -845,13 +848,13 @@ public:
 
   std::shared_ptr<WriteableAudioFile> enter() { return shared_from_this(); }
 
-  void exit(const py::object &type, const py::object &value,
-            const py::object &traceback) {
+  void exit(const nb::object &type, const nb::object &value,
+            const nb::object &traceback) {
     bool shouldThrow = PythonException::isPending();
     close();
 
     if (shouldThrow || PythonException::isPending())
-      throw py::error_already_set();
+      throw nb::python_error();
   }
 
   PythonOutputStream *getPythonOutputStream() const {
@@ -879,10 +882,10 @@ private:
   std::optional<ChannelLayout> lastChannelLayout = {};
 };
 
-inline py::class_<WriteableAudioFile, AudioFile,
+inline nb::class_<WriteableAudioFile, AudioFile,
                   std::shared_ptr<WriteableAudioFile>>
-declare_writeable_audio_file(py::module &m) {
-  return py::class_<WriteableAudioFile, AudioFile,
+declare_writeable_audio_file(nb::module_ &m) {
+  return nb::class_<WriteableAudioFile, AudioFile,
                     std::shared_ptr<WriteableAudioFile>>(m,
                                                          "WriteableAudioFile",
                                                          R"(
@@ -933,11 +936,11 @@ Args:
 }
 
 inline void init_writeable_audio_file(
-    py::module &m,
-    py::class_<WriteableAudioFile, AudioFile,
+    nb::module_ &m,
+    nb::class_<WriteableAudioFile, AudioFile,
                std::shared_ptr<WriteableAudioFile>> &pyWriteableAudioFile) {
   pyWriteableAudioFile
-      .def(py::init([](std::string filename, double sampleRate, int numChannels,
+      .def(nb::init([](std::string filename, double sampleRate, int numChannels,
                        int bitDepth,
                        std::optional<std::variant<std::string, float>> quality)
                         -> WriteableAudioFile * {
@@ -946,11 +949,11 @@ inline void init_writeable_audio_file(
                  "Internal error: __init__ should never be called, as this "
                  "class implements __new__.");
            }),
-           py::arg("filename"), py::arg("samplerate"),
-           py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
-           py::arg("quality") = py::none())
-      .def(py::init(
-               [](py::object filelike, double sampleRate, int numChannels,
+           nb::arg("filename"), nb::arg("samplerate"),
+           nb::arg("num_channels") = 1, nb::arg("bit_depth") = 16,
+           nb::arg("quality") = nb::none())
+      .def(nb::init(
+               [](nb::object filelike, double sampleRate, int numChannels,
                   int bitDepth,
                   std::optional<std::variant<std::string, float>> quality,
                   std::optional<std::string> format) -> WriteableAudioFile * {
@@ -959,50 +962,50 @@ inline void init_writeable_audio_file(
                      "Internal error: __init__ should never be called, as this "
                      "class implements __new__.");
                }),
-           py::arg("file_like"), py::arg("samplerate"),
-           py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
-           py::arg("quality") = py::none(), py::arg("format") = py::none())
+           nb::arg("file_like"), nb::arg("samplerate"),
+           nb::arg("num_channels") = 1, nb::arg("bit_depth") = 16,
+           nb::arg("quality") = nb::none(), nb::arg("format") = nb::none())
       .def_static(
           "__new__",
-          [](const py::object *, std::string filename,
+          [](const nb::object *, std::string filename,
              std::optional<double> sampleRate, int numChannels, int bitDepth,
              std::optional<std::variant<std::string, float>> quality) {
             if (!sampleRate) {
-              throw py::type_error(
+              throw nb::type_error(
                   "Opening an audio file for writing requires a samplerate "
                   "argument to be provided.");
             }
             return std::make_shared<WriteableAudioFile>(
                 filename, *sampleRate, numChannels, bitDepth, quality);
           },
-          py::arg("cls"), py::arg("filename"),
-          py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
-          py::arg("bit_depth") = 16, py::arg("quality") = py::none())
+          nb::arg("cls"), nb::arg("filename"),
+          nb::arg("samplerate") = nb::none(), nb::arg("num_channels") = 1,
+          nb::arg("bit_depth") = 16, nb::arg("quality") = nb::none())
       .def_static(
           "__new__",
-          [](const py::object *, py::object filelike,
+          [](const nb::object *, nb::object filelike,
              std::optional<double> sampleRate, int numChannels, int bitDepth,
              std::optional<std::variant<std::string, float>> quality,
              std::optional<std::string> format) {
             if (!sampleRate) {
-              throw py::type_error(
+              throw nb::type_error(
                   "Opening an audio file for writing requires a samplerate "
                   "argument to be provided.");
             }
             if (!isWriteableFileLike(filelike)) {
-              throw py::type_error(
+              throw nb::type_error(
                   "Expected either a filename or a file-like object (with "
                   "write, seek, seekable, and tell methods), but received: " +
-                  py::repr(filelike).cast<std::string>());
+                  nb::repr(filelike).attrstd::string>());
             }
 
             auto stream = std::make_unique<PythonOutputStream>(filelike);
             if (!format && !stream->getFilename()) {
-              throw py::type_error(
+              throw nb::type_error(
                   "Unable to infer audio file format for writing. Expected "
                   "either a \".name\" property on the provided file-like "
                   "object (" +
-                  py::repr(filelike).cast<std::string>() +
+                  nb::repr(filelike).attrstd::string>() +
                   ") or an explicit file format passed as the \"format=\" "
                   "argument.");
             }
@@ -1011,16 +1014,16 @@ inline void init_writeable_audio_file(
                 format.value_or(""), std::move(stream), *sampleRate,
                 numChannels, bitDepth, quality);
           },
-          py::arg("cls"), py::arg("file_like"),
-          py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
-          py::arg("bit_depth") = 16, py::arg("quality") = py::none(),
-          py::arg("format") = py::none())
+          nb::arg("cls"), nb::arg("file_like"),
+          nb::arg("samplerate") = nb::none(), nb::arg("num_channels") = 1,
+          nb::arg("bit_depth") = 16, nb::arg("quality") = nb::none(),
+          nb::arg("format") = nb::none())
       .def(
           "write",
-          [](WriteableAudioFile &file, py::array samples) {
+          [](WriteableAudioFile &file, nb::ndarray samples) {
             file.write(samples);
           },
-          py::arg("samples").noconvert(),
+          nb::arg("samples").noconvert(),
           "Encode an array of audio data and write "
           "it to this file. The number of channels in the array must match the "
           "number of channels used to open the file. The array may contain "
@@ -1101,31 +1104,31 @@ inline void init_writeable_audio_file(
              ss << ">";
              return ss.str();
            })
-      .def_property_readonly(
+      .def_prop_ro(
           "closed", &WriteableAudioFile::isClosed,
           "If this file has been closed, this property will be True.")
-      .def_property_readonly(
+      .def_prop_ro(
           "samplerate", &WriteableAudioFile::getSampleRate,
           "The sample rate of this file in samples (per channel) per second "
           "(Hz). Sample rates are represented as floating-point numbers by "
           "default, but this property will be an integer if the file's sample "
           "rate has no fractional part.")
-      .def_property_readonly("num_channels",
+      .def_prop_ro("num_channels",
                              &WriteableAudioFile::getNumChannels,
                              "The number of channels in this file.")
-      .def_property_readonly("frames", &WriteableAudioFile::getFramesWritten,
+      .def_prop_ro("frames", &WriteableAudioFile::getFramesWritten,
                              "The total number of frames (samples per "
                              "channel) written to this file so far.")
       .def("tell", &WriteableAudioFile::getFramesWritten,
            "Return the current position of the write pointer in this audio "
            "file, in frames at the target sample rate. This value will "
            "increase as :meth:`write` is called, and will never decrease.")
-      .def_property_readonly(
+      .def_prop_ro(
           "file_dtype", &WriteableAudioFile::getFileDatatype,
           "The data type stored natively by this file. Note that write(...) "
           "will accept multiple datatypes, regardless of the value of this "
           "property.")
-      .def_property_readonly(
+      .def_prop_ro(
           "quality", &WriteableAudioFile::getQuality,
           "The quality setting used to write this file. For many "
           "formats, this may be ``None``.\n\nQuality options differ based on "

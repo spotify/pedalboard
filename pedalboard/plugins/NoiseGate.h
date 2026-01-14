@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../JucePlugin.h"
 
@@ -31,13 +31,13 @@ class NoiseGate : public JucePlugin<juce::dsp::NoiseGate<SampleType>> {
   DEFINE_DSP_SETTER_AND_GETTER(SampleType, Release, {});
 };
 
-inline void init_noisegate(py::module &m) {
+inline void init_noisegate(nb::module_ &m) {
 
-  py::class_<NoiseGate<float>, Plugin, std::shared_ptr<NoiseGate<float>>>(
+  nb::class_<NoiseGate<float>, Plugin>(
       m, "NoiseGate",
       "A simple noise gate with standard threshold, ratio, attack time and "
       "release time controls. Can be used as an expander if the ratio is low.")
-      .def(py::init([](float thresholddB, float ratio, float attackMs,
+      .def(nb::init([](float thresholddB, float ratio, float attackMs,
                        float releaseMs) {
              auto plugin = std::make_unique<NoiseGate<float>>();
              plugin->setThreshold(thresholddB);
@@ -46,8 +46,8 @@ inline void init_noisegate(py::module &m) {
              plugin->setRelease(releaseMs);
              return plugin;
            }),
-           py::arg("threshold_db") = -100.0, py::arg("ratio") = 10,
-           py::arg("attack_ms") = 1.0, py::arg("release_ms") = 100.0)
+           nb::arg("threshold_db") = -100.0, nb::arg("ratio") = 10,
+           nb::arg("attack_ms") = 1.0, nb::arg("release_ms") = 100.0)
       .def("__repr__",
            [](const NoiseGate<float> &plugin) {
              std::ostringstream ss;
@@ -60,13 +60,13 @@ inline void init_noisegate(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("threshold_db", &NoiseGate<float>::getThreshold,
-                    &NoiseGate<float>::setThreshold)
-      .def_property("ratio", &NoiseGate<float>::getRatio,
-                    &NoiseGate<float>::setRatio)
-      .def_property("attack_ms", &NoiseGate<float>::getAttack,
-                    &NoiseGate<float>::setAttack)
-      .def_property("release_ms", &NoiseGate<float>::getRelease,
-                    &NoiseGate<float>::setRelease);
+      .def_prop_rw("threshold_db", &NoiseGate<float>::getThreshold,
+                   &NoiseGate<float>::setThreshold)
+      .def_prop_rw("ratio", &NoiseGate<float>::getRatio,
+                   &NoiseGate<float>::setRatio)
+      .def_prop_rw("attack_ms", &NoiseGate<float>::getAttack,
+                   &NoiseGate<float>::setAttack)
+      .def_prop_rw("release_ms", &NoiseGate<float>::getRelease,
+                   &NoiseGate<float>::setRelease);
 }
 }; // namespace Pedalboard

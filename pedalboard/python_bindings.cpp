@@ -21,11 +21,14 @@
 
 #include "JuceHeader.h"
 
-#include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/vector.h>
+#include <nanobind/stl/shared_ptr.h>
+#include <nanobind/stl/optional.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "ExternalPlugin.h"
 #include "JucePlugin.h"
@@ -72,22 +75,22 @@ namespace py = pybind11;
 
 using namespace Pedalboard;
 
-PYBIND11_MODULE(pedalboard_native, m, py::mod_gil_not_used()) {
+NB_MODULE(pedalboard_native, m) {
   m.doc() =
-      ("This module provides classes and functions for generating and adding "
-       "effects to audio. Most classes in this module are subclasses of "
-       "``Plugin``, each of which allows applying effects to an audio buffer "
-       "or stream.\n\nFor audio I/O classes (i.e.: reading and writing audio "
-       "files), see ``pedalboard.io``.");
+      "This module provides classes and functions for generating and adding "
+      "effects to audio. Most classes in this module are subclasses of "
+      "``Plugin``, each of which allows applying effects to an audio buffer "
+      "or stream.\n\nFor audio I/O classes (i.e.: reading and writing audio "
+      "files), see ``pedalboard.io``.";
 
-  auto plugin = py::class_<Plugin, std::shared_ptr<Plugin>>(
+  auto plugin = nb::class_<Plugin>(
       m, "Plugin",
       "A generic audio processing plugin. Base class of all Pedalboard "
       "plugins.");
 
   m.def(
       "process",
-      [](const py::array inputArray, double sampleRate,
+      [](nb::ndarray<> inputArray, double sampleRate,
          const std::vector<std::shared_ptr<Plugin>> plugins,
          unsigned int bufferSize, bool reset) {
         return process(inputArray, sampleRate, plugins, bufferSize, reset);
@@ -108,12 +111,12 @@ or buffer, set ``reset`` to ``False``.
 
 :meta private:
 )",
-      py::arg("input_array"), py::arg("sample_rate"), py::arg("plugins"),
-      py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true);
+      nb::arg("input_array"), nb::arg("sample_rate"), nb::arg("plugins"),
+      nb::arg("buffer_size") = DEFAULT_BUFFER_SIZE, nb::arg("reset") = true);
 
   plugin
-      .def(py::init([]() {
-        throw py::type_error(
+      .def(nb::init([]() {
+        throw nb::type_error(
             "Plugin is an abstract base class - don't instantiate this "
             "directly, use its subclasses instead.");
         // This will never be hit, but is required to provide a non-void
@@ -134,7 +137,7 @@ or buffer, set ``reset`` to ``False``.
           "parameters will remain unchanged. ")
       .def(
           "process",
-          [](std::shared_ptr<Plugin> self, const py::array inputArray,
+          [](std::shared_ptr<Plugin> self, nb::ndarray<> inputArray,
              double sampleRate, unsigned int bufferSize, bool reset) {
             return process(inputArray, sampleRate, {self}, bufferSize, reset);
           },
@@ -172,26 +175,26 @@ If the number of samples and the number of channels are the same, each
     i.e.: just calling this object like a function (``my_plugin(...)``) will
     automatically invoke :py:meth:`process` with the same arguments.
 )",
-          py::arg("input_array"), py::arg("sample_rate"),
-          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
+          nb::arg("input_array"), nb::arg("sample_rate"),
+          nb::arg("buffer_size") = DEFAULT_BUFFER_SIZE, nb::arg("reset") = true)
       .def(
           "__call__",
-          [](std::shared_ptr<Plugin> self, const py::array inputArray,
+          [](std::shared_ptr<Plugin> self, nb::ndarray<> inputArray,
              double sampleRate, unsigned int bufferSize, bool reset) {
             return process(inputArray, sampleRate, {self}, bufferSize, reset);
           },
           "Run an audio buffer through this plugin. Alias for "
           ":py:meth:`process`.",
-          py::arg("input_array"), py::arg("sample_rate"),
-          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
-      .def_property_readonly(
+          nb::arg("input_array"), nb::arg("sample_rate"),
+          nb::arg("buffer_size") = DEFAULT_BUFFER_SIZE, nb::arg("reset") = true)
+      .def_prop_ro(
           "is_effect",
           [](std::shared_ptr<Plugin> self) {
             return self->acceptsAudioInput();
           },
           "True iff this plugin is an audio effect and accepts audio "
           "as input.\n\n*Introduced in v0.7.4.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "is_instrument",
           [](std::shared_ptr<Plugin> self) {
             return !self->acceptsAudioInput();
@@ -230,13 +233,13 @@ If the number of samples and the number of channels are the same, each
   init_external_plugins(m);
 
   // Classes that don't perform any audio effects, but that add other utilities:
-  py::module utils = m.def_submodule("utils");
+  nb::module_ utils = m.def_submodule("utils");
   init_mix(utils);
   init_chain(utils);
   init_time_stretch(utils);
 
   // Internal plugins for testing, debugging, etc:
-  py::module internal = m.def_submodule("_internal");
+  nb::module_ internal = m.def_submodule("_internal");
   init_add_latency(internal);
   init_prime_with_silence_test_plugin(internal);
   init_resample_with_latency(internal);
@@ -244,7 +247,7 @@ If the number of samples and the number of channels are the same, each
   init_force_mono_test_plugin(internal);
 
   // I/O helpers and utilities:
-  py::module io = m.def_submodule("io");
+  nb::module_ io = m.def_submodule("io");
   io.doc() = "This module provides classes and functions for reading and "
              "writing audio files or streams.\n\n*Introduced in v0.5.1.*";
 

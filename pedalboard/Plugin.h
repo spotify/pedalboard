@@ -94,7 +94,40 @@ public:
 
   template <typename T>
   ChannelLayout parseAndCacheChannelLayout(
-      const py::array_t<T, py::array::c_style> inputArray,
+      nb::ndarray<T, nb::c_contig, nb::device::cpu> inputArray,
+      std::optional<int> channelCountHint = {}) {
+
+    if (!channelCountHint && lastSpec.numChannels != 0) {
+      channelCountHint = {lastSpec.numChannels};
+    }
+
+    if (lastChannelLayout) {
+      try {
+        lastChannelLayout = detectChannelLayout(inputArray, channelCountHint);
+      } catch (...) {
+        // Use the last cached layout.
+      }
+    } else {
+      // We have no cached layout; detect it now and raise if necessary:
+      try {
+        lastChannelLayout = detectChannelLayout(inputArray, channelCountHint);
+      } catch (const std::exception &e) {
+        throw std::runtime_error(
+            std::string(e.what()) +
+            " Provide a non-square array first to allow Pedalboard to "
+            "determine which dimension corresponds with the number of channels "
+            "and which dimension corresponds with the number of samples.");
+      }
+    }
+
+    return *lastChannelLayout;
+  }
+
+  /**
+   * Overload for generic ndarray (when dtype is not known at compile time)
+   */
+  ChannelLayout parseAndCacheChannelLayout(
+      nb::ndarray<> inputArray,
       std::optional<int> channelCountHint = {}) {
 
     if (!channelCountHint && lastSpec.numChannels != 0) {

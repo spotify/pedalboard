@@ -145,9 +145,8 @@ using GSMFullRateCompressor = ForceMono<Resample<
         float, GSMFullRateCompressorInternal::GSM_FRAME_SIZE_SAMPLES>,
     float, GSMFullRateCompressorInternal::GSM_SAMPLE_RATE>>;
 
-inline void init_gsm_full_rate_compressor(py::module &m) {
-  py::class_<GSMFullRateCompressor, Plugin,
-             std::shared_ptr<GSMFullRateCompressor>>(
+inline void init_gsm_full_rate_compressor(nb::module_ &m) {
+  nb::class_<GSMFullRateCompressor, Plugin>(
       m, "GSMFullRateCompressor",
       "An audio degradation/compression plugin that applies the GSM \"Full "
       "Rate\" compression algorithm to emulate the sound of a "
@@ -155,12 +154,12 @@ inline void init_gsm_full_rate_compressor(py::module &m) {
       "input audio to a fixed sample rate of 8kHz (required by the GSM Full "
       "Rate codec), although the quality of the resampling algorithm "
       "can be specified.")
-      .def(py::init([](ResamplingQuality quality) {
+      .def(nb::init([](ResamplingQuality quality) {
              auto plugin = std::make_unique<GSMFullRateCompressor>();
              plugin->getNestedPlugin().setQuality(quality);
              return plugin;
            }),
-           py::arg("quality") = ResamplingQuality::WindowedSinc8)
+           nb::arg("quality") = ResamplingQuality::WindowedSinc8)
       .def("__repr__",
            [](const GSMFullRateCompressor &plugin) {
              std::ostringstream ss;
@@ -169,7 +168,7 @@ inline void init_gsm_full_rate_compressor(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property(
+      .def_prop_rw(
           "quality",
           [](GSMFullRateCompressor &plugin) {
             return plugin.getNestedPlugin().getQuality();

@@ -20,8 +20,8 @@
 #include <mutex>
 #include <optional>
 
-#include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
 
 #include "../JuceHeader.h"
 #include "AudioFile.h"
@@ -29,18 +29,16 @@
 #include "ReadableAudioFile.h"
 #include "WriteableAudioFile.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 namespace Pedalboard {
 
-// For pybind11-stubgen to properly parse the docstrings,
+// For nanobind-stubgen to properly parse the docstrings,
 // we have to declare all of the AudioFile subclasses first before using
 // their types (i.e.: as return types from `__new__`).
-// See:
-// https://pybind11.readthedocs.io/en/latest/advanced/misc.html#avoiding-cpp-types-in-docstrings
-inline py::class_<AudioFile, std::shared_ptr<AudioFile>>
-declare_audio_file(py::module &m) {
-  return py::class_<AudioFile, std::shared_ptr<AudioFile>>(
+inline nb::class_<AudioFile>
+declare_audio_file(nb::module_ &m) {
+  return nb::class_<AudioFile>(
       m, "AudioFile",
       R"(A base class for readable and writeable audio files.
 
@@ -138,7 +136,7 @@ Re-encoding a WAV file as an MP3 in four lines of Python::
 }
 
 inline void init_audio_file(
-    py::class_<AudioFile, std::shared_ptr<AudioFile>> &pyAudioFile) {
+    nb::class_<AudioFile, std::shared_ptr<AudioFile>> &pyAudioFile) {
   /**
    * Important note: any changes made to the function signatures here should
    * also be made to the constructor signatures of ReadableAudioFile and
@@ -146,37 +144,37 @@ inline void init_audio_file(
    */
 
   pyAudioFile
-      .def(py::init<>()) // Make this class effectively abstract; we can only
+      .def(nb::init<>()) // Make this class effectively abstract; we can only
                          // instantiate subclasses via __new__.
       .def_static(
           "__new__",
-          [](const py::object *, std::string filename, std::string mode) {
+          [](const nb::object *, std::string filename, std::string mode) {
             if (mode == "r") {
               return std::make_shared<ReadableAudioFile>(filename);
             } else if (mode == "w") {
-              throw py::type_error("Opening an audio file for writing requires "
+              throw nb::type_error("Opening an audio file for writing requires "
                                    "samplerate and num_channels arguments.");
             } else {
-              throw py::type_error("AudioFile instances can only be opened in "
+              throw nb::type_error("AudioFile instances can only be opened in "
                                    "read mode (\"r\") or write mode (\"w\").");
             }
           },
-          py::arg("cls"), py::arg("filename"), py::arg("mode") = "r",
+          nb::arg("cls"), nb::arg("filename"), nb::arg("mode") = "r",
           "Open an audio file for reading.")
       .def_static(
           "__new__",
-          [](const py::object *, py::object filelike, std::string mode) {
+          [](const nb::object *, nb::object filelike, std::string mode) {
             if (mode == "r") {
               if (!isReadableFileLike(filelike) &&
                   !tryConvertingToBuffer(filelike)) {
-                throw py::type_error(
+                throw nb::type_error(
                     "Expected either a filename, a file-like object (with "
                     "read, seek, seekable, and tell methods) or a memory view, "
                     "but received: " +
-                    py::repr(filelike).cast<std::string>());
+                    nb::repr(filelike).attrstd::string>());
               }
 
-              if (std::optional<py::buffer> buf =
+              if (std::optional<BufferInfo> buf =
                       tryConvertingToBuffer(filelike)) {
                 return std::make_shared<ReadableAudioFile>(
                     std::make_unique<PythonMemoryViewInputStream>(*buf,
@@ -186,33 +184,33 @@ inline void init_audio_file(
                     std::make_unique<PythonInputStream>(filelike));
               }
             } else if (mode == "w") {
-              throw py::type_error(
+              throw nb::type_error(
                   "Opening an audio file-like object for writing requires "
                   "samplerate and num_channels arguments.");
             } else {
-              throw py::type_error("AudioFile instances can only be opened in "
+              throw nb::type_error("AudioFile instances can only be opened in "
                                    "read mode (\"r\") or write mode (\"w\").");
             }
           },
-          py::arg("cls"), py::arg("file_like"), py::arg("mode") = "r",
+          nb::arg("cls"), nb::arg("file_like"), nb::arg("mode") = "r",
           "Open a file-like object for reading. The provided object must have "
           "``read``, ``seek``, ``tell``, and ``seekable`` methods, and must "
           "return binary data (i.e.: ``open(..., \"w\")`` or ``io.BytesIO``, "
           "etc.).")
       .def_static(
           "__new__",
-          [](const py::object *, std::string filename, std::string mode,
+          [](const nb::object *, std::string filename, std::string mode,
              std::optional<double> sampleRate, int numChannels, int bitDepth,
              std::optional<std::variant<std::string, float>> quality) {
             if (mode == "r") {
-              throw py::type_error(
+              throw nb::type_error(
                   "Opening an audio file for reading does not require "
                   "samplerate, num_channels, bit_depth, or quality arguments - "
                   "these parameters "
                   "will be read from the file.");
             } else if (mode == "w") {
               if (!sampleRate) {
-                throw py::type_error(
+                throw nb::type_error(
                     "Opening an audio file for writing requires a samplerate "
                     "argument to be provided.");
               }
@@ -220,46 +218,46 @@ inline void init_audio_file(
               return std::make_shared<WriteableAudioFile>(
                   filename, *sampleRate, numChannels, bitDepth, quality);
             } else {
-              throw py::type_error("AudioFile instances can only be opened in "
+              throw nb::type_error("AudioFile instances can only be opened in "
                                    "read mode (\"r\") or write mode (\"w\").");
             }
           },
-          py::arg("cls"), py::arg("filename"), py::arg("mode") = "w",
-          py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
-          py::arg("bit_depth") = 16, py::arg("quality") = py::none())
+          nb::arg("cls"), nb::arg("filename"), nb::arg("mode") = "w",
+          nb::arg("samplerate") = nb::none(), nb::arg("num_channels") = 1,
+          nb::arg("bit_depth") = 16, nb::arg("quality") = nb::none())
       .def_static(
           "__new__",
-          [](const py::object *, py::object filelike, std::string mode,
+          [](const nb::object *, nb::object filelike, std::string mode,
              std::optional<double> sampleRate, int numChannels, int bitDepth,
              std::optional<std::variant<std::string, float>> quality,
              std::optional<std::string> format) {
             if (mode == "r") {
-              throw py::type_error(
+              throw nb::type_error(
                   "Opening a file-like object for reading does not require "
                   "samplerate, num_channels, bit_depth, or quality arguments - "
                   "these parameters "
                   "will be read from the file-like object.");
             } else if (mode == "w") {
               if (!sampleRate) {
-                throw py::type_error("Opening a file-like object for writing "
+                throw nb::type_error("Opening a file-like object for writing "
                                      "requires a samplerate "
                                      "argument to be provided.");
               }
 
               if (!isWriteableFileLike(filelike)) {
-                throw py::type_error(
+                throw nb::type_error(
                     "Expected either a filename or a file-like object (with "
                     "write, seek, seekable, and tell methods), but received: " +
-                    filelike.attr("__repr__")().cast<std::string>());
+                    filelike.attr("__repr__")().attrstd::string>());
               }
 
               auto stream = std::make_unique<PythonOutputStream>(filelike);
               if (!format && !stream->getFilename()) {
-                throw py::type_error(
+                throw nb::type_error(
                     "Unable to infer audio file format for writing. Expected "
                     "either a \".name\" property on the provided file-like "
                     "object (" +
-                    filelike.attr("__repr__")().cast<std::string>() +
+                    filelike.attr("__repr__")().attrstd::string>() +
                     ") or an explicit file format passed as the \"format=\" "
                     "argument.");
               }
@@ -268,17 +266,17 @@ inline void init_audio_file(
                   format.value_or(""), std::move(stream), *sampleRate,
                   numChannels, bitDepth, quality);
             } else {
-              throw py::type_error("AudioFile instances can only be opened in "
+              throw nb::type_error("AudioFile instances can only be opened in "
                                    "read mode (\"r\") or write mode (\"w\").");
             }
           },
-          py::arg("cls"), py::arg("file_like"), py::arg("mode") = "w",
-          py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
-          py::arg("bit_depth") = 16, py::arg("quality") = py::none(),
-          py::arg("format") = py::none())
+          nb::arg("cls"), nb::arg("file_like"), nb::arg("mode") = "w",
+          nb::arg("samplerate") = nb::none(), nb::arg("num_channels") = 1,
+          nb::arg("bit_depth") = 16, nb::arg("quality") = nb::none(),
+          nb::arg("format") = nb::none())
       .def_static(
           "encode",
-          [](const py::array samples, double sampleRate, std::string format,
+          [](const nb::ndarray samples, double sampleRate, std::string format,
              int numChannels, int bitDepth,
              std::optional<std::variant<std::string, float>> quality) {
             juce::MemoryBlock outputBlock;
@@ -290,12 +288,12 @@ inline void init_audio_file(
             audioFile->write(samples);
             audioFile->close();
 
-            return py::bytes((const char *)outputBlock.getData(),
+            return nb::bytes((const char *)outputBlock.getData(),
                              outputBlock.getSize());
           },
-          py::arg("samples"), py::arg("samplerate"), py::arg("format"),
-          py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
-          py::arg("quality") = py::none(),
+          nb::arg("samples"), nb::arg("samplerate"), nb::arg("format"),
+          nb::arg("num_channels") = 1, nb::arg("bit_depth") = 16,
+          nb::arg("quality") = nb::none(),
           R"(
 Encode an audio buffer to a Python :class:`bytes` object.
 

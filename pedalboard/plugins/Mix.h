@@ -168,16 +168,16 @@ protected:
   std::vector<int> samplesAvailablePerPlugin;
 };
 
-inline void init_mix(py::module &m) {
-  py::class_<Mix, PluginContainer, std::shared_ptr<Mix>>(
+inline void init_mix(nb::module_ &m) {
+  nb::class_<Mix, PluginContainer>(
       m, "Mix",
       "A utility plugin that allows running other plugins in parallel. All "
       "plugins provided will be mixed equally.")
-      .def(py::init([](std::vector<std::shared_ptr<Plugin>> plugins) {
+      .def(nb::init([](std::vector<std::shared_ptr<Plugin>> plugins) {
              return new Mix(plugins);
            }),
-           py::arg("plugins"))
-      .def(py::init([]() { return new Mix({}); }))
+           nb::arg("plugins"))
+      .def(nb::init([]() { return new Mix({}); }))
       .def("__repr__", [](Mix &plugin) {
         std::ostringstream ss;
         ss << "<pedalboard.Mix with " << plugin.getPlugins().size()
@@ -187,8 +187,8 @@ inline void init_mix(py::module &m) {
         }
         ss << ": [";
         for (int i = 0; i < plugin.getPlugins().size(); i++) {
-          py::object nestedPlugin = py::cast(plugin.getPlugins()[i]);
-          ss << nestedPlugin.attr("__repr__")();
+          nb::object nestedPlugin = nb::cast(plugin.getPlugins()[i]);
+          ss << nb::str(nestedPlugin.attr("__repr__")()).c_str();
           if (i < plugin.getPlugins().size() - 1) {
             ss << ", ";
           }

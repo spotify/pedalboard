@@ -130,6 +130,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install wheel
           pip install -r test-requirements.txt
+          pip install nanobind 'scikit-build-core[pyproject]'
           # TensorFlow is an optional dependency; if present, we'll run tests with it:
           # There are no environment specifiers to select when TensorFlow binaries are available.
           pip install tensorflow==2.13 || true
@@ -140,10 +141,8 @@ jobs:
           enableCrossOsArchive: true
           path: |
             ${{ github.workspace }}/.ccache
-            ${{ github.workspace }}/pedalboard/build/lib*
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache
+            ${{ github.workspace }}/build
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache-v2
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -158,7 +157,7 @@ jobs:
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-        run: python -m pip install -e .
+        run: python -m pip install --no-build-isolation -ve .
       - name: Ensure ccache worked
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -178,9 +177,7 @@ jobs:
           enableCrossOsArchive: true
           path: |
             ${{ github.workspace }}/.ccache
-            ${{ github.workspace }}/pedalboard/build/lib*
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
+            ${{ github.workspace }}/build
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
 
   prime-macos-build-caches:
@@ -217,6 +214,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install wheel
           pip install -r test-requirements.txt
+          pip install nanobind 'scikit-build-core[pyproject]'
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
         uses: actions/cache/restore@v4
@@ -224,10 +222,8 @@ jobs:
           enableCrossOsArchive: true
           path: |
             ${{ github.workspace }}/.ccache
-            ${{ github.workspace }}/pedalboard/build/lib*
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache
+            ${{ github.workspace }}/build
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache-v2
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -238,7 +234,7 @@ jobs:
           CCACHE_NOINODECACHE: 1
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_DEBUG: "1"
-          # Use the minimum macOS deployment target supported by our version of PyBind:
+          # Use the minimum macOS deployment target supported by our version of Nanobind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
           CCACHE_LOGFILE: ${{ github.workspace }}/.ccache_log
           # This build caching is only to speed up tests on CI, so we only care about x86_64 (macos-15-intel runners).
@@ -248,7 +244,7 @@ jobs:
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-        run: python -m pip install -e .
+        run: python -m pip install --no-build-isolation -ve .
       - name: Ensure ccache worked
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -269,9 +265,7 @@ jobs:
           enableCrossOsArchive: true
           path: |
             ${{ github.workspace }}/.ccache
-            ${{ github.workspace }}/pedalboard/build/lib*
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
+            ${{ github.workspace }}/build
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
 
   # Build the native module with ccache enabled so we can share object files between builds:
@@ -326,6 +320,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install wheel
           pip install -r test-requirements.txt
+          pip install nanobind 'scikit-build-core[pyproject]'
           # TensorFlow is an optional dependency; if present, we'll run tests with it:
           # There are no environment specifiers to select when TensorFlow binaries are available.
           pip install tensorflow==2.13 || true
@@ -336,10 +331,8 @@ jobs:
           enableCrossOsArchive: true
           path: |
             ${{ github.workspace }}/.ccache
-            ${{ github.workspace }}/pedalboard/build/lib*
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache
+            ${{ github.workspace }}/build
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-asan-ccache-v2
       - name: Build pedalboard locally
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -355,7 +348,7 @@ jobs:
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-        run: python -m pip install -e .
+        run: python -m pip install --no-build-isolation -ve .
       - name: Ensure ccache worked
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -376,9 +369,7 @@ jobs:
           enableCrossOsArchive: true
           path: |
             ${{ github.workspace }}/.ccache
-            ${{ github.workspace }}/pedalboard/build/lib*
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
+            ${{ github.workspace }}/build
           key: ${{ steps.cache-objects-restore.outputs.cache-primary-key }}
 
   # This initial job catches obvious failures faster by running tests in parallel on just Ubuntu.
@@ -431,6 +422,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install wheel
           pip install -r test-requirements.txt
+          pip install nanobind 'scikit-build-core[pyproject]'
           # TensorFlow is an optional dependency; if present, we'll run tests with it:
           # There are no environment specifiers to select when TensorFlow binaries are available.
           pip install tensorflow==2.13 || true
@@ -441,21 +433,19 @@ jobs:
           enableCrossOsArchive: true
           path: |
             ${{ github.workspace }}/.ccache
-            ${{ github.workspace }}/pedalboard/build/lib*
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache
+            ${{ github.workspace }}/build
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache-v2
       - name: Print Restored ${{ runner.os }} Objects
         run: ls -lashR ${{ github.workspace }}
-      # Without this, distutils will recompile the extension even though we already have the .so built:
+      # Without this, CMake will recompile the extension even though we already have the .so built:
       - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run: |
           find ${{ github.workspace }} -name '*.so' -exec touch {} \; || true
           find ${{ github.workspace }} -name '*.o' -exec touch {} \; || true
-          ls -lR ${{ github.workspace }}/pedalboard
+          ls -lR ${{ github.workspace }}/build || true
       - name: Build pedalboard locally
-        run: python -m pip install -e .
+        run: python -m pip install --no-build-isolation -ve .
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ github.workspace }}
@@ -648,7 +638,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install wheel
           pip install -r test-requirements.txt
-          pip install pybind11 'scikit-build-core[pyproject]'
+          pip install nanobind 'scikit-build-core[pyproject]'
           # TensorFlow is an optional dependency; if present, we'll run tests with it:
           # There are no environment specifiers to select when TensorFlow binaries are available.
           pip install tensorflow==2.13 || true
@@ -670,19 +660,17 @@ jobs:
           enableCrossOsArchive: true
           path: |
             ${{ github.workspace }}/.ccache
-            ${{ github.workspace }}/pedalboard/build/lib*
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache
-      # Without this, distutils will recompile the extension even though we already have the shared object built:
+            ${{ github.workspace }}/build
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-ccache-v2
+      # Without this, CMake will recompile the extension even though we already have the shared object built:
       - name: Touch Restored ${{ runner.os }} Objects to Prevent Cache Miss
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run: |
           find ${{ github.workspace }} -name '*.so' -exec touch {} \; || true
           find ${{ github.workspace }} -name '*.o' -exec touch {} \; || true
-          ls -lR ${{ github.workspace }}/pedalboard
+          ls -lR ${{ github.workspace }}/build || true
       - name: Build pedalboard locally
-        run: python -m pip install -ve .
+        run: python -m pip install --no-build-isolation -ve .
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ github.workspace }}
@@ -693,7 +681,7 @@ jobs:
           CCACHE_IGNOREOPTIONS: "-fno-strict-overflow -fwrapv -W* -arch x86_64 arm64 -dynamic -fno-common -g -I/usr/local/opt/*"
           CCACHE_LOGFILE: ${{ github.workspace }}/.ccache_log
           CCACHE_DEBUG: "1"
-          # Use the minimum macOS deployment target supported by our version of PyBind:
+          # Use the minimum macOS deployment target supported by our version of Nanobind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
           # This build caching is only to speed up tests on CI, so we only care about x86_64 (macos-15-intel runners).
           # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
@@ -774,6 +762,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install wheel
           pip install -r test-requirements.txt
+          pip install nanobind 'scikit-build-core[pyproject]'
           # TensorFlow is an optional dependency; if present, we'll run tests with it:
           # There are no environment specifiers to select when TensorFlow binaries are available.
           pip install tensorflow==2.13 || true
@@ -784,10 +773,8 @@ jobs:
           enableCrossOsArchive: true
           path: |
             ${{ github.workspace }}/.ccache
-            ${{ github.workspace }}/pedalboard/build/lib*
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/pedalboard/juce_overrides
-            ${{ github.workspace }}/pedalboard/build/temp${{ github.workspace }}/pedalboard/vendors
-          key: ${{ matrix.os }}-clang-ccache
+            ${{ github.workspace }}/build
+          key: ${{ matrix.os }}-clang-asan-ccache-v2
       - name: Build pedalboard locally
         env:
           DEBUG: "0"
@@ -805,7 +792,7 @@ jobs:
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ccache clang
           CXX: ccache clang++
-        run: python -m pip install -e .
+        run: python -m pip install --no-build-isolation -ve .
       - name: Ensure ccache worked
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -896,7 +883,7 @@ jobs:
           CIBW_BUILD: ${{ matrix.build }}
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
           CIBW_ENVIRONMENT: NPY_BLAS_ORDER="" NPY_LAPACK_ORDER="" CIBW_BUILD="${{ matrix.build }}"
-          # Use the minimum macOS deployment target supported by our version of PyBind:
+          # Use the minimum macOS deployment target supported by our version of Nanobind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
       - name: Ensure wheels have required files
         if: runner.os != 'Windows'

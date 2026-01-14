@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../JucePlugin.h"
 
@@ -28,19 +28,19 @@ class Gain : public JucePlugin<juce::dsp::Gain<SampleType>> {
   DEFINE_DSP_SETTER_AND_GETTER(SampleType, GainDecibels, {});
 };
 
-inline void init_gain(py::module &m) {
-  py::class_<Gain<float>, Plugin, std::shared_ptr<Gain<float>>>(
+inline void init_gain(nb::module_ &m) {
+  nb::class_<Gain<float>, Plugin>(
       m, "Gain",
       "A gain plugin that increases or decreases the volume of a signal by "
       "amplifying or attenuating it by the provided value (in decibels). No "
       "distortion or other effects are applied.\n\nThink of this as a volume "
       "control.")
-      .def(py::init([](float gaindB) {
+      .def(nb::init([](float gaindB) {
              auto plugin = std::make_unique<Gain<float>>();
              plugin->setGainDecibels(gaindB);
              return plugin;
            }),
-           py::arg("gain_db") = 1.0)
+           nb::arg("gain_db") = 1.0)
       .def("__repr__",
            [](const Gain<float> &plugin) {
              std::ostringstream ss;
@@ -50,7 +50,7 @@ inline void init_gain(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("gain_db", &Gain<float>::getGainDecibels,
-                    &Gain<float>::setGainDecibels);
+      .def_prop_rw("gain_db", &Gain<float>::getGainDecibels,
+                   &Gain<float>::setGainDecibels);
 }
 }; // namespace Pedalboard

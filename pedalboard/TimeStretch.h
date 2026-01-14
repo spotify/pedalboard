@@ -315,13 +315,13 @@ timeStretch(const juce::AudioBuffer<float> input, double sampleRate,
   return output;
 }
 
-inline void init_time_stretch(py::module &m) {
+inline void init_time_stretch(nb::module_ &m) {
   m.def(
       "time_stretch",
-      [](py::array_t<float, py::array::c_style> input, double sampleRate,
-         std::variant<double, py::array_t<double, py::array::c_style>>
+      [](nb::ndarray<float, nb::c_contig, nb::device::cpu> input, double sampleRate,
+         std::variant<double, nb::ndarray<double, nb::ndim<1>, nb::c_contig, nb::device::cpu>>
              stretchFactor,
-         std::variant<double, py::array_t<double, py::array::c_style>>
+         std::variant<double, nb::ndarray<double, nb::ndim<1>, nb::c_contig, nb::device::cpu>>
              pitchShiftInSemitones,
          bool highQuality, std::string transientMode,
          std::string transientDetector, bool retainPhaseContinuity,
@@ -330,38 +330,36 @@ inline void init_time_stretch(py::module &m) {
         // Convert from Python arrays to std::vector<double> or double:
         std::variant<double, std::vector<double>> cppStretchFactor;
         if (auto *variableStretchFactor =
-                std::get_if<py::array_t<double, py::array::c_style>>(
+                std::get_if<nb::ndarray<double, nb::ndim<1>, nb::c_contig, nb::device::cpu>>(
                     &stretchFactor)) {
-          py::buffer_info inputInfo = variableStretchFactor->request();
-          if (inputInfo.ndim != 1) {
+          if (variableStretchFactor->ndim() != 1) {
             throw std::domain_error(
                 "stretch_factor must be a one-dimensional array of "
                 "double-precision floating point numbers, but a " +
-                std::to_string(inputInfo.ndim) +
+                std::to_string(variableStretchFactor->ndim()) +
                 "-dimensional array was provided.");
           }
           cppStretchFactor = std::vector<double>(
-              static_cast<double *>(inputInfo.ptr),
-              static_cast<double *>(inputInfo.ptr) + inputInfo.size);
+              variableStretchFactor->data(),
+              variableStretchFactor->data() + variableStretchFactor->size());
         } else {
           cppStretchFactor = std::get<double>(stretchFactor);
         }
 
         std::variant<double, std::vector<double>> cppPitchShift;
         if (auto *variablePitchShift =
-                std::get_if<py::array_t<double, py::array::c_style>>(
+                std::get_if<nb::ndarray<double, nb::ndim<1>, nb::c_contig, nb::device::cpu>>(
                     &pitchShiftInSemitones)) {
-          py::buffer_info inputInfo = variablePitchShift->request();
-          if (inputInfo.ndim != 1) {
+          if (variablePitchShift->ndim() != 1) {
             throw std::domain_error(
                 "stretch_factor must be a one-dimensional array of "
                 "double-precision floating point numbers, but a " +
-                std::to_string(inputInfo.ndim) +
+                std::to_string(variablePitchShift->ndim()) +
                 "-dimensional array was provided.");
           }
           cppPitchShift = std::vector<double>(
-              static_cast<double *>(inputInfo.ptr),
-              static_cast<double *>(inputInfo.ptr) + inputInfo.size);
+              variablePitchShift->data(),
+              variablePitchShift->data() + variablePitchShift->size());
         } else {
           cppPitchShift = std::get<double>(pitchShiftInSemitones);
         }
@@ -370,7 +368,7 @@ inline void init_time_stretch(py::module &m) {
             convertPyArrayIntoJuceBuffer(input, detectChannelLayout(input));
         juce::AudioBuffer<float> output;
         {
-          py::gil_scoped_release release;
+          nb::gil_scoped_release release;
           output = timeStretch(inputBuffer, sampleRate, cppStretchFactor,
                                cppPitchShift, highQuality, transientMode,
                                transientDetector, retainPhaseContinuity,
@@ -448,14 +446,14 @@ over the behavior of the time stretcher:
     ``pitch_shift_in_semitones`` was added in Pedalboard v0.9.8.
 
 )",
-      py::arg("input_audio"), py::arg("samplerate"),
-      py::arg("stretch_factor") = 1.0,
-      py::arg("pitch_shift_in_semitones") = 0.0, py::arg("high_quality") = true,
-      py::arg("transient_mode") = "crisp",
-      py::arg("transient_detector") = "compound",
-      py::arg("retain_phase_continuity") = true,
-      py::arg("use_long_fft_window") = py::none(),
-      py::arg("use_time_domain_smoothing") = false,
-      py::arg("preserve_formants") = true);
+      nb::arg("input_audio"), nb::arg("samplerate"),
+      nb::arg("stretch_factor") = 1.0,
+      nb::arg("pitch_shift_in_semitones") = 0.0, nb::arg("high_quality") = true,
+      nb::arg("transient_mode") = "crisp",
+      nb::arg("transient_detector") = "compound",
+      nb::arg("retain_phase_continuity") = true,
+      nb::arg("use_long_fft_window") = nb::none(),
+      nb::arg("use_time_domain_smoothing") = false,
+      nb::arg("preserve_formants") = true);
 }
 }; // namespace Pedalboard

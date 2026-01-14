@@ -1,5 +1,5 @@
 [build-system]
-requires = ["scikit-build-core>=0.5.0", "pybind11>=2.9.0"]
+requires = ["scikit-build-core>=0.5.0", "nanobind>=2.4.0"]
 build-backend = "scikit_build_core.build"
 
 [tool.cibuildwheel]

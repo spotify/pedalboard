@@ -164,16 +164,14 @@ private:
   int expectedBlockSize = 0;
 };
 
-inline void init_prime_with_silence_test_plugin(py::module &m) {
-  py::class_<PrimeWithSilenceTestPlugin, Plugin,
-             std::shared_ptr<PrimeWithSilenceTestPlugin>>(
-      m, "PrimeWithSilenceTestPlugin")
-      .def(py::init([](int expectedSilentSamples) {
+inline void init_prime_with_silence_test_plugin(nb::module_ &m) {
+  nb::class_<PrimeWithSilenceTestPlugin, Plugin>(m, "PrimeWithSilenceTestPlugin")
+      .def(nb::init([](int expectedSilentSamples) {
              auto plugin = std::make_unique<PrimeWithSilenceTestPlugin>();
              plugin->setExpectedSilentSamples(expectedSilentSamples);
              return plugin;
            }),
-           py::arg("expected_silent_samples") = 160)
+           nb::arg("expected_silent_samples") = 160)
       .def("__repr__", [](const PrimeWithSilenceTestPlugin &plugin) {
         std::ostringstream ss;
         ss << "<pedalboard.PrimeWithSilenceTestPlugin";

@@ -77,16 +77,16 @@ public:
   }
 };
 
-inline void init_chain(py::module &m) {
-  py::class_<Chain, PluginContainer, std::shared_ptr<Chain>>(
+inline void init_chain(nb::module_ &m) {
+  nb::class_<Chain, PluginContainer>(
       m, "Chain",
       "Run zero or more plugins as a plugin. Useful when "
       "used with the Mix plugin.")
-      .def(py::init([](std::vector<std::shared_ptr<Plugin>> plugins) {
+      .def(nb::init([](std::vector<std::shared_ptr<Plugin>> plugins) {
              return new Chain(plugins);
            }),
-           py::arg("plugins"))
-      .def(py::init([]() { return new Chain({}); }))
+           nb::arg("plugins"))
+      .def(nb::init([]() { return new Chain({}); }))
       .def("__repr__", [](Chain &plugin) {
         std::ostringstream ss;
         ss << "<pedalboard.Chain with " << plugin.getPlugins().size()
@@ -96,8 +96,8 @@ inline void init_chain(py::module &m) {
         }
         ss << ": [";
         for (int i = 0; i < plugin.getPlugins().size(); i++) {
-          py::object nestedPlugin = py::cast(plugin.getPlugins()[i]);
-          ss << nestedPlugin.attr("__repr__")();
+          nb::object nestedPlugin = nb::cast(plugin.getPlugins()[i]);
+          ss << nb::str(nestedPlugin.attr("__repr__")()).c_str();
           if (i < plugin.getPlugins().size() - 1) {
             ss << ", ";
           }

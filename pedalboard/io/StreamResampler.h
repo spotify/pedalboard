@@ -298,8 +298,8 @@ private:
   std::optional<ChannelLayout> lastChannelLayout = {};
 };
 
-inline void init_stream_resampler(py::module &m) {
-  py::class_<StreamResampler<float>, std::shared_ptr<StreamResampler<float>>>
+inline void init_stream_resampler(nb::module_ &m) {
+  nb::class_<StreamResampler<float>>
       resampler(
           m, "StreamResampler",
           "A streaming resampler that can change the sample rate of multiple "
@@ -308,14 +308,14 @@ inline void init_stream_resampler(py::module &m) {
           "see :class:`pedalboard.Resample`.\n\n*Introduced in v0.6.0.*");
 
   resampler.def(
-      py::init([](float sourceSampleRate, float targetSampleRate,
+      nb::init([](float sourceSampleRate, float targetSampleRate,
                   int numChannels, ResamplingQuality quality) {
         return std::make_unique<StreamResampler<float>>(
             sourceSampleRate, targetSampleRate, numChannels, quality);
       }),
-      py::arg("source_sample_rate"), py::arg("target_sample_rate"),
-      py::arg("num_channels"),
-      py::arg("quality") = ResamplingQuality::WindowedSinc32,
+      nb::arg("source_sample_rate"), nb::arg("target_sample_rate"),
+      nb::arg("num_channels"),
+      nb::arg("quality") = ResamplingQuality::WindowedSinc32,
       "Create a new StreamResampler, capable of resampling a "
       "potentially-unbounded audio stream with a constant amount of memory. "
       "The source sample rate, target sample rate, quality, or number of "
@@ -359,7 +359,7 @@ inline void init_stream_resampler(py::module &m) {
   resampler.def(
       "process",
       [](StreamResampler<float> &resampler,
-         std::optional<py::array_t<float, py::array::c_style>> input) {
+         std::optional<nb::ndarray<float, nb::c_contig, nb::device::cpu>> input) {
         std::optional<juce::AudioBuffer<float>> inputBuffer;
         if (input) {
           std::optional<ChannelLayout> layout =
@@ -377,14 +377,14 @@ inline void init_stream_resampler(py::module &m) {
 
         juce::AudioBuffer<float> output;
         {
-          py::gil_scoped_release release;
+          nb::gil_scoped_release release;
           output = resampler.process(inputBuffer);
         }
 
         return copyJuceBufferIntoPyArray(output,
                                          *resampler.getLastChannelLayout(), 0);
       },
-      py::arg("input") = py::none(),
+      nb::arg("input") = nb::none(),
       "Resample a 32-bit floating-point audio buffer. The returned buffer may "
       "be smaller than the provided buffer depending on the quality method "
       "used. Call :meth:`process()` without any arguments to flush the "
@@ -395,25 +395,25 @@ inline void init_stream_resampler(py::module &m) {
                 "method when resampling a new audio stream to prevent audio "
                 "from leaking between streams.");
 
-  resampler.def_property_readonly("num_channels",
+  resampler.def_prop_ro("num_channels",
                                   &StreamResampler<float>::getNumChannels,
                                   "The number of channels expected to be "
                                   "passed in every call to :meth:`process()`.");
-  resampler.def_property_readonly(
+  resampler.def_prop_ro(
       "source_sample_rate", &StreamResampler<float>::getSourceSampleRate,
       "The source sample rate of the input audio that this resampler expects "
       "to be passed to :meth:`process()`.");
 
-  resampler.def_property_readonly(
+  resampler.def_prop_ro(
       "target_sample_rate", &StreamResampler<float>::getTargetSampleRate,
       "The sample rate of the audio that this resampler will return from "
       ":meth:`process()`.");
 
-  resampler.def_property_readonly(
+  resampler.def_prop_ro(
       "quality", &StreamResampler<float>::getQuality,
       "The resampling algorithm used by this resampler.");
 
-  resampler.def_property_readonly(
+  resampler.def_prop_ro(
       "input_latency", &StreamResampler<float>::getInputLatency,
       "The number of samples (in the input sample rate) that must be supplied "
       "before this resampler will begin returning output.");

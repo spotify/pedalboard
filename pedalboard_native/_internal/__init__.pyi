@@ -13,8 +13,8 @@ def patch_overload(func):
     else:
         func.__doc__ = __OVERLOADED_DOCSTRINGS.get(func.__qualname__)
     if func.__doc__:
-        # Work around the fact that pybind11-stubgen generates
-        # duplicate docstrings sometimes, once for each overload:
+        # Work around the fact that stub generators sometimes generate
+        # duplicate docstrings, once for each overload:
         docstring = func.__doc__
         if docstring[len(docstring) // 2 :].strip() == docstring[: -len(docstring) // 2].strip():
             func.__doc__ = docstring[len(docstring) // 2 :].strip()

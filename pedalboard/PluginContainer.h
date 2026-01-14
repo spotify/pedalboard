@@ -83,14 +83,13 @@ protected:
   std::vector<std::shared_ptr<Plugin>> plugins;
 };
 
-inline void init_plugin_container(py::module &m) {
-  py::class_<PluginContainer, Plugin, std::shared_ptr<PluginContainer>>(
-      m, "PluginContainer",
+inline void init_plugin_container(nb::module_ &m) {
+  nb::class_<PluginContainer, Plugin>(m, "PluginContainer",
       "A generic audio processing plugin that contains zero or more other "
       "plugins. Not intended for direct use.")
       .def(
-          py::init([](std::vector<std::shared_ptr<Plugin>> plugins) {
-            throw py::type_error(
+          nb::init([](std::vector<std::shared_ptr<Plugin>> plugins) {
+            throw nb::type_error(
                 "PluginContainer is an abstract base class - don't instantiate "
                 "this directly, use its subclasses instead.");
             // This will never be hit, but is required to provide a non-void
@@ -98,7 +97,7 @@ inline void init_plugin_container(py::module &m) {
             // type inference.
             return nullptr;
           }),
-          py::arg("plugins"))
+          nb::arg("plugins"))
       // Implement the Sequence protocol:
       .def(
           "__getitem__",
@@ -107,12 +106,12 @@ inline void init_plugin_container(py::module &m) {
             if (i < 0)
               i = s.getPlugins().size() + i;
             if (i < 0)
-              throw py::index_error("index out of range");
+              throw nb::index_error("index out of range");
             if (i >= s.getPlugins().size())
-              throw py::index_error("index out of range");
+              throw nb::index_error("index out of range");
             return s.getPlugins()[i];
           },
-          py::arg("index"),
+          nb::arg("index"),
           "Get a plugin by its index. Index may be negative. If the index is "
           "out of range, an IndexError will be thrown.")
       .def(
@@ -122,9 +121,9 @@ inline void init_plugin_container(py::module &m) {
             if (i < 0)
               i = s.getPlugins().size() + i;
             if (i < 0)
-              throw py::index_error("index out of range");
+              throw nb::index_error("index out of range");
             if (i >= s.getPlugins().size())
-              throw py::index_error("index out of range");
+              throw nb::index_error("index out of range");
 
             if (plugin && !plugin->acceptsAudioInput()) {
               throw std::domain_error(
@@ -135,7 +134,7 @@ inline void init_plugin_container(py::module &m) {
 
             s.getPlugins()[i] = plugin;
           },
-          py::arg("index"), py::arg("plugin"),
+          nb::arg("index"), nb::arg("plugin"),
           "Replace a plugin at the specified index. Index may be negative. If "
           "the index is out of range, an IndexError will be thrown.")
       .def(
@@ -145,13 +144,13 @@ inline void init_plugin_container(py::module &m) {
             if (i < 0)
               i = s.getPlugins().size() + i;
             if (i < 0)
-              throw py::index_error("index out of range");
+              throw nb::index_error("index out of range");
             if (i >= s.getPlugins().size())
-              throw py::index_error("index out of range");
+              throw nb::index_error("index out of range");
             auto &plugins = s.getPlugins();
             plugins.erase(plugins.begin() + i);
           },
-          py::arg("index"),
+          nb::arg("index"),
           "Delete a plugin by its index. Index may be negative. If the index "
           "is out of range, an IndexError will be thrown.")
       .def(
@@ -168,9 +167,9 @@ inline void init_plugin_container(py::module &m) {
             if (i < 0)
               i = s.getPlugins().size() + i;
             if (i < 0)
-              throw py::index_error("index out of range");
+              throw nb::index_error("index out of range");
             if (i > s.getPlugins().size())
-              throw py::index_error("index out of range");
+              throw nb::index_error("index out of range");
 
             if (plugin && !plugin->acceptsAudioInput()) {
               throw std::domain_error(
@@ -182,7 +181,7 @@ inline void init_plugin_container(py::module &m) {
             auto &plugins = s.getPlugins();
             plugins.insert(plugins.begin() + i, plugin);
           },
-          py::arg("index"), py::arg("plugin"),
+          nb::arg("index"), nb::arg("plugin"),
           "Insert a plugin at the specified index.")
       .def(
           "append",
@@ -198,7 +197,7 @@ inline void init_plugin_container(py::module &m) {
 
             s.getPlugins().push_back(plugin);
           },
-          py::arg("plugin"), "Append a plugin to the end of this container.")
+          nb::arg("plugin"), "Append a plugin to the end of this container.")
       .def(
           "remove",
           [](PluginContainer &s, std::shared_ptr<Plugin> plugin) {
@@ -206,17 +205,18 @@ inline void init_plugin_container(py::module &m) {
             auto &plugins = s.getPlugins();
             auto position = std::find(plugins.begin(), plugins.end(), plugin);
             if (position == plugins.end())
-              throw py::value_error("remove(x): x not in list");
+              throw nb::value_error("remove(x): x not in list");
             plugins.erase(position);
           },
-          py::arg("plugin"), "Remove a plugin by its value.")
+          nb::arg("plugin"), "Remove a plugin by its value.")
       .def(
           "__iter__",
           [](PluginContainer &s) {
-            return py::make_iterator(s.getPlugins().begin(),
+            return nb::make_iterator(nb::type<PluginContainer>(), "iterator",
+                                     s.getPlugins().begin(),
                                      s.getPlugins().end());
           },
-          py::keep_alive<0, 1>())
+          nb::keep_alive<0, 1>())
       .def(
           "__contains__",
           [](PluginContainer &s, std::shared_ptr<Plugin> plugin) {
@@ -225,7 +225,7 @@ inline void init_plugin_container(py::module &m) {
             return std::find(plugins.begin(), plugins.end(), plugin) !=
                    plugins.end();
           },
-          py::arg("plugin"));
+          nb::arg("plugin"));
 }
 
 } // namespace Pedalboard

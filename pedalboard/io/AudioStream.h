@@ -23,14 +23,17 @@
 #include <chrono>
 #include <thread>
 
-#include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/optional.h>
+#include <nanobind/stl/variant.h>
 
 #include "../BufferUtils.h"
 #include "../JuceHeader.h"
 #include "../plugins/Chain.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 namespace Pedalboard {
 
@@ -206,14 +209,14 @@ public:
       }
 
       {
-        py::gil_scoped_release release;
+        nb::gil_scoped_release release;
 
         // Let other Python threads run:
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
       }
     }
     stop();
-    throw py::error_already_set();
+    throw nb::python_error();
 #else
     throw std::runtime_error("AudioStream is not supported on this platform.");
 #endif
@@ -224,14 +227,14 @@ public:
     return shared_from_this();
   }
 
-  void exit(const py::object &type, const py::object &value,
-            const py::object &traceback) {
+  void exit(const nb::object &type, const nb::object &value,
+            const nb::object &traceback) {
     bool shouldThrow = PythonException::isPending();
     stop();
     close();
 
     if (shouldThrow || PythonException::isPending())
-      throw py::error_already_set();
+      throw nb::python_error();
   }
 
   static std::vector<std::string> getDeviceNames(bool isInput) {
@@ -473,7 +476,7 @@ public:
         break;
       }
 
-      py::gil_scoped_release release;
+      nb::gil_scoped_release release;
 
       int numSamplesToWrite =
           std::min(playBufferFifo->getFreeSpace(), buffer.getNumSamples() - i);
@@ -485,7 +488,7 @@ public:
     stop();
 
     if (errorSet) {
-      throw py::error_already_set();
+      throw nb::python_error();
     }
   }
 
@@ -519,7 +522,7 @@ public:
       return;
     }
 
-    py::gil_scoped_release release;
+    nb::gil_scoped_release release;
 
     // Write this audio buffer to the output device, via the FIFO:
     for (int i = 0; i < buffer.getNumSamples();) {
@@ -556,7 +559,7 @@ public:
         break;
       }
 
-      py::gil_scoped_release release;
+      nb::gil_scoped_release release;
 
       int numSamplesToRead = std::min(recordBufferFifo->getNumReady(),
                                       returnBuffer.getNumSamples() - i);
@@ -584,7 +587,7 @@ public:
 
     // Always return the buffer, even if an error was set:
     if (errorSet) {
-      throw py::error_already_set();
+      throw nb::python_error();
     }
     return returnBuffer;
   }
@@ -615,7 +618,7 @@ public:
           "call read() as quickly as possible or increase your buffer size.");
     }
 
-    py::gil_scoped_release release;
+    nb::gil_scoped_release release;
 
     juce::AudioBuffer<float> returnBuffer(getNumInputChannels(), numSamples);
 
@@ -699,8 +702,8 @@ private:
   bool ignoreDroppedInput = false;
 };
 
-inline void init_audio_stream(py::module &m) {
-  py::class_<AudioStream, std::shared_ptr<AudioStream>>(m, "AudioStream",
+inline void init_audio_stream(nb::module_ &m) {
+  nb::class_<AudioStream, std::shared_ptr<AudioStream>>(m, "AudioStream",
                                                         R"(
 A class that allows interacting with live streams of audio from an input
 audio device (i.e.: a microphone, audio interface, etc) and/or to an
@@ -766,7 +769,7 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
 
 :py:meth:`read` *and* :py:meth:`write` *methods introduced in v0.9.12.*
 )")
-      .def(py::init([](std::optional<std::string> inputDeviceName,
+      .def(nb::init([](std::optional<std::string> inputDeviceName,
                        std::optional<std::string> outputDeviceName,
                        std::optional<std::shared_ptr<Chain>> pedalboard,
                        std::optional<double> sampleRate,
@@ -777,18 +780,18 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
                  bufferSize, allowFeedback, numInputChannels,
                  numOutputChannels);
            }),
-           py::arg("input_device_name") = py::none(),
-           py::arg("output_device_name") = py::none(),
-           py::arg("plugins") = py::none(), py::arg("sample_rate") = py::none(),
-           py::arg("buffer_size") = py::none(),
-           py::arg("allow_feedback") = false, py::arg("num_input_channels") = 1,
-           py::arg("num_output_channels") = 2)
+           nb::arg("input_device_name") = nb::none(),
+           nb::arg("output_device_name") = nb::none(),
+           nb::arg("plugins") = nb::none(), nb::arg("sample_rate") = nb::none(),
+           nb::arg("buffer_size") = nb::none(),
+           nb::arg("allow_feedback") = false, nb::arg("num_input_channels") = 1,
+           nb::arg("num_output_channels") = 2)
       .def("run", &AudioStream::stream,
            "Start streaming audio from input to output, passing the audio "
            "stream through the :py:attr:`plugins` on this AudioStream object. "
            "This call will block the current thread until a "
            ":py:exc:`KeyboardInterrupt` (``Ctrl-C``) is received.")
-      .def_property_readonly("running", &AudioStream::getIsRunning,
+      .def_prop_ro("running", &AudioStream::getIsRunning,
                              ":py:const:`True` if this stream is currently "
                              "streaming live "
                              "audio, :py:const:`False` otherwise.")
@@ -835,7 +838,7 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
              ss << ">";
              return ss.str();
            })
-      .def_property_readonly(
+      .def_prop_ro(
           "buffer_size",
           [](AudioStream &stream) {
 #ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
@@ -847,30 +850,30 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
           "The size (in frames) of the buffer used between the audio "
           "hardware "
           "and Python.")
-      .def_property("plugins", &AudioStream::getPedalboard,
+      .def_prop_rw("plugins", &AudioStream::getPedalboard,
                     &AudioStream::setPedalboard,
                     "The Pedalboard object that this AudioStream will use to "
                     "process audio.")
-      .def_property_readonly(
+      .def_prop_ro(
           "dropped_input_frame_count", &AudioStream::getDroppedInputFrameCount,
           "The number of frames of audio that were dropped since the last "
           "call "
           "to :py:meth:`read`. To prevent audio from being dropped during "
           "recording, ensure that you call :py:meth:`read` as often as "
           "possible or increase your buffer size.")
-      .def_property_readonly(
+      .def_prop_ro(
           "sample_rate", &AudioStream::getSampleRate,
           "The sample rate that this stream is operating at.")
-      .def_property_readonly("num_input_channels",
+      .def_prop_ro("num_input_channels",
                              &AudioStream::getNumInputChannels,
                              "The number of input channels on the input "
                              "device. Will be ``0`` if "
                              "no input device is connected.")
-      .def_property_readonly(
+      .def_prop_ro(
           "num_output_channels", &AudioStream::getNumOutputChannels,
           "The number of output channels on the output "
           "device. Will be ``0`` if no output device is connected.")
-      .def_property(
+      .def_prop_rw(
           "ignore_dropped_input", &AudioStream::getIgnoreDroppedInput,
           &AudioStream::setIgnoreDroppedInput,
           "Controls the behavior of the :py:meth:`read` method when audio "
@@ -886,7 +889,7 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
       .def(
           "write",
           [](AudioStream &stream,
-             const py::array_t<float, py::array::c_style> inputArray,
+             const nb::ndarray_t<float, nb::ndarray::c_style> inputArray,
              float sampleRate) {
             if (sampleRate != stream.getSampleRate()) {
               throw std::runtime_error(
@@ -901,7 +904,7 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
             }
             stream.write(copyPyArrayIntoJuceBuffer(inputArray));
           },
-          py::arg("audio"), py::arg("sample_rate"),
+          nb::arg("audio"), nb::arg("sample_rate"),
           "Write (play) audio data to the output device. This method will "
           "block until the provided audio buffer is played in its "
           "entirety.\n\nIf the provided sample rate does not match the "
@@ -915,7 +918,7 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
             return copyJuceBufferIntoPyArray(stream.read(numSamples),
                                              ChannelLayout::NotInterleaved, 0);
           },
-          py::arg("num_samples") = 0,
+          nb::arg("num_samples") = 0,
           "Read (record) audio data from the input device. When called with "
           "no "
           "arguments, this method returns all of the available audio data in "
@@ -932,7 +935,7 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
           "number of dropped samples since the last call to :py:meth:`read` "
           "can be retrieved by accessing the "
           ":py:attr:`dropped_input_frame_count` property.")
-      .def_property_readonly(
+      .def_prop_ro(
           "buffered_input_sample_count",
           &AudioStream::getNumBufferedInputFrames,
           "The number of frames of audio that are currently in the input "
@@ -944,7 +947,7 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
            "longer usable.")
       .def_static(
           "play",
-          [](const py::array_t<float, py::array::c_style> audio,
+          [](const nb::ndarray_t<float, nb::ndarray::c_style> audio,
              float sampleRate, std::optional<std::string> outputDeviceName) {
             juce::AudioBuffer<float> buffer = copyPyArrayIntoJuceBuffer(audio);
             AudioStream(std::nullopt, outputDeviceName ? *outputDeviceName : "",
@@ -952,36 +955,36 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
                         buffer.getNumChannels())
                 .write(buffer);
           },
-          py::arg("audio"), py::arg("sample_rate"),
-          py::arg("output_device_name") = py::none(),
+          nb::arg("audio"), nb::arg("sample_rate"),
+          nb::arg("output_device_name") = nb::none(),
           "Play audio data to the speaker, headphones, or other output "
           "device. "
           "This method will block until the audio is finished playing.")
-      .def_property_readonly_static(
+      .def_prop_ro_static(
           "input_device_names",
-          [](py::object *obj) -> std::vector<std::string> {
+          [](nb::object *obj) -> std::vector<std::string> {
             return AudioStream::getDeviceNames(true);
           },
           "The input devices (i.e.: microphones, audio interfaces, etc.) "
           "currently available on the current machine.")
-      .def_property_readonly_static(
+      .def_prop_ro_static(
           "output_device_names",
-          [](py::object *obj) -> std::vector<std::string> {
+          [](nb::object *obj) -> std::vector<std::string> {
             return AudioStream::getDeviceNames(false);
           },
           "The output devices (i.e.: speakers, headphones, etc.) currently "
           "available on the current machine.")
-      .def_property_readonly_static(
+      .def_prop_ro_static(
           "default_input_device_name",
-          [](py::object *obj) -> std::optional<std::string> {
+          [](nb::object *obj) -> std::optional<std::string> {
             return AudioStream::getDefaultDeviceName(true, 1);
           },
           "The name of the default input device (i.e.: microphone, audio "
           "interface, etc.) currently available on the current machine. May "
           "be :py:const:`None` if no input devices are present.")
-      .def_property_readonly_static(
+      .def_prop_ro_static(
           "default_output_device_name",
-          [](py::object *obj) -> std::optional<std::string> {
+          [](nb::object *obj) -> std::optional<std::string> {
             return AudioStream::getDefaultDeviceName(false, 2);
           },
           "The name of the default output device (i.e.: speakers, "

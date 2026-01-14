@@ -18,8 +18,10 @@
 #pragma once
 #include "JuceHeader.h"
 
-#include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
+
+namespace nb = nanobind;
 
 namespace Pedalboard {
 enum class ChannelLayout {
@@ -27,24 +29,31 @@ enum class ChannelLayout {
   NotInterleaved,
 };
 
+/**
+ * Detect the channel layout of a NumPy array.
+ * For nanobind, we use nb::ndarray<> which provides direct access to shape/ndim.
+ */
 template <typename T>
 ChannelLayout
-detectChannelLayout(const py::array_t<T, py::array::c_style> inputArray,
+detectChannelLayout(nb::ndarray<T, nb::c_contig, nb::device::cpu> inputArray,
                     std::optional<int> channelCountHint = {}) {
-  py::buffer_info inputInfo = inputArray.request();
-
-  if (inputInfo.ndim == 1) {
+  size_t ndim = inputArray.ndim();
+  
+  if (ndim == 1) {
     return ChannelLayout::NotInterleaved;
-  } else if (inputInfo.ndim == 2) {
+  } else if (ndim == 2) {
+    size_t shape0 = inputArray.shape(0);
+    size_t shape1 = inputArray.shape(1);
+    
     if (channelCountHint) {
-      if (inputInfo.shape[0] == inputInfo.shape[1] && inputInfo.shape[0] > 1) {
+      if (shape0 == shape1 && shape0 > 1) {
         throw std::runtime_error(
             "Unable to determine channel layout from shape: (" +
-            std::to_string(inputInfo.shape[0]) + ", " +
-            std::to_string(inputInfo.shape[1]) + ").");
-      } else if (inputInfo.shape[0] == *channelCountHint) {
+            std::to_string(shape0) + ", " +
+            std::to_string(shape1) + ").");
+      } else if (shape0 == (size_t)*channelCountHint) {
         return ChannelLayout::NotInterleaved;
-      } else if (inputInfo.shape[1] == *channelCountHint) {
+      } else if (shape1 == (size_t)*channelCountHint) {
         return ChannelLayout::Interleaved;
       } else {
         // The hint was not used; fall through to the next case.
@@ -52,36 +61,88 @@ detectChannelLayout(const py::array_t<T, py::array::c_style> inputArray,
     }
 
     // Try to auto-detect the channel layout from the shape
-    if (inputInfo.shape[0] == 0 && inputInfo.shape[1] > 0) {
+    if (shape0 == 0 && shape1 > 0) {
       // Zero channels doesn't make sense; but zero samples does.
       return ChannelLayout::Interleaved;
-    } else if (inputInfo.shape[1] == 0 && inputInfo.shape[0] > 0) {
+    } else if (shape1 == 0 && shape0 > 0) {
       return ChannelLayout::NotInterleaved;
-    } else if (inputInfo.shape[1] < inputInfo.shape[0]) {
+    } else if (shape1 < shape0) {
       return ChannelLayout::Interleaved;
-    } else if (inputInfo.shape[0] < inputInfo.shape[1]) {
+    } else if (shape0 < shape1) {
       return ChannelLayout::NotInterleaved;
-    } else if (inputInfo.shape[0] == 1 || inputInfo.shape[1] == 1) {
+    } else if (shape0 == 1 || shape1 == 1) {
       // Do we only have one sample? Then the layout doesn't matter:
       return ChannelLayout::NotInterleaved;
     } else {
       throw std::runtime_error(
           "Unable to determine channel layout from shape: (" +
-          std::to_string(inputInfo.shape[0]) + ", " +
-          std::to_string(inputInfo.shape[1]) + ").");
+          std::to_string(shape0) + ", " +
+          std::to_string(shape1) + ").");
     }
   } else {
     throw std::runtime_error("Number of input dimensions must be 1 or 2 (got " +
-                             std::to_string(inputInfo.ndim) + ").");
+                             std::to_string(ndim) + ").");
+  }
+}
+
+/**
+ * Overload for generic ndarray (used when dtype is not known at compile time)
+ */
+inline ChannelLayout
+detectChannelLayout(nb::ndarray<> inputArray,
+                    std::optional<int> channelCountHint = {}) {
+  size_t ndim = inputArray.ndim();
+  
+  if (ndim == 1) {
+    return ChannelLayout::NotInterleaved;
+  } else if (ndim == 2) {
+    size_t shape0 = inputArray.shape(0);
+    size_t shape1 = inputArray.shape(1);
+    
+    if (channelCountHint) {
+      if (shape0 == shape1 && shape0 > 1) {
+        throw std::runtime_error(
+            "Unable to determine channel layout from shape: (" +
+            std::to_string(shape0) + ", " +
+            std::to_string(shape1) + ").");
+      } else if (shape0 == (size_t)*channelCountHint) {
+        return ChannelLayout::NotInterleaved;
+      } else if (shape1 == (size_t)*channelCountHint) {
+        return ChannelLayout::Interleaved;
+      } else {
+        // The hint was not used; fall through to the next case.
+      }
+    }
+
+    // Try to auto-detect the channel layout from the shape
+    if (shape0 == 0 && shape1 > 0) {
+      return ChannelLayout::Interleaved;
+    } else if (shape1 == 0 && shape0 > 0) {
+      return ChannelLayout::NotInterleaved;
+    } else if (shape1 < shape0) {
+      return ChannelLayout::Interleaved;
+    } else if (shape0 < shape1) {
+      return ChannelLayout::NotInterleaved;
+    } else if (shape0 == 1 || shape1 == 1) {
+      return ChannelLayout::NotInterleaved;
+    } else {
+      throw std::runtime_error(
+          "Unable to determine channel layout from shape: (" +
+          std::to_string(shape0) + ", " +
+          std::to_string(shape1) + ").");
+    }
+  } else {
+    throw std::runtime_error("Number of input dimensions must be 1 or 2 (got " +
+                             std::to_string(ndim) + ").");
   }
 }
 
 template <typename T>
 juce::AudioBuffer<T> copyPyArrayIntoJuceBuffer(
-    const py::array_t<T, py::array::c_style> inputArray,
+    nb::ndarray<T, nb::c_contig, nb::device::cpu> inputArray,
     std::optional<ChannelLayout> providedChannelLayout = {}) {
   // Numpy/Librosa convention is (num_samples, num_channels)
-  py::buffer_info inputInfo = inputArray.request();
+  size_t ndim = inputArray.ndim();
 
   unsigned int numChannels = 0;
   unsigned int numSamples = 0;
@@ -93,29 +154,32 @@ juce::AudioBuffer<T> copyPyArrayIntoJuceBuffer(
     inputChannelLayout = detectChannelLayout(inputArray);
   }
 
-  if (inputInfo.ndim == 1) {
-    numSamples = inputInfo.shape[0];
+  if (ndim == 1) {
+    numSamples = inputArray.shape(0);
     numChannels = 1;
-  } else if (inputInfo.ndim == 2) {
+  } else if (ndim == 2) {
     // Try to auto-detect the channel layout from the shape
     switch (inputChannelLayout) {
     case ChannelLayout::NotInterleaved:
-      numSamples = inputInfo.shape[1];
-      numChannels = inputInfo.shape[0];
+      numSamples = inputArray.shape(1);
+      numChannels = inputArray.shape(0);
       break;
     case ChannelLayout::Interleaved:
-      numSamples = inputInfo.shape[0];
-      numChannels = inputInfo.shape[1];
+      numSamples = inputArray.shape(0);
+      numChannels = inputArray.shape(1);
       break;
     default:
       throw std::runtime_error("Unable to determine shape of audio input!");
     }
   } else {
     throw std::runtime_error("Number of input dimensions must be 1 or 2 (got " +
-                             std::to_string(inputInfo.ndim) + ").");
+                             std::to_string(ndim) + ").");
   }
 
   juce::AudioBuffer<T> ioBuffer(numChannels, numSamples);
+
+  // Get raw pointer to the data
+  const T *inputPtr = inputArray.data();
 
   // Depending on the input channel layout, we need to copy data
   // differently. This loop is duplicated here to move the if statement
@@ -127,14 +191,14 @@ juce::AudioBuffer<T> copyPyArrayIntoJuceBuffer(
       T *channelBuffer = ioBuffer.getWritePointer(i);
       // We're de-interleaving the data here, so we can't use copyFrom.
       for (unsigned int j = 0; j < numSamples; j++) {
-        channelBuffer[j] = static_cast<T *>(inputInfo.ptr)[j * numChannels + i];
+        channelBuffer[j] = inputPtr[j * numChannels + i];
       }
     }
     break;
   case ChannelLayout::NotInterleaved:
     for (unsigned int i = 0; i < numChannels; i++) {
       ioBuffer.copyFrom(
-          i, 0, static_cast<T *>(inputInfo.ptr) + (numSamples * i), numSamples);
+          i, 0, inputPtr + (numSamples * i), numSamples);
     }
     break;
   default:
@@ -150,7 +214,7 @@ juce::AudioBuffer<T> copyPyArrayIntoJuceBuffer(
  */
 template <typename T>
 const juce::AudioBuffer<T> convertPyArrayIntoJuceBuffer(
-    const py::array_t<T, py::array::c_style> &inputArray,
+    nb::ndarray<T, nb::c_contig, nb::device::cpu> inputArray,
     std::optional<ChannelLayout> providedLayout = {}) {
   ChannelLayout inputChannelLayout;
   if (providedLayout) {
@@ -164,23 +228,23 @@ const juce::AudioBuffer<T> convertPyArrayIntoJuceBuffer(
     return copyPyArrayIntoJuceBuffer(inputArray);
   case ChannelLayout::NotInterleaved: {
     // Return a JUCE AudioBuffer that just points to the original PyArray:
-    py::buffer_info inputInfo = inputArray.request();
+    size_t ndim = inputArray.ndim();
 
     unsigned int numChannels = 0;
     unsigned int numSamples = 0;
 
-    if (inputInfo.ndim == 1) {
-      numSamples = inputInfo.shape[0];
+    if (ndim == 1) {
+      numSamples = inputArray.shape(0);
       numChannels = 1;
-    } else if (inputInfo.ndim == 2) {
+    } else if (ndim == 2) {
       switch (inputChannelLayout) {
       case ChannelLayout::NotInterleaved:
-        numSamples = inputInfo.shape[1];
-        numChannels = inputInfo.shape[0];
+        numSamples = inputArray.shape(1);
+        numChannels = inputArray.shape(0);
         break;
       case ChannelLayout::Interleaved:
-        numSamples = inputInfo.shape[0];
-        numChannels = inputInfo.shape[1];
+        numSamples = inputArray.shape(0);
+        numChannels = inputArray.shape(1);
         break;
       default:
         throw std::runtime_error("Unable to determine shape of audio input!");
@@ -188,12 +252,13 @@ const juce::AudioBuffer<T> convertPyArrayIntoJuceBuffer(
     } else {
       throw std::runtime_error(
           "Number of input dimensions must be 1 or 2 (got " +
-          std::to_string(inputInfo.ndim) + ").");
+          std::to_string(ndim) + ").");
     }
 
     T **channelPointers = (T **)alloca(numChannels * sizeof(T *));
-    for (int c = 0; c < numChannels; c++) {
-      channelPointers[c] = static_cast<T *>(inputInfo.ptr) + (c * numSamples);
+    T *dataPtr = const_cast<T*>(inputArray.data());
+    for (unsigned int c = 0; c < numChannels; c++) {
+      channelPointers[c] = dataPtr + (c * numSamples);
     }
 
     return juce::AudioBuffer<T>(channelPointers, numChannels, numSamples);
@@ -203,49 +268,63 @@ const juce::AudioBuffer<T> convertPyArrayIntoJuceBuffer(
   }
 }
 
+/**
+ * Copy a JUCE AudioBuffer into a new NumPy array.
+ * This function allocates new memory for the output array.
+ */
 template <typename T>
-py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> &juceBuffer,
-                                         ChannelLayout channelLayout,
-                                         int offsetSamples, int ndim = 2) {
+nb::ndarray<nb::numpy, T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> &juceBuffer,
+                                                     ChannelLayout channelLayout,
+                                                     int offsetSamples, int ndim = 2) {
   unsigned int numChannels = juceBuffer.getNumChannels();
   unsigned int numSamples = juceBuffer.getNumSamples();
   unsigned int outputSampleCount =
       std::max((int)numSamples - (int)offsetSamples, 0);
 
-  // TODO: Avoid the need to copy here if offsetSamples is 0!
-  py::array_t<T> outputArray;
+  // Allocate memory for the output
+  size_t totalElements;
+  size_t shape[2];
+  size_t actualNdim;
+  
   if (ndim == 2) {
     switch (channelLayout) {
     case ChannelLayout::Interleaved:
-      outputArray = py::array_t<T>({outputSampleCount, numChannels});
+      shape[0] = outputSampleCount;
+      shape[1] = numChannels;
       break;
     case ChannelLayout::NotInterleaved:
-      outputArray = py::array_t<T>({numChannels, outputSampleCount});
+      shape[0] = numChannels;
+      shape[1] = outputSampleCount;
       break;
     default:
       throw std::runtime_error(
           "Internal error: got unexpected channel layout.");
     }
+    totalElements = shape[0] * shape[1];
+    actualNdim = 2;
   } else {
-    outputArray = py::array_t<T>(outputSampleCount);
+    shape[0] = outputSampleCount;
+    totalElements = outputSampleCount;
+    actualNdim = 1;
   }
 
-  py::buffer_info outputInfo = outputArray.request();
+  // Allocate the output buffer
+  T *outputData = new T[totalElements];
+  
+  // Create a capsule to own the memory and ensure it gets freed
+  nb::capsule owner(outputData, [](void *p) noexcept {
+    delete[] static_cast<T*>(p);
+  });
 
-  // Depending on the input channel layout, we need to copy data
-  // differently. This loop is duplicated here to move the if statement
-  // outside of the tight loop, as we don't need to re-check that the input
-  // channel is still the same on every iteration of the loop.
-  T *outputBasePointer = static_cast<T *>(outputInfo.ptr);
-
+  // Copy the data
   if (juceBuffer.getNumSamples() > 0) {
     switch (channelLayout) {
     case ChannelLayout::Interleaved:
       for (unsigned int i = 0; i < numChannels; i++) {
         const T *channelBuffer = juceBuffer.getReadPointer(i, offsetSamples);
-        // We're interleaving the data here, so we can't use copyFrom.
+        // We're interleaving the data here
         for (unsigned int j = 0; j < outputSampleCount; j++) {
-          outputBasePointer[j * numChannels + i] = channelBuffer[j];
+          outputData[j * numChannels + i] = channelBuffer[j];
         }
       }
       break;
@@ -253,7 +332,7 @@ py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> &juceBuffer,
       for (unsigned int i = 0; i < numChannels; i++) {
         const T *channelBuffer = juceBuffer.getReadPointer(i, offsetSamples);
         std::copy(channelBuffer, channelBuffer + outputSampleCount,
-                  &outputBasePointer[outputSampleCount * i]);
+                  &outputData[outputSampleCount * i]);
       }
       break;
     default:
@@ -262,6 +341,11 @@ py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> &juceBuffer,
     }
   }
 
-  return outputArray;
+  // Create and return the ndarray
+  if (actualNdim == 2) {
+    return nb::ndarray<nb::numpy, T>(outputData, actualNdim, shape, owner);
+  } else {
+    return nb::ndarray<nb::numpy, T>(outputData, actualNdim, shape, owner);
+  }
 }
 } // namespace Pedalboard

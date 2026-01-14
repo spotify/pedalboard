@@ -15,10 +15,13 @@
  * limitations under the License.
  */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/variant.h>
+#include <nanobind/stl/optional.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../JucePlugin.h"
 
@@ -91,9 +94,8 @@ private:
   std::optional<double> sampleRate;
 };
 
-inline void init_convolution(py::module &m) {
-  py::class_<JucePlugin<ConvolutionWithMix>, Plugin,
-             std::shared_ptr<JucePlugin<ConvolutionWithMix>>>(
+inline void init_convolution(nb::module_ &m) {
+  nb::class_<JucePlugin<ConvolutionWithMix>, Plugin>(
       m, "Convolution",
       "An audio convolution, suitable for things like speaker simulation or "
       "reverb modeling.\n\n"
@@ -102,15 +104,15 @@ inline void init_convolution(py::module &m) {
       "the ``sample_rate`` argument must also be provided to indicate the "
       "sample rate of the impulse response.\n\n*Support for passing NumPy "
       "arrays as impulse responses introduced in v0.9.10.*")
-      .def(py::init([](std::variant<std::string,
-                                    py::array_t<float, py::array::c_style>>
+      .def(nb::init([](std::variant<std::string,
+                                    nb::ndarray<float, nb::c_contig, nb::device::cpu>>
                            impulseResponse,
                        float mix, std::optional<double> sampleRate) {
              auto plugin = std::make_unique<JucePlugin<ConvolutionWithMix>>();
 
              if (auto *impulseResponseFilename =
                      std::get_if<std::string>(&impulseResponse)) {
-               py::gil_scoped_release release;
+               nb::gil_scoped_release release;
                // Load the IR file on construction, to handle errors
                auto inputFile = juce::File(*impulseResponseFilename);
                // Test opening the file before we pass it to
@@ -130,7 +132,7 @@ inline void init_convolution(py::module &m) {
                plugin->getDSP().setImpulseResponseFilename(
                    *impulseResponseFilename);
              } else if (auto *inputArray =
-                            std::get_if<py::array_t<float, py::array::c_style>>(
+                            std::get_if<nb::ndarray<float, nb::c_contig, nb::device::cpu>>(
                                 &impulseResponse)) {
                if (!sampleRate) {
                  throw std::runtime_error(
@@ -150,8 +152,8 @@ inline void init_convolution(py::module &m) {
              plugin->getDSP().setMix(mix);
              return plugin;
            }),
-           py::arg("impulse_response_filename"), py::arg("mix") = 1.0,
-           py::arg("sample_rate") = py::none())
+           nb::arg("impulse_response_filename"), nb::arg("mix") = 1.0,
+           nb::arg("sample_rate") = nb::none())
       .def("__repr__",
            [](JucePlugin<ConvolutionWithMix> &plugin) {
              std::ostringstream ss;
@@ -173,15 +175,15 @@ inline void init_convolution(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property_readonly(
+      .def_prop_ro(
           "impulse_response_filename",
           [](JucePlugin<ConvolutionWithMix> &plugin) {
             return plugin.getDSP().getImpulseResponseFilename();
           })
-      .def_property_readonly(
+      .def_prop_ro(
           "impulse_response",
           [](JucePlugin<ConvolutionWithMix> &plugin)
-              -> std::optional<py::array_t<float, py::array::c_style>> {
+              -> std::optional<nb::ndarray<nb::numpy, float>> {
             if (plugin.getDSP().getImpulseResponse()) {
               return {copyJuceBufferIntoPyArray(
                   *plugin.getDSP().getImpulseResponse(),
@@ -190,7 +192,7 @@ inline void init_convolution(py::module &m) {
               return {};
             }
           })
-      .def_property(
+      .def_prop_rw(
           "mix",
           [](JucePlugin<ConvolutionWithMix> &plugin) {
             return plugin.getDSP().getMix();

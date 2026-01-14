@@ -20,34 +20,54 @@
 #include <mutex>
 #include <optional>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../JuceHeader.h"
 #include "PythonFileLike.h"
 
 namespace Pedalboard {
 
-bool isReadableFileLike(py::object fileLike) {
-  return py::hasattr(fileLike, "read") && py::hasattr(fileLike, "seek") &&
-         py::hasattr(fileLike, "tell") && py::hasattr(fileLike, "seekable");
+bool isReadableFileLike(nb::object fileLike) {
+  return nb::hasattr(fileLike, "read") && nb::hasattr(fileLike, "seek") &&
+         nb::hasattr(fileLike, "tell") && nb::hasattr(fileLike, "seekable");
 }
 
-std::optional<py::buffer> tryConvertingToBuffer(py::object bufferLike) {
+struct BufferInfo {
+  void *ptr;
+  size_t size;
+  size_t itemsize;
+};
+
+std::optional<BufferInfo> tryConvertingToBuffer(nb::object bufferLike) {
   try {
-    py::buffer b(bufferLike);
-    return {b};
-  } catch (std::exception &e) {
-    // If not already a buffer, can we call getbuffer() on it and do we then get
-    // a buffer?
-    if (py::hasattr(bufferLike, "getbuffer")) {
-      py::object getBufferResult = bufferLike.attr("getbuffer")();
-      try {
-        py::buffer b(getBufferResult);
-        return {b};
-      } catch (std::exception &e) {
+    // Try to get buffer interface from the object
+    Py_buffer view;
+    if (PyObject_GetBuffer(bufferLike.ptr(), &view, PyBUF_SIMPLE) == 0) {
+      BufferInfo info;
+      info.ptr = view.buf;
+      info.size = view.len / (view.itemsize > 0 ? view.itemsize : 1);
+      info.itemsize = view.itemsize > 0 ? view.itemsize : 1;
+      PyBuffer_Release(&view);
+      return {info};
+    }
+    PyErr_Clear();
+
+    // If not already a buffer, can we call getbuffer() on it?
+    if (nb::hasattr(bufferLike, "getbuffer")) {
+      nb::object getBufferResult = bufferLike.attr("getbuffer")();
+      if (PyObject_GetBuffer(getBufferResult.ptr(), &view, PyBUF_SIMPLE) == 0) {
+        BufferInfo info;
+        info.ptr = view.buf;
+        info.size = view.len / (view.itemsize > 0 ? view.itemsize : 1);
+        info.itemsize = view.itemsize > 0 ? view.itemsize : 1;
+        PyBuffer_Release(&view);
+        return {info};
       }
+      PyErr_Clear();
     }
 
+    return {};
+  } catch (std::exception &e) {
     return {};
   }
 }
@@ -58,13 +78,13 @@ std::optional<py::buffer> tryConvertingToBuffer(py::object bufferLike) {
  */
 class PythonInputStream : public juce::InputStream, public PythonFileLike {
 public:
-  PythonInputStream(py::object fileLike) : PythonFileLike(fileLike) {}
+  PythonInputStream(nb::object fileLike) : PythonFileLike(fileLike) {}
   virtual ~PythonInputStream() {}
 
   juce::int64 getTotalLength() noexcept override {
     ScopedDowngradeToReadLockWithGIL lock(objectLock);
     ClearErrnoBeforeReturn clearErrnoBeforeReturn;
-    py::gil_scoped_acquire acquire;
+    nb::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
       return -1;
@@ -74,21 +94,21 @@ public:
     // for instance
 
     try {
-      if (!fileLike.attr("seekable")().cast<bool>()) {
+      if (!nb::cast<bool>(fileLike.attr("seekable")())) {
         return -1;
       }
 
       if (totalLength == -1) {
-        juce::int64 pos = fileLike.attr("tell")().cast<juce::int64>();
+        juce::int64 pos = nb::cast<juce::int64>(fileLike.attr("tell")());
         fileLike.attr("seek")(0, 2);
-        totalLength = fileLike.attr("tell")().cast<juce::int64>();
+        totalLength = nb::cast<juce::int64>(fileLike.attr("tell")());
         fileLike.attr("seek")(pos, 0);
       }
-    } catch (py::error_already_set e) {
+    } catch (nb::python_error &e) {
       e.restore();
       return -1;
-    } catch (const py::builtin_exception &e) {
-      e.set_error();
+    } catch (const std::exception &e) {
+      PyErr_SetString(PyExc_RuntimeError, e.what());
       return -1;
     }
 
@@ -102,44 +122,37 @@ public:
     ScopedDowngradeToReadLockWithGIL lock(objectLock);
     ClearErrnoBeforeReturn clearErrnoBeforeReturn;
 
-    py::gil_scoped_acquire acquire;
+    nb::gil_scoped_acquire acquire;
     if (PythonException::isPending())
       return 0;
 
     try {
       auto readResult = fileLike.attr("read")(bytesToRead);
 
-      if (!py::isinstance<py::bytes>(readResult)) {
+      if (!nb::isinstance<nb::bytes>(readResult)) {
         std::string message =
             "File-like object passed to AudioFile was expected to return "
             "bytes from its read(...) method, but "
             "returned " +
-            py::str(readResult.get_type().attr("__name__"))
-                .cast<std::string>() +
+            nb::cast<std::string>(nb::str(readResult.type().attr("__name__"))) +
             ".";
 
-        if (py::hasattr(fileLike, "mode") &&
-            py::str(fileLike.attr("mode")).cast<std::string>() == "r") {
+        if (nb::hasattr(fileLike, "mode") &&
+            nb::cast<std::string>(nb::str(fileLike.attr("mode"))) == "r") {
           message += " (Try opening the stream in \"rb\" mode instead of "
                      "\"r\" mode if possible.)";
         }
 
-        throw py::type_error(message);
+        throw nb::type_error(message.c_str());
         return 0;
       }
 
-      py::bytes bytesObject = readResult.cast<py::bytes>();
-      char *pythonBuffer = nullptr;
-      py::ssize_t pythonLength = 0;
-
-      if (PYBIND11_BYTES_AS_STRING_AND_SIZE(bytesObject.ptr(), &pythonBuffer,
-                                            &pythonLength)) {
-        throw py::buffer_error(
-            "Internal error: failed to read bytes from bytes object!");
-      }
+      nb::bytes bytesObject = nb::cast<nb::bytes>(readResult);
+      const char *pythonBuffer = bytesObject.c_str();
+      size_t pythonLength = bytesObject.size();
 
       if (!buffer && pythonLength > 0) {
-        throw py::buffer_error("Internal error: bytes pointer is null, but a "
+        throw std::runtime_error("Internal error: bytes pointer is null, but a "
                                "non-zero number of bytes were returned!");
       }
 
@@ -147,24 +160,24 @@ public:
         std::memcpy(buffer, pythonBuffer, pythonLength);
       }
 
-      lastReadWasSmallerThanExpected = bytesToRead > pythonLength;
+      lastReadWasSmallerThanExpected = bytesToRead > (int)pythonLength;
       return pythonLength;
-    } catch (py::error_already_set e) {
+    } catch (nb::python_error &e) {
       e.restore();
       return 0;
-    } catch (const py::builtin_exception &e) {
-      e.set_error();
+    } catch (const std::exception &e) {
+      PyErr_SetString(PyExc_RuntimeError, e.what());
       return 0;
     }
   }
 
   bool isExhausted() noexcept override {
     // Read this up front to avoid releasing the object lock recursively:
-    juce::int64 totalLength = getTotalLength();
+    juce::int64 totalLen = getTotalLength();
 
     ScopedDowngradeToReadLockWithGIL lock(objectLock);
     ClearErrnoBeforeReturn clearErrnoBeforeReturn;
-    py::gil_scoped_acquire acquire;
+    nb::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
       return true;
@@ -174,12 +187,12 @@ public:
         return true;
       }
 
-      return fileLike.attr("tell")().cast<juce::int64>() == totalLength;
-    } catch (py::error_already_set e) {
+      return nb::cast<juce::int64>(fileLike.attr("tell")()) == totalLen;
+    } catch (nb::python_error &e) {
       e.restore();
       return true;
-    } catch (const py::builtin_exception &e) {
-      e.set_error();
+    } catch (const std::exception &e) {
+      PyErr_SetString(PyExc_RuntimeError, e.what());
       return true;
     }
   }
@@ -187,18 +200,18 @@ public:
   juce::int64 getPosition() noexcept override {
     ScopedDowngradeToReadLockWithGIL lock(objectLock);
     ClearErrnoBeforeReturn clearErrnoBeforeReturn;
-    py::gil_scoped_acquire acquire;
+    nb::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
       return -1;
 
     try {
-      return fileLike.attr("tell")().cast<juce::int64>();
-    } catch (py::error_already_set e) {
+      return nb::cast<juce::int64>(fileLike.attr("tell")());
+    } catch (nb::python_error &e) {
       e.restore();
       return -1;
-    } catch (const py::builtin_exception &e) {
-      e.set_error();
+    } catch (const std::exception &e) {
+      PyErr_SetString(PyExc_RuntimeError, e.what());
       return -1;
     }
   }
@@ -206,23 +219,23 @@ public:
   bool setPosition(juce::int64 pos) noexcept override {
     ScopedDowngradeToReadLockWithGIL lock(objectLock);
     ClearErrnoBeforeReturn clearErrnoBeforeReturn;
-    py::gil_scoped_acquire acquire;
+    nb::gil_scoped_acquire acquire;
 
     if (PythonException::isPending())
       return false;
 
     try {
-      if (fileLike.attr("seekable")().cast<bool>()) {
+      if (nb::cast<bool>(fileLike.attr("seekable")())) {
         fileLike.attr("seek")(pos);
         lastReadWasSmallerThanExpected = false;
       }
 
-      return fileLike.attr("tell")().cast<juce::int64>() == pos;
-    } catch (py::error_already_set e) {
+      return nb::cast<juce::int64>(fileLike.attr("tell")()) == pos;
+    } catch (nb::python_error &e) {
       e.restore();
       return false;
-    } catch (const py::builtin_exception &e) {
-      e.set_error();
+    } catch (const std::exception &e) {
+      PyErr_SetString(PyExc_RuntimeError, e.what());
       return false;
     }
   }
@@ -238,20 +251,27 @@ private:
  */
 class PythonMemoryViewInputStream : public PythonInputStream {
 public:
-  PythonMemoryViewInputStream(py::buffer bufferLike, py::object passedObject)
+  PythonMemoryViewInputStream(nb::object bufferLike, nb::object passedObject)
       : PythonInputStream(bufferLike) {
-    info = bufferLike.request();
-    totalLength = info.size * info.itemsize;
-    repr = py::repr(passedObject).cast<std::string>();
+    Py_buffer view;
+    if (PyObject_GetBuffer(bufferLike.ptr(), &view, PyBUF_SIMPLE) != 0) {
+      PyErr_Clear();
+      throw std::runtime_error("Failed to get buffer from object");
+    }
+    bufferPtr = view.buf;
+    totalLength = view.len;
+    PyBuffer_Release(&view);
+    
+    repr = nb::cast<std::string>(nb::repr(passedObject));
 
-    if (py::hasattr(passedObject, "tell")) {
+    if (nb::hasattr(passedObject, "tell")) {
       try {
         offset = std::min(
-            std::max(0LL, passedObject.attr("tell")().cast<juce::int64>()),
+            std::max((juce::int64)0, nb::cast<juce::int64>(passedObject.attr("tell")())),
             totalLength);
-      } catch (py::error_already_set e) {
+      } catch (nb::python_error &e) {
         e.restore();
-      } catch (std::exception e) {
+      } catch (std::exception &e) {
         // If we can't call tell(), that's fine; just assume an offset of 0.
       }
     }
@@ -268,7 +288,7 @@ public:
       bytesToRead = totalLength - offset;
     }
 
-    std::memcpy(buffer, ((const char *)info.ptr) + offset, bytesToRead);
+    std::memcpy(buffer, ((const char *)bufferPtr) + offset, bytesToRead);
     offset += bytesToRead;
     return bytesToRead;
   }
@@ -288,7 +308,7 @@ public:
 private:
   juce::int64 totalLength = -1;
   juce::int64 offset = 0;
-  py::buffer_info info;
+  void *bufferPtr = nullptr;
   std::string repr;
 };
 

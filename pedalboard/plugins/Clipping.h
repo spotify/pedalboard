@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../JucePlugin.h"
 
@@ -60,17 +60,17 @@ private:
   SampleType positiveThresholdGain;
 };
 
-inline void init_clipping(py::module &m) {
-  py::class_<Clipping<float>, Plugin, std::shared_ptr<Clipping<float>>>(
+inline void init_clipping(nb::module_ &m) {
+  nb::class_<Clipping<float>, Plugin>(
       m, "Clipping",
       "A distortion plugin that adds hard distortion to the signal "
       "by clipping the signal at the provided threshold (in decibels).")
-      .def(py::init([](float thresholdDb) {
+      .def(nb::init([](float thresholdDb) {
              auto plugin = std::make_unique<Clipping<float>>();
              plugin->setThresholdDecibels(thresholdDb);
              return plugin;
            }),
-           py::arg("threshold_db") = -6.0)
+           nb::arg("threshold_db") = -6.0)
       .def("__repr__",
            [](const Clipping<float> &plugin) {
              std::ostringstream ss;
@@ -80,7 +80,7 @@ inline void init_clipping(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("threshold_db", &Clipping<float>::getThresholdDecibels,
-                    &Clipping<float>::setThresholdDecibels);
+      .def_prop_rw("threshold_db", &Clipping<float>::getThresholdDecibels,
+                   &Clipping<float>::setThresholdDecibels);
 }
 }; // namespace Pedalboard

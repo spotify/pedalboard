@@ -18,14 +18,16 @@
 #pragma once
 #include "JuceHeader.h"
 
-#include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
+#include <nanobind/stl/vector.h>
+#include <nanobind/stl/shared_ptr.h>
 
 #include "BufferUtils.h"
 #include "Plugin.h"
 #include "PluginContainer.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 namespace Pedalboard {
 
@@ -159,8 +161,8 @@ inline int process(juce::AudioBuffer<float> &ioBuffer,
  * Pedalboard plugins at a given sample rate.
  * Only supports float processing, not double, at the moment.
  */
-py::array_t<float>
-processFloat32(const py::array_t<float, py::array::c_style> inputArray,
+nb::ndarray<nb::numpy, float>
+processFloat32(nb::ndarray<float, nb::c_contig, nb::device::cpu> inputArray,
                double sampleRate, std::vector<std::shared_ptr<Plugin>> plugins,
                unsigned int bufferSize, bool reset) {
 
@@ -174,35 +176,51 @@ processFloat32(const py::array_t<float, py::array::c_style> inputArray,
   juce::AudioBuffer<float> ioBuffer =
       copyPyArrayIntoJuceBuffer(inputArray, {inputChannelLayout});
 
+  size_t inputNdim = inputArray.ndim();
+
   if (ioBuffer.getNumChannels() == 0) {
     unsigned int numChannels = 0;
     unsigned int numSamples = ioBuffer.getNumSamples();
     // We have no channels to process; just return an empty output array with
     // the same shape. Passing zero channels into JUCE breaks some assumptions
     // all over the place.
-    py::array_t<float> outputArray;
-    if (inputArray.request().ndim == 2) {
+    
+    size_t shape[2];
+    size_t actualNdim;
+    
+    if (inputNdim == 2) {
       switch (inputChannelLayout) {
       case ChannelLayout::Interleaved:
-        outputArray = py::array_t<float>({numSamples, numChannels});
+        shape[0] = numSamples;
+        shape[1] = numChannels;
         break;
       case ChannelLayout::NotInterleaved:
-        outputArray = py::array_t<float>({numChannels, numSamples});
+        shape[0] = numChannels;
+        shape[1] = numSamples;
         break;
       default:
         throw std::runtime_error(
             "Internal error: got unexpected channel layout.");
       }
+      actualNdim = 2;
     } else {
-      outputArray = py::array_t<float>(0);
+      shape[0] = 0;
+      actualNdim = 1;
     }
-    return outputArray;
+    
+    // Create an empty array
+    float *emptyData = new float[1];  // Allocate at least 1 byte
+    emptyData[0] = 0;
+    nb::capsule owner(emptyData, [](void *p) noexcept {
+      delete[] static_cast<float*>(p);
+    });
+    return nb::ndarray<nb::numpy, float>(emptyData, actualNdim, shape, owner);
   }
 
   int totalOutputLatencySamples;
 
   {
-    py::gil_scoped_release release;
+    nb::gil_scoped_release release;
 
     bufferSize = std::min(bufferSize, (unsigned int)ioBuffer.getNumSamples());
 
@@ -272,27 +290,37 @@ processFloat32(const py::array_t<float, py::array::c_style> inputArray,
 
   return copyJuceBufferIntoPyArray(ioBuffer, inputChannelLayout,
                                    totalOutputLatencySamples,
-                                   inputArray.request().ndim);
+                                   inputNdim);
 }
 
-py::array_t<float> process(py::array inputArray, double sampleRate,
-                           const std::vector<std::shared_ptr<Plugin>> plugins,
-                           unsigned int bufferSize, bool reset) {
-  py::array_t<float, py::array::c_style> float32InputArray;
-  switch (inputArray.dtype().char_()) {
-  case 'f':
-    float32InputArray = inputArray;
-    break;
-  case 'd':
-    float32InputArray = inputArray.attr("astype")("float32");
-    break;
-  default:
-    throw py::type_error("Pedalboard only supports 32-bit and 64-bit floating "
+/**
+ * Main entry point for processing audio through plugins.
+ * Accepts any ndarray and converts to float32 if needed.
+ */
+nb::ndarray<nb::numpy, float> process(nb::ndarray<> inputArray, double sampleRate,
+                                       const std::vector<std::shared_ptr<Plugin>> plugins,
+                                       unsigned int bufferSize, bool reset) {
+  // Check dtype and convert if necessary
+  nb::dlpack::dtype dtype = inputArray.dtype();
+  
+  // dtype.code: 0 = int, 1 = uint, 2 = float
+  // dtype.bits: 32, 64, etc.
+  if (dtype.code == 2 && dtype.bits == 32) {
+    // Already float32 - cast directly
+    auto float32Array = nb::ndarray<float, nb::c_contig, nb::device::cpu>(
+        inputArray.data(), inputArray.ndim(), inputArray.shape_ptr(), inputArray.handle());
+    return processFloat32(float32Array, sampleRate, plugins, bufferSize, reset);
+  } else if (dtype.code == 2 && dtype.bits == 64) {
+    // float64 - need to convert via Python
+    nb::object np = nb::module_::import_("numpy");
+    nb::object astype = inputArray.attr("astype");
+    nb::object float32Array = astype("float32");
+    auto castArray = nb::cast<nb::ndarray<float, nb::c_contig, nb::device::cpu>>(float32Array);
+    return processFloat32(castArray, sampleRate, plugins, bufferSize, reset);
+  } else {
+    throw nb::type_error("Pedalboard only supports 32-bit and 64-bit floating "
                          "point audio for processing.");
   }
-
-  return processFloat32(float32InputArray, sampleRate, plugins, bufferSize,
-                        reset);
 }
 
 } // namespace Pedalboard

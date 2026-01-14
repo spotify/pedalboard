@@ -2,7 +2,7 @@ Pedalboard Internals
 ====================
 
 Pedalboard is a Python wrapper around JUCE, an open-source cross-platform C++ library for developing audio applications.
-Most of Pedalboard is written in C++ using pybind11, a library for binding C++ code to Python. The design goals of
+Most of Pedalboard is written in C++ using nanobind, a library for binding C++ code to Python. The design goals of
 Pedalboard are to:
 
  - Expose the digital signal processing functionality of JUCE to Python code in an idiomatic way

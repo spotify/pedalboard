@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../JucePlugin.h"
 
@@ -119,35 +119,34 @@ public:
   }
 };
 
-inline void init_iir_filters(py::module &m) {
-  py::class_<IIRFilter<float>, Plugin, std::shared_ptr<IIRFilter<float>>>(
+inline void init_iir_filters(nb::module_ &m) {
+  nb::class_<IIRFilter<float>, Plugin>(
       m, "IIRFilter",
       "An abstract class that implements various kinds of infinite impulse "
       "response (IIR) filter designs. This should not be used directly; use "
       ":class:`HighShelfFilter`, :class:`LowShelfFilter`, or "
       ":class:`PeakFilter` directly instead.")
-      .def(py::init([]() {
+      .def(nb::init([]() {
         throw std::runtime_error(
             "IIRFilter is not designed to be instantiated directly: "
             "use HighShelfFilter, LowShelfFilter, or PeakFilter instead.");
         return nullptr;
       }));
 
-  py::class_<HighShelfFilter<float>, IIRFilter<float>,
-             std::shared_ptr<HighShelfFilter<float>>>(
+  nb::class_<HighShelfFilter<float>, IIRFilter<float>>(
       m, "HighShelfFilter",
       "A high shelf filter plugin with variable Q and gain, as would be used "
       "in an equalizer. Frequencies above the cutoff frequency will be boosted "
       "(or cut) by the provided gain (in decibels).")
-      .def(py::init([](float cutoffFrequencyHz, float gaindB, float Q) {
+      .def(nb::init([](float cutoffFrequencyHz, float gaindB, float Q) {
              auto plugin = std::make_unique<HighShelfFilter<float>>();
              plugin->setCutoffFrequencyHz(cutoffFrequencyHz);
              plugin->setGainDecibels(gaindB);
              plugin->setQ(Q);
              return plugin;
            }),
-           py::arg("cutoff_frequency_hz") = 440, py::arg("gain_db") = 0.0,
-           py::arg("q") = (juce::MathConstants<float>::sqrt2 / 2.0))
+           nb::arg("cutoff_frequency_hz") = 440, nb::arg("gain_db") = 0.0,
+           nb::arg("q") = (juce::MathConstants<float>::sqrt2 / 2.0))
       .def("__repr__",
            [](const HighShelfFilter<float> &plugin) {
              std::ostringstream ss;
@@ -159,29 +158,28 @@ inline void init_iir_filters(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("cutoff_frequency_hz",
-                    &HighShelfFilter<float>::getCutoffFrequencyHz,
-                    &HighShelfFilter<float>::setCutoffFrequencyHz)
-      .def_property("gain_db", &HighShelfFilter<float>::getGainDecibels,
-                    &HighShelfFilter<float>::setGainDecibels)
-      .def_property("q", &HighShelfFilter<float>::getQ,
-                    &HighShelfFilter<float>::setQ);
+      .def_prop_rw("cutoff_frequency_hz",
+                   &HighShelfFilter<float>::getCutoffFrequencyHz,
+                   &HighShelfFilter<float>::setCutoffFrequencyHz)
+      .def_prop_rw("gain_db", &HighShelfFilter<float>::getGainDecibels,
+                   &HighShelfFilter<float>::setGainDecibels)
+      .def_prop_rw("q", &HighShelfFilter<float>::getQ,
+                   &HighShelfFilter<float>::setQ);
 
-  py::class_<LowShelfFilter<float>, IIRFilter<float>,
-             std::shared_ptr<LowShelfFilter<float>>>(
+  nb::class_<LowShelfFilter<float>, IIRFilter<float>>(
       m, "LowShelfFilter",
       "A low shelf filter with variable Q and gain, as would be used in an "
       "equalizer. Frequencies below the cutoff frequency will be boosted (or "
       "cut) by the provided gain value.")
-      .def(py::init([](float cutoffFrequencyHz, float gaindB, float Q) {
+      .def(nb::init([](float cutoffFrequencyHz, float gaindB, float Q) {
              auto plugin = std::make_unique<LowShelfFilter<float>>();
              plugin->setCutoffFrequencyHz(cutoffFrequencyHz);
              plugin->setGainDecibels(gaindB);
              plugin->setQ(Q);
              return plugin;
            }),
-           py::arg("cutoff_frequency_hz") = 440, py::arg("gain_db") = 0.0,
-           py::arg("q") = (juce::MathConstants<float>::sqrt2 / 2.0))
+           nb::arg("cutoff_frequency_hz") = 440, nb::arg("gain_db") = 0.0,
+           nb::arg("q") = (juce::MathConstants<float>::sqrt2 / 2.0))
       .def("__repr__",
            [](const LowShelfFilter<float> &plugin) {
              std::ostringstream ss;
@@ -193,29 +191,28 @@ inline void init_iir_filters(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("cutoff_frequency_hz",
-                    &LowShelfFilter<float>::getCutoffFrequencyHz,
-                    &LowShelfFilter<float>::setCutoffFrequencyHz)
-      .def_property("gain_db", &LowShelfFilter<float>::getGainDecibels,
-                    &LowShelfFilter<float>::setGainDecibels)
-      .def_property("q", &LowShelfFilter<float>::getQ,
-                    &LowShelfFilter<float>::setQ);
+      .def_prop_rw("cutoff_frequency_hz",
+                   &LowShelfFilter<float>::getCutoffFrequencyHz,
+                   &LowShelfFilter<float>::setCutoffFrequencyHz)
+      .def_prop_rw("gain_db", &LowShelfFilter<float>::getGainDecibels,
+                   &LowShelfFilter<float>::setGainDecibels)
+      .def_prop_rw("q", &LowShelfFilter<float>::getQ,
+                   &LowShelfFilter<float>::setQ);
 
-  py::class_<PeakFilter<float>, IIRFilter<float>,
-             std::shared_ptr<PeakFilter<float>>>(
+  nb::class_<PeakFilter<float>, IIRFilter<float>>(
       m, "PeakFilter",
       "A peak (or notch) filter with variable Q and gain, as would be used in "
       "an equalizer. Frequencies around the cutoff frequency will be boosted "
       "(or cut) by the provided gain value.")
-      .def(py::init([](float cutoffFrequencyHz, float gaindB, float Q) {
+      .def(nb::init([](float cutoffFrequencyHz, float gaindB, float Q) {
              auto plugin = std::make_unique<PeakFilter<float>>();
              plugin->setCutoffFrequencyHz(cutoffFrequencyHz);
              plugin->setGainDecibels(gaindB);
              plugin->setQ(Q);
              return plugin;
            }),
-           py::arg("cutoff_frequency_hz") = 440, py::arg("gain_db") = 0.0,
-           py::arg("q") = (juce::MathConstants<float>::sqrt2 / 2.0))
+           nb::arg("cutoff_frequency_hz") = 440, nb::arg("gain_db") = 0.0,
+           nb::arg("q") = (juce::MathConstants<float>::sqrt2 / 2.0))
       .def("__repr__",
            [](const PeakFilter<float> &plugin) {
              std::ostringstream ss;
@@ -227,11 +224,11 @@ inline void init_iir_filters(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("cutoff_frequency_hz",
-                    &PeakFilter<float>::getCutoffFrequencyHz,
-                    &PeakFilter<float>::setCutoffFrequencyHz)
-      .def_property("gain_db", &PeakFilter<float>::getGainDecibels,
-                    &PeakFilter<float>::setGainDecibels)
-      .def_property("q", &PeakFilter<float>::getQ, &PeakFilter<float>::setQ);
+      .def_prop_rw("cutoff_frequency_hz",
+                   &PeakFilter<float>::getCutoffFrequencyHz,
+                   &PeakFilter<float>::setCutoffFrequencyHz)
+      .def_prop_rw("gain_db", &PeakFilter<float>::getGainDecibels,
+                   &PeakFilter<float>::setGainDecibels)
+      .def_prop_rw("q", &PeakFilter<float>::getQ, &PeakFilter<float>::setQ);
 }
 }; // namespace Pedalboard

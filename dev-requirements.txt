@@ -6,6 +6,6 @@ bumpversion==0.5.3
 ipython
 ipdb
 pip>=20
-pybind11>=2.10.4
-setuptools>=42
+nanobind>=2.4.0
+scikit-build-core[pyproject]
 wheel

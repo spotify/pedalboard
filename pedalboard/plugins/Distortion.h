@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../JucePlugin.h"
 
@@ -47,20 +47,20 @@ private:
   enum { gainIndex, waveshaperIndex };
 };
 
-inline void init_distortion(py::module &m) {
-  py::class_<Distortion<float>, Plugin, std::shared_ptr<Distortion<float>>>(
+inline void init_distortion(nb::module_ &m) {
+  nb::class_<Distortion<float>, Plugin>(
       m, "Distortion",
       "A distortion effect, which applies a non-linear (``tanh``, or "
       "hyperbolic tangent) waveshaping function to apply harmonically pleasing "
       "distortion to a signal.\n\nThis plugin produces a signal that is "
       "roughly equivalent to running: ``def distortion(x): return tanh(x * "
       "db_to_gain(drive_db))``")
-      .def(py::init([](float drive_db) {
+      .def(nb::init([](float drive_db) {
              auto plugin = std::make_unique<Distortion<float>>();
              plugin->setDriveDecibels(drive_db);
              return plugin;
            }),
-           py::arg("drive_db") = 25)
+           nb::arg("drive_db") = 25)
       .def("__repr__",
            [](const Distortion<float> &plugin) {
              std::ostringstream ss;
@@ -70,7 +70,7 @@ inline void init_distortion(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("drive_db", &Distortion<float>::getDriveDecibels,
-                    &Distortion<float>::setDriveDecibels);
+      .def_prop_rw("drive_db", &Distortion<float>::getDriveDecibels,
+                   &Distortion<float>::setDriveDecibels);
 }
 }; // namespace Pedalboard

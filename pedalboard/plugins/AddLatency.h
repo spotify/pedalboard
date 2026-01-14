@@ -54,19 +54,19 @@ private:
   int samplesProvided = 0;
 };
 
-inline void init_add_latency(py::module &m) {
-  py::class_<AddLatency, Plugin, std::shared_ptr<AddLatency>>(
+inline void init_add_latency(nb::module_ &m) {
+  nb::class_<AddLatency, Plugin>(
       m, "AddLatency",
       "A dummy plugin that delays input audio for the given number of samples "
       "before passing it back to the output. Used internally to test "
       "Pedalboard's automatic latency compensation. Probably not useful as a "
       "real effect.")
-      .def(py::init([](int samples) {
+      .def(nb::init([](int samples) {
              auto al = std::make_unique<AddLatency>();
              al->getDSP().setMaximumDelayInSamples(samples);
              al->getDSP().setDelay(samples);
              return al;
            }),
-           py::arg("samples") = 44100);
+           nb::arg("samples") = 44100);
 }
 }; // namespace Pedalboard

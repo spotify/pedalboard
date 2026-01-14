@@ -27,7 +27,10 @@
 
 #include "AudioUnitParser.h"
 #include "Plugin.h"
-#include <pybind11/stl.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/vector.h>
+#include <nanobind/stl/optional.h>
+#include <nanobind/stl/tuple.h>
 
 #include "juce_overrides/juce_PatchedVST3PluginFormat.h"
 #include "process.h"
@@ -181,56 +184,49 @@ inline std::vector<std::string> findInstalledVSTPluginPaths() {
 }
 
 /**
- * Given a py::object representing a Python list object filled with Tuple[bytes,
+ * Given a nb::object representing a Python list object filled with Tuple[bytes,
  * float], each representing a MIDI message at a specific timestamp, return a
  * juce::MidiBuffer.
  */
-juce::MidiBuffer parseMidiBufferFromPython(py::object midiMessages,
+juce::MidiBuffer parseMidiBufferFromPython(nb::object midiMessages,
                                            float sampleRate) {
   juce::MidiBuffer buf;
-  py::object normalizeFunction = py::module_::import("pedalboard.midi_utils")
+  nb::object normalizeFunction = nb::module_::import_("pedalboard.midi_utils")
                                      .attr("normalize_midi_messages");
 
   {
-    py::gil_scoped_acquire acquire;
+    nb::gil_scoped_acquire acquire;
     if (PyErr_Occurred() != nullptr)
-      throw py::error_already_set();
+      throw nb::python_error();
   }
 
-  if (normalizeFunction == py::none()) {
+  if (normalizeFunction.is_none()) {
     throw std::runtime_error(
         "Failed to import pedalboard.midi_utils.normalize_midi_messages! This "
         "is an internal Pedalboard error and should be reported.");
   }
 
-  py::object pyNormalizedBuffer = normalizeFunction(midiMessages);
+  nb::object pyNormalizedBuffer = normalizeFunction(midiMessages);
 
   {
-    py::gil_scoped_acquire acquire;
+    nb::gil_scoped_acquire acquire;
     if (PyErr_Occurred() != nullptr)
-      throw py::error_already_set();
+      throw nb::python_error();
   }
 
-  if (pyNormalizedBuffer == py::none()) {
+  if (pyNormalizedBuffer.is_none()) {
     throw std::runtime_error(
         "pedalboard.midi_utils.normalize_midi_messages returned None without "
         "throwing an exception. This is an internal Pedalboard error and "
         "should be reported.");
   }
 
-  std::vector<std::tuple<py::bytes, float>> normalizedBuffer =
-      pyNormalizedBuffer.cast<std::vector<std::tuple<py::bytes, float>>>();
+  std::vector<std::tuple<nb::bytes, float>> normalizedBuffer =
+      nb::cast<std::vector<std::tuple<nb::bytes, float>>>(pyNormalizedBuffer);
 
-  for (const std::tuple<py::bytes, float> &tuple : normalizedBuffer) {
-    char *messagePointer;
-    py::ssize_t messageLength;
-
-    if (PYBIND11_BYTES_AS_STRING_AND_SIZE(std::get<0>(tuple).ptr(),
-                                          &messagePointer, &messageLength)) {
-      throw std::runtime_error(
-          "Failed to decode Python bytes object. This is an internal "
-          "Pedalboard error and should be reported.");
-    }
+  for (const std::tuple<nb::bytes, float> &tuple : normalizedBuffer) {
+    const char *messagePointer = std::get<0>(tuple).c_str();
+    size_t messageLength = std::get<0>(tuple).size();
 
     long sampleIndex = (std::get<1>(tuple) * sampleRate);
     buf.addEvent(messagePointer, messageLength, sampleIndex);
@@ -363,7 +359,7 @@ scanPluginDescriptions(std::string filename) {
 #endif
 
   if (typesFound.isEmpty()) {
-    throw pybind11::import_error(errorMessage);
+    throw nb::import_error(errorMessage.c_str());
   }
 
   return typesFound;
@@ -413,19 +409,19 @@ public:
    * window if necessary.
    */
   static void openWindowAndWait(juce::AudioProcessor &processor,
-                                py::object optionalEvent) {
+                                nb::object optionalEvent) {
     bool shouldThrowErrorAlreadySet = false;
 
     // Check the provided Event object before even opening the window:
-    if (optionalEvent != py::none() &&
-        optionalEvent.attr("is_set")().cast<bool>()) {
+    if (!optionalEvent.is_none() &&
+        nb::cast<bool>(optionalEvent.attr("is_set")())) {
       return;
     }
 
     {
       // Release the GIL to allow other Python threads to run in the
       // background while we the UI is running:
-      py::gil_scoped_release release;
+      nb::gil_scoped_release release;
       JUCE_AUTORELEASEPOOL {
         StandalonePluginWindow window(processor);
         window.show();
@@ -440,11 +436,11 @@ public:
           bool eventSet = false;
 
           {
-            py::gil_scoped_acquire acquire;
+            nb::gil_scoped_acquire acquire;
 
             errorThrown = PyErr_CheckSignals() != 0;
-            eventSet = optionalEvent != py::none() &&
-                       optionalEvent.attr("is_set")().cast<bool>();
+            eventSet = !optionalEvent.is_none() &&
+                       nb::cast<bool>(optionalEvent.attr("is_set")());
           }
 
           if (errorThrown || eventSet) {
@@ -463,7 +459,7 @@ public:
     }
 
     if (shouldThrowErrorAlreadySet) {
-      throw py::error_already_set();
+      throw nb::python_error();
     }
   }
 
@@ -524,7 +520,7 @@ public:
       float initializationTimeout = DEFAULT_INITIALIZATION_TIMEOUT_SECONDS)
       : pathToPluginFile(_pathToPluginFile),
         initializationTimeout(initializationTimeout) {
-    py::gil_scoped_release release;
+    nb::gil_scoped_release release;
     // Ensure we have a MessageManager, which is required by the VST wrapper
     // Without this, we get an assert(false) from JUCE at runtime
     juce::MessageManager::getInstance();
@@ -538,9 +534,9 @@ public:
         juce::File::createFileWithoutCheckingPath(pluginFileStripped).exists();
 
     if (!fileExists) {
-      throw pybind11::import_error("Unable to load plugin " +
+      throw nb::import_error(("Unable to load plugin " +
                                    pathToPluginFile.toStdString() +
-                                   ": plugin file not found.");
+                                   ": plugin file not found.").c_str());
     }
 
     juce::OwnedArray<juce::PluginDescription> typesFound =
@@ -623,7 +619,7 @@ public:
       }
 #endif
 
-      throw pybind11::import_error(errorMessage);
+      throw nb::import_error(errorMessage.c_str());
     }
   }
 
@@ -746,9 +742,9 @@ public:
                                ExternalLoadMaximumBlockSize, loadError);
 
       if (!pluginInstance) {
-        throw pybind11::import_error("Unable to load plugin " +
+        throw nb::import_error(("Unable to load plugin " +
                                      pathToPluginFile.toStdString() + ": " +
-                                     loadError.toStdString());
+                                     loadError.toStdString()).c_str());
       }
 
       pluginInstance->enableAllBuses();
@@ -774,9 +770,9 @@ public:
               ExternalLoadMaximumBlockSize, loadError);
 
           if (!pluginInstance) {
-            throw pybind11::import_error("Unable to load plugin " +
+            throw nb::import_error(("Unable to load plugin " +
                                          pathToPluginFile.toStdString() + ": " +
-                                         loadError.toStdString());
+                                         loadError.toStdString()).c_str());
           }
         }
       }
@@ -1224,7 +1220,8 @@ public:
     return 0;
   }
 
-  py::array_t<float> renderMIDIMessages(py::object midiMessages, float duration,
+  nb::ndarray<nb::numpy, float, nb::ndim<2>> renderMIDIMessages(
+                                        nb::object midiMessages, float duration,
                                         float sampleRate,
                                         unsigned int numChannels,
                                         unsigned long bufferSize, bool reset) {
@@ -1246,18 +1243,16 @@ public:
 
     std::scoped_lock<std::mutex>(this->mutex);
 
-    py::array_t<float> outputArray;
     unsigned long outputSampleCount = duration * sampleRate;
 
     juce::MidiBuffer midiInputBuffer =
         parseMidiBufferFromPython(midiMessages, sampleRate);
 
-    outputArray =
-        py::array_t<float>({numChannels, (unsigned int)outputSampleCount});
+    // Allocate output buffer
+    float *outputArrayPointer = new float[numChannels * outputSampleCount];
+    size_t shape[2] = {numChannels, outputSampleCount};
 
-    float *outputArrayPointer = static_cast<float *>(outputArray.request().ptr);
-
-    py::gil_scoped_release release;
+    nb::gil_scoped_release release;
 
     if (pluginInstance) {
       if (reset)
@@ -1310,7 +1305,10 @@ public:
       }
     }
 
-    return outputArray;
+    nb::capsule owner(outputArrayPointer, [](void *p) noexcept {
+      delete[] static_cast<float *>(p);
+    });
+    return nb::ndarray<nb::numpy, float, nb::ndim<2>>(outputArrayPointer, 2, shape, owner);
   }
 
   void getState(juce::MemoryBlock &dest) const {
@@ -1348,23 +1346,23 @@ public:
     return pluginInstance && pluginInstance->getMainBusNumInputChannels() > 0;
   }
 
-  void showEditor(py::object optionalEvent) {
+  void showEditor(nb::object optionalEvent) {
     if (!pluginInstance) {
       throw std::runtime_error(
           "Editor cannot be shown - plugin not loaded. This is an internal "
           "Pedalboard error and should be reported.");
     }
 
-    if (optionalEvent != py::none() && !py::hasattr(optionalEvent, "is_set")) {
-      throw py::type_error(
-          "Pedalboard expected a threading.Event object to be "
+    if (!optionalEvent.is_none() && !nb::hasattr(optionalEvent, "is_set")) {
+      throw nb::type_error(
+          ("Pedalboard expected a threading.Event object to be "
           "passed to show_editor, but the provided object (\"" +
-          py::repr(optionalEvent).cast<std::string>() +
-          "\") does not have an 'is_set' method.");
+          nb::cast<std::string>(nb::repr(optionalEvent)) +
+          "\") does not have an 'is_set' method.").c_str());
     }
 
     {
-      py::gil_scoped_release release;
+      nb::gil_scoped_release release;
       if (!juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()) {
         throw std::runtime_error(
             "Editor cannot be shown - no visual display devices available.");
@@ -1421,8 +1419,8 @@ private:
   float initializationTimeout = DEFAULT_INITIALIZATION_TIMEOUT_SECONDS;
 };
 
-inline void init_external_plugins(py::module &m) {
-  py::enum_<ExternalPluginReloadType>(
+inline void init_external_plugins(nb::module_ &m) {
+  nb::enum_<ExternalPluginReloadType>(
       m, "ExternalPluginReloadType",
       "Indicates the behavior of an external plugin when reset() is called.")
       .value("Unknown", ExternalPluginReloadType::Unknown,
@@ -1439,7 +1437,7 @@ inline void init_external_plugins(py::module &m) {
              "plugin every time reset is called.")
       .export_values();
 
-  py::class_<juce::AudioProcessorParameter>(
+  nb::class_<juce::AudioProcessorParameter>(
       m, "_AudioProcessorParameter",
       "An abstract base class for parameter objects that can be added to an "
       "AudioProcessor.")
@@ -1458,13 +1456,13 @@ inline void init_external_plugins(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property(
+      .def_prop_rw(
           "raw_value", &juce::AudioProcessorParameter::getValue,
           &juce::AudioProcessorParameter::setValue,
           "The internal value of this parameter. Convention is that this "
           "parameter should be between 0 and 1.0. This may or may not "
           "correspond with the value shown to the user.")
-      .def_property_readonly(
+      .def_prop_ro(
           "default_raw_value", &juce::AudioProcessorParameter::getDefaultValue,
           "The default internal value of this parameter. Convention is that "
           "this parameter should be between 0 and 1.0. This may or may not "
@@ -1474,32 +1472,32 @@ inline void init_external_plugins(py::module &m) {
           [](juce::AudioProcessorParameter &param, int length) {
             return param.getName(length).toStdString();
           },
-          py::arg("maximum_string_length"),
+          nb::arg("maximum_string_length"),
           "Returns the name to display for this parameter, which is made to "
           "fit within the given string length")
-      .def_property_readonly(
+      .def_prop_ro(
           "name",
           [](juce::AudioProcessorParameter &param) {
             return param.getName(512).toStdString();
           },
           "Returns the name to display for this parameter at its longest.")
-      .def_property_readonly(
+      .def_prop_ro(
           "label",
           [](juce::AudioProcessorParameter &param) {
             return param.getLabel().toStdString();
           },
           "Some parameters may be able to return a label string for their "
           "units. For example \"Hz\" or \"%\".")
-      .def_property_readonly(
+      .def_prop_ro(
           "num_steps", &juce::AudioProcessorParameter::getNumSteps,
           "Returns the number of steps that this parameter's range should be "
           "quantised into. See also: is_discrete, is_boolean.")
-      .def_property_readonly("is_discrete",
+      .def_prop_ro("is_discrete",
                              &juce::AudioProcessorParameter::isDiscrete,
                              "Returns whether the parameter uses discrete "
                              "values, based on the result of getNumSteps, or "
                              "allows the host to select values continuously.")
-      .def_property_readonly(
+      .def_prop_ro(
           "is_boolean", &juce::AudioProcessorParameter::isBoolean,
           "Returns whether the parameter represents a boolean switch, "
           "typically with \"On\" and \"Off\" states.")
@@ -1509,7 +1507,7 @@ inline void init_external_plugins(py::module &m) {
              int maximumStringLength) {
             return param.getText(value, maximumStringLength).toStdString();
           },
-          py::arg("raw_value"), py::arg("maximum_string_length") = 512,
+          nb::arg("raw_value"), nb::arg("maximum_string_length") = 512,
           "Returns a textual version of the supplied normalised parameter "
           "value.")
       .def(
@@ -1517,45 +1515,40 @@ inline void init_external_plugins(py::module &m) {
           [](juce::AudioProcessorParameter &param, std::string &text) {
             return param.getValueForText(text);
           },
-          py::arg("string_value"),
+          nb::arg("string_value"),
           "Returns the raw value of the supplied text. Plugins may handle "
           "errors however they see fit, but will likely not raise "
           "exceptions.")
-      .def_property_readonly(
+      .def_prop_ro(
           "is_orientation_inverted",
           &juce::AudioProcessorParameter::isOrientationInverted,
           "If true, this parameter operates in the reverse direction. (Not "
           "all plugin formats will actually use this information).")
-      .def_property_readonly("is_automatable",
-                             &juce::AudioProcessorParameter::isAutomatable,
-                             "Returns true if this parameter can be automated.")
-      .def_property_readonly("is_automatable",
+      .def_prop_ro("is_automatable",
                              &juce::AudioProcessorParameter::isAutomatable,
                              "Returns true if this parameter can be "
                              "automated (i.e.: scheduled to "
                              "change over time, in real-time, in a DAW).")
-      .def_property_readonly(
+      .def_prop_ro(
           "is_meta_parameter", &juce::AudioProcessorParameter::isMetaParameter,
           "A meta-parameter is a parameter that changes other parameters.")
-      .def_property_readonly(
+      .def_prop_ro(
           "index", &juce::AudioProcessorParameter::getParameterIndex,
           "The index of this parameter in its plugin's parameter list.")
-      .def_property_readonly(
+      .def_prop_ro(
           "string_value",
           [](juce::AudioProcessorParameter &param) {
             return param.getCurrentValueAsText().toStdString();
           },
           "Returns the current value of the parameter as a string.");
 
-  py::object externalPlugin =
-      py::class_<AbstractExternalPlugin, Plugin,
-                 std::shared_ptr<AbstractExternalPlugin>>(
-          m, "ExternalPlugin", py::dynamic_attr(),
+  nb::class_<AbstractExternalPlugin, Plugin>(
+          m, "ExternalPlugin", nb::dynamic_attr(),
           "A wrapper around a third-party effect plugin.\n\nDon't use this "
           "directly; use one of :class:`pedalboard.VST3Plugin` or "
           ":class:`pedalboard.AudioUnitPlugin` instead.")
-          .def(py::init([]() {
-            throw py::type_error(
+          .def(nb::init([]() {
+            throw nb::type_error(
                 "ExternalPlugin is an abstract base class - don't instantiate "
                 "this directly, use its subclasses instead.");
             return nullptr;
@@ -1563,64 +1556,61 @@ inline void init_external_plugins(py::module &m) {
           .def(
               "process",
               [](std::shared_ptr<AbstractExternalPlugin> self,
-                 py::object midiMessages, float duration, float sampleRate,
+                 nb::object midiMessages, float duration, float sampleRate,
                  unsigned int numChannels, unsigned long bufferSize,
-                 bool reset) -> py::array_t<float> {
-                throw py::type_error("ExternalPlugin is an abstract base class "
+                 bool reset) -> nb::ndarray<nb::numpy, float, nb::ndim<2>> {
+                throw nb::type_error("ExternalPlugin is an abstract base class "
                                      "- use its subclasses instead.");
-                py::array_t<float> nothing;
-                return nothing;
+                return nb::ndarray<nb::numpy, float, nb::ndim<2>>();
               },
-              EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("midi_messages"),
-              py::arg("duration"), py::arg("sample_rate"),
-              py::arg("num_channels") = 2,
-              py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-              py::arg("reset") = true)
+              EXTERNAL_PLUGIN_PROCESS_DOCSTRING, nb::arg("midi_messages"),
+              nb::arg("duration"), nb::arg("sample_rate"),
+              nb::arg("num_channels") = 2,
+              nb::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+              nb::arg("reset") = true)
           .def(
               "process",
-              [](std::shared_ptr<Plugin> self, const py::array inputArray,
+              [](std::shared_ptr<Plugin> self, const nb::ndarray<nb::numpy> inputArray,
                  double sampleRate, unsigned int bufferSize, bool reset) {
                 return process(inputArray, sampleRate, {self}, bufferSize,
                                reset);
               },
-              EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("input_array"),
-              py::arg("sample_rate"),
-              py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-              py::arg("reset") = true)
+              EXTERNAL_PLUGIN_PROCESS_DOCSTRING, nb::arg("input_array"),
+              nb::arg("sample_rate"),
+              nb::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+              nb::arg("reset") = true)
           .def(
               "__call__",
-              [](std::shared_ptr<Plugin> self, const py::array inputArray,
+              [](std::shared_ptr<Plugin> self, const nb::ndarray<nb::numpy> inputArray,
                  double sampleRate, unsigned int bufferSize, bool reset) {
                 return process(inputArray, sampleRate, {self}, bufferSize,
                                reset);
               },
               "Run an audio or MIDI buffer through this plugin, returning "
               "audio. Alias for :py:meth:`process`.",
-              py::arg("input_array"), py::arg("sample_rate"),
-              py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-              py::arg("reset") = true)
+              nb::arg("input_array"), nb::arg("sample_rate"),
+              nb::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+              nb::arg("reset") = true)
           .def(
               "__call__",
               [](std::shared_ptr<AbstractExternalPlugin> self,
-                 py::object midiMessages, float duration, float sampleRate,
+                 nb::object midiMessages, float duration, float sampleRate,
                  unsigned int numChannels, unsigned long bufferSize,
-                 bool reset) -> py::array_t<float> {
-                throw py::type_error("ExternalPlugin is an abstract base class "
+                 bool reset) -> nb::ndarray<nb::numpy, float, nb::ndim<2>> {
+                throw nb::type_error("ExternalPlugin is an abstract base class "
                                      "- use its subclasses instead.");
-                py::array_t<float> nothing;
-                return nothing;
+                return nb::ndarray<nb::numpy, float, nb::ndim<2>>();
               },
               "Run an audio or MIDI buffer through this plugin, returning "
               "audio. Alias for :py:meth:`process`.",
-              py::arg("midi_messages"), py::arg("duration"),
-              py::arg("sample_rate"), py::arg("num_channels") = 2,
-              py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-              py::arg("reset") = true);
+              nb::arg("midi_messages"), nb::arg("duration"),
+              nb::arg("sample_rate"), nb::arg("num_channels") = 2,
+              nb::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+              nb::arg("reset") = true);
 
 #if (JUCE_MAC || JUCE_WINDOWS || JUCE_LINUX)
-  py::class_<ExternalPlugin<juce::PatchedVST3PluginFormat>,
-             AbstractExternalPlugin,
-             std::shared_ptr<ExternalPlugin<juce::PatchedVST3PluginFormat>>>(
+  nb::class_<ExternalPlugin<juce::PatchedVST3PluginFormat>,
+             AbstractExternalPlugin>(
       m, "VST3Plugin",
       R"(A wrapper around third-party, audio effect or instrument plugins in
 `Steinberg GmbH's VST3® <https://en.wikipedia.org/wiki/Virtual_Studio_Technology>`_
@@ -1644,21 +1634,21 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
 *Support for running VST3® plugins on background threads introduced in v0.8.8.*
 )")
       .def(
-          py::init([](std::string &pathToPluginFile, py::object parameterValues,
+          nb::init([](std::string &pathToPluginFile, nb::object parameterValues,
                       std::optional<std::string> pluginName,
                       float initializationTimeout) {
             std::shared_ptr<ExternalPlugin<juce::PatchedVST3PluginFormat>>
                 plugin = std::make_shared<
                     ExternalPlugin<juce::PatchedVST3PluginFormat>>(
                     pathToPluginFile, pluginName, initializationTimeout);
-            py::cast(plugin).attr("__set_initial_parameter_values__")(
+            nb::cast(plugin).attr("__set_initial_parameter_values__")(
                 parameterValues);
             return plugin;
           }),
-          py::arg("path_to_plugin_file"),
-          py::arg("parameter_values") = py::none(),
-          py::arg("plugin_name") = py::none(),
-          py::arg("initialization_timeout") =
+          nb::arg("path_to_plugin_file"),
+          nb::arg("parameter_values") = nb::none(),
+          nb::arg("plugin_name") = nb::none(),
+          nb::arg("initialization_timeout") =
               DEFAULT_INITIALIZATION_TIMEOUT_SECONDS)
       .def("__repr__",
            [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
@@ -1672,19 +1662,18 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
       .def("load_preset",
            &ExternalPlugin<juce::PatchedVST3PluginFormat>::loadPresetFile,
            "Load a VST3 preset file in .vstpreset format.",
-           py::arg("preset_file_path"))
-      .def_property(
+           nb::arg("preset_file_path"))
+      .def_prop_rw(
           "preset_data",
           [](const ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             juce::MemoryBlock presetData;
             plugin.getPreset(presetData);
-            return py::bytes((const char *)presetData.getData(),
+            return nb::bytes((const char *)presetData.getData(),
                              presetData.getSize());
           },
           [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin,
-             const py::bytes &presetData) {
-            py::buffer_info info(py::buffer(presetData).request());
-            plugin.setPreset(info.ptr, static_cast<size_t>(info.size));
+             const nb::bytes &presetData) {
+            plugin.setPreset(presetData.c_str(), presetData.size());
           },
           "Get or set the current plugin state as bytes in .vstpreset "
           "format.\n\n"
@@ -1701,30 +1690,29 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           "plugin (i.e.: a \".vst3\"). If the provided file cannot be "
           "scanned, "
           "an ImportError will be raised.")
-      .def_property_readonly_static(
+      .def_prop_ro_static(
           "installed_plugins",
-          [](py::object /* cls */) { return findInstalledVSTPluginPaths(); },
+          [](nb::handle /* cls */) { return findInstalledVSTPluginPaths(); },
           "Return a list of paths to VST3 plugins installed in the default "
           "location on this system. This list may not be exhaustive, and "
           "plugins in this list are not guaranteed to be compatible with "
           "Pedalboard.")
-      .def_property_readonly(
+      .def_prop_ro(
           "name",
           [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             return plugin.getName().toStdString();
           },
           "The name of this plugin.")
-      .def_property(
+      .def_prop_rw(
           "raw_state",
           [](const ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             juce::MemoryBlock state;
             plugin.getState(state);
-            return py::bytes((const char *)state.getData(), state.getSize());
+            return nb::bytes((const char *)state.getData(), state.getSize());
           },
           [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin,
-             const py::bytes &state) {
-            py::buffer_info info(py::buffer(state).request());
-            plugin.setState(info.ptr, static_cast<size_t>(info.size));
+             const nb::bytes &state) {
+            plugin.setState(state.c_str(), state.size());
           },
           "A :py:class:`bytes` object representing the plugin's internal "
           "state.\n\n"
@@ -1734,7 +1722,7 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           ".. warning::\n    This property can be set to change the "
           "plugin's internal state, but providing invalid data may cause the "
           "plugin to crash, taking the entire Python process down with it.")
-      .def_property_readonly(
+      .def_prop_ro(
           "descriptive_name",
           [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             return plugin.foundPluginDescription.descriptiveName.toStdString();
@@ -1742,42 +1730,42 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           "A more descriptive name for this plugin. This may be the same as "
           "the 'name' field, but some plugins may provide an alternative "
           "name.\n\n*Introduced in v0.9.4.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "category",
           [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             return plugin.foundPluginDescription.category.toStdString();
           },
           "A category that this plugin falls into, such as \"Dynamics\", "
           "\"Reverbs\", etc.\n\n*Introduced in v0.9.4.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "manufacturer_name",
           [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             return plugin.foundPluginDescription.manufacturerName.toStdString();
           },
           "The name of the manufacturer of this plugin, as reported by the "
           "plugin itself.\n\n*Introduced in v0.9.4.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "version",
           [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             return plugin.foundPluginDescription.version.toStdString();
           },
           "The version string for this plugin, as reported by the plugin "
           "itself.\n\n*Introduced in v0.9.4.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "is_instrument",
           [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             return plugin.foundPluginDescription.isInstrument;
           },
           "True iff this plugin identifies itself as an instrument (generator, "
           "synthesizer, etc) plugin.\n\n*Introduced in v0.9.4.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "has_shared_container",
           [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             return plugin.foundPluginDescription.hasSharedContainer;
           },
           "True iff this plugin is part of a multi-plugin "
           "container.\n\n*Introduced in v0.9.4.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "identifier",
           [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             return plugin.foundPluginDescription.createIdentifierString()
@@ -1785,7 +1773,7 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           },
           "A string that can be saved and used to uniquely identify this "
           "plugin (and version) again.\n\n*Introduced in v0.9.4.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "reported_latency_samples",
           [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             return plugin.getLatencyHint();
@@ -1797,51 +1785,51 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           "informational purposes. Note that not all plugins correctly report "
           "the latency that they introduce, so this value may be inaccurate "
           "(especially if the plugin reports 0).\n\n*Introduced in v0.9.12.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "_parameters",
           &ExternalPlugin<juce::PatchedVST3PluginFormat>::getParameters,
-          py::return_value_policy::reference_internal)
+          nb::rv_policy::reference_internal)
       .def("_get_parameter",
            &ExternalPlugin<juce::PatchedVST3PluginFormat>::getParameter,
-           py::return_value_policy::reference_internal)
+           nb::rv_policy::reference_internal)
       .def("show_editor",
            &ExternalPlugin<juce::PatchedVST3PluginFormat>::showEditor,
-           SHOW_EDITOR_DOCSTRING, py::arg("close_event") = py::none())
+           SHOW_EDITOR_DOCSTRING, nb::arg("close_event") = nb::none())
       .def(
           "process",
-          [](std::shared_ptr<Plugin> self, const py::array inputArray,
+          [](std::shared_ptr<Plugin> self, const nb::ndarray<nb::numpy> inputArray,
              double sampleRate, unsigned int bufferSize, bool reset) {
             return process(inputArray, sampleRate, {self}, bufferSize, reset);
           },
-          EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("input_array"),
-          py::arg("sample_rate"), py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-          py::arg("reset") = true)
+          EXTERNAL_PLUGIN_PROCESS_DOCSTRING, nb::arg("input_array"),
+          nb::arg("sample_rate"), nb::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+          nb::arg("reset") = true)
       .def(
           "__call__",
-          [](std::shared_ptr<Plugin> self, const py::array inputArray,
+          [](std::shared_ptr<Plugin> self, const nb::ndarray<nb::numpy> inputArray,
              double sampleRate, unsigned int bufferSize, bool reset) {
             return process(inputArray, sampleRate, {self}, bufferSize, reset);
           },
           "Run an audio or MIDI buffer through this plugin, returning "
           "audio. Alias for :py:meth:`process`.",
-          py::arg("input_array"), py::arg("sample_rate"),
-          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
+          nb::arg("input_array"), nb::arg("sample_rate"),
+          nb::arg("buffer_size") = DEFAULT_BUFFER_SIZE, nb::arg("reset") = true)
       .def("process",
            &ExternalPlugin<juce::PatchedVST3PluginFormat>::renderMIDIMessages,
-           EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("midi_messages"),
-           py::arg("duration"), py::arg("sample_rate"),
-           py::arg("num_channels") = 2,
-           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-           py::arg("reset") = true)
+           EXTERNAL_PLUGIN_PROCESS_DOCSTRING, nb::arg("midi_messages"),
+           nb::arg("duration"), nb::arg("sample_rate"),
+           nb::arg("num_channels") = 2,
+           nb::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+           nb::arg("reset") = true)
       .def("__call__",
            &ExternalPlugin<juce::PatchedVST3PluginFormat>::renderMIDIMessages,
            "Run an audio or MIDI buffer through this plugin, returning "
            "audio. Alias for :py:meth:`process`.",
-           py::arg("midi_messages"), py::arg("duration"),
-           py::arg("sample_rate"), py::arg("num_channels") = 2,
-           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-           py::arg("reset") = true)
-      .def_readwrite(
+           nb::arg("midi_messages"), nb::arg("duration"),
+           nb::arg("sample_rate"), nb::arg("num_channels") = 2,
+           nb::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+           nb::arg("reset") = true)
+      .def_rw(
           "_reload_type",
           &ExternalPlugin<juce::PatchedVST3PluginFormat>::reloadType,
           "The behavior that this plugin exhibits when .reset() is called. "
@@ -1851,9 +1839,8 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
 #endif
 
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
-  py::class_<ExternalPlugin<juce::AudioUnitPluginFormat>,
-             AbstractExternalPlugin,
-             std::shared_ptr<ExternalPlugin<juce::AudioUnitPluginFormat>>>(
+  nb::class_<ExternalPlugin<juce::AudioUnitPluginFormat>,
+             AbstractExternalPlugin>(
       m, "AudioUnitPlugin", R"(
 A wrapper around third-party, audio effect or instrument
 plugins in `Apple's Audio Unit <https://en.wikipedia.org/wiki/Audio_Units>`_
@@ -1882,21 +1869,21 @@ see :class:`pedalboard.VST3Plugin`.)
 *Support for loading AUv3 plugins (* ``.appex`` *bundles) introduced in v0.9.5.*
 )")
       .def(
-          py::init([](std::string &pathToPluginFile, py::object parameterValues,
+          nb::init([](std::string &pathToPluginFile, nb::object parameterValues,
                       std::optional<std::string> pluginName,
                       float initializationTimeout) {
             std::shared_ptr<ExternalPlugin<juce::AudioUnitPluginFormat>>
                 plugin = std::make_shared<
                     ExternalPlugin<juce::AudioUnitPluginFormat>>(
                     pathToPluginFile, pluginName, initializationTimeout);
-            py::cast(plugin).attr("__set_initial_parameter_values__")(
+            nb::cast(plugin).attr("__set_initial_parameter_values__")(
                 parameterValues);
             return plugin;
           }),
-          py::arg("path_to_plugin_file"),
-          py::arg("parameter_values") = py::none(),
-          py::arg("plugin_name") = py::none(),
-          py::arg("initialization_timeout") =
+          nb::arg("path_to_plugin_file"),
+          nb::arg("parameter_values") = nb::none(),
+          nb::arg("plugin_name") = nb::none(),
+          nb::arg("initialization_timeout") =
               DEFAULT_INITIALIZATION_TIMEOUT_SECONDS)
       .def("__repr__",
            [](const ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
@@ -1912,39 +1899,38 @@ see :class:`pedalboard.VST3Plugin`.)
           [](std::string filename) {
             return getPluginNamesForFile<juce::AudioUnitPluginFormat>(filename);
           },
-          py::arg("filename"),
+          nb::arg("filename"),
           "Return a list of plugin names contained within a given Audio Unit "
           "bundle (i.e.: a ``.component`` or ``.appex`` file). If the provided "
           "file cannot be scanned, an ``ImportError`` will be raised.\n\nNote "
           "that most Audio Units have a single plugin inside, but this method "
           "can be useful to determine if multiple plugins are present in one "
           "bundle, and if so, what their names are.")
-      .def_property_readonly_static(
+      .def_prop_ro_static(
           "installed_plugins",
-          [](py::object /* cls */) {
+          [](nb::handle /* cls */) {
             return AudioUnitPathFinder::findInstalledAudioUnitPaths();
           },
           "Return a list of paths to Audio Units installed in the default "
           "location on this system. This list may not be exhaustive, and "
           "plugins in this list are not guaranteed to be compatible with "
           "Pedalboard.")
-      .def_property_readonly(
+      .def_prop_ro(
           "name",
           [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
             return plugin.getName().toStdString();
           },
           "The name of this plugin, as reported by the plugin itself.")
-      .def_property(
+      .def_prop_rw(
           "raw_state",
           [](const ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
             juce::MemoryBlock state;
             plugin.getState(state);
-            return py::bytes((const char *)state.getData(), state.getSize());
+            return nb::bytes((const char *)state.getData(), state.getSize());
           },
           [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin,
-             const py::bytes &state) {
-            py::buffer_info info(py::buffer(state).request());
-            plugin.setState(info.ptr, static_cast<size_t>(info.size));
+             const nb::bytes &state) {
+            plugin.setState(state.c_str(), state.size());
           },
           "A :py:class:`bytes` object representing the plugin's internal "
           "state.\n\n"
@@ -1954,13 +1940,7 @@ see :class:`pedalboard.VST3Plugin`.)
           ".. warning::\n    This property can be set to change the "
           "plugin's internal state, but providing invalid data may cause the "
           "plugin to crash, taking the entire Python process down with it.")
-      .def_property_readonly(
-          "name",
-          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
-            return plugin.getName().toStdString();
-          },
-          "The name of this plugin.")
-      .def_property_readonly(
+      .def_prop_ro(
           "descriptive_name",
           [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
             return plugin.foundPluginDescription.descriptiveName.toStdString();
@@ -1968,42 +1948,42 @@ see :class:`pedalboard.VST3Plugin`.)
           "A more descriptive name for this plugin. This may be the same as "
           "the 'name' field, but some plugins may provide an alternative "
           "name.\n\n*Introduced in v0.9.4.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "category",
           [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
             return plugin.foundPluginDescription.category.toStdString();
           },
           "A category that this plugin falls into, such as \"Dynamics\", "
           "\"Reverbs\", etc.\n\n*Introduced in v0.9.4.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "manufacturer_name",
           [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
             return plugin.foundPluginDescription.manufacturerName.toStdString();
           },
           "The name of the manufacturer of this plugin, as reported by the "
           "plugin itself.\n\n*Introduced in v0.9.4.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "version",
           [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
             return plugin.foundPluginDescription.version.toStdString();
           },
           "The version string for this plugin, as reported by the plugin "
           "itself.\n\n*Introduced in v0.9.4.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "is_instrument",
           [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
             return plugin.foundPluginDescription.isInstrument;
           },
           "True iff this plugin identifies itself as an instrument (generator, "
           "synthesizer, etc) plugin.\n\n*Introduced in v0.9.4.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "has_shared_container",
           [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
             return plugin.foundPluginDescription.hasSharedContainer;
           },
           "True iff this plugin is part of a multi-plugin "
           "container.\n\n*Introduced in v0.9.4.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "identifier",
           [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
             return plugin.foundPluginDescription.createIdentifierString()
@@ -2011,7 +1991,7 @@ see :class:`pedalboard.VST3Plugin`.)
           },
           "A string that can be saved and used to uniquely identify this "
           "plugin (and version) again.\n\n*Introduced in v0.9.4.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "reported_latency_samples",
           [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
             return plugin.getLatencyHint();
@@ -2023,51 +2003,51 @@ see :class:`pedalboard.VST3Plugin`.)
           "informational purposes. Note that not all plugins correctly report "
           "the latency that they introduce, so this value may be inaccurate "
           "(especially if the plugin reports 0).\n\n*Introduced in v0.9.12.*")
-      .def_property_readonly(
+      .def_prop_ro(
           "_parameters",
           &ExternalPlugin<juce::AudioUnitPluginFormat>::getParameters,
-          py::return_value_policy::reference_internal)
+          nb::rv_policy::reference_internal)
       .def("_get_parameter",
            &ExternalPlugin<juce::AudioUnitPluginFormat>::getParameter,
-           py::return_value_policy::reference_internal)
+           nb::rv_policy::reference_internal)
       .def("show_editor",
            &ExternalPlugin<juce::AudioUnitPluginFormat>::showEditor,
-           SHOW_EDITOR_DOCSTRING, py::arg("close_event") = py::none())
+           SHOW_EDITOR_DOCSTRING, nb::arg("close_event") = nb::none())
       .def(
           "process",
-          [](std::shared_ptr<Plugin> self, const py::array inputArray,
+          [](std::shared_ptr<Plugin> self, const nb::ndarray<nb::numpy> inputArray,
              double sampleRate, unsigned int bufferSize, bool reset) {
             return process(inputArray, sampleRate, {self}, bufferSize, reset);
           },
-          EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("input_array"),
-          py::arg("sample_rate"), py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-          py::arg("reset") = true)
+          EXTERNAL_PLUGIN_PROCESS_DOCSTRING, nb::arg("input_array"),
+          nb::arg("sample_rate"), nb::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+          nb::arg("reset") = true)
       .def(
           "__call__",
-          [](std::shared_ptr<Plugin> self, const py::array inputArray,
+          [](std::shared_ptr<Plugin> self, const nb::ndarray<nb::numpy> inputArray,
              double sampleRate, unsigned int bufferSize, bool reset) {
             return process(inputArray, sampleRate, {self}, bufferSize, reset);
           },
           "Run an audio or MIDI buffer through this plugin, returning "
           "audio. Alias for :py:meth:`process`.",
-          py::arg("input_array"), py::arg("sample_rate"),
-          py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
+          nb::arg("input_array"), nb::arg("sample_rate"),
+          nb::arg("buffer_size") = DEFAULT_BUFFER_SIZE, nb::arg("reset") = true)
       .def("process",
            &ExternalPlugin<juce::AudioUnitPluginFormat>::renderMIDIMessages,
-           EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("midi_messages"),
-           py::arg("duration"), py::arg("sample_rate"),
-           py::arg("num_channels") = 2,
-           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-           py::arg("reset") = true)
+           EXTERNAL_PLUGIN_PROCESS_DOCSTRING, nb::arg("midi_messages"),
+           nb::arg("duration"), nb::arg("sample_rate"),
+           nb::arg("num_channels") = 2,
+           nb::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+           nb::arg("reset") = true)
       .def("__call__",
            &ExternalPlugin<juce::AudioUnitPluginFormat>::renderMIDIMessages,
            "Run an audio or MIDI buffer through this plugin, returning "
            "audio. Alias for :py:meth:`process`.",
-           py::arg("midi_messages"), py::arg("duration"),
-           py::arg("sample_rate"), py::arg("num_channels") = 2,
-           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
-           py::arg("reset") = true)
-      .def_readwrite(
+           nb::arg("midi_messages"), nb::arg("duration"),
+           nb::arg("sample_rate"), nb::arg("num_channels") = 2,
+           nb::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
+           nb::arg("reset") = true)
+      .def_rw(
           "_reload_type",
           &ExternalPlugin<juce::AudioUnitPluginFormat>::reloadType,
           "The behavior that this plugin exhibits when .reset() is called. "

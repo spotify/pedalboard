@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 #include "../JucePlugin.h"
 
@@ -44,20 +44,19 @@ private:
   float cutoffFrequencyHz;
 };
 
-inline void init_highpass(py::module &m) {
-  py::class_<HighpassFilter<float>, Plugin,
-             std::shared_ptr<HighpassFilter<float>>>(
+inline void init_highpass(nb::module_ &m) {
+  nb::class_<HighpassFilter<float>, Plugin>(
       m, "HighpassFilter",
       "Apply a first-order high-pass filter with a roll-off of 6dB/octave. "
       "The cutoff frequency will be attenuated by -3dB (i.e.: "
       R"(:math:`\\frac{1}{\\sqrt{2}}` as loud, expressed as a gain factor))"
       " and lower frequencies will be attenuated by a further 6dB per octave.)")
-      .def(py::init([](float cutoff_frequency_hz) {
+      .def(nb::init([](float cutoff_frequency_hz) {
              auto plugin = std::make_unique<HighpassFilter<float>>();
              plugin->setCutoffFrequencyHz(cutoff_frequency_hz);
              return plugin;
            }),
-           py::arg("cutoff_frequency_hz") = 50)
+           nb::arg("cutoff_frequency_hz") = 50)
       .def("__repr__",
            [](const HighpassFilter<float> &plugin) {
              std::ostringstream ss;
@@ -67,8 +66,8 @@ inline void init_highpass(py::module &m) {
              ss << ">";
              return ss.str();
            })
-      .def_property("cutoff_frequency_hz",
-                    &HighpassFilter<float>::getCutoffFrequencyHz,
-                    &HighpassFilter<float>::setCutoffFrequencyHz);
+      .def_prop_rw("cutoff_frequency_hz",
+                   &HighpassFilter<float>::getCutoffFrequencyHz,
+                   &HighpassFilter<float>::setCutoffFrequencyHz);
 }
 }; // namespace Pedalboard
