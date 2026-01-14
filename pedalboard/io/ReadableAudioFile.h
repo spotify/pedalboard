@@ -430,6 +430,12 @@ public:
       throw std::runtime_error("I/O operation on a closed file.");
 
     if (reader->usesFloatingPointData) {
+      if (reader->bitsPerSample > 32) {
+        throw std::runtime_error(
+            "This file contains " + std::to_string(reader->bitsPerSample) +
+            "-bit floating-point audio, which cannot be returned without "
+            "losing precision. Use read() instead to get 32-bit float data.");
+      }
       return read(numSamples);
     } else {
       switch (reader->bitsPerSample) {

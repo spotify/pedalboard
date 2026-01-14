@@ -1310,6 +1310,49 @@ def test_mp3_in_wav_format():
         assert np.amax(np.abs(audio)) > 0.1  # Should have actual audio content
 
 
+@pytest.mark.parametrize(
+    "filename,expected_dtype",
+    [
+        ("adpcm_ms.wav", "float32"),  # Microsoft ADPCM (format tag 0x0002)
+        ("adpcm_ima.wav", "float32"),  # IMA ADPCM (format tag 0x0011)
+        ("alaw.wav", "float32"),  # A-law (format tag 0x0006)
+        ("mulaw.wav", "float32"),  # µ-law (format tag 0x0007)
+        ("float64.wav", "float64"),  # 64-bit float (format tag 0x0003, not supported by JUCE)
+    ],
+)
+def test_wav_formats_via_drwav(filename: str, expected_dtype: str):
+    """
+    Test reading WAV files with formats not natively supported by JUCE,
+    decoded via dr_wav: ADPCM, A-law, µ-law, and 64-bit float.
+
+    These are valid WAV files using formats common in telephony, older audio
+    software, embedded systems, and high-precision audio applications.
+    """
+    filepath = os.path.join(os.path.dirname(__file__), "audio", "correct", filename)
+    with pedalboard.io.AudioFile(filepath) as f:
+        assert f.samplerate == 44100
+        assert f.num_channels == 1
+        assert f.frames >= 44100  # At least 1 second of audio
+        assert f.file_dtype == expected_dtype
+
+        # Read the audio and verify it's not silent
+        audio = f.read(f.frames)
+        assert audio.shape[0] == 1
+        assert np.amax(np.abs(audio)) > 0.01  # Should have actual audio content
+
+
+def test_float64_read_raw_raises():
+    """
+    Test that read_raw() raises an informative exception for 64-bit float WAV files,
+    since returning the raw data would lose precision (dr_wav decodes to float32).
+    """
+    filepath = os.path.join(os.path.dirname(__file__), "audio", "correct", "float64.wav")
+    with pedalboard.io.AudioFile(filepath) as f:
+        assert f.file_dtype == "float64"
+        with pytest.raises(RuntimeError, match="64-bit floating-point"):
+            f.read_raw(1024)
+
+
 @pytest.mark.parametrize("samplerate", [44100, 32000])
 @pytest.mark.parametrize("chunk_size", [1, 2, 16])
 @pytest.mark.parametrize("target_samplerate", [44100, 32000, 22050, 1234.56])
