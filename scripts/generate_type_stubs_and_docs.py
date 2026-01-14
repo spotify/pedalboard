@@ -55,6 +55,65 @@ MULTILINE_REPLACEMENTS = [
         r"output_device_names = \[[^]]*\]\n",
         "output_device_names: typing.List[str] = []\n",
     ),
+    # Replace AudioFile.__new__ and __init__ with overloads for proper type narrowing.
+    # Using original_overload (not typing.overload) because patch_overload confuses pyright.
+    (
+        r"(class AudioFile:[\s\S]*?)(\n    def __new__\([\s\S]*?-> typing\.Union\[ReadableAudioFile, WriteableAudioFile\]: \.\.\.)",
+        r"\1\n"
+        r"    # Overloads for type narrowing based on mode\n"
+        r"    @original_overload\n"
+        r"    @staticmethod\n"
+        r"    def __new__(\n"
+        r"        cls: typing.Type[AudioFile],\n"
+        r"        filename_or_file_like: typing.Union[str, typing.BinaryIO, memoryview],\n"
+        r"        mode: Literal[\"w\"],\n"
+        r"        samplerate: float,\n"
+        r"        num_channels: int = 1,\n"
+        r"        bit_depth: int = 16,\n"
+        r"        quality: typing.Optional[typing.Union[str, float]] = None,\n"
+        r"        format: typing.Optional[str] = None,\n"
+        r"    ) -> WriteableAudioFile: ...\n"
+        r"    @original_overload\n"
+        r"    @staticmethod\n"
+        r"    def __new__(\n"
+        r"        cls: typing.Type[AudioFile],\n"
+        r"        filename_or_file_like: typing.Union[str, typing.BinaryIO, memoryview],\n"
+        r"        mode: Literal[\"r\"],\n"
+        r"    ) -> ReadableAudioFile: ...\n"
+        r"    @original_overload\n"
+        r"    @staticmethod\n"
+        r"    def __new__(\n"
+        r"        cls: typing.Type[AudioFile],\n"
+        r"        filename_or_file_like: typing.Union[str, typing.BinaryIO, memoryview],\n"
+        r"    ) -> ReadableAudioFile: ...\n"
+        r"    def __init__(self, *args: typing.Any, **kwargs: typing.Any) -> None: ...",
+    ),
+    # Add mode overloads to ReadableAudioFile for calls routed through AudioFile
+    (
+        r"(class ReadableAudioFile\(AudioFile\):[\s\S]*?)\n    def __new__\(\n        cls,\n        filename_or_file_like:[^)]+\) -> ReadableAudioFile: \.\.\.\n    def __init__\(\n        self,\n        filename_or_file_like:[^)]+\) -> None: \.\.\.",
+        r"\1\n"
+        r"    @original_overload\n"
+        r"    def __new__(cls, filename_or_file_like: typing.Union[str, typing.BinaryIO, memoryview]) -> ReadableAudioFile: ...\n"
+        r"    @original_overload\n"
+        r"    def __new__(cls, filename_or_file_like: typing.Union[str, typing.BinaryIO, memoryview], mode: Literal[\"r\"]) -> ReadableAudioFile: ...\n"
+        r"    @original_overload\n"
+        r"    def __init__(self, filename_or_file_like: typing.Union[str, typing.BinaryIO, memoryview]) -> None: ...\n"
+        r"    @original_overload\n"
+        r"    def __init__(self, filename_or_file_like: typing.Union[str, typing.BinaryIO, memoryview], mode: Literal[\"r\"]) -> None: ...",
+    ),
+    # Add mode overloads to WriteableAudioFile for calls routed through AudioFile
+    (
+        r"(class WriteableAudioFile\(AudioFile\):[\s\S]*?def __exit__[^.]+\.\.\.)\n    def __new__\(\n        cls,\n        filename_or_file_like:[^)]+\n        samplerate:[^)]+\) -> WriteableAudioFile: \.\.\.\n    def __init__\(\n        self,\n        filename_or_file_like:[^)]+\n        samplerate:[^)]+\) -> None: \.\.\.",
+        r"\1\n"
+        r"    @original_overload\n"
+        r"    def __new__(cls, filename_or_file_like: typing.Union[str, typing.BinaryIO], samplerate: float, num_channels: int = 1, bit_depth: int = 16, quality: typing.Optional[typing.Union[str, float]] = None, format: typing.Optional[str] = None) -> WriteableAudioFile: ...\n"
+        r"    @original_overload\n"
+        r"    def __new__(cls, filename_or_file_like: typing.Union[str, typing.BinaryIO], mode: Literal[\"w\"], samplerate: float, num_channels: int = 1, bit_depth: int = 16, quality: typing.Optional[typing.Union[str, float]] = None, format: typing.Optional[str] = None) -> WriteableAudioFile: ...\n"
+        r"    @original_overload\n"
+        r"    def __init__(self, filename_or_file_like: typing.Union[str, typing.BinaryIO], samplerate: float, num_channels: int = 1, bit_depth: int = 16, quality: typing.Optional[typing.Union[str, float]] = None, format: typing.Optional[str] = None) -> None: ...\n"
+        r"    @original_overload\n"
+        r"    def __init__(self, filename_or_file_like: typing.Union[str, typing.BinaryIO], mode: Literal[\"w\"], samplerate: float, num_channels: int = 1, bit_depth: int = 16, quality: typing.Optional[typing.Union[str, float]] = None, format: typing.Optional[str] = None) -> None: ...",
+    ),
     # Remove _reload_type property blocks (internal implementation detail using ExternalPluginReloadType)
     # Match @property followed by def _reload_type and its docstring (using [\s\S] for multiline)
     (r'    @property\n    def _reload_type\(self\)[^\n]*\n        """[\s\S]*?"""\n', ""),
@@ -74,28 +133,28 @@ MULTILINE_REPLACEMENTS = [
     (
         r'(class VST3Plugin\(ExternalPlugin, Plugin\):[\s\S]*?"""\n)'
         r'(    @typing\.overload\n    def __call__\(self, input_array: object[^\n]*\n        """[\s\S]*?"""\n)'
-        r'(    @typing\.overload\n    def __call__\(self, midi_messages[^\n]*\.\.\.)',
-        r'\1\3\n\2',
+        r"(    @typing\.overload\n    def __call__\(self, midi_messages[^\n]*\.\.\.)",
+        r"\1\3\n\2",
     ),
     # Fix VST3Plugin process overload order similarly
     (
         r'(    def load_preset\(self, preset_file_path: str\)[^\n]*\n        """[\s\S]*?"""\n)'
         r'(    @typing\.overload\n    def process\(self, input_array: object[^\n]*\n        """[\s\S]*?"""\n)'
-        r'(    @typing\.overload\n    def process\(self, midi_messages[^\n]*\.\.\.)',
-        r'\1\3\n\2',
+        r"(    @typing\.overload\n    def process\(self, midi_messages[^\n]*\.\.\.)",
+        r"\1\3\n\2",
     ),
     # Fix AudioUnitPlugin __call__ and process overload order similarly
     (
         r'(class AudioUnitPlugin\(ExternalPlugin, Plugin\):[\s\S]*?"""\n)'
         r'(    @typing\.overload\n    def __call__\(self, input_array: object[^\n]*\n        """[\s\S]*?"""\n)'
-        r'(    @typing\.overload\n    def __call__\(self, midi_messages[^\n]*\.\.\.)',
-        r'\1\3\n\2',
+        r"(    @typing\.overload\n    def __call__\(self, midi_messages[^\n]*\.\.\.)",
+        r"\1\3\n\2",
     ),
     (
         r'(class AudioUnitPlugin[\s\S]*?def load_preset\(self, preset_file_path: str\)[^\n]*\n        """[\s\S]*?"""\n)'
         r'(    @typing\.overload\n    def process\(self, input_array: object[^\n]*\n        """[\s\S]*?"""\n)'
-        r'(    @typing\.overload\n    def process\(self, midi_messages[^\n]*\.\.\.)',
-        r'\1\3\n\2',
+        r"(    @typing\.overload\n    def process\(self, midi_messages[^\n]*\.\.\.)",
+        r"\1\3\n\2",
     ),
 ]
 
