@@ -110,15 +110,16 @@ inline void init_convolution(py::module &m) {
              if (py::isinstance<py::array_t<float, py::array::c_style>>(
                      impulseResponse)) {
                auto inputArray =
-                   impulseResponse.cast<py::array_t<float, py::array::c_style>>();
+                   impulseResponse
+                       .cast<py::array_t<float, py::array::c_style>>();
                if (!sampleRate) {
                  throw std::runtime_error(
                      "sample_rate must be provided when passing a numpy array "
                      "as an impulse response.");
                }
                plugin->getDSP().getConvolution().loadImpulseResponse(
-                   std::move(copyPyArrayIntoJuceBuffer(inputArray)), *sampleRate,
-                   juce::dsp::Convolution::Stereo::yes,
+                   std::move(copyPyArrayIntoJuceBuffer(inputArray)),
+                   *sampleRate, juce::dsp::Convolution::Stereo::yes,
                    juce::dsp::Convolution::Trim::no,
                    juce::dsp::Convolution::Normalise::yes);
 
@@ -153,8 +154,9 @@ inline void init_convolution(py::module &m) {
                {
                  juce::FileInputStream stream(inputFile);
                  if (!stream.openedOk()) {
-                   throw std::runtime_error("Unable to load impulse response: " +
-                                            impulseResponseFilename);
+                   throw std::runtime_error(
+                       "Unable to load impulse response: " +
+                       impulseResponseFilename);
                  }
                }
 

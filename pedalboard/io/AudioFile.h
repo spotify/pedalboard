@@ -17,42 +17,13 @@
 
 #pragma once
 
-#include <pybind11/pybind11.h>
-
 #include "../juce_overrides/juce_PatchedFLACAudioFormat.h"
 #include "../juce_overrides/juce_PatchedMP3AudioFormat.h"
 #include "../juce_overrides/juce_PatchedWavAudioFormat.h"
 #include "LameMP3AudioFormat.h"
-
-namespace py = pybind11;
+#include "PathUtils.h"
 
 namespace Pedalboard {
-
-/**
- * Convert a Python path-like object (str, bytes, or os.PathLike) to a
- * std::string. This mimics os.fspath() behavior without requiring
- * std::filesystem::path (which requires macOS 10.15+).
- *
- * NOTE: This function calls Python APIs and requires the GIL to be held.
- */
-inline std::string pathToString(py::object path) {
-  // If it's already a string, just return it
-  if (py::isinstance<py::str>(path)) {
-    return path.cast<std::string>();
-  }
-
-  // Try calling os.fspath() to handle PathLike objects
-  try {
-    py::object os = py::module_::import("os");
-    py::object fspath = os.attr("fspath");
-    py::object result = fspath(path);
-    return result.cast<std::string>();
-  } catch (py::error_already_set &e) {
-    throw py::type_error(
-        "expected str, bytes, or os.PathLike object, not " +
-        std::string(py::str(path.get_type().attr("__name__"))));
-  }
-}
 
 static constexpr const unsigned int DEFAULT_AUDIO_BUFFER_SIZE_FRAMES = 8192;
 

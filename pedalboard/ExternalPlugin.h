@@ -29,6 +29,7 @@
 #include "Plugin.h"
 #include <pybind11/stl.h>
 
+#include "io/PathUtils.h"
 #include "juce_overrides/juce_PatchedVST3PluginFormat.h"
 #include "process.h"
 
@@ -37,31 +38,6 @@
 #endif
 
 namespace Pedalboard {
-
-/**
- * Convert a Python path-like object (str, bytes, or os.PathLike) to a
- * std::string, without requiring std::filesystem::path.
- *
- * NOTE: This function requires the GIL to be held by the caller.
- */
-inline std::string pathToString(py::object path) {
-  // If it's already a string, just return it
-  if (py::isinstance<py::str>(path)) {
-    return path.cast<std::string>();
-  }
-
-  // Try calling os.fspath() to handle PathLike objects
-  try {
-    py::object os = py::module_::import("os");
-    py::object fspath = os.attr("fspath");
-    py::object result = fspath(path);
-    return result.cast<std::string>();
-  } catch (py::error_already_set &e) {
-    throw py::type_error(
-        "expected str, bytes, or os.PathLike object, not " +
-        std::string(py::str(path.get_type().attr("__name__"))));
-  }
-}
 
 // JUCE external plugins use some global state; here we lock that state
 // to play nicely with the Python interpreter.
@@ -1670,24 +1646,23 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
 
 *Support for running VST3® plugins on background threads introduced in v0.8.8.*
 )")
-      .def(
-          py::init([](py::object pathToPluginFile, py::object parameterValues,
-                      std::optional<std::string> pluginName,
-                      float initializationTimeout) {
-            std::string pathStr = pathToString(pathToPluginFile);
-            std::shared_ptr<ExternalPlugin<juce::PatchedVST3PluginFormat>>
-                plugin = std::make_shared<
-                    ExternalPlugin<juce::PatchedVST3PluginFormat>>(
-                    pathStr, pluginName, initializationTimeout);
-            py::cast(plugin).attr("__set_initial_parameter_values__")(
-                parameterValues);
-            return plugin;
-          }),
-          py::arg("path_to_plugin_file"),
-          py::arg("parameter_values") = py::none(),
-          py::arg("plugin_name") = py::none(),
-          py::arg("initialization_timeout") =
-              DEFAULT_INITIALIZATION_TIMEOUT_SECONDS)
+      .def(py::init([](py::object pathToPluginFile, py::object parameterValues,
+                       std::optional<std::string> pluginName,
+                       float initializationTimeout) {
+             std::string pathStr = pathToString(pathToPluginFile);
+             std::shared_ptr<ExternalPlugin<juce::PatchedVST3PluginFormat>>
+                 plugin = std::make_shared<
+                     ExternalPlugin<juce::PatchedVST3PluginFormat>>(
+                     pathStr, pluginName, initializationTimeout);
+             py::cast(plugin).attr("__set_initial_parameter_values__")(
+                 parameterValues);
+             return plugin;
+           }),
+           py::arg("path_to_plugin_file"),
+           py::arg("parameter_values") = py::none(),
+           py::arg("plugin_name") = py::none(),
+           py::arg("initialization_timeout") =
+               DEFAULT_INITIALIZATION_TIMEOUT_SECONDS)
       .def("__repr__",
            [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
              std::ostringstream ss;
@@ -1909,24 +1884,23 @@ see :class:`pedalboard.VST3Plugin`.)
 
 *Support for loading AUv3 plugins (* ``.appex`` *bundles) introduced in v0.9.5.*
 )")
-      .def(
-          py::init([](py::object pathToPluginFile, py::object parameterValues,
-                      std::optional<std::string> pluginName,
-                      float initializationTimeout) {
-            std::string pathStr = pathToString(pathToPluginFile);
-            std::shared_ptr<ExternalPlugin<juce::AudioUnitPluginFormat>>
-                plugin = std::make_shared<
-                    ExternalPlugin<juce::AudioUnitPluginFormat>>(
-                    pathStr, pluginName, initializationTimeout);
-            py::cast(plugin).attr("__set_initial_parameter_values__")(
-                parameterValues);
-            return plugin;
-          }),
-          py::arg("path_to_plugin_file"),
-          py::arg("parameter_values") = py::none(),
-          py::arg("plugin_name") = py::none(),
-          py::arg("initialization_timeout") =
-              DEFAULT_INITIALIZATION_TIMEOUT_SECONDS)
+      .def(py::init([](py::object pathToPluginFile, py::object parameterValues,
+                       std::optional<std::string> pluginName,
+                       float initializationTimeout) {
+             std::string pathStr = pathToString(pathToPluginFile);
+             std::shared_ptr<ExternalPlugin<juce::AudioUnitPluginFormat>>
+                 plugin = std::make_shared<
+                     ExternalPlugin<juce::AudioUnitPluginFormat>>(
+                     pathStr, pluginName, initializationTimeout);
+             py::cast(plugin).attr("__set_initial_parameter_values__")(
+                 parameterValues);
+             return plugin;
+           }),
+           py::arg("path_to_plugin_file"),
+           py::arg("parameter_values") = py::none(),
+           py::arg("plugin_name") = py::none(),
+           py::arg("initialization_timeout") =
+               DEFAULT_INITIALIZATION_TIMEOUT_SECONDS)
       .def("__repr__",
            [](const ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
              std::ostringstream ss;
