@@ -15,11 +15,8 @@
  * limitations under the License.
  */
 
-#include <filesystem>
-
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/stl/filesystem.h>
 
 namespace py = pybind11;
 
@@ -105,15 +102,49 @@ inline void init_convolution(py::module &m) {
       "the ``sample_rate`` argument must also be provided to indicate the "
       "sample rate of the impulse response.\n\n*Support for passing NumPy "
       "arrays as impulse responses introduced in v0.9.10.*")
-      .def(py::init([](std::variant<std::filesystem::path,
-                                    py::array_t<float, py::array::c_style>>
-                           impulseResponse,
-                       float mix, std::optional<double> sampleRate) {
+      .def(py::init([](py::object impulseResponse, float mix,
+                       std::optional<double> sampleRate) {
              auto plugin = std::make_unique<JucePlugin<ConvolutionWithMix>>();
 
-             if (auto *impulseResponsePath =
-                     std::get_if<std::filesystem::path>(&impulseResponse)) {
-               std::string impulseResponseFilename = impulseResponsePath->string();
+             // Check if it's a numpy array first
+             if (py::isinstance<py::array_t<float, py::array::c_style>>(
+                     impulseResponse)) {
+               auto inputArray =
+                   impulseResponse.cast<py::array_t<float, py::array::c_style>>();
+               if (!sampleRate) {
+                 throw std::runtime_error(
+                     "sample_rate must be provided when passing a numpy array "
+                     "as an impulse response.");
+               }
+               plugin->getDSP().getConvolution().loadImpulseResponse(
+                   std::move(copyPyArrayIntoJuceBuffer(inputArray)), *sampleRate,
+                   juce::dsp::Convolution::Stereo::yes,
+                   juce::dsp::Convolution::Trim::no,
+                   juce::dsp::Convolution::Normalise::yes);
+
+               plugin->getDSP().setImpulseResponse(
+                   copyPyArrayIntoJuceBuffer(inputArray));
+               plugin->getDSP().setSampleRate(*sampleRate);
+             } else {
+               // Try to convert to a path string using os.fspath
+               std::string impulseResponseFilename;
+               if (py::isinstance<py::str>(impulseResponse)) {
+                 impulseResponseFilename = impulseResponse.cast<std::string>();
+               } else {
+                 try {
+                   py::object os = py::module_::import("os");
+                   py::object fspath = os.attr("fspath");
+                   py::object result = fspath(impulseResponse);
+                   impulseResponseFilename = result.cast<std::string>();
+                 } catch (py::error_already_set &) {
+                   throw py::type_error(
+                       "impulse_response_filename must be a str, os.PathLike "
+                       "object, or numpy array, not " +
+                       std::string(py::str(
+                           impulseResponse.get_type().attr("__name__"))));
+                 }
+               }
+
                py::gil_scoped_release release;
                // Load the IR file on construction, to handle errors
                auto inputFile = juce::File(impulseResponseFilename);
@@ -122,9 +153,8 @@ inline void init_convolution(py::module &m) {
                {
                  juce::FileInputStream stream(inputFile);
                  if (!stream.openedOk()) {
-                   throw std::runtime_error(
-                       "Unable to load impulse response: " +
-                       impulseResponseFilename);
+                   throw std::runtime_error("Unable to load impulse response: " +
+                                            impulseResponseFilename);
                  }
                }
 
@@ -133,23 +163,6 @@ inline void init_convolution(py::module &m) {
                    juce::dsp::Convolution::Trim::no, 0);
                plugin->getDSP().setImpulseResponseFilename(
                    impulseResponseFilename);
-             } else if (auto *inputArray =
-                            std::get_if<py::array_t<float, py::array::c_style>>(
-                                &impulseResponse)) {
-               if (!sampleRate) {
-                 throw std::runtime_error(
-                     "sample_rate must be provided when passing a numpy array "
-                     "as an impulse response.");
-               }
-               plugin->getDSP().getConvolution().loadImpulseResponse(
-                   std::move(copyPyArrayIntoJuceBuffer(*inputArray)),
-                   *sampleRate, juce::dsp::Convolution::Stereo::yes,
-                   juce::dsp::Convolution::Trim::no,
-                   juce::dsp::Convolution::Normalise::yes);
-
-               plugin->getDSP().setImpulseResponse(
-                   copyPyArrayIntoJuceBuffer(*inputArray));
-               plugin->getDSP().setSampleRate(*sampleRate);
              }
              plugin->getDSP().setMix(mix);
              return plugin;

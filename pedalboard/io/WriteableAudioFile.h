@@ -17,13 +17,11 @@
 
 #pragma once
 
-#include <filesystem>
 #include <mutex>
 #include <optional>
 
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
-#include <pybind11/stl/filesystem.h>
 
 #include "../BufferUtils.h"
 #include "../JuceHeader.h"
@@ -939,8 +937,8 @@ inline void init_writeable_audio_file(
     py::class_<WriteableAudioFile, AudioFile,
                std::shared_ptr<WriteableAudioFile>> &pyWriteableAudioFile) {
   pyWriteableAudioFile
-      .def(py::init([](std::filesystem::path filename, double sampleRate,
-                       int numChannels, int bitDepth,
+      .def(py::init([](py::object filename, double sampleRate, int numChannels,
+                       int bitDepth,
                        std::optional<std::variant<std::string, float>> quality)
                         -> WriteableAudioFile * {
              // This definition is only here to provide nice docstrings.
@@ -966,7 +964,7 @@ inline void init_writeable_audio_file(
            py::arg("quality") = py::none(), py::arg("format") = py::none())
       .def_static(
           "__new__",
-          [](const py::object *, std::filesystem::path filename,
+          [](const py::object *, py::object filename,
              std::optional<double> sampleRate, int numChannels, int bitDepth,
              std::optional<std::variant<std::string, float>> quality) {
             if (!sampleRate) {
@@ -975,7 +973,8 @@ inline void init_writeable_audio_file(
                   "argument to be provided.");
             }
             return std::make_shared<WriteableAudioFile>(
-                filename.string(), *sampleRate, numChannels, bitDepth, quality);
+                pathToString(filename), *sampleRate, numChannels, bitDepth,
+                quality);
           },
           py::arg("cls"), py::arg("filename"),
           py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,

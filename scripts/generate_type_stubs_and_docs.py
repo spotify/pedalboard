@@ -58,6 +58,41 @@ MULTILINE_REPLACEMENTS = [
 ]
 
 REPLACEMENTS = [
+    # Path-like parameters in AudioFile constructors:
+    (
+        r"filename: object, mode: str = 'r'",
+        r"filename: str | os.PathLike[str], mode: str = 'r'",
+    ),
+    (
+        r"filename: object, mode:",
+        r"filename: str | os.PathLike[str], mode:",
+    ),
+    (
+        r"filename: object, samplerate:",
+        r"filename: str | os.PathLike[str], samplerate:",
+    ),
+    (
+        r"filename: object\) ->",
+        r"filename: str | os.PathLike[str]) ->",
+    ),
+    # Path-like parameters for external plugins:
+    (
+        r"path_to_plugin_file: object,",
+        r"path_to_plugin_file: str | os.PathLike[str],",
+    ),
+    (
+        r"preset_file_path: object\)",
+        r"preset_file_path: str | os.PathLike[str])",
+    ),
+    (
+        r"get_plugin_names_for_file\(filename: object\)",
+        r"get_plugin_names_for_file(filename: str | os.PathLike[str])",
+    ),
+    # Convolution impulse response can be a path or numpy array:
+    (
+        r"impulse_response_filename: object,",
+        r"impulse_response_filename: str | os.PathLike[str] | numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]],",
+    ),
     # object is a superclass of `str`, which would make these declarations ambiguous:
     (
         r"file_like: object, mode: str = 'r'",
