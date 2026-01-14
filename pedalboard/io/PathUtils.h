@@ -24,6 +24,15 @@ namespace py = pybind11;
 namespace Pedalboard {
 
 /**
+ * Check if a Python object is path-like (str or has __fspath__ method).
+ *
+ * NOTE: This function requires the GIL to be held by the caller.
+ */
+inline bool isPathLike(py::object obj) {
+  return py::isinstance<py::str>(obj) || py::hasattr(obj, "__fspath__");
+}
+
+/**
  * Convert a Python path-like object (str, bytes, or os.PathLike) to a
  * std::string, without requiring std::filesystem::path.
  *

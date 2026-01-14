@@ -58,22 +58,26 @@ MULTILINE_REPLACEMENTS = [
 ]
 
 REPLACEMENTS = [
-    # Path-like parameters in AudioFile constructors:
+    # AudioFile read mode: filename accepts paths OR file-likes (for positional compat),
+    # file_like is keyword-only alternative
     (
-        r"filename: object, mode: str = 'r'",
-        r"filename: str | os.PathLike[str], mode: str = 'r'",
+        r"filename: object = None, mode: str = 'r', \*, file_like: object = None",
+        r"filename: str | os.PathLike[str] | typing.BinaryIO | memoryview | None = None, mode: str = 'r', *, file_like: typing.BinaryIO | memoryview | None = None",
     ),
+    # ReadableAudioFile: filename accepts paths OR file-likes (for positional compat),
+    # file_like is keyword-only alternative
     (
-        r"filename: object, mode:",
-        r"filename: str | os.PathLike[str], mode:",
+        r"filename: object = None, \*, file_like: object = None\)",
+        r"filename: str | os.PathLike[str] | typing.BinaryIO | memoryview | None = None, *, file_like: typing.BinaryIO | memoryview | None = None)",
+    ),
+    # Path-like parameters in AudioFile/WriteableAudioFile constructors (write mode):
+    (
+        r"filename: object, mode: str = 'w'",
+        r"filename: str | os.PathLike[str], mode: str = 'w'",
     ),
     (
         r"filename: object, samplerate:",
         r"filename: str | os.PathLike[str], samplerate:",
-    ),
-    (
-        r"filename: object\) ->",
-        r"filename: str | os.PathLike[str]) ->",
     ),
     # Path-like parameters for external plugins:
     (
@@ -93,15 +97,7 @@ REPLACEMENTS = [
         r"impulse_response_filename: object,",
         r"impulse_response_filename: str | os.PathLike[str] | numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]],",
     ),
-    # object is a superclass of `str`, which would make these declarations ambiguous:
-    (
-        r"file_like: object, mode: str = 'r'",
-        r"file_like: typing.Union[typing.BinaryIO, memoryview], mode: str = 'r'",
-    ),
-    (
-        r"file_like: object\) -> ReadableAudioFile:",
-        "file_like: typing.Union[typing.BinaryIO, memoryview]) -> ReadableAudioFile:",
-    ),
+    # file_like parameter for write mode (has format argument):
     ("file_like: object", "file_like: typing.BinaryIO"),
     # "r" is the default file open/reading mode:
     ("mode: str = 'r'", r'mode: Literal["r"] = "r"'),

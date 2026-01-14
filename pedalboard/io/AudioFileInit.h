@@ -150,10 +150,44 @@ inline void init_audio_file(
                          // instantiate subclasses via __new__.
       .def_static(
           "__new__",
-          [](const py::object *, py::object filename, std::string mode) {
+          [](const py::object *, py::object filename, std::string mode,
+             py::object file_like) {
+            // Handle both filename and file_like kwargs for backward compat
+            py::object target;
+            if (!filename.is_none() && !file_like.is_none()) {
+              throw py::type_error(
+                  "Cannot specify both 'filename' and 'file_like'");
+            } else if (!filename.is_none()) {
+              target = filename;
+            } else if (!file_like.is_none()) {
+              target = file_like;
+            } else {
+              throw py::type_error(
+                  "Must specify either 'filename' or 'file_like'");
+            }
+
             if (mode == "r") {
-              return std::make_shared<ReadableAudioFile>(
-                  pathToString(filename));
+              // Check if this is a path-like object (str or has __fspath__)
+              if (isPathLike(target)) {
+                return std::make_shared<ReadableAudioFile>(
+                    pathToString(target));
+              }
+              // Otherwise, try to handle as a file-like object or buffer
+              if (std::optional<py::buffer> buf =
+                      tryConvertingToBuffer(target)) {
+                return std::make_shared<ReadableAudioFile>(
+                    std::make_unique<PythonMemoryViewInputStream>(*buf,
+                                                                  target));
+              } else if (isReadableFileLike(target)) {
+                return std::make_shared<ReadableAudioFile>(
+                    std::make_unique<PythonInputStream>(target));
+              } else {
+                throw py::type_error(
+                    "Expected either a filename, a file-like object (with "
+                    "read, seek, seekable, and tell methods) or a memory view, "
+                    "but received: " +
+                    py::repr(target).cast<std::string>());
+              }
             } else if (mode == "w") {
               throw py::type_error("Opening an audio file for writing requires "
                                    "samplerate and num_channels arguments.");
@@ -162,44 +196,9 @@ inline void init_audio_file(
                                    "read mode (\"r\") or write mode (\"w\").");
             }
           },
-          py::arg("cls"), py::arg("filename"), py::arg("mode") = "r",
-          "Open an audio file for reading.")
-      .def_static(
-          "__new__",
-          [](const py::object *, py::object filelike, std::string mode) {
-            if (mode == "r") {
-              if (!isReadableFileLike(filelike) &&
-                  !tryConvertingToBuffer(filelike)) {
-                throw py::type_error(
-                    "Expected either a filename, a file-like object (with "
-                    "read, seek, seekable, and tell methods) or a memory view, "
-                    "but received: " +
-                    py::repr(filelike).cast<std::string>());
-              }
-
-              if (std::optional<py::buffer> buf =
-                      tryConvertingToBuffer(filelike)) {
-                return std::make_shared<ReadableAudioFile>(
-                    std::make_unique<PythonMemoryViewInputStream>(*buf,
-                                                                  filelike));
-              } else {
-                return std::make_shared<ReadableAudioFile>(
-                    std::make_unique<PythonInputStream>(filelike));
-              }
-            } else if (mode == "w") {
-              throw py::type_error(
-                  "Opening an audio file-like object for writing requires "
-                  "samplerate and num_channels arguments.");
-            } else {
-              throw py::type_error("AudioFile instances can only be opened in "
-                                   "read mode (\"r\") or write mode (\"w\").");
-            }
-          },
-          py::arg("cls"), py::arg("file_like"), py::arg("mode") = "r",
-          "Open a file-like object for reading. The provided object must have "
-          "``read``, ``seek``, ``tell``, and ``seekable`` methods, and must "
-          "return binary data (i.e.: ``open(..., \"w\")`` or ``io.BytesIO``, "
-          "etc.).")
+          py::arg("cls"), py::arg("filename") = py::none(),
+          py::arg("mode") = "r", py::kw_only(),
+          py::arg("file_like") = py::none(), "Open an audio file for reading.")
       .def_static(
           "__new__",
           [](const py::object *, py::object filename, std::string mode,
