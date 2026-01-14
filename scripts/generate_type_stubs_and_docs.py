@@ -49,15 +49,61 @@ OMIT_LINES_CONTAINING = [
 ]
 
 MULTILINE_REPLACEMENTS = [
-    # Users don't want "Peter Sobot’s iPhone Microphone" to show up in their type hints:
+    # Users don't want "Peter Sobot's iPhone Microphone" to show up in their type hints:
     (r"input_device_names = \[[^]]*\]\n", "input_device_names: typing.List[str] = []\n"),
     (
         r"output_device_names = \[[^]]*\]\n",
         "output_device_names: typing.List[str] = []\n",
     ),
+    # Remove _reload_type property blocks (internal implementation detail using ExternalPluginReloadType)
+    # Match @property followed by def _reload_type and its docstring (using [\s\S] for multiline)
+    (r'    @property\n    def _reload_type\(self\)[^\n]*\n        """[\s\S]*?"""\n', ""),
+    (r'    @_reload_type\.setter\n    def _reload_type\(self[^\n]*\n        """[\s\S]*?"""\n', ""),
+    # MyPy chokes on classes that contain both __new__ and __init__.
+    # Remove all bare, arg-free inits (and their @typing.overload decorators):
+    (r"    @typing\.overload\n    def __init__\(self\) -> None: \.\.\.\n", ""),
+    # After removing one overload from a pair in Chain/Mix classes, a single @typing.overload
+    # remains which is invalid. Remove it ONLY for the plugins: parameter pattern (from utils)
+    (
+        r"    @typing\.overload\n(    def __init__\(self, plugins:)",
+        r"\1",
+    ),
+    # Fix VST3Plugin __call__ overload order to match ExternalPlugin (midi_messages first)
+    # The raw stubs have input_array first, but parent has midi_messages first.
+    # Raw stubs have single-line signatures before black formatting.
+    (
+        r'(class VST3Plugin\(ExternalPlugin, Plugin\):[\s\S]*?"""\n)'
+        r'(    @typing\.overload\n    def __call__\(self, input_array: object[^\n]*\n        """[\s\S]*?"""\n)'
+        r'(    @typing\.overload\n    def __call__\(self, midi_messages[^\n]*\.\.\.)',
+        r'\1\3\n\2',
+    ),
+    # Fix VST3Plugin process overload order similarly
+    (
+        r'(    def load_preset\(self, preset_file_path: str\)[^\n]*\n        """[\s\S]*?"""\n)'
+        r'(    @typing\.overload\n    def process\(self, input_array: object[^\n]*\n        """[\s\S]*?"""\n)'
+        r'(    @typing\.overload\n    def process\(self, midi_messages[^\n]*\.\.\.)',
+        r'\1\3\n\2',
+    ),
+    # Fix AudioUnitPlugin __call__ and process overload order similarly
+    (
+        r'(class AudioUnitPlugin\(ExternalPlugin, Plugin\):[\s\S]*?"""\n)'
+        r'(    @typing\.overload\n    def __call__\(self, input_array: object[^\n]*\n        """[\s\S]*?"""\n)'
+        r'(    @typing\.overload\n    def __call__\(self, midi_messages[^\n]*\.\.\.)',
+        r'\1\3\n\2',
+    ),
+    (
+        r'(class AudioUnitPlugin[\s\S]*?def load_preset\(self, preset_file_path: str\)[^\n]*\n        """[\s\S]*?"""\n)'
+        r'(    @typing\.overload\n    def process\(self, input_array: object[^\n]*\n        """[\s\S]*?"""\n)'
+        r'(    @typing\.overload\n    def process\(self, midi_messages[^\n]*\.\.\.)',
+        r'\1\3\n\2',
+    ),
 ]
 
 REPLACEMENTS = [
+    # Replace generic 'object' with a proper ArrayLike type hint for audio data:
+    (r"input_array: object", r"input_array: ArrayLike"),
+    (r"input: object", r"input: ArrayLike"),
+    (r"samples: object", r"samples: ArrayLike"),
     # object is a superclass of `str`, which would make these declarations ambiguous:
     (
         r"file_like: object, mode: str = 'r'",
@@ -79,9 +125,21 @@ REPLACEMENTS = [
         "\n".join(
             [
                 "import typing",
+                "from typing import Optional",
                 "from typing_extensions import Literal",
                 "from enum import Enum",
                 "import threading",
+                "",
+                "# Array-like type that includes numpy arrays, torch tensors, etc.",
+                "# At runtime, we accept any array-like object (numpy arrays, torch tensors,",
+                "# tensorflow tensors, jax arrays, or anything with __array__ method).",
+                "# For type checking, we use numpy.typing.ArrayLike which covers most cases.",
+                "if typing.TYPE_CHECKING:",
+                "    import numpy",
+                "    import numpy.typing",
+                "    ArrayLike = numpy.typing.ArrayLike",
+                "else:",
+                "    ArrayLike = typing.Any",
             ]
         ),
     ),
@@ -104,7 +162,8 @@ REPLACEMENTS = [
         "pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality",
     ),
     (
-        r".*: pedalboard_native.ExternalPluginReloadType.*",
+        # Remove any lines referencing ExternalPluginReloadType (internal implementation detail)
+        r".*ExternalPluginReloadType.*",
         "",
     ),
     # Enum values that should not be in __all__:
@@ -115,8 +174,8 @@ REPLACEMENTS = [
     # Remove type hints in docstrings, added unnecessarily by pybind11-stubgen
     (r".*?:type:.*$", ""),
     # MyPy chokes on classes that contain both __new__ and __init__.
-    # Remove all bare, arg-free inits:
-    (r"def __init__\(self\) -> None: ...", ""),
+    # Remove all bare, arg-free inits (moved to MULTILINE_REPLACEMENTS):
+    (r"def __init__\(self\) -> None: \.\.\.", ""),
     # Sphinx gets confused when inheriting twice from the same base class:
     (r"\(ExternalPlugin, Plugin\)", "(ExternalPlugin)"),
     # Python <3.9 doesn't like bare lists in type hints:
