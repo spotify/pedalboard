@@ -17,11 +17,13 @@
 
 #pragma once
 
+#include <filesystem>
 #include <mutex>
 #include <optional>
 
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl/filesystem.h>
 
 #include "../BufferUtils.h"
 #include "../JuceHeader.h"
@@ -789,7 +791,7 @@ inline void init_readable_audio_file(
     py::class_<ReadableAudioFile, AudioFile, std::shared_ptr<ReadableAudioFile>>
         &pyReadableAudioFile) {
   pyReadableAudioFile
-      .def(py::init([](std::string filename) -> ReadableAudioFile * {
+      .def(py::init([](std::filesystem::path filename) -> ReadableAudioFile * {
              // This definition is only here to provide nice docstrings.
              throw std::runtime_error(
                  "Internal error: __init__ should never be called, as this "
@@ -805,8 +807,8 @@ inline void init_readable_audio_file(
            py::arg("file_like"))
       .def_static(
           "__new__",
-          [](const py::object *, std::string filename) {
-            return std::make_shared<ReadableAudioFile>(filename);
+          [](const py::object *, std::filesystem::path filename) {
+            return std::make_shared<ReadableAudioFile>(filename.string());
           },
           py::arg("cls"), py::arg("filename"))
       .def_static(

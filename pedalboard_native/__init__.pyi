@@ -3,6 +3,7 @@
 For audio I/O classes (i.e.: reading and writing audio files), see ``pedalboard.io``."""
 
 from __future__ import annotations
+import pathlib
 import pedalboard_native
 import enum
 import typing
@@ -319,7 +320,7 @@ class Convolution(Plugin):
     def __init__(
         self,
         impulse_response_filename: typing.Union[
-            str, NDArray[float32]
+            str, pathlib.Path, NDArray[float32]
         ],
         mix: float = 1.0,
         sample_rate: typing.Optional[float] = None,
@@ -646,7 +647,7 @@ class ExternalPlugin(Plugin):
     pass
 
     @staticmethod
-    def get_plugin_names_for_file(filename: str) -> typing.List[str]:
+    def get_plugin_names_for_file(filename: str | pathlib.Path) -> typing.List[str]:
         """
         Return a list of plugin names contained within a given VST3 plugin (i.e.: a ".vst3"). If the provided file cannot be scanned, an ImportError will be raised.
         """
@@ -1123,7 +1124,7 @@ class AudioUnitPlugin(ExternalPlugin):
     ) -> NDArray[float32]: ...
     def __init__(
         self,
-        path_to_plugin_file: str,
+        path_to_plugin_file: str | pathlib.Path,
         parameter_values: object = None,
         plugin_name: typing.Optional[str] = None,
         initialization_timeout: float = 10.0,
@@ -1131,7 +1132,7 @@ class AudioUnitPlugin(ExternalPlugin):
     def __repr__(self) -> str: ...
     def _get_parameter(self, arg0: str) -> _AudioProcessorParameter: ...
     @staticmethod
-    def get_plugin_names_for_file(filename: str) -> typing.List[str]:
+    def get_plugin_names_for_file(filename: str | pathlib.Path) -> typing.List[str]:
         """
         Return a list of plugin names contained within a given Audio Unit bundle (i.e.: a ``.component`` or ``.appex`` file). If the provided file cannot be scanned, an ``ImportError`` will be raised.
 
@@ -1814,7 +1815,7 @@ class VST3Plugin(ExternalPlugin):
 
     def __init__(
         self,
-        path_to_plugin_file: str,
+        path_to_plugin_file: str | pathlib.Path,
         parameter_values: object = None,
         plugin_name: typing.Optional[str] = None,
         initialization_timeout: float = 10.0,
@@ -1822,12 +1823,12 @@ class VST3Plugin(ExternalPlugin):
     def __repr__(self) -> str: ...
     def _get_parameter(self, arg0: str) -> _AudioProcessorParameter: ...
     @staticmethod
-    def get_plugin_names_for_file(arg0: str) -> typing.List[str]:
+    def get_plugin_names_for_file(filename: str | pathlib.Path) -> typing.List[str]:
         """
         Return a list of plugin names contained within a given VST3 plugin (i.e.: a ".vst3"). If the provided file cannot be scanned, an ImportError will be raised.
         """
 
-    def load_preset(self, preset_file_path: str) -> None:
+    def load_preset(self, preset_file_path: str | pathlib.Path) -> None:
         """
         Load a VST3 preset file in .vstpreset format.
         """

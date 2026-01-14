@@ -15,8 +15,11 @@
  * limitations under the License.
  */
 
+#include <filesystem>
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/stl/filesystem.h>
 
 namespace py = pybind11;
 
@@ -102,17 +105,18 @@ inline void init_convolution(py::module &m) {
       "the ``sample_rate`` argument must also be provided to indicate the "
       "sample rate of the impulse response.\n\n*Support for passing NumPy "
       "arrays as impulse responses introduced in v0.9.10.*")
-      .def(py::init([](std::variant<std::string,
+      .def(py::init([](std::variant<std::filesystem::path,
                                     py::array_t<float, py::array::c_style>>
                            impulseResponse,
                        float mix, std::optional<double> sampleRate) {
              auto plugin = std::make_unique<JucePlugin<ConvolutionWithMix>>();
 
-             if (auto *impulseResponseFilename =
-                     std::get_if<std::string>(&impulseResponse)) {
+             if (auto *impulseResponsePath =
+                     std::get_if<std::filesystem::path>(&impulseResponse)) {
+               std::string impulseResponseFilename = impulseResponsePath->string();
                py::gil_scoped_release release;
                // Load the IR file on construction, to handle errors
-               auto inputFile = juce::File(*impulseResponseFilename);
+               auto inputFile = juce::File(impulseResponseFilename);
                // Test opening the file before we pass it to
                // loadImpulseResponse, which reloads it in the background:
                {
@@ -120,7 +124,7 @@ inline void init_convolution(py::module &m) {
                  if (!stream.openedOk()) {
                    throw std::runtime_error(
                        "Unable to load impulse response: " +
-                       *impulseResponseFilename);
+                       impulseResponseFilename);
                  }
                }
 
@@ -128,7 +132,7 @@ inline void init_convolution(py::module &m) {
                    inputFile, juce::dsp::Convolution::Stereo::yes,
                    juce::dsp::Convolution::Trim::no, 0);
                plugin->getDSP().setImpulseResponseFilename(
-                   *impulseResponseFilename);
+                   impulseResponseFilename);
              } else if (auto *inputArray =
                             std::get_if<py::array_t<float, py::array::c_style>>(
                                 &impulseResponse)) {

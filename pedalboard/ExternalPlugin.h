@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <filesystem>
 #include <mutex>
 #include <optional>
 
@@ -28,6 +29,7 @@
 #include "AudioUnitParser.h"
 #include "Plugin.h"
 #include <pybind11/stl.h>
+#include <pybind11/stl/filesystem.h>
 
 #include "juce_overrides/juce_PatchedVST3PluginFormat.h"
 #include "process.h"
@@ -653,19 +655,21 @@ public:
     }
   };
 
-  void loadPresetFile(std::string presetFilePath) {
-    juce::File presetFile(presetFilePath);
+  void loadPresetFile(std::filesystem::path presetFilePath) {
+    std::string presetFilePathStr = presetFilePath.string();
+    juce::File presetFile(presetFilePathStr);
     juce::MemoryBlock presetData;
 
     if (!presetFile.loadFileAsData(presetData)) {
-      throw std::runtime_error("Failed to read preset file: " + presetFilePath);
+      throw std::runtime_error("Failed to read preset file: " +
+                               presetFilePathStr);
     }
 
     SetPresetVisitor visitor{presetData};
     pluginInstance->getExtensions(visitor);
     if (!visitor.didSetPreset) {
       throw std::runtime_error("Plugin failed to load data from preset file: " +
-                               presetFilePath);
+                               presetFilePathStr);
     }
   }
 
@@ -1644,13 +1648,15 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
 *Support for running VST3® plugins on background threads introduced in v0.8.8.*
 )")
       .def(
-          py::init([](std::string &pathToPluginFile, py::object parameterValues,
+          py::init([](std::filesystem::path pathToPluginFile,
+                      py::object parameterValues,
                       std::optional<std::string> pluginName,
                       float initializationTimeout) {
+            std::string pathStr = pathToPluginFile.string();
             std::shared_ptr<ExternalPlugin<juce::PatchedVST3PluginFormat>>
                 plugin = std::make_shared<
                     ExternalPlugin<juce::PatchedVST3PluginFormat>>(
-                    pathToPluginFile, pluginName, initializationTimeout);
+                    pathStr, pluginName, initializationTimeout);
             py::cast(plugin).attr("__set_initial_parameter_values__")(
                 parameterValues);
             return plugin;
@@ -1693,9 +1699,9 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           "plugin to crash, taking the entire Python process down with it.")
       .def_static(
           "get_plugin_names_for_file",
-          [](std::string filename) {
+          [](std::filesystem::path filename) {
             return getPluginNamesForFile<juce::PatchedVST3PluginFormat>(
-                filename);
+                filename.string());
           },
           "Return a list of plugin names contained within a given VST3 "
           "plugin (i.e.: a \".vst3\"). If the provided file cannot be "
@@ -1882,13 +1888,15 @@ see :class:`pedalboard.VST3Plugin`.)
 *Support for loading AUv3 plugins (* ``.appex`` *bundles) introduced in v0.9.5.*
 )")
       .def(
-          py::init([](std::string &pathToPluginFile, py::object parameterValues,
+          py::init([](std::filesystem::path pathToPluginFile,
+                      py::object parameterValues,
                       std::optional<std::string> pluginName,
                       float initializationTimeout) {
+            std::string pathStr = pathToPluginFile.string();
             std::shared_ptr<ExternalPlugin<juce::AudioUnitPluginFormat>>
                 plugin = std::make_shared<
                     ExternalPlugin<juce::AudioUnitPluginFormat>>(
-                    pathToPluginFile, pluginName, initializationTimeout);
+                    pathStr, pluginName, initializationTimeout);
             py::cast(plugin).attr("__set_initial_parameter_values__")(
                 parameterValues);
             return plugin;
@@ -1909,8 +1917,9 @@ see :class:`pedalboard.VST3Plugin`.)
            })
       .def_static(
           "get_plugin_names_for_file",
-          [](std::string filename) {
-            return getPluginNamesForFile<juce::AudioUnitPluginFormat>(filename);
+          [](std::filesystem::path filename) {
+            return getPluginNamesForFile<juce::AudioUnitPluginFormat>(
+                filename.string());
           },
           py::arg("filename"),
           "Return a list of plugin names contained within a given Audio Unit "

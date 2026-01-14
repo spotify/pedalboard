@@ -78,6 +78,7 @@ REPLACEMENTS = [
         r"import typing",
         "\n".join(
             [
+                "import os",
                 "import typing",
                 "from typing_extensions import Literal",
                 "from enum import Enum",
@@ -85,6 +86,9 @@ REPLACEMENTS = [
             ]
         ),
     ),
+    # pybind11 renders std::filesystem::path as os.PathLike[str]; pybind11 actually accepts
+    # str OR any os.PathLike object, so we use the union type for accuracy:
+    (r"os\.PathLike\[str\]", r"str | os.PathLike[str]"),
     (
         r"default_input_device_name = [\"'].*?[\"']",
         "default_input_device_name: Optional[str] = None",

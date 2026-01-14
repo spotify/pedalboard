@@ -17,11 +17,13 @@
 
 #pragma once
 
+#include <filesystem>
 #include <mutex>
 #include <optional>
 
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl/filesystem.h>
 
 #include "../JuceHeader.h"
 #include "AudioFile.h"
@@ -150,9 +152,10 @@ inline void init_audio_file(
                          // instantiate subclasses via __new__.
       .def_static(
           "__new__",
-          [](const py::object *, std::string filename, std::string mode) {
+          [](const py::object *, std::filesystem::path filename,
+             std::string mode) {
             if (mode == "r") {
-              return std::make_shared<ReadableAudioFile>(filename);
+              return std::make_shared<ReadableAudioFile>(filename.string());
             } else if (mode == "w") {
               throw py::type_error("Opening an audio file for writing requires "
                                    "samplerate and num_channels arguments.");
@@ -201,8 +204,9 @@ inline void init_audio_file(
           "etc.).")
       .def_static(
           "__new__",
-          [](const py::object *, std::string filename, std::string mode,
-             std::optional<double> sampleRate, int numChannels, int bitDepth,
+          [](const py::object *, std::filesystem::path filename,
+             std::string mode, std::optional<double> sampleRate, int numChannels,
+             int bitDepth,
              std::optional<std::variant<std::string, float>> quality) {
             if (mode == "r") {
               throw py::type_error(
@@ -218,7 +222,8 @@ inline void init_audio_file(
               }
 
               return std::make_shared<WriteableAudioFile>(
-                  filename, *sampleRate, numChannels, bitDepth, quality);
+                  filename.string(), *sampleRate, numChannels, bitDepth,
+                  quality);
             } else {
               throw py::type_error("AudioFile instances can only be opened in "
                                    "read mode (\"r\") or write mode (\"w\").");
