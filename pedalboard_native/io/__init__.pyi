@@ -122,6 +122,16 @@ class AudioFile:
         those classes below for documentation.
     """
 
+    def __enter__(self) -> typing.Union[ReadableAudioFile, WriteableAudioFile]:
+        """
+        Use this :class:`AudioFile` as a context manager, automatically closing the file and releasing resources when the context manager exits.
+        """
+
+    def __exit__(self, arg0: object, arg1: object, arg2: object) -> None:
+        """
+        Stop using this :class:`AudioFile` as a context manager, close the file, release its resources.
+        """
+
     @classmethod
     @typing.overload
     def __new__(cls, filename: str) -> ReadableAudioFile:
