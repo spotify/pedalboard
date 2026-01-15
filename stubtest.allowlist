@@ -1,18 +1,25 @@
-pedalboard.Plugin.__call__
-pedalboard.__all__
-pedalboard.io.__all__
-pedalboard._pedalboard.Dict
-pedalboard._pedalboard.Iterable
-pedalboard._pedalboard.List
-pedalboard._pedalboard.Plugin.__call__
-pedalboard._pedalboard.WeakTypeWrapper@\d+
-pedalboard._pedalboard._AudioProcessorParameter.__init__
-pedalboard._pedalboard.Pedalboard
-pedalboard._pedalboard.VST3Plugin
-pedalboard.utils.Chain
-pedalboard.utils.Mix
-pedalboard.utils.__all__
-pedalboard.version.__all__
-.*?AudioUnitPlugin.*
+# Allowlist for stubtest - these are expected differences between stubs and runtime
+# Metaclass differences are expected with pybind11
 .*?metaclass.*
+# AudioUnitPlugin is macOS-only
+.*?AudioUnitPlugin.*
+# ExternalPluginReloadType is internal
 .*?ExternalPluginReloadType.*
+.*?ClearsAudioOnReset.*
+.*?PersistsAudioOnReset.*
+.*?Unknown.*
+# ArrayLike is a type alias for type checking only
+.*?ArrayLike.*
+# __all__ is stub-only
+.*?__all__.*
+# original_overload and patch_overload are stub helpers
+.*?original_overload.*
+.*?patch_overload.*
+# _AudioProcessorParameter has variadic __init__
+.*?_AudioProcessorParameter.__init__.*
+# Enum methods that pybind11 adds at runtime
+.*?__index__.*
+.*?__int__.*
+.*?__members__.*
+# installed_plugins is a runtime-populated list
+.*?installed_plugins.*

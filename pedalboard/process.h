@@ -21,6 +21,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
+#include "ArrayUtils.h"
 #include "BufferUtils.h"
 #include "Plugin.h"
 #include "PluginContainer.h"
@@ -275,9 +276,12 @@ processFloat32(const py::array_t<float, py::array::c_style> inputArray,
                                    inputArray.request().ndim);
 }
 
-py::array_t<float> process(py::array inputArray, double sampleRate,
+py::array_t<float> process(py::object input, double sampleRate,
                            const std::vector<std::shared_ptr<Plugin>> plugins,
                            unsigned int bufferSize, bool reset) {
+  // Convert the input to a numpy array (supports torch tensors, etc.)
+  py::array inputArray = ensureArrayLike(input);
+
   py::array_t<float, py::array::c_style> float32InputArray;
   switch (inputArray.dtype().char_()) {
   case 'f':
