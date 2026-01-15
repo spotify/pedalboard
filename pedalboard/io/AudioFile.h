@@ -20,8 +20,8 @@
 #include "../juce_overrides/juce_PatchedFLACAudioFormat.h"
 #include "../juce_overrides/juce_PatchedMP3AudioFormat.h"
 #include "../juce_overrides/juce_PatchedWavAudioFormat.h"
-#include "AudioFile.h"
 #include "LameMP3AudioFormat.h"
+#include "PathUtils.h"
 
 namespace Pedalboard {
 

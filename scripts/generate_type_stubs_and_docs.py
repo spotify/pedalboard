@@ -58,15 +58,46 @@ MULTILINE_REPLACEMENTS = [
 ]
 
 REPLACEMENTS = [
-    # object is a superclass of `str`, which would make these declarations ambiguous:
+    # AudioFile read mode: filename accepts paths OR file-likes (for positional compat),
+    # file_like is keyword-only alternative
     (
-        r"file_like: object, mode: str = 'r'",
-        r"file_like: typing.Union[typing.BinaryIO, memoryview], mode: str = 'r'",
+        r"filename: object = None, mode: str = 'r', \*, file_like: object = None",
+        r"filename: str | os.PathLike[str] | typing.BinaryIO | memoryview | None = None, mode: str = 'r', *, file_like: typing.BinaryIO | memoryview | None = None",
+    ),
+    # ReadableAudioFile: filename accepts paths OR file-likes (for positional compat),
+    # file_like is keyword-only alternative
+    (
+        r"filename: object = None, \*, file_like: object = None\)",
+        r"filename: str | os.PathLike[str] | typing.BinaryIO | memoryview | None = None, *, file_like: typing.BinaryIO | memoryview | None = None)",
+    ),
+    # Path-like parameters in AudioFile/WriteableAudioFile constructors (write mode):
+    (
+        r"filename: object, mode: str = 'w'",
+        r"filename: str | os.PathLike[str], mode: str = 'w'",
     ),
     (
-        r"file_like: object\) -> ReadableAudioFile:",
-        "file_like: typing.Union[typing.BinaryIO, memoryview]) -> ReadableAudioFile:",
+        r"filename: object, samplerate:",
+        r"filename: str | os.PathLike[str], samplerate:",
     ),
+    # Path-like parameters for external plugins:
+    (
+        r"path_to_plugin_file: object,",
+        r"path_to_plugin_file: str | os.PathLike[str],",
+    ),
+    (
+        r"preset_file_path: object\)",
+        r"preset_file_path: str | os.PathLike[str])",
+    ),
+    (
+        r"get_plugin_names_for_file\(filename: object\)",
+        r"get_plugin_names_for_file(filename: str | os.PathLike[str])",
+    ),
+    # Convolution impulse response can be a path or numpy array:
+    (
+        r"impulse_response_filename: object,",
+        r"impulse_response_filename: str | os.PathLike[str] | numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]],",
+    ),
+    # file_like parameter for write mode (has format argument):
     ("file_like: object", "file_like: typing.BinaryIO"),
     # "r" is the default file open/reading mode:
     ("mode: str = 'r'", r'mode: Literal["r"] = "r"'),
@@ -78,6 +109,7 @@ REPLACEMENTS = [
         r"import typing",
         "\n".join(
             [
+                "import os",
                 "import typing",
                 "from typing_extensions import Literal",
                 "from enum import Enum",
@@ -85,6 +117,9 @@ REPLACEMENTS = [
             ]
         ),
     ),
+    # pybind11 renders std::filesystem::path as os.PathLike[str]; pybind11 actually accepts
+    # str OR any os.PathLike object, so we use the union type for accuracy:
+    (r"os\.PathLike\[str\]", r"str | os.PathLike[str]"),
     (
         r"default_input_device_name = [\"'].*?[\"']",
         "default_input_device_name: Optional[str] = None",
