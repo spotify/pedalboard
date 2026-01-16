@@ -68,16 +68,16 @@ static inline int inputBufferSizeFor(ResamplingQuality quality) {
 }
 
 class ResampledReadableAudioFile
-    : public AudioFile,
+    : public AbstractReadableAudioFile,
       public std::enable_shared_from_this<ResampledReadableAudioFile> {
 public:
-  ResampledReadableAudioFile(std::shared_ptr<ReadableAudioFile> audioFile,
+  ResampledReadableAudioFile(std::shared_ptr<AbstractReadableAudioFile> audioFile,
                              float targetSampleRate, ResamplingQuality quality)
       : audioFile(audioFile),
         resampler(audioFile->getSampleRateAsDouble(), targetSampleRate,
                   audioFile->getNumChannels(), quality) {}
 
-  std::variant<double, long> getSampleRate() const {
+  std::variant<double, long> getSampleRate() const override {
     py::gil_scoped_release release;
     const juce::ScopedReadLock scopedReadLock(objectLock);
 
@@ -92,13 +92,13 @@ public:
     }
   }
 
-  double getSampleRateAsDouble() const {
+  double getSampleRateAsDouble() const override {
     py::gil_scoped_release release;
     const juce::ScopedReadLock scopedReadLock(objectLock);
     return resampler.getTargetSampleRate();
   }
 
-  long getLengthInSamples() const {
+  long long getLengthInSamples() const override {
     double underlyingLengthInSamples = (double)audioFile->getLengthInSamples();
     double underlyingSampleRate = audioFile->getSampleRateAsDouble();
 
@@ -111,30 +111,30 @@ public:
       length -= (std::round(resampler.getOutputLatency()) -
                  resampler.getOutputLatency());
     }
-    return (long)length;
+    return (long long)length;
   }
 
-  double getDuration() const {
+  double getDuration() const override {
     // No need for a ScopedReadLock here, as audioFile is const:
     return audioFile->getDuration();
   }
 
-  long getNumChannels() const {
+  long getNumChannels() const override {
     // No need for a ScopedReadLock here, as audioFile is const:
     return audioFile->getNumChannels();
   }
 
-  bool exactDurationKnown() const {
+  bool exactDurationKnown() const override {
     // No need for a ScopedReadLock here, as audioFile is const:
     return audioFile->exactDurationKnown();
   }
 
-  std::string getFileFormat() const {
+  std::string getFileFormat() const override {
     // No need for a ScopedReadLock here, as audioFile is const:
     return audioFile->getFileFormat();
   }
 
-  std::string getFileDatatype() const {
+  std::string getFileDatatype() const override {
     // No need for a ScopedReadLock here, as audioFile is const:
     return audioFile->getFileDatatype();
   }
@@ -145,7 +145,7 @@ public:
     return resampler.getQuality();
   }
 
-  py::array_t<float> read(std::variant<double, long long> numSamplesVariant) {
+  py::array_t<float> read(std::variant<double, long long> numSamplesVariant) override {
     long long numSamples = parseNumSamples(numSamplesVariant);
     if (numSamples == 0)
       throw std::domain_error(
@@ -247,11 +247,24 @@ public:
       std::optional<juce::AudioBuffer<float>> resamplerInput;
 
       if (inputSamplesRequired > 0) {
-        // Read from the underlying audioFile into our contiguous buffer,
-        // which causes the sourceSamples AudioBuffer to be filled:
-        long long samplesRead = audioFile->readInternal(
-            audioFile->getNumChannels(), inputSamplesRequired,
-            contiguousSourceSampleBuffer.data());
+        // Read from the underlying audioFile using the public read() interface.
+        // We need to acquire the GIL since read() creates Python objects.
+        long long samplesRead = 0;
+        {
+          py::gil_scoped_acquire acquire;
+          py::array_t<float> readResult = audioFile->read(inputSamplesRequired);
+          py::buffer_info bufInfo = readResult.request();
+          samplesRead = bufInfo.shape[1]; // shape is (channels, samples)
+
+          // Copy data from the numpy array to our contiguous buffer
+          float *srcPtr = static_cast<float *>(bufInfo.ptr);
+          for (int c = 0; c < audioFile->getNumChannels(); c++) {
+            for (long long i = 0; i < samplesRead; i++) {
+              contiguousSourceSampleBuffer[c * inputSamplesRequired + i] =
+                  srcPtr[c * samplesRead + i];
+            }
+          }
+        }
 
         // Resize the sourceSamples buffer to the number of samples read,
         // without reallocating the memory underneath
@@ -330,66 +343,67 @@ public:
     return resampledBuffer;
   }
 
-  void seek(long long targetPosition) {
+  void seek(long long targetPosition) override {
     py::gil_scoped_release release;
-    {
-      ScopedTryWriteLock scopedTryWriteLock(objectLock);
-      if (!scopedTryWriteLock.isLocked()) {
-        throw std::runtime_error(
-            "Another thread is currently reading from this AudioFile. Note "
-            "that using multiple concurrent readers on the same AudioFile "
-            "object will produce nondeterministic results.");
-      }
-      long long positionToSeekToIncludingBuffers = targetPosition;
-
-      long long targetPositionInSourceSampleRate =
-          std::max(0LL, (long long)(((double)positionToSeekToIncludingBuffers *
-                                     resampler.getSourceSampleRate()) /
-                                    resampler.getTargetSampleRate()));
-
-      targetPositionInSourceSampleRate -=
-          inputBufferSizeFor(resampler.getQuality());
-
-      long long maximumOverflow = (long long)std::ceil(
-          resampler.getSourceSampleRate() / resampler.getTargetSampleRate());
-      targetPositionInSourceSampleRate -= std::max(0LL, maximumOverflow);
-
-      double floatingPositionInTargetSampleRate =
-          std::max(0.0, ((double)targetPositionInSourceSampleRate *
-                         resampler.getTargetSampleRate()) /
-                            resampler.getSourceSampleRate());
-
-      positionInTargetSampleRate =
-          (long long)(floatingPositionInTargetSampleRate);
-
-      resampler.reset();
-
-      long long inputSamplesUsed =
-          resampler.advanceResamplerState(positionInTargetSampleRate);
-      targetPositionInSourceSampleRate = inputSamplesUsed;
-
-      audioFile->seekInternal(std::max(0LL, targetPositionInSourceSampleRate));
-
-      outputBuffer.setSize(0, 0);
-
-      const long long chunkSize = 1024 * 1024;
-      for (long long i = positionInTargetSampleRate; i < targetPosition;
-           i += chunkSize) {
-        long long numSamples = std::min(chunkSize, targetPosition - i);
-        this->readInternal(numSamples);
-      }
-    }
-
+    seekInternal(targetPosition);
     PythonException::raise();
   }
 
-  long long tell() const {
+  void seekInternal(long long targetPosition) override {
+    ScopedTryWriteLock scopedTryWriteLock(objectLock);
+    if (!scopedTryWriteLock.isLocked()) {
+      throw std::runtime_error(
+          "Another thread is currently reading from this AudioFile. Note "
+          "that using multiple concurrent readers on the same AudioFile "
+          "object will produce nondeterministic results.");
+    }
+    long long positionToSeekToIncludingBuffers = targetPosition;
+
+    long long targetPositionInSourceSampleRate =
+        std::max(0LL, (long long)(((double)positionToSeekToIncludingBuffers *
+                                   resampler.getSourceSampleRate()) /
+                                  resampler.getTargetSampleRate()));
+
+    targetPositionInSourceSampleRate -=
+        inputBufferSizeFor(resampler.getQuality());
+
+    long long maximumOverflow = (long long)std::ceil(
+        resampler.getSourceSampleRate() / resampler.getTargetSampleRate());
+    targetPositionInSourceSampleRate -= std::max(0LL, maximumOverflow);
+
+    double floatingPositionInTargetSampleRate =
+        std::max(0.0, ((double)targetPositionInSourceSampleRate *
+                       resampler.getTargetSampleRate()) /
+                          resampler.getSourceSampleRate());
+
+    positionInTargetSampleRate =
+        (long long)(floatingPositionInTargetSampleRate);
+
+    resampler.reset();
+
+    long long inputSamplesUsed =
+        resampler.advanceResamplerState(positionInTargetSampleRate);
+    targetPositionInSourceSampleRate = inputSamplesUsed;
+
+    audioFile->seekInternal(std::max(0LL, targetPositionInSourceSampleRate));
+
+    outputBuffer.setSize(0, 0);
+
+    const long long chunkSize = 1024 * 1024;
+    for (long long i = positionInTargetSampleRate; i < targetPosition;
+         i += chunkSize) {
+      long long numSamples = std::min(chunkSize, targetPosition - i);
+      this->readInternal(numSamples);
+    }
+  }
+
+  long long tell() const override {
     py::gil_scoped_release release;
     const juce::ScopedReadLock scopedReadLock(objectLock);
     return positionInTargetSampleRate;
   }
 
-  void close() {
+  void close() override {
     py::gil_scoped_release release;
     ScopedTryWriteLock scopedTryWriteLock(objectLock);
     if (!scopedTryWriteLock.isLocked()) {
@@ -400,7 +414,7 @@ public:
     _isClosed = true;
   }
 
-  bool isClosed() const {
+  bool isClosed() const override {
     // No need for a ScopedReadLock here, as audioFile is const:
     if (audioFile->isClosed())
       return true;
@@ -411,27 +425,27 @@ public:
     return _isClosed;
   }
 
-  bool isSeekable() const {
+  bool isSeekable() const override {
     // No need for a ScopedReadLock here, as audioFile is const:
     return audioFile->isSeekable();
   }
 
-  std::optional<std::string> getFilename() const {
+  std::optional<std::string> getFilename() const override {
     // No need for a ScopedReadLock here, as audioFile is const:
     return audioFile->getFilename();
   }
 
-  PythonInputStream *getPythonInputStream() const {
+  PythonInputStream *getPythonInputStream() const override {
     // No need for a ScopedReadLock here, as audioFile is const:
     return audioFile->getPythonInputStream();
   }
 
-  std::shared_ptr<ResampledReadableAudioFile> enter() {
+  std::shared_ptr<AbstractReadableAudioFile> enter() override {
     return shared_from_this();
   }
 
   void exit(const py::object &type, const py::object &value,
-            const py::object &traceback) {
+            const py::object &traceback) override {
     bool shouldThrow = PythonException::isPending();
     close();
 
@@ -439,8 +453,12 @@ public:
       throw py::error_already_set();
   }
 
+  std::string getClassName() const override {
+    return "ResampledReadableAudioFile";
+  }
+
 private:
-  const std::shared_ptr<ReadableAudioFile> audioFile;
+  const std::shared_ptr<AbstractReadableAudioFile> audioFile;
   StreamResampler<float> resampler;
   juce::AudioBuffer<float> outputBuffer;
   long long positionInTargetSampleRate = 0;
@@ -448,10 +466,10 @@ private:
   bool _isClosed = false;
 };
 
-inline py::class_<ResampledReadableAudioFile, AudioFile,
+inline py::class_<ResampledReadableAudioFile, AbstractReadableAudioFile,
                   std::shared_ptr<ResampledReadableAudioFile>>
 declare_resampled_readable_audio_file(py::module &m) {
-  return py::class_<ResampledReadableAudioFile, AudioFile,
+  return py::class_<ResampledReadableAudioFile, AbstractReadableAudioFile,
                     std::shared_ptr<ResampledReadableAudioFile>>(
       m, "ResampledReadableAudioFile",
       R"(
@@ -485,12 +503,14 @@ reads, seeking through files, and using a constant amount of memory.
 }
 
 inline void init_resampled_readable_audio_file(
-    py::module &m, py::class_<ResampledReadableAudioFile, AudioFile,
+    py::module &m, py::class_<ResampledReadableAudioFile, AbstractReadableAudioFile,
                               std::shared_ptr<ResampledReadableAudioFile>>
                        &pyResampledReadableAudioFile) {
+  // Note: Most methods are inherited from AbstractReadableAudioFile.
+  // We only define class-specific methods and override docstrings where needed.
   pyResampledReadableAudioFile
       .def(py::init(
-               [](std::shared_ptr<ReadableAudioFile> audioFile,
+               [](std::shared_ptr<AbstractReadableAudioFile> audioFile,
                   float targetSampleRate,
                   ResamplingQuality quality) -> ResampledReadableAudioFile * {
                  // This definition is only here to provide nice docstrings.
@@ -502,163 +522,14 @@ inline void init_resampled_readable_audio_file(
            py::arg("resampling_quality") = ResamplingQuality::WindowedSinc32)
       .def_static(
           "__new__",
-          [](const py::object *, std::shared_ptr<ReadableAudioFile> audioFile,
+          [](const py::object *,
+             std::shared_ptr<AbstractReadableAudioFile> audioFile,
              float targetSampleRate, ResamplingQuality quality) {
             return std::make_shared<ResampledReadableAudioFile>(
                 audioFile, targetSampleRate, quality);
           },
           py::arg("cls"), py::arg("audio_file"), py::arg("target_sample_rate"),
           py::arg("resampling_quality") = ResamplingQuality::WindowedSinc32)
-      .def("read", &ResampledReadableAudioFile::read, py::arg("num_frames") = 0,
-           R"(
-Read the given number of frames (samples in each channel, at the target sample rate)
-from this audio file at its current position, automatically resampling on-the-fly to
-``target_sample_rate``.
-
-``num_frames`` is a required argument, as audio files can be deceptively large. (Consider that 
-an hour-long ``.ogg`` file may be only a handful of megabytes on disk, but may decompress to
-nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid 
-hard-to-debug memory problems and out-of-memory crashes.
-
-Audio samples are returned as a multi-dimensional :class:`numpy.array` with the shape
-``(channels, samples)``; i.e.: a stereo audio file will have shape ``(2, <length>)``.
-Returned data is always in the ``float32`` datatype.
-
-If the file does not contain enough audio data to fill ``num_frames``, the returned
-:class:`numpy.array` will contain as many frames as could be read from the file. (In some cases,
-passing :py:attr:`frames` as ``num_frames`` may still return less data than expected. See documentation
-for :py:attr:`frames` and :py:attr:`exact_duration_known` for more information about situations
-in which this may occur.)
-
-For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the
-maximum sample value will be ``+1.0f``.
-
-.. note::
-    For convenience, the ``num_frames`` argument may be a floating-point number. However, if the
-    provided number of frames contains a fractional part (i.e.: ``1.01`` instead of ``1.00``) then
-    an exception will be thrown, as a fractional number of samples cannot be returned.
-)")
-      .def("seekable", &ResampledReadableAudioFile::isSeekable,
-           "Returns True if this file is currently open and calls to seek() "
-           "will work.")
-      .def("seek", &ResampledReadableAudioFile::seek, py::arg("position"),
-           "Seek this file to the provided location in frames at the target "
-           "sample rate. Future reads will start from this position.\n\n.. "
-           "note::\n    Prior to version 0.7.3, this method operated in linear "
-           "time with respect to the seek position (i.e.: the file was seeked "
-           "to its beginning and pushed through the resampler) to ensure that "
-           "the resampled audio output was sample-accurate. This was optimized "
-           "in version 0.7.3 to operate in effectively constant time while "
-           "retaining sample-accuracy.")
-      .def("tell", &ResampledReadableAudioFile::tell,
-           "Return the current position of the read pointer in this audio "
-           "file, in frames at the target sample rate. This value will "
-           "increase as :meth:`read` is "
-           "called, and may decrease if :meth:`seek` is called.")
-      .def("close", &ResampledReadableAudioFile::close,
-           "Close this file, rendering this object unusable. Note that the "
-           ":class:`ReadableAudioFile` instance that is wrapped by this object "
-           "will not be closed, and will remain usable.")
-      .def("__enter__", &ResampledReadableAudioFile::enter,
-           "Use this :class:`ResampledReadableAudioFile` as a context manager, "
-           "automatically closing the file and releasing resources when the "
-           "context manager exits.")
-      .def("__exit__", &ResampledReadableAudioFile::exit,
-           "Stop using this :class:`ResampledReadableAudioFile` as a context "
-           "manager, close the file, release its resources.")
-      .def("__repr__",
-           [](const ResampledReadableAudioFile &file) {
-             std::ostringstream ss;
-             ss << "<pedalboard.io.ResampledReadableAudioFile";
-
-             if (file.getFilename() && !file.getFilename()->empty()) {
-               ss << " filename=\"" << *file.getFilename() << "\"";
-             } else if (PythonInputStream *stream =
-                            file.getPythonInputStream()) {
-               ss << " file_like=" << stream->getRepresentation();
-             }
-
-             if (file.isClosed()) {
-               ss << " closed";
-             } else {
-               ss << " samplerate=" << file.getSampleRateAsDouble();
-               ss << " num_channels=" << file.getNumChannels();
-               ss << " frames=" << file.getLengthInSamples();
-               ss << " file_dtype=" << file.getFileDatatype();
-             }
-             ss << " at " << &file;
-             ss << ">";
-             return ss.str();
-           })
-      .def_property_readonly(
-          "name", &ResampledReadableAudioFile::getFilename,
-          "The name of this file.\n\nIf the "
-          ":class:`ReadableAudioFile` wrapped by this "
-          ":class:`ResampledReadableAudioFile` was "
-          "opened from a file-like object, this will be ``None``.")
-      .def_property_readonly(
-          "closed", &ResampledReadableAudioFile::isClosed,
-          "True iff either this file or its wrapped :class:`ReadableAudioFile` "
-          "instance are closed (and no longer usable), False otherwise.")
-      .def_property_readonly(
-          "samplerate", &ResampledReadableAudioFile::getSampleRate,
-          "The sample rate of this file in samples (per channel) per second "
-          "(Hz). This will be equal to the ``target_sample_rate`` parameter "
-          "passed when this object was created. Sample rates are represented "
-          "as floating-point numbers by default, but this property will be an "
-          "integer if the file's target sample rate has no fractional part.")
-      .def_property_readonly("num_channels",
-                             &ResampledReadableAudioFile::getNumChannels,
-                             "The number of channels in this file.")
-      .def_property_readonly("exact_duration_known",
-                             &ResampledReadableAudioFile::exactDurationKnown,
-                             R"(
-Returns :py:const:`True` if this file's :py:attr:`frames` and
-:py:attr:`duration` attributes are exact values, or :py:const:`False` if the
-:py:attr:`frames` and :py:attr:`duration` attributes are estimates based
-on the file's size and bitrate.
-
-:py:attr:`exact_duration_known` will change from :py:const:`False` to
-:py:const:`True` as the file is read to completion. Once :py:const:`True`,
-this value will not change back to :py:const:`False` for the same
-:py:class:`AudioFile` object (even after calls to :meth:`seek`).
-
-.. note::
-    :py:attr:`exact_duration_known` will only ever be :py:const:`False`
-    when reading certain MP3 files. For files in other formats than MP3,
-    :py:attr:`exact_duration_known` will always be equal to :py:const:`True`.
-
-*Introduced in v0.7.2.*
-)")
-      .def_property_readonly(
-          "frames", &ResampledReadableAudioFile::getLengthInSamples,
-          "The total number of frames (samples per "
-          "channel) in this file, at the target sample rate.\n\nFor example, "
-          "if this file contains 10 seconds of stereo audio at sample "
-          "rate of 44,100 Hz, and ``target_sample_rate`` is 22,050 Hz, "
-          "``frames`` will return ``22,050``.\n\nNote that different "
-          "``resampling_quality`` values used for resampling may cause "
-          "``frames`` to differ by ± 1 from its expected value.\n\n.. "
-          "warning::\n    When reading certain MP3 files, the "
-          ":py:attr:`frames` and :py:attr:`duration` properties may "
-          "initially be estimates and **may change as the file is read**. "
-          "See the documentation for :py:attr:`.ReadableAudioFile.frames` "
-          "for more details.")
-      .def_property_readonly(
-          "duration", &ResampledReadableAudioFile::getDuration,
-          "The duration of this file in seconds (``frames`` "
-          "divided by ``samplerate``).\n\n.. "
-          "warning::\n    When reading certain MP3 files, the "
-          ":py:attr:`frames` and :py:attr:`duration` properties may "
-          "initially be estimates and **may change as the file is read**. "
-          "See the documentation for :py:attr:`.ReadableAudioFile.frames` "
-          "for more details.")
-      .def_property_readonly(
-          "file_dtype", &ResampledReadableAudioFile::getFileDatatype,
-          "The data type (``\"int16\"``, ``\"float32\"``, etc) stored "
-          "natively by this file.\n\nNote that :meth:`read` will always "
-          "return a ``float32`` array, regardless of the value of this "
-          "property.")
       .def_property_readonly(
           "resampling_quality", &ResampledReadableAudioFile::getQuality,
           "The resampling algorithm used to resample from the original file's "
