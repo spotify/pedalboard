@@ -19,6 +19,7 @@
 
 #include <mutex>
 #include <optional>
+#include <sstream>
 
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -135,6 +136,159 @@ Re-encoding a WAV file as an MP3 in four lines of Python::
     in write ("w") mode, a :class:`WriteableAudioFile` will be returned. See
     those classes below for documentation.
 )");
+}
+
+inline py::class_<AbstractReadableAudioFile, AudioFile,
+                  std::shared_ptr<AbstractReadableAudioFile>>
+declare_ireadable_audio_file(py::module &m) {
+  return py::class_<AbstractReadableAudioFile, AudioFile,
+                    std::shared_ptr<AbstractReadableAudioFile>>(
+      m, "AbstractReadableAudioFile",
+      R"(An abstract base class for readable audio files.
+
+This class defines the common interface shared by :class:`ReadableAudioFile`,
+:class:`ResampledReadableAudioFile`, and :class:`ChannelConvertedReadableAudioFile`.
+
+*Introduced in v0.9.17.*
+)");
+}
+
+inline void init_ireadable_audio_file(
+    py::class_<AbstractReadableAudioFile, AudioFile,
+               std::shared_ptr<AbstractReadableAudioFile>> &pyAbstractReadableAudioFile) {
+  pyAbstractReadableAudioFile
+      .def("read", &AbstractReadableAudioFile::read, py::arg("num_frames") = 0,
+           R"(
+Read the given number of frames (samples in each channel) from this audio file
+at its current position.
+
+``num_frames`` is a required argument, as audio files can be deceptively large. (Consider that 
+an hour-long ``.ogg`` file may be only a handful of megabytes on disk, but may decompress to
+nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid 
+hard-to-debug memory problems and out-of-memory crashes.
+
+Audio samples are returned as a multi-dimensional :class:`numpy.array` with the shape
+``(channels, samples)``; i.e.: a stereo audio file will have shape ``(2, <length>)``.
+Returned data is always in the ``float32`` datatype.
+
+If the file does not contain enough audio data to fill ``num_frames``, the returned
+:class:`numpy.array` will contain as many frames as could be read from the file. (In some cases,
+passing :py:attr:`frames` as ``num_frames`` may still return less data than expected. See documentation
+for :py:attr:`frames` and :py:attr:`exact_duration_known` for more information about situations
+in which this may occur.)
+
+For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the
+maximum sample value will be ``+1.0f``.
+
+.. note::
+    For convenience, the ``num_frames`` argument may be a floating-point number. However, if the
+    provided number of frames contains a fractional part (i.e.: ``1.01`` instead of ``1.00``) then
+    an exception will be thrown, as a fractional number of samples cannot be returned.
+)")
+      .def("seekable", &AbstractReadableAudioFile::isSeekable,
+           "Returns True if this file is currently open and calls to seek() "
+           "will work.")
+      .def("seek", &AbstractReadableAudioFile::seek, py::arg("position"),
+           "Seek this file to the provided location in frames. Future reads "
+           "will start from this position.")
+      .def("tell", &AbstractReadableAudioFile::tell,
+           "Return the current position of the read pointer in this audio "
+           "file, in frames. This value will increase as :meth:`read` is "
+           "called, and may decrease if :meth:`seek` is called.")
+      .def("close", &AbstractReadableAudioFile::close,
+           "Close this file, rendering this object unusable.")
+      .def_property_readonly("name", &AbstractReadableAudioFile::getFilename,
+                             "The name of this file.\n\nIf this file was "
+                             "opened from a file-like object, this will be "
+                             "``None``.")
+      .def_property_readonly("closed", &AbstractReadableAudioFile::isClosed,
+                             "True iff this file is closed (and no longer "
+                             "usable), False otherwise.")
+      .def_property_readonly(
+          "samplerate", &AbstractReadableAudioFile::getSampleRate,
+          "The sample rate of this file in samples (per channel) per second "
+          "(Hz). Sample rates are represented as floating-point numbers by "
+          "default, but this property will be an integer if the file's sample "
+          "rate has no fractional part.")
+      .def_property_readonly("num_channels", &AbstractReadableAudioFile::getNumChannels,
+                             "The number of channels in this file.")
+      .def_property_readonly(
+          "exact_duration_known", &AbstractReadableAudioFile::exactDurationKnown,
+          R"(
+Returns :py:const:`True` if this file's :py:attr:`frames` and
+:py:attr:`duration` attributes are exact values, or :py:const:`False` if the
+:py:attr:`frames` and :py:attr:`duration` attributes are estimates based
+on the file's size and bitrate.
+
+:py:attr:`exact_duration_known` will change from :py:const:`False` to
+:py:const:`True` as the file is read to completion. Once :py:const:`True`,
+this value will not change back to :py:const:`False` for the same
+:py:class:`AudioFile` object (even after calls to :meth:`seek`).
+
+.. note::
+    :py:attr:`exact_duration_known` will only ever be :py:const:`False`
+    when reading certain MP3 files. For files in other formats than MP3,
+    :py:attr:`exact_duration_known` will always be equal to :py:const:`True`.
+
+*Introduced in v0.7.2.*
+)")
+      .def_property_readonly(
+          "frames", &AbstractReadableAudioFile::getLengthInSamples,
+          "The total number of frames (samples per "
+          "channel) in this file.\n\nFor example, "
+          "if this file contains 10 seconds of stereo audio at sample "
+          "rate of 44,100 Hz, ``frames`` will return ``441,000``.\n\n.. "
+          "warning::\n    When reading certain MP3 files, the "
+          ":py:attr:`frames` and :py:attr:`duration` properties may "
+          "initially be estimates and **may change as the file is read**. "
+          "See the documentation for :py:attr:`.ReadableAudioFile.frames` "
+          "for more details.")
+      .def_property_readonly(
+          "duration", &AbstractReadableAudioFile::getDuration,
+          "The duration of this file in seconds (``frames`` "
+          "divided by ``samplerate``).\n\n.. "
+          "warning::\n    When reading certain MP3 files, the "
+          ":py:attr:`frames` and :py:attr:`duration` properties may "
+          "initially be estimates and **may change as the file is read**. "
+          "See the documentation for :py:attr:`.ReadableAudioFile.frames` "
+          "for more details.")
+      .def_property_readonly(
+          "file_dtype", &AbstractReadableAudioFile::getFileDatatype,
+          "The data type (``\"int16\"``, ``\"float32\"``, etc) stored "
+          "natively by this file.\n\nNote that :meth:`read` will always "
+          "return a ``float32`` array, regardless of the value of this "
+          "property.")
+      .def("__enter__", &AbstractReadableAudioFile::enter,
+           "Use this file as a context manager, automatically closing the file "
+           "and releasing resources when the context manager exits.")
+      .def("__exit__", &AbstractReadableAudioFile::exit,
+           "Stop using this file as a context manager, close the file, and "
+           "release its resources.")
+      .def("__repr__", [](const AbstractReadableAudioFile &file) {
+        std::ostringstream ss;
+        ss << "<pedalboard.io." << file.getClassName();
+
+        if (file.getFilename() && !file.getFilename()->empty()) {
+          ss << " filename=\"" << *file.getFilename() << "\"";
+        } else if (PythonInputStream *stream = file.getPythonInputStream()) {
+          ss << " file_like=" << stream->getRepresentation();
+        }
+
+        // Always show properties (they're cached and available even after
+        // close)
+        ss << " samplerate=" << file.getSampleRateAsDouble();
+        ss << " num_channels=" << file.getNumChannels();
+        ss << " frames=" << file.getLengthInSamples();
+        ss << " file_dtype=" << file.getFileDatatype();
+
+        if (file.isClosed()) {
+          ss << " closed";
+        }
+
+        ss << " at " << &file;
+        ss << ">";
+        return ss.str();
+      });
 }
 
 inline void init_audio_file(
@@ -324,4 +478,17 @@ programs.
   :class:`AudioFile` class in write (``"w"``) mode instead.
 )");
 }
+
+// Forward declarations - these classes must be defined before calling this
+// function
+class ResampledReadableAudioFile;
+class ChannelConvertedReadableAudioFile;
+
+// This function must be called after ResampledReadableAudioFile and
+// ChannelConvertedReadableAudioFile are defined
+inline void init_abstract_readable_audio_file_methods(
+    py::class_<AbstractReadableAudioFile, AudioFile,
+               std::shared_ptr<AbstractReadableAudioFile>>
+        &pyAbstractReadableAudioFile);
+
 } // namespace Pedalboard
