@@ -256,11 +256,14 @@ public:
           py::buffer_info bufInfo = readResult.request();
           samplesRead = bufInfo.shape[1]; // shape is (channels, samples)
 
-          // Copy data from the numpy array to our contiguous buffer
+          // Copy data from the numpy array to our contiguous buffer.
+          // Use samplesRead for the stride (not inputSamplesRequired) to match
+          // the layout expected by the pointer update below when the read is
+          // shorter than requested.
           float *srcPtr = static_cast<float *>(bufInfo.ptr);
           for (int c = 0; c < audioFile->getNumChannels(); c++) {
             for (long long i = 0; i < samplesRead; i++) {
-              contiguousSourceSampleBuffer[c * inputSamplesRequired + i] =
+              contiguousSourceSampleBuffer[c * samplesRead + i] =
                   srcPtr[c * samplesRead + i];
             }
           }
