@@ -317,7 +317,10 @@ public:
           // (offline, or in a different AudioStream object) then don't corrupt
           // its state by calling it here too; instead, just skip it:
           if (lock.owns_lock()) {
-            plugin->process(context);
+            // Pass an empty MIDI buffer since live preview does not receive MIDI
+            // data but plugins expect the new signature.
+            juce::MidiBuffer empty;
+            plugin->process(context, empty);
           }
         }
       }

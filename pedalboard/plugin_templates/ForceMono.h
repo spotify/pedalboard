@@ -97,12 +97,21 @@ public:
     AddLatency::prepare(spec);
   }
 
+  virtual int process(const juce::dsp::ProcessContextReplacing<float> &context) override {
+    // Older callers may not provide MIDI; call the MIDI-aware method with an
+    // empty buffer in that case.
+    juce::MidiBuffer empty;
+    return process(context, empty);
+  }
+
   virtual int
-  process(const juce::dsp::ProcessContextReplacing<float> &context) {
+  process(const juce::dsp::ProcessContextReplacing<float> &context,
+          const juce::MidiBuffer &midiMessages) override {
     if (context.getInputBlock().getNumChannels() != 1) {
       throw std::runtime_error("Expected mono input!");
     }
-    return AddLatency::process(context);
+    // Forward both audio and MIDI to the underlying delay plugin.
+    return AddLatency::process(context, midiMessages);
   }
 };
 

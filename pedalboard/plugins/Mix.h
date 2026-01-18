@@ -49,8 +49,17 @@ public:
     lastSpec = spec;
   }
 
+  // Maintain backward compatibility with callers that do not supply MIDI data.
   virtual int
   process(const juce::dsp::ProcessContextReplacing<float> &context) {
+    juce::MidiBuffer empty;
+    return process(context, empty);
+  }
+
+  // Process audio while forwarding the provided MIDI messages 
+  // to each nested plugin.
+  virtual int process(const juce::dsp::ProcessContextReplacing<float> &context,
+                      const juce::MidiBuffer &midiMessages) {
     auto ioBlock = context.getOutputBlock();
 
     for (int i = 0; i < plugins.size(); i++) {
@@ -82,7 +91,7 @@ public:
       int samplesRendered = subBlock.getNumSamples();
 
       if (plugin) {
-        samplesRendered = plugin->process(subContext);
+        samplesRendered = plugin->process(subContext, midiMessages);
       }
       samplesAvailablePerPlugin[i] += samplesRendered;
 

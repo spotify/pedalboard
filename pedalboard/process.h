@@ -29,10 +29,14 @@ namespace py = pybind11;
 
 namespace Pedalboard {
 
+// Run a chain of plugins over the provided audio buffer.
+// If ``midiMessages`` is provided, they will be forwarded to each plugin so
+// effects can respond to MIDI input.
 inline int process(juce::AudioBuffer<float> &ioBuffer,
                    juce::dsp::ProcessSpec spec,
                    const std::vector<std::shared_ptr<Plugin>> &plugins,
-                   bool isProbablyLastProcessCall) {
+                   bool isProbablyLastProcessCall,
+                   const juce::MidiBuffer *midiMessages = nullptr) {
   int totalOutputLatencySamples = 0;
   int expectedOutputLatency = 0;
 
@@ -78,7 +82,14 @@ inline int process(juce::AudioBuffer<float> &ioBuffer,
           blockStart, blockSize);
       juce::dsp::ProcessContextReplacing<float> context(ioBlock);
 
-      int outputSamples = plugin->process(context);
+      // Slice the global MIDI buffer down to this processing block. The
+      // negative offset ensures timestamps remain relative to ``blockStart``.
+      juce::MidiBuffer midiChunk;
+      if (midiMessages) {
+        midiChunk.addEvents(*midiMessages, blockStart, blockSize, -blockStart);
+      }
+
+      int outputSamples = plugin->process(context, midiChunk);
       if (outputSamples < 0) {
         throw std::runtime_error(
             "A plugin returned a negative number of output samples! "
@@ -162,7 +173,9 @@ inline int process(juce::AudioBuffer<float> &ioBuffer,
 py::array_t<float>
 processFloat32(const py::array_t<float, py::array::c_style> inputArray,
                double sampleRate, std::vector<std::shared_ptr<Plugin>> plugins,
-               unsigned int bufferSize, bool reset) {
+               unsigned int bufferSize, bool reset,
+               // Optional MIDI events consumed by each plugin.
+               const juce::MidiBuffer *midiMessages = nullptr) {
 
   ChannelLayout inputChannelLayout;
   if (!plugins.empty()) {
@@ -265,8 +278,10 @@ processFloat32(const py::array_t<float, py::array::c_style> inputArray,
       plugin->prepare(spec);
     }
 
-    // Actually run the process method of all plugins.
-    int samplesReturned = process(ioBuffer, spec, plugins, reset);
+    // Actually run the process method of all plugins, 
+    // forwarding MIDI if any was provided by the caller.
+    int samplesReturned =
+        process(ioBuffer, spec, plugins, reset, midiMessages);
     totalOutputLatencySamples = ioBuffer.getNumSamples() - samplesReturned;
   }
 
@@ -275,9 +290,12 @@ processFloat32(const py::array_t<float, py::array::c_style> inputArray,
                                    inputArray.request().ndim);
 }
 
+// Convenience wrapper used by Python bindings. Converts the input array to
+// float32 and forwards optional MIDI data to ``processFloat32`` above.
 py::array_t<float> process(py::array inputArray, double sampleRate,
                            const std::vector<std::shared_ptr<Plugin>> plugins,
-                           unsigned int bufferSize, bool reset) {
+                           unsigned int bufferSize, bool reset,
+                           const juce::MidiBuffer *midiMessages = nullptr) {
   py::array_t<float, py::array::c_style> float32InputArray;
   switch (inputArray.dtype().char_()) {
   case 'f':
@@ -292,7 +310,7 @@ py::array_t<float> process(py::array inputArray, double sampleRate,
   }
 
   return processFloat32(float32InputArray, sampleRate, plugins, bufferSize,
-                        reset);
+                        reset, midiMessages);
 }
 
 } // namespace Pedalboard
