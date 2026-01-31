@@ -873,6 +873,7 @@ jobs:
           # - { os: 'ubuntu-24.04', build: cp313t-musllinux_x86_64 }
           # - { os: 'ubuntu-24.04', build: cp313t-musllinux_aarch64 }
           - { os: "ubuntu-24.04", build: cp314-manylinux_x86_64 }
+          - { os: "ubuntu-24.04", build: cp314-manylinux_aarch64 }
           - { os: "ubuntu-24.04", build: cp314t-manylinux_aarch64 }
     name: Build wheel for ${{ matrix.build }}
     steps:
