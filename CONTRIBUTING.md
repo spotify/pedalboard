@@ -8,7 +8,7 @@ We'd love to get patches from you!
 
 To compile Pedalboard from scratch, the following packages will need to be installed:
 
-- [Python 3.8](https://www.python.org/downloads/) or higher.
+- [Python 3.10](https://www.python.org/downloads/) or higher.
 - A C++ compiler, e.g. `gcc`, `clang`, etc.
   - On macOS, a working Xcode installation should provide this.
 - On Linux:
@@ -20,36 +20,30 @@ To compile Pedalboard from scratch, the following packages will need to be insta
 ```shell
 git clone --recurse-submodules --shallow-submodules git@github.com:spotify/pedalboard.git
 cd pedalboard
-pip3 install pybind11 tox
+pip3 install pybind11 scikit-build-core tox
 pip3 install .
 ```
 
 To compile a debug build of `pedalboard` that allows using a debugger (like gdb or lldb), use the following command to build the package locally and install a symbolic link for debugging:
 ```shell
-python3 setup.py build develop
+pip3 install --no-build-isolation -ve .
 ```
 
 Then, you can `import pedalboard` from Python (or run the tests with `tox`) to test out your local changes.
 
 > If you're on macOS or Linux, you can try to compile a debug build _faster_ by using [Ccache](https://ccache.dev/):
-> ## macOS
+> ### macOS
 > ```shell
 > brew install ccache
-> rm -rf build && CC="ccache clang" CXX="ccache clang++" DEBUG=1 python3 -j8 -m pip install -e .
+> rm -rf build && CC="ccache clang" CXX="ccache clang++" DEBUG=1 pip3 install --no-build-isolation -ve .
 > ```
-> ## Linux
-> e.g.
+> ### Linux
 > ```shell
 > sudo yum install ccache  # or apt, if on a Debian
-> 
-> # If using GCC:
-> rm -rf build && CC="ccache gcc" CXX="scripts/ccache_g++" DEBUG=1 python3 setup.py build -j8 develop
-> 
-> # ...or if using Clang:
-> rm -rf build && CC="ccache clang" CXX="scripts/ccache_clang++" DEBUG=1 python3 setup.py build -j8 develop
+> rm -rf build && CC="ccache clang" CXX="ccache clang++" DEBUG=1 pip3 install --no-build-isolation -ve .
 > ```
 
-By default, [all `.cpp` and `.mm` files in the `pedalboard` directory (or subdirectories)](https://github.com/spotify/pedalboard/blob/master/setup.py#L129) will be automatically compiled by `setup.py`.
+By default, all `.cpp` and `.mm` files in the `pedalboard` directory (and subdirectories) will be automatically compiled.
 
 While `pedalboard` is mostly C++ code, it ships with `.pyi` files to allow for type hints in text editors and via MyPy. To update the type hint files, use the following commands:
 
