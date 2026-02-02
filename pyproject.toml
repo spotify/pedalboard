@@ -56,7 +56,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = ["numpy"]
-version = "0.9.22"
+dynamic = ["version"]
 
 [project.optional-dependencies]
 test = [
@@ -76,6 +76,9 @@ test = [
 cmake.build-type = "Release"
 build.verbose = true
 logging.level = "DEBUG"
+metadata.version.provider = "scikit_build_core.metadata.regex"
+metadata.version.input = "pedalboard/version.py"
+metadata.version.regex = '__version__\s*=\s*"(?P<value>[^"]+)"'
 wheel.packages = ["pedalboard", "pedalboard.io", "pedalboard_native"]
 sdist.include = [
     "pedalboard/**/*.py",
