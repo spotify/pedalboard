@@ -12,6 +12,8 @@ test-command = "pytest {project}/tests"
 # Also testing any pypy versions fails, as TensorFlow isn't pypy compatible.
 # cp313t is skipped because cffi doesn't support free-threaded Python 3.13.
 test-skip = "*manylinux* *musllinux_aarch* *pp* *-macosx_universal2:arm64 *cp313t*"
+musllinux-x86_64-image = "quay.io/pypa/musllinux_1_1_x86_64:latest"
+musllinux-aarch64-image = "quay.io/pypa/musllinux_1_1_aarch64:latest"
 
 # See: https://cibuildwheel.readthedocs.io/en/stable/options/#examples
 [tool.cibuildwheel.linux]
@@ -29,8 +31,7 @@ archs = ["auto"]
 # Use apk instead of yum when building on Alpine Linux
 # (Note: this is experimental, as most VSTs require glibc and thus Alpine Linux isn't that useful)
 select = "*-musllinux*"
-# Note: libexecinfo-dev was removed in Alpine 3.22 (musl 1.2.4+ has execinfo built-in)
-before-all = "apk add libsndfile libx11-dev libxrandr-dev libxinerama-dev libxrender-dev libxcomposite-dev libxinerama-dev libxcursor-dev freetype-dev alsa-lib-dev"
+before-all = "apk add libsndfile libx11-dev libxrandr-dev libxinerama-dev libxrender-dev libxcomposite-dev libxinerama-dev libxcursor-dev freetype-dev libexecinfo-dev alsa-lib-dev"
 
 [project]
 name = "pedalboard"

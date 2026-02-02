@@ -12,7 +12,6 @@ wheel
 numpy>=2.1.0rc1; python_version>="3.13"
 numpy>=2; python_version>="3.9" and python_version<"3.13"
 numpy<2; python_version<="3.8"
-google-cloud-storage
 tqdm
 psutil
 mypy

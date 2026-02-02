@@ -8,13 +8,22 @@ import json
 import os
 import platform
 
-from google.auth.exceptions import RefreshError
-from google.cloud import storage
-from google.oauth2 import service_account
+try:
+    from google.auth.exceptions import RefreshError
+    from google.cloud import storage
+    from google.oauth2 import service_account
+    HAS_GCS = True
+except ImportError:
+    HAS_GCS = False
+
 from tqdm import tqdm
 
 
 def main():
+    if not HAS_GCS:
+        print("google-cloud-storage not installed. Skipping plugin download.")
+        print("Install with: pip install google-cloud-storage")
+        return
     GCS_ASSET_BUCKET_NAME = os.environ.get("GCS_ASSET_BUCKET_NAME")
     if not GCS_ASSET_BUCKET_NAME:
         print("Missing GCS_ASSET_BUCKET_NAME environment variable! Not downloading.")
