@@ -22,9 +22,22 @@ def patch_overload(func):
 
 typing.overload = patch_overload
 
+from typing import Optional
 from typing_extensions import Literal
 from enum import Enum
 import threading
+
+# Array-like type that includes numpy arrays, torch tensors, etc.
+# At runtime, we accept any array-like object (numpy arrays, torch tensors,
+# tensorflow tensors, jax arrays, or anything with __array__ method).
+# For type checking, we use numpy.typing.ArrayLike which covers most cases.
+if typing.TYPE_CHECKING:
+    import numpy
+    import numpy.typing
+
+    ArrayLike = numpy.typing.ArrayLike
+else:
+    ArrayLike = typing.Any
 import numpy
 import pedalboard_native
 
@@ -37,9 +50,7 @@ class Chain(pedalboard_native.PluginContainer, pedalboard_native.Plugin):
     Run zero or more plugins as a plugin. Useful when used with the Mix plugin.
     """
 
-    @typing.overload
     def __init__(self, plugins: typing.List[pedalboard_native.Plugin]) -> None: ...
-    @typing.overload
     def __repr__(self) -> str: ...
     pass
 
@@ -48,9 +59,7 @@ class Mix(pedalboard_native.PluginContainer, pedalboard_native.Plugin):
     A utility plugin that allows running other plugins in parallel. All plugins provided will be mixed equally.
     """
 
-    @typing.overload
     def __init__(self, plugins: typing.List[pedalboard_native.Plugin]) -> None: ...
-    @typing.overload
     def __repr__(self) -> str: ...
     pass
 
