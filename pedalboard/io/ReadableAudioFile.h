@@ -795,49 +795,53 @@ inline void init_readable_audio_file(
     py::class_<ReadableAudioFile, AudioFile, std::shared_ptr<ReadableAudioFile>>
         &pyReadableAudioFile) {
   pyReadableAudioFile
-      .def(py::init([](std::string filename) -> ReadableAudioFile * {
+      .def(py::init([](py::object filename,
+                       py::object file_like) -> ReadableAudioFile * {
              // This definition is only here to provide nice docstrings.
              throw std::runtime_error(
                  "Internal error: __init__ should never be called, as this "
                  "class implements __new__.");
            }),
-           py::arg("filename"))
-      .def(py::init([](py::object filelike) -> ReadableAudioFile * {
-             // This definition is only here to provide nice docstrings.
-             throw std::runtime_error(
-                 "Internal error: __init__ should never be called, as this "
-                 "class implements __new__.");
-           }),
-           py::arg("file_like"))
+           py::arg("filename") = py::none(), py::kw_only(),
+           py::arg("file_like") = py::none())
       .def_static(
           "__new__",
-          [](const py::object *, std::string filename) {
-            return std::make_shared<ReadableAudioFile>(filename);
-          },
-          py::arg("cls"), py::arg("filename"))
-      .def_static(
-          "__new__",
-          [](const py::object *, py::object filelike) {
-            if (!isReadableFileLike(filelike) &&
-                !tryConvertingToBuffer(filelike)) {
+          [](const py::object *, py::object filename, py::object file_like) {
+            // Handle both filename and file_like kwargs for backward compat
+            py::object target;
+            if (!filename.is_none() && !file_like.is_none()) {
+              throw py::type_error(
+                  "Cannot specify both 'filename' and 'file_like'");
+            } else if (!filename.is_none()) {
+              target = filename;
+            } else if (!file_like.is_none()) {
+              target = file_like;
+            } else {
+              throw py::type_error(
+                  "Must specify either 'filename' or 'file_like'");
+            }
+
+            // Check if this is a path-like object (str or has __fspath__)
+            if (isPathLike(target)) {
+              return std::make_shared<ReadableAudioFile>(pathToString(target));
+            }
+            // Otherwise, try to handle as a file-like object or buffer
+            if (std::optional<py::buffer> buf = tryConvertingToBuffer(target)) {
+              return std::make_shared<ReadableAudioFile>(
+                  std::make_unique<PythonMemoryViewInputStream>(*buf, target));
+            } else if (isReadableFileLike(target)) {
+              return std::make_shared<ReadableAudioFile>(
+                  std::make_unique<PythonInputStream>(target));
+            } else {
               throw py::type_error(
                   "Expected either a filename, a file-like object (with "
                   "read, seek, seekable, and tell methods) or a memoryview, "
                   "but received: " +
-                  py::repr(filelike).cast<std::string>());
-            }
-
-            if (std::optional<py::buffer> buf =
-                    tryConvertingToBuffer(filelike)) {
-              return std::make_shared<ReadableAudioFile>(
-                  std::make_unique<PythonMemoryViewInputStream>(*buf,
-                                                                filelike));
-            } else {
-              return std::make_shared<ReadableAudioFile>(
-                  std::make_unique<PythonInputStream>(filelike));
+                  py::repr(target).cast<std::string>());
             }
           },
-          py::arg("cls"), py::arg("file_like"))
+          py::arg("cls"), py::arg("filename") = py::none(), py::kw_only(),
+          py::arg("file_like") = py::none())
       .def("read", &ReadableAudioFile::read, py::arg("num_frames") = 0, R"(
 Read the given number of frames (samples in each channel) from this audio file at its current position.
 

@@ -937,7 +937,7 @@ inline void init_writeable_audio_file(
     py::class_<WriteableAudioFile, AudioFile,
                std::shared_ptr<WriteableAudioFile>> &pyWriteableAudioFile) {
   pyWriteableAudioFile
-      .def(py::init([](std::string filename, double sampleRate, int numChannels,
+      .def(py::init([](py::object filename, double sampleRate, int numChannels,
                        int bitDepth,
                        std::optional<std::variant<std::string, float>> quality)
                         -> WriteableAudioFile * {
@@ -964,7 +964,7 @@ inline void init_writeable_audio_file(
            py::arg("quality") = py::none(), py::arg("format") = py::none())
       .def_static(
           "__new__",
-          [](const py::object *, std::string filename,
+          [](const py::object *, py::object filename,
              std::optional<double> sampleRate, int numChannels, int bitDepth,
              std::optional<std::variant<std::string, float>> quality) {
             if (!sampleRate) {
@@ -973,7 +973,8 @@ inline void init_writeable_audio_file(
                   "argument to be provided.");
             }
             return std::make_shared<WriteableAudioFile>(
-                filename, *sampleRate, numChannels, bitDepth, quality);
+                pathToString(filename), *sampleRate, numChannels, bitDepth,
+                quality);
           },
           py::arg("cls"), py::arg("filename"),
           py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
