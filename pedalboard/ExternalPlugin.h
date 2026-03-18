@@ -714,7 +714,33 @@ public:
     }
   };
 
-  void getPreset(juce::MemoryBlock &dest) const {
+  void getPreset(juce::MemoryBlock &dest) {
+    // Flush any pending parameter changes to the plugin's internal state
+    // by calling processBlock with a small buffer. Some VST3 plugins defer
+    // parameter state synchronization until the audio processing callback,
+    // so without this flush, getPreset() may return stale parameter values.
+    if (pluginInstance) {
+      int numChannels = std::max(
+          pluginInstance->getTotalNumInputChannels(),
+          pluginInstance->getTotalNumOutputChannels());
+      if (numChannels < 1) numChannels = 2;
+
+      // Only prepare if the plugin hasn't been prepared yet.
+      bool wasPrepared = (lastSpec.numChannels != 0);
+      if (!wasPrepared) {
+        pluginInstance->prepareToPlay(44100.0, 1);
+      }
+
+      juce::AudioBuffer<float> flushBuffer(numChannels, 1);
+      flushBuffer.clear();
+      juce::MidiBuffer emptyMidi;
+      pluginInstance->processBlock(flushBuffer, emptyMidi);
+
+      if (!wasPrepared) {
+        pluginInstance->releaseResources();
+      }
+    }
+
     // Get the plugin state's .vstpreset representation if possible.
     GetPresetVisitor visitor(dest);
     pluginInstance->getExtensions(visitor);
@@ -1255,15 +1281,9 @@ public:
 
       currentPositionInfo.isPlaying = true;
       pluginInstance->processBlock(audioBuffer, emptyMidiBuffer);
-      currentPositionInfo.isPlaying = false;
 
       samplesProvided += outputBlock.getNumSamples();
       currentPositionInfo.timeInSamples += outputBlock.getNumSamples();
-
-      // Pump the processBlock callback to tell the VST that we've stopped
-      // playing:
-      juce::AudioBuffer<float> emptyBuffer(channelPointers.size(), 0);
-      pluginInstance->processBlock(emptyBuffer, emptyMidiBuffer);
 
       // To compensate for any latency added by the plugin,
       // only tell Pedalboard to use the last _n_ samples.
@@ -1743,7 +1763,7 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
            py::arg("preset_file_path"))
       .def_property(
           "preset_data",
-          [](const ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             juce::MemoryBlock presetData;
             plugin.getPreset(presetData);
             return py::bytes((const char *)presetData.getData(),
