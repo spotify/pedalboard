@@ -23,6 +23,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
+#include "../ArrayUtils.h"
 #include "../BufferUtils.h"
 #include "../JuceHeader.h"
 #include "AudioFile.h"
@@ -445,11 +446,15 @@ public:
 
   /**
    * A generic type-dispatcher for all writes.
+   * Accepts various array-like objects including torch tensors.
    * pybind11 supports dispatch here, but both pybind11-stubgen
    * and Sphinx currently (2022-07-16) struggle with how to render
    * docstrings of overloaded functions, so we don't overload.
    */
-  void write(py::array inputArray) {
+  void write(py::object input) {
+    // Convert the input to a numpy array (supports torch tensors, etc.)
+    py::array inputArray = ensureArrayLike(input);
+
     switch (inputArray.dtype().char_()) {
     case 'f':
       return write<float>(py::array_t<float>(inputArray.release(), false));
@@ -1017,13 +1022,15 @@ inline void init_writeable_audio_file(
           py::arg("format") = py::none())
       .def(
           "write",
-          [](WriteableAudioFile &file, py::array samples) {
+          [](WriteableAudioFile &file, py::object samples) {
             file.write(samples);
           },
-          py::arg("samples").noconvert(),
+          py::arg("samples"),
           "Encode an array of audio data and write "
           "it to this file. The number of channels in the array must match the "
-          "number of channels used to open the file. The array may contain "
+          "number of channels used to open the file. The audio data may be "
+          "provided as a NumPy array, PyTorch tensor, TensorFlow tensor, "
+          "JAX array, or any other array-like object. The array may contain "
           "audio in any shape. If the file's bit depth or format does not "
           "match the provided data type, the audio will be automatically "
           "converted.\n\n"

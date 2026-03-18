@@ -23,6 +23,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
+#include "../ArrayUtils.h"
 #include "../JuceHeader.h"
 #include "AudioFile.h"
 
@@ -278,16 +279,19 @@ inline void init_audio_file(
           py::arg("format") = py::none())
       .def_static(
           "encode",
-          [](const py::array samples, double sampleRate, std::string format,
+          [](py::object samples, double sampleRate, std::string format,
              int numChannels, int bitDepth,
              std::optional<std::variant<std::string, float>> quality) {
+            // Convert the input to a numpy array (supports torch tensors, etc.)
+            py::array samplesArray = ensureArrayLike(samples);
+
             juce::MemoryBlock outputBlock;
             auto audioFile = std::make_unique<WriteableAudioFile>(
                 format,
                 std::make_unique<juce::MemoryOutputStream>(outputBlock, false),
                 sampleRate, numChannels, bitDepth, quality);
 
-            audioFile->write(samples);
+            audioFile->write(samplesArray);
             audioFile->close();
 
             return py::bytes((const char *)outputBlock.getData(),
@@ -298,6 +302,10 @@ inline void init_audio_file(
           py::arg("quality") = py::none(),
           R"(
 Encode an audio buffer to a Python :class:`bytes` object.
+
+The input audio buffer can be any array-like object, including NumPy arrays,
+PyTorch tensors, TensorFlow tensors, JAX arrays, or any other object that
+supports the buffer protocol or has a __array__ method.
 
 This function will encode an entire audio buffer at once and return a :class:`bytes`
 object representing the bytes of the resulting audio file.

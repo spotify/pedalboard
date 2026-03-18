@@ -22,9 +22,22 @@ def patch_overload(func):
 
 typing.overload = patch_overload
 
+from typing import Optional
 from typing_extensions import Literal
 from enum import Enum
 import threading
+
+# Array-like type that includes numpy arrays, torch tensors, etc.
+# At runtime, we accept any array-like object (numpy arrays, torch tensors,
+# tensorflow tensors, jax arrays, or anything with __array__ method).
+# For type checking, we use numpy.typing.ArrayLike which covers most cases.
+if typing.TYPE_CHECKING:
+    import numpy
+    import numpy.typing
+
+    ArrayLike = numpy.typing.ArrayLike
+else:
+    ArrayLike = typing.Any
 import pedalboard_native
 
 __all__ = [

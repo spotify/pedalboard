@@ -87,15 +87,19 @@ PYBIND11_MODULE(pedalboard_native, m, py::mod_gil_not_used()) {
 
   m.def(
       "process",
-      [](const py::array inputArray, double sampleRate,
+      [](py::object input, double sampleRate,
          const std::vector<std::shared_ptr<Plugin>> plugins,
          unsigned int bufferSize, bool reset) {
-        return process(inputArray, sampleRate, plugins, bufferSize, reset);
+        return process(input, sampleRate, plugins, bufferSize, reset);
       },
       R"(
 Run a 32-bit or 64-bit floating point audio buffer through a
 list of Pedalboard plugins. If the provided buffer uses a 64-bit datatype,
 it will be converted to 32-bit for processing.
+
+The input audio buffer can be any array-like object, including NumPy arrays,
+PyTorch tensors, TensorFlow tensors, JAX arrays, or any other object that
+supports the buffer protocol or has a __array__ method.
 
 The provided ``buffer_size`` argument will be used to control the size of
 each chunk of audio provided into the plugins. Higher buffer sizes may speed up
@@ -134,14 +138,18 @@ or buffer, set ``reset`` to ``False``.
           "parameters will remain unchanged. ")
       .def(
           "process",
-          [](std::shared_ptr<Plugin> self, const py::array inputArray,
-             double sampleRate, unsigned int bufferSize, bool reset) {
-            return process(inputArray, sampleRate, {self}, bufferSize, reset);
+          [](std::shared_ptr<Plugin> self, py::object input, double sampleRate,
+             unsigned int bufferSize, bool reset) {
+            return process(input, sampleRate, {self}, bufferSize, reset);
           },
           R"(
 Run a 32-bit or 64-bit floating point audio buffer through this plugin.
 (If calling this multiple times with multiple plugins, consider creating a
 :class:`pedalboard.Pedalboard` object instead.)
+
+The input audio buffer can be any array-like object, including NumPy arrays,
+PyTorch tensors, TensorFlow tensors, JAX arrays, or any other object that
+supports the buffer protocol or has a __array__ method.
 
 The returned array may contain up to (but not more than) the same number of
 samples as were provided. If fewer samples were returned than expected, the
@@ -176,9 +184,9 @@ If the number of samples and the number of channels are the same, each
           py::arg("buffer_size") = DEFAULT_BUFFER_SIZE, py::arg("reset") = true)
       .def(
           "__call__",
-          [](std::shared_ptr<Plugin> self, const py::array inputArray,
-             double sampleRate, unsigned int bufferSize, bool reset) {
-            return process(inputArray, sampleRate, {self}, bufferSize, reset);
+          [](std::shared_ptr<Plugin> self, py::object input, double sampleRate,
+             unsigned int bufferSize, bool reset) {
+            return process(input, sampleRate, {self}, bufferSize, reset);
           },
           "Run an audio buffer through this plugin. Alias for "
           ":py:meth:`process`.",
