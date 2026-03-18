@@ -102,3 +102,42 @@ def test_is_list_like():
 
     with pytest.raises(TypeError):
         pb[0] = "not a plugin"  # type: ignore
+
+
+def test_error_on_integer_samples_outside_unit_range(sr=44100):
+    """Passing integer-valued samples that exceed [-1, 1] should raise a
+    descriptive error telling the user to convert to float."""
+    # Simulate raw 16-bit PCM data cast to float32
+    int_samples = np.array([-32768, -16384, 0, 16384, 32767], dtype=np.float32)
+    with pytest.raises(Exception, match="integer samples"):
+        Pedalboard([Gain(0)]).process(int_samples, sr)
+
+
+def test_error_on_integer_samples_2d(sr=44100):
+    """Same check should trigger for 2-D (multi-channel) arrays."""
+    int_samples = np.array([[0, 100, 200, -300]], dtype=np.float32)
+    with pytest.raises(Exception, match="integer samples"):
+        Pedalboard([Gain(0)]).process(int_samples, sr)
+
+
+def test_no_error_on_silence(sr=44100):
+    """All-zero (silence) is integer-valued but within [-1, 1], so it
+    must NOT trigger the integer-sample check."""
+    silence = np.zeros(44100, dtype=np.float32)
+    output = Pedalboard([Gain(0)]).process(silence, sr)
+    assert output.shape == silence.shape
+
+
+def test_no_error_on_normal_float_audio(sr=44100):
+    """Normal float audio in [-1, 1] should process without error."""
+    audio = np.random.uniform(-1.0, 1.0, 44100).astype(np.float32)
+    output = Pedalboard([Gain(0)]).process(audio, sr)
+    assert output.shape == audio.shape
+
+
+def test_no_error_on_quiet_integer_valued_audio(sr=44100):
+    """Integer-valued samples that stay within [-1, 1] (e.g. 0, 1, -1)
+    should NOT trigger the check, to avoid false positives."""
+    quiet = np.array([0.0, 1.0, -1.0, 0.0, 1.0], dtype=np.float32)
+    output = Pedalboard([Gain(0)]).process(quiet, sr)
+    assert output.shape == quiet.shape

@@ -18,6 +18,7 @@
 #pragma once
 #include "JuceHeader.h"
 
+#include <cmath>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
@@ -28,6 +29,44 @@
 namespace py = pybind11;
 
 namespace Pedalboard {
+
+/**
+ * Check if the given audio buffer looks like it contains integer-valued
+ * samples (e.g.: raw 16-bit PCM values like -32768 to 32767) rather than
+ * the expected floating-point samples in the [-1, 1] range.
+ *
+ * The heuristic: if EVERY sample is an exact integer (f == std::trunc(f))
+ * AND at least one sample falls outside [-1, 1], the user almost certainly
+ * passed unconverted integer data.
+ */
+inline void throwIfInputLooksLikeIntegerSamples(
+    const juce::AudioBuffer<float> &buffer) {
+  bool allInteger = true;
+  bool anyOutsideUnitRange = false;
+
+  for (int c = 0; c < buffer.getNumChannels() && allInteger; c++) {
+    const float *data = buffer.getReadPointer(c);
+    for (int s = 0; s < buffer.getNumSamples(); s++) {
+      float f = data[s];
+      if (f != std::trunc(f)) {
+        allInteger = false;
+        break;
+      }
+      if (f < -1.0f || f > 1.0f) {
+        anyOutsideUnitRange = true;
+      }
+    }
+  }
+
+  if (allInteger && anyOutsideUnitRange) {
+    throw std::domain_error(
+        "The provided audio data looks like it contains integer samples "
+        "(all values are whole numbers, with at least one outside the "
+        "[-1, 1] range). Pedalboard expects floating-point audio samples "
+        "in the range [-1.0, 1.0]. If your audio is 16-bit integer data, "
+        "divide by 32768.0; if 32-bit integer, divide by 2147483648.0.");
+  }
+}
 
 inline int process(juce::AudioBuffer<float> &ioBuffer,
                    juce::dsp::ProcessSpec spec,
@@ -173,6 +212,8 @@ processFloat32(const py::array_t<float, py::array::c_style> inputArray,
 
   juce::AudioBuffer<float> ioBuffer =
       copyPyArrayIntoJuceBuffer(inputArray, {inputChannelLayout});
+
+  throwIfInputLooksLikeIntegerSamples(ioBuffer);
 
   if (ioBuffer.getNumChannels() == 0) {
     unsigned int numChannels = 0;
