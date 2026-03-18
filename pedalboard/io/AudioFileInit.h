@@ -153,9 +153,10 @@ This class defines the common interface shared by :class:`ReadableAudioFile`,
 )");
 }
 
-inline void init_ireadable_audio_file(
-    py::class_<AbstractReadableAudioFile, AudioFile,
-               std::shared_ptr<AbstractReadableAudioFile>> &pyAbstractReadableAudioFile) {
+inline void
+init_ireadable_audio_file(py::class_<AbstractReadableAudioFile, AudioFile,
+                                     std::shared_ptr<AbstractReadableAudioFile>>
+                              &pyAbstractReadableAudioFile) {
   pyAbstractReadableAudioFile
       .def("read", &AbstractReadableAudioFile::read, py::arg("num_frames") = 0,
            R"(
@@ -210,11 +211,12 @@ maximum sample value will be ``+1.0f``.
           "(Hz). Sample rates are represented as floating-point numbers by "
           "default, but this property will be an integer if the file's sample "
           "rate has no fractional part.")
-      .def_property_readonly("num_channels", &AbstractReadableAudioFile::getNumChannels,
+      .def_property_readonly("num_channels",
+                             &AbstractReadableAudioFile::getNumChannels,
                              "The number of channels in this file.")
-      .def_property_readonly(
-          "exact_duration_known", &AbstractReadableAudioFile::exactDurationKnown,
-          R"(
+      .def_property_readonly("exact_duration_known",
+                             &AbstractReadableAudioFile::exactDurationKnown,
+                             R"(
 Returns :py:const:`True` if this file's :py:attr:`frames` and
 :py:attr:`duration` attributes are exact values, or :py:const:`False` if the
 :py:attr:`frames` and :py:attr:`duration` attributes are estimates based

@@ -71,8 +71,9 @@ class ResampledReadableAudioFile
     : public AbstractReadableAudioFile,
       public std::enable_shared_from_this<ResampledReadableAudioFile> {
 public:
-  ResampledReadableAudioFile(std::shared_ptr<AbstractReadableAudioFile> audioFile,
-                             float targetSampleRate, ResamplingQuality quality)
+  ResampledReadableAudioFile(
+      std::shared_ptr<AbstractReadableAudioFile> audioFile,
+      float targetSampleRate, ResamplingQuality quality)
       : audioFile(audioFile),
         resampler(audioFile->getSampleRateAsDouble(), targetSampleRate,
                   audioFile->getNumChannels(), quality) {}
@@ -145,7 +146,8 @@ public:
     return resampler.getQuality();
   }
 
-  py::array_t<float> read(std::variant<double, long long> numSamplesVariant) override {
+  py::array_t<float>
+  read(std::variant<double, long long> numSamplesVariant) override {
     long long numSamples = parseNumSamples(numSamplesVariant);
     if (numSamples == 0)
       throw std::domain_error(
@@ -506,9 +508,10 @@ reads, seeking through files, and using a constant amount of memory.
 }
 
 inline void init_resampled_readable_audio_file(
-    py::module &m, py::class_<ResampledReadableAudioFile, AbstractReadableAudioFile,
-                              std::shared_ptr<ResampledReadableAudioFile>>
-                       &pyResampledReadableAudioFile) {
+    py::module &m,
+    py::class_<ResampledReadableAudioFile, AbstractReadableAudioFile,
+               std::shared_ptr<ResampledReadableAudioFile>>
+        &pyResampledReadableAudioFile) {
   // Note: Most methods are inherited from AbstractReadableAudioFile.
   // We only define class-specific methods and override docstrings where needed.
   pyResampledReadableAudioFile

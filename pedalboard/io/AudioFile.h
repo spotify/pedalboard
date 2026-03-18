@@ -98,7 +98,8 @@ public:
   virtual std::string getFileDatatype() const = 0;
 
   // Reading
-  virtual py::array_t<float> read(std::variant<double, long long> numSamples) = 0;
+  virtual py::array_t<float>
+  read(std::variant<double, long long> numSamples) = 0;
 
   // Seeking
   virtual void seek(long long position) = 0;
