@@ -65,9 +65,9 @@ namespace py = pybind11;
 
 #include "io/AudioFileInit.h"
 #include "io/AudioStream.h"
+#include "io/ChannelConvertedReadableAudioFile.h"
 #include "io/ReadableAudioFile.h"
 #include "io/ResampledReadableAudioFile.h"
-#include "io/ChannelConvertedReadableAudioFile.h"
 #include "io/StreamResampler.h"
 #include "io/WriteableAudioFile.h"
 

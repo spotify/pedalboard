@@ -36,14 +36,16 @@ namespace Pedalboard {
 
 /**
  * A wrapper class that converts audio channel counts on-the-fly.
- * Wraps any AbstractReadableAudioFile (ReadableAudioFile, ResampledReadableAudioFile, etc.)
+ * Wraps any AbstractReadableAudioFile (ReadableAudioFile,
+ * ResampledReadableAudioFile, etc.)
  */
 class ChannelConvertedReadableAudioFile
     : public AbstractReadableAudioFile,
       public std::enable_shared_from_this<ChannelConvertedReadableAudioFile> {
 public:
   ChannelConvertedReadableAudioFile(
-      std::shared_ptr<AbstractReadableAudioFile> audioFile, int targetNumChannels)
+      std::shared_ptr<AbstractReadableAudioFile> audioFile,
+      int targetNumChannels)
       : wrappedFile(audioFile), targetNumChannels(targetNumChannels) {
     if (targetNumChannels < 1) {
       throw std::domain_error("Target number of channels must be at least 1.");
@@ -80,9 +82,7 @@ public:
     return wrappedFile->getLengthInSamples();
   }
 
-  double getDuration() const override {
-    return wrappedFile->getDuration();
-  }
+  double getDuration() const override { return wrappedFile->getDuration(); }
 
   long getNumChannels() const override { return targetNumChannels; }
 
@@ -98,7 +98,8 @@ public:
     return wrappedFile->getFileDatatype();
   }
 
-  py::array_t<float> read(std::variant<double, long long> numSamplesVariant) override {
+  py::array_t<float>
+  read(std::variant<double, long long> numSamplesVariant) override {
     long long numSamples = parseNumSamples(numSamplesVariant);
     if (numSamples == 0)
       throw std::domain_error(
@@ -152,10 +153,12 @@ public:
         return juce::AudioBuffer<float>(targetNumChannels, 0);
       }
 
-      // Create output buffer and copy data while we still have access to the array
+      // Create output buffer and copy data while we still have access to the
+      // array
       outputBuffer.setSize(targetNumChannels, actualSamplesRead);
       float *sourcePtr = static_cast<float *>(sourceInfo.ptr);
-      copyChannelData(outputBuffer, sourcePtr, sourceNumChannels, actualSamplesRead);
+      copyChannelData(outputBuffer, sourcePtr, sourceNumChannels,
+                      actualSamplesRead);
     }
 
     return outputBuffer;
@@ -210,9 +213,7 @@ public:
     wrappedFile->seekInternal(targetPosition);
   }
 
-  long long tell() const override {
-    return wrappedFile->tell();
-  }
+  long long tell() const override { return wrappedFile->tell(); }
 
   void close() override {
     py::gil_scoped_release release;
@@ -234,9 +235,7 @@ public:
     return _isClosed;
   }
 
-  bool isSeekable() const override {
-    return wrappedFile->isSeekable();
-  }
+  bool isSeekable() const override { return wrappedFile->isSeekable(); }
 
   std::optional<std::string> getFilename() const override {
     return wrappedFile->getFilename();
@@ -273,7 +272,8 @@ private:
 inline py::class_<ChannelConvertedReadableAudioFile, AbstractReadableAudioFile,
                   std::shared_ptr<ChannelConvertedReadableAudioFile>>
 declare_readable_audio_file_with_channel_conversion(py::module &m) {
-  return py::class_<ChannelConvertedReadableAudioFile, AbstractReadableAudioFile,
+  return py::class_<ChannelConvertedReadableAudioFile,
+                    AbstractReadableAudioFile,
                     std::shared_ptr<ChannelConvertedReadableAudioFile>>(
       m, "ChannelConvertedReadableAudioFile",
       R"(
@@ -319,18 +319,20 @@ inline void init_readable_audio_file_with_channel_conversion(
   // Note: Most methods are inherited from AbstractReadableAudioFile.
   // We only define class-specific methods here.
   pyChannelConvertedReadableAudioFile
-      .def(py::init([](std::shared_ptr<AbstractReadableAudioFile> audioFile,
-                       int targetNumChannels)
-                        -> ChannelConvertedReadableAudioFile * {
-             // This definition is only here to provide nice docstrings.
-             throw std::runtime_error(
-                 "Internal error: __init__ should never be called, as this "
-                 "class implements __new__.");
-           }),
-           py::arg("audio_file"), py::arg("num_channels"))
+      .def(
+          py::init(
+              [](std::shared_ptr<AbstractReadableAudioFile> audioFile,
+                 int targetNumChannels) -> ChannelConvertedReadableAudioFile * {
+                // This definition is only here to provide nice docstrings.
+                throw std::runtime_error(
+                    "Internal error: __init__ should never be called, as this "
+                    "class implements __new__.");
+              }),
+          py::arg("audio_file"), py::arg("num_channels"))
       .def_static(
           "__new__",
-          [](const py::object *, std::shared_ptr<AbstractReadableAudioFile> audioFile,
+          [](const py::object *,
+             std::shared_ptr<AbstractReadableAudioFile> audioFile,
              int targetNumChannels) {
             return std::make_shared<ChannelConvertedReadableAudioFile>(
                 audioFile, targetNumChannels);
@@ -390,8 +392,7 @@ inline void init_abstract_readable_audio_file_methods(
             if (file->getNumChannels() == 1)
               return file;
 
-            return std::make_shared<ChannelConvertedReadableAudioFile>(
-                file, 1);
+            return std::make_shared<ChannelConvertedReadableAudioFile>(file, 1);
           },
           "Return a :class:`ChannelConvertedReadableAudioFile` that will "
           "automatically convert this audio file to mono (1 channel).\n\nIf "
@@ -406,8 +407,7 @@ inline void init_abstract_readable_audio_file_methods(
             if (file->getNumChannels() == 2)
               return file;
 
-            return std::make_shared<ChannelConvertedReadableAudioFile>(
-                file, 2);
+            return std::make_shared<ChannelConvertedReadableAudioFile>(file, 2);
           },
           "Return a :class:`ChannelConvertedReadableAudioFile` that will "
           "automatically convert this audio file to stereo (2 "

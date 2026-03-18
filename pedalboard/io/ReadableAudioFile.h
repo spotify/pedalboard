@@ -234,7 +234,9 @@ public:
     return numFrames + (lengthCorrection ? *lengthCorrection : 0);
   }
 
-  double getDuration() const override { return numFrames / getSampleRateAsDouble(); }
+  double getDuration() const override {
+    return numFrames / getSampleRateAsDouble();
+  }
 
   long getNumChannels() const override { return numChannels; }
 
@@ -248,7 +250,8 @@ public:
 
   std::string getFileDatatype() const override { return fileDatatype; }
 
-  py::array_t<float> read(std::variant<double, long long> numSamplesVariant) override {
+  py::array_t<float>
+  read(std::variant<double, long long> numSamplesVariant) override {
     long long numSamples = parseNumSamples(numSamplesVariant);
 
     if (numSamples == 0)
@@ -796,8 +799,8 @@ class ChannelConvertedReadableAudioFile;
 
 inline void init_readable_audio_file(
     py::module &m,
-    py::class_<ReadableAudioFile, AbstractReadableAudioFile, std::shared_ptr<ReadableAudioFile>>
-        &pyReadableAudioFile) {
+    py::class_<ReadableAudioFile, AbstractReadableAudioFile,
+               std::shared_ptr<ReadableAudioFile>> &pyReadableAudioFile) {
   // Note: Most methods are inherited from AbstractReadableAudioFile.
   // We only define class-specific methods here.
   pyReadableAudioFile
