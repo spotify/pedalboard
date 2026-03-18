@@ -39,8 +39,8 @@ namespace Pedalboard {
  * AND at least one sample falls outside [-1, 1], the user almost certainly
  * passed unconverted integer data.
  */
-inline void throwIfInputLooksLikeIntegerSamples(
-    const juce::AudioBuffer<float> &buffer) {
+inline void
+throwIfInputLooksLikeIntegerSamples(const juce::AudioBuffer<float> &buffer) {
   bool allInteger = true;
   bool anyOutsideUnitRange = false;
 
