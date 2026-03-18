@@ -720,10 +720,10 @@ public:
     // parameter state synchronization until the audio processing callback,
     // so without this flush, getPreset() may return stale parameter values.
     if (pluginInstance) {
-      int numChannels = std::max(
-          pluginInstance->getTotalNumInputChannels(),
-          pluginInstance->getTotalNumOutputChannels());
-      if (numChannels < 1) numChannels = 2;
+      int numChannels = std::max(pluginInstance->getTotalNumInputChannels(),
+                                 pluginInstance->getTotalNumOutputChannels());
+      if (numChannels < 1)
+        numChannels = 2;
 
       // Only prepare if the plugin hasn't been prepared yet.
       bool wasPrepared = (lastSpec.numChannels != 0);
