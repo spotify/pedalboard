@@ -196,5 +196,8 @@ def test_read_from_stream_measures_dropped_frames():
     # The input buffer was cleared on __exit__, so the buffer count should be zero:
     assert stream.buffered_input_sample_count == 0
 
-    # ...but we should still know how many frames were dropped:
-    assert stream.dropped_input_frame_count == dropped_count
+    # ...but we should still know how many frames were dropped.
+    # Allow up to one extra buffer's worth of dropped frames, because the audio
+    # thread may drop one more buffer between our snapshot and stream shutdown.
+    assert stream.dropped_input_frame_count >= dropped_count
+    assert stream.dropped_input_frame_count <= dropped_count + stream.buffer_size
