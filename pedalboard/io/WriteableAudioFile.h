@@ -937,7 +937,7 @@ inline void init_writeable_audio_file(
     py::class_<WriteableAudioFile, AudioFile,
                std::shared_ptr<WriteableAudioFile>> &pyWriteableAudioFile) {
   pyWriteableAudioFile
-      .def(py::init([](std::string filename, double sampleRate, int numChannels,
+      .def(py::init([](py::object filename, double sampleRate, int numChannels,
                        int bitDepth,
                        std::optional<std::variant<std::string, float>> quality)
                         -> WriteableAudioFile * {
@@ -964,7 +964,7 @@ inline void init_writeable_audio_file(
            py::arg("quality") = py::none(), py::arg("format") = py::none())
       .def_static(
           "__new__",
-          [](const py::object *, std::string filename,
+          [](const py::object *, py::object filename,
              std::optional<double> sampleRate, int numChannels, int bitDepth,
              std::optional<std::variant<std::string, float>> quality) {
             if (!sampleRate) {
@@ -972,8 +972,38 @@ inline void init_writeable_audio_file(
                   "Opening an audio file for writing requires a samplerate "
                   "argument to be provided.");
             }
-            return std::make_shared<WriteableAudioFile>(
-                filename, *sampleRate, numChannels, bitDepth, quality);
+
+            // If this is a path-like object, open it as a file path.
+            if (isPathLike(filename)) {
+              return std::make_shared<WriteableAudioFile>(
+                  pathToString(filename), *sampleRate, numChannels, bitDepth,
+                  quality);
+            }
+
+            // Otherwise, try to handle as a file-like object.
+            // This can happen because pybind11 overload resolution matches
+            // py::object for both path-like and file-like inputs.
+            if (isWriteableFileLike(filename)) {
+              auto stream = std::make_unique<PythonOutputStream>(filename);
+              if (!stream->getFilename()) {
+                throw py::type_error(
+                    "Unable to infer audio file format for writing. "
+                    "Expected either a \".name\" property on the provided "
+                    "file-like object (" +
+                    py::repr(filename).cast<std::string>() +
+                    ") or an explicit file format passed as the "
+                    "\"format=\" argument.");
+              }
+              return std::make_shared<WriteableAudioFile>(
+                  std::string(""), std::move(stream), *sampleRate, numChannels,
+                  bitDepth, quality);
+            }
+
+            throw py::type_error(
+                "Expected either a filename (str, bytes, or os.PathLike) "
+                "or a file-like object (with write, seek, seekable, and "
+                "tell methods), but received: " +
+                py::repr(filename).cast<std::string>());
           },
           py::arg("cls"), py::arg("filename"),
           py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,

@@ -3,6 +3,7 @@
 *Introduced in v0.5.1.*"""
 
 from __future__ import annotations
+import pathlib
 import pedalboard_native.io
 
 import typing
@@ -124,13 +125,13 @@ class AudioFile:
 
     @classmethod
     @typing.overload
-    def __new__(cls, filename: str) -> ReadableAudioFile:
+    def __new__(cls, filename: str | pathlib.Path) -> ReadableAudioFile:
         """Open an audio file for reading (mode 'r' is implied)."""
         ...
 
     @classmethod
     @typing.overload
-    def __new__(cls, filename: str, mode: Literal["r"]) -> ReadableAudioFile:
+    def __new__(cls, filename: str | pathlib.Path, mode: Literal["r"]) -> ReadableAudioFile:
         """Open an audio file for reading with an explicit mode 'r'."""
         ...
 
@@ -144,7 +145,7 @@ class AudioFile:
     @typing.overload
     def __new__(
         cls,
-        filename: str,
+        filename: str | pathlib.Path,
         mode: Literal["w"],
         samplerate: typing.Optional[float] = None,
         num_channels: int = 1,
@@ -461,19 +462,19 @@ class ReadableAudioFile(AudioFile):
         """
 
     @typing.overload
-    def __init__(self, filename: str) -> None: ...
+    def __init__(self, filename: str | pathlib.Path) -> None: ...
     @typing.overload
     def __init__(self, file_like: typing.Union[typing.BinaryIO, memoryview]) -> None: ...
 
     # These don't exist, but Pyright assumes they do:
     @typing.overload
-    def __init__(self, filename: str, mode: Literal["r"]) -> None: ...
+    def __init__(self, filename: str | pathlib.Path, mode: Literal["r"]) -> None: ...
     @typing.overload
     def __init__(self, file_like: typing.Union[typing.BinaryIO, memoryview], mode: Literal["r"]) -> None: ...
 
     @classmethod
     @typing.overload
-    def __new__(cls, filename: str) -> ReadableAudioFile: ...
+    def __new__(cls, filename: str | pathlib.Path) -> ReadableAudioFile: ...
     @classmethod
     @typing.overload
     def __new__(cls, file_like: typing.Union[typing.BinaryIO, memoryview]) -> ReadableAudioFile: ...
@@ -1033,7 +1034,7 @@ class WriteableAudioFile(AudioFile):
     @typing.overload
     def __init__(
         self,
-        filename: str,
+        filename: str | pathlib.Path,
         samplerate: float,
         num_channels: int = 1,
         bit_depth: int = 16,
@@ -1053,7 +1054,7 @@ class WriteableAudioFile(AudioFile):
     @typing.overload
     def __new__(
         cls,
-        filename: str,
+        filename: str | pathlib.Path,
         samplerate: typing.Optional[float] = None,
         num_channels: int = 1,
         bit_depth: int = 16,
@@ -1076,7 +1077,7 @@ class WriteableAudioFile(AudioFile):
     @typing.overload
     def __init__(
         self,
-        filename: str,
+        filename: str | pathlib.Path,
         mode: Literal["w"],
         samplerate: float,
         num_channels: int = 1,

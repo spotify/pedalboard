@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import platform
 import re
 import weakref
@@ -761,7 +762,7 @@ except ImportError:
 
 
 def load_plugin(
-    path_to_plugin_file: str,
+    path_to_plugin_file: Union[str, "os.PathLike[str]"],
     parameter_values: Dict[str, Union[str, int, float, bool]] = {},
     plugin_name: Union[str, None] = None,
     initialization_timeout: float = 10.0,
@@ -774,7 +775,7 @@ def load_plugin(
      - Audio Units are supported on macOS
 
     Args:
-        path_to_plugin_file (``str``): The path of a VST3® or Audio Unit plugin file or bundle.
+        path_to_plugin_file (``str`` or ``os.PathLike``): The path of a VST3® or Audio Unit plugin file or bundle.
 
         parameter_values (``Dict[str, Union[str, int, float, bool]]``):
             An optional dictionary of initial values to provide to the plugin
