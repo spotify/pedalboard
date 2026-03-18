@@ -529,6 +529,21 @@ public:
     // Without this, we get an assert(false) from JUCE at runtime
     juce::MessageManager::getInstance();
 
+    // Initialize currentPositionInfo to sensible defaults before any plugin
+    // loading, as plugins may query the playhead during initialization.
+    currentPositionInfo.bpm = 120.0;
+    currentPositionInfo.timeSigNumerator = 4;
+    currentPositionInfo.timeSigDenominator = 4;
+    currentPositionInfo.timeInSamples = 0;
+    currentPositionInfo.timeInSeconds = 0.0;
+    currentPositionInfo.ppqPosition = 0.0;
+    currentPositionInfo.ppqPositionOfLastBarStart = 0.0;
+    currentPositionInfo.isPlaying = false;
+    currentPositionInfo.isRecording = false;
+    currentPositionInfo.isLooping = false;
+    currentPositionInfo.editOriginTime = 0.0;
+    currentPositionInfo.frameRate = juce::AudioPlayHead::fpsUnknown;
+
     pluginFormatManager.addDefaultFormats();
     pluginFormatManager.addFormat(new juce::PatchedVST3PluginFormat());
 
