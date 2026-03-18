@@ -1811,8 +1811,7 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           "process",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
              double sampleRate, unsigned int bufferSize, bool reset) {
-            return process(inputArray, sampleRate, {self}, bufferSize,
-                           reset);
+            return process(inputArray, sampleRate, {self}, bufferSize, reset);
           },
           EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("input_array"),
           py::arg("sample_rate"), py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
@@ -1821,8 +1820,7 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           "__call__",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
              double sampleRate, unsigned int bufferSize, bool reset) {
-            return process(inputArray, sampleRate, {self}, bufferSize,
-                           reset);
+            return process(inputArray, sampleRate, {self}, bufferSize, reset);
           },
           "Run an audio or MIDI buffer through this plugin, returning "
           "audio. Alias for :py:meth:`process`.",
@@ -2039,8 +2037,7 @@ see :class:`pedalboard.VST3Plugin`.)
           "process",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
              double sampleRate, unsigned int bufferSize, bool reset) {
-            return process(inputArray, sampleRate, {self}, bufferSize,
-                           reset);
+            return process(inputArray, sampleRate, {self}, bufferSize, reset);
           },
           EXTERNAL_PLUGIN_PROCESS_DOCSTRING, py::arg("input_array"),
           py::arg("sample_rate"), py::arg("buffer_size") = DEFAULT_BUFFER_SIZE,
@@ -2049,8 +2046,7 @@ see :class:`pedalboard.VST3Plugin`.)
           "__call__",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
              double sampleRate, unsigned int bufferSize, bool reset) {
-            return process(inputArray, sampleRate, {self}, bufferSize,
-                           reset);
+            return process(inputArray, sampleRate, {self}, bufferSize, reset);
           },
           "Run an audio or MIDI buffer through this plugin, returning "
           "audio. Alias for :py:meth:`process`.",
