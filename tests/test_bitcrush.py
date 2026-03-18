@@ -23,8 +23,8 @@ from .utils import generate_sine_at
 
 
 def _scale_factor(bit_depth):
-    """Return the scale factor that Bitcrush uses internally after the fix."""
-    return 2 ** (bit_depth - 1) + 1
+    """Return the scale factor that Bitcrush uses internally (industry standard 2^(n-1))."""
+    return 2 ** (bit_depth - 1)
 
 
 @pytest.mark.parametrize("bit_depth", list(np.arange(1, 32, 0.5)))
@@ -82,18 +82,19 @@ class TestBitcrushQuantizationFormula:
     def test_bit_depth_8_output_range_signed(self):
         """For bit_depth=8 the output should stay within [-1, 1] and include
         negative values — i.e. quantization is centered around zero for signed
-        audio."""
+        audio. With the industry-standard 2^(n-1) divisor, the positive peak
+        maps to slightly below 1.0 and negative peak maps to exactly -1.0."""
         sample_rate = 44100.0
         samples = np.linspace(-1.0, 1.0, 4096, dtype=np.float32).reshape(1, -1)
 
         plugin = Bitcrush(8)
         output = plugin.process(samples, sample_rate)
 
-        # Output must be within [-1, 1]
+        # Output must not exceed [-1, 1]
         assert np.all(output >= -1.0 - 1e-6), "Output has values below -1"
         assert np.all(output <= 1.0 + 1e-6), "Output has values above 1"
 
-        # Must have both positive and negative values (symmetric around zero)
+        # Must have both positive and negative values
         assert np.any(output > 0), "Output has no positive values"
         assert np.any(output < 0), "Output has no negative values"
 
@@ -116,10 +117,9 @@ class TestBitcrushQuantizationFormula:
             err_msg=f"Quantization is not symmetric around zero at bit_depth={bit_depth}",
         )
 
-    def test_bit_depth_1_produces_three_or_fewer_levels(self):
-        """With bit_depth=1 the scale factor is 2^0 + 1 = 2, so the only
-        representable values are -1, -0.5, 0, 0.5, 1 (at most 5 levels).
-        The exact count depends on rounding, but it must be a very small set."""
+    def test_bit_depth_1_produces_few_levels(self):
+        """With bit_depth=1 the scale factor is 2^0 = 1, so the only
+        representable values are -1, 0, 1 (at most 3 levels)."""
         sample_rate = 44100.0
         samples = np.linspace(-1.0, 1.0, 8192, dtype=np.float32).reshape(1, -1)
 
@@ -127,10 +127,8 @@ class TestBitcrushQuantizationFormula:
         output = plugin.process(samples, sample_rate)
 
         unique_values = np.unique(np.round(output, decimals=5))
-        # scale factor = 2, so representable levels = round(x*2)/2
-        # for x in [-1,1]: levels are {-1, -0.5, 0, 0.5, 1} = 5
-        assert len(unique_values) <= 5, (
-            f"bit_depth=1 should produce at most 5 unique output levels, "
+        assert len(unique_values) <= 3, (
+            f"bit_depth=1 should produce at most 3 unique output levels, "
             f"got {len(unique_values)}: {unique_values}"
         )
 
@@ -143,7 +141,7 @@ class TestBitcrushQuantizationFormula:
         plugin = Bitcrush(16)
         output = plugin.process(samples, sample_rate)
 
-        # At 16 bits the step size is ~1/32769, so max error < 2e-5
+        # At 16 bits the step size is ~1/32768, so max error < 2e-5
         np.testing.assert_allclose(output, samples, atol=2e-5)
 
     def test_number_of_quantization_levels(self):
