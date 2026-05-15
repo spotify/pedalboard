@@ -270,7 +270,7 @@ test = [
 requires-dist = [
     { name = "mido", marker = "extra == 'test'" },
     { name = "mutagen", marker = "extra == 'test'" },
-    { name = "mypy", marker = "extra == 'test'", specifier = "<2.1" },
+    { name = "mypy", marker = "extra == 'test'", specifier = "<2" },
     { name = "numpy" },
     { name = "psutil", marker = "extra == 'test'" },
     { name = "pyright", marker = "extra == 'test'" },
