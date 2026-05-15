@@ -1719,3 +1719,144 @@ def test_errno_cleared_after_python_file_operations(format_name: str):
 
     with pedalboard.io.AudioFile(ErrnoTriggeringFileLike(buf)) as af:
         assert af.samplerate == 44100
+
+
+@pytest.mark.parametrize("samplerate", [44100, 48000])
+@pytest.mark.parametrize("num_channels", [1, 2])
+def test_mp3_codec_options_bit_reservoir_disabled(samplerate: int, num_channels: int):
+    """
+    Writing an MP3 with the bit reservoir disabled should produce a valid file
+    that can be read back. Each frame is independently decodable, so the file
+    may be slightly larger than an equivalent file with the reservoir enabled.
+    """
+    audio = generate_sine_at(samplerate, num_channels=num_channels)
+
+    buffers = {}
+    for enable_reservoir in (True, False):
+        buf = io.BytesIO()
+        with pedalboard.io.WriteableAudioFile(
+            buf,
+            samplerate,
+            num_channels,
+            format="mp3",
+            quality="128 kbps",
+            codec_options={
+                pedalboard.io.WriteableAudioFileFlag.Mp3EnableBitReservoir: enable_reservoir
+            },
+        ) as af:
+            af.write(audio)
+        buffers[enable_reservoir] = buf
+
+    # Both files should be readable:
+    for buf in buffers.values():
+        buf.seek(0)
+        with pedalboard.io.ReadableAudioFile(buf) as af:
+            assert af.samplerate == samplerate
+            assert af.num_channels == num_channels
+            assert af.frames > 0
+
+    # Without the bit reservoir, files are typically at least as large
+    # (each frame must be self-contained):
+    assert len(buffers[False].getvalue()) >= len(buffers[True].getvalue())
+
+
+def test_mp3_codec_options_default_matches_no_options():
+    """
+    Passing Mp3EnableBitReservoir=True (the default) should produce identical
+    output to not passing any codec_options at all.
+    """
+    samplerate = 44100
+    num_channels = 1
+    audio = generate_sine_at(samplerate, num_channels=num_channels)
+
+    buf_default = io.BytesIO()
+    with pedalboard.io.WriteableAudioFile(
+        buf_default, samplerate, num_channels, format="mp3", quality="128 kbps"
+    ) as af:
+        af.write(audio)
+
+    buf_explicit = io.BytesIO()
+    with pedalboard.io.WriteableAudioFile(
+        buf_explicit,
+        samplerate,
+        num_channels,
+        format="mp3",
+        quality="128 kbps",
+        codec_options={pedalboard.io.WriteableAudioFileFlag.Mp3EnableBitReservoir: True},
+    ) as af:
+        af.write(audio)
+
+    assert buf_default.getvalue() == buf_explicit.getvalue()
+
+
+def test_codec_options_via_audio_file_constructor():
+    """
+    codec_options should work when opening files via AudioFile("w") as well.
+    """
+    audio = generate_sine_at(44100, num_channels=1)
+
+    buf = io.BytesIO()
+    with pedalboard.io.AudioFile(
+        buf,
+        "w",
+        samplerate=44100,
+        num_channels=1,
+        format="mp3",
+        codec_options={pedalboard.io.WriteableAudioFileFlag.Mp3EnableBitReservoir: False},
+    ) as af:
+        af.write(audio)
+
+    buf.seek(0)
+    with pedalboard.io.AudioFile(buf) as af:
+        assert af.samplerate == 44100
+        assert af.frames > 0
+
+
+def test_codec_options_via_encode():
+    """
+    codec_options should work through AudioFile.encode() as well.
+    """
+    audio = generate_sine_at(44100, num_channels=1).astype(np.float32)
+
+    result_default = pedalboard.io.AudioFile.encode(audio, 44100, "mp3", quality="128 kbps")
+    result_no_reservoir = pedalboard.io.AudioFile.encode(
+        audio,
+        44100,
+        "mp3",
+        quality="128 kbps",
+        codec_options={pedalboard.io.WriteableAudioFileFlag.Mp3EnableBitReservoir: False},
+    )
+
+    assert len(result_default) > 0
+    assert len(result_no_reservoir) > 0
+    assert len(result_no_reservoir) >= len(result_default)
+
+
+def test_codec_options_unsupported_format():
+    """
+    Passing an MP3-specific codec option to a non-MP3 format should raise.
+    """
+    buf = io.BytesIO()
+    with pytest.raises(Exception, match="not supported"):
+        pedalboard.io.WriteableAudioFile(
+            buf,
+            44100,
+            1,
+            format="wav",
+            codec_options={pedalboard.io.WriteableAudioFileFlag.Mp3EnableBitReservoir: True},
+        )
+
+
+def test_codec_options_wrong_type():
+    """
+    Passing a non-bool value to Mp3EnableBitReservoir should raise.
+    """
+    buf = io.BytesIO()
+    with pytest.raises(Exception, match="bool"):
+        pedalboard.io.WriteableAudioFile(
+            buf,
+            44100,
+            1,
+            format="mp3",
+            codec_options={pedalboard.io.WriteableAudioFileFlag.Mp3EnableBitReservoir: "yes"},
+        )
