@@ -28,6 +28,7 @@
 #include "AudioFile.h"
 #include "LameMP3AudioFormat.h"
 #include "PythonOutputStream.h"
+#include "WriteableAudioFileFlags.h"
 
 namespace py = pybind11;
 
@@ -222,15 +223,17 @@ public:
   WriteableAudioFile(
       std::string filename, double writeSampleRate, int numChannels = 1,
       int bitDepth = 16,
-      std::optional<std::variant<std::string, float>> qualityInput = {})
+      std::optional<std::variant<std::string, float>> qualityInput = {},
+      CodecOptionsMap codecOptions = {})
       : WriteableAudioFile(filename, nullptr, writeSampleRate, numChannels,
-                           bitDepth, qualityInput) {}
+                           bitDepth, qualityInput, codecOptions) {}
 
   WriteableAudioFile(
       std::string filename,
       std::unique_ptr<juce::OutputStream> providedOutputStream,
       double writeSampleRate, int numChannels = 1, int bitDepth = 16,
-      std::optional<std::variant<std::string, float>> qualityInput = {}) {
+      std::optional<std::variant<std::string, float>> qualityInput = {},
+      CodecOptionsMap codecOptions = {}) {
     pybind11::gil_scoped_release release;
 
     // This is kind of silly, as nobody else has a reference
@@ -355,10 +358,19 @@ public:
       quality = format->getQualityOptions()[qualityOptionIndex].toStdString();
     }
 
+    std::string formatName = format->getFormatName().toStdString();
+    validateCodecOptions(codecOptions, formatName);
+
     juce::StringPairArray emptyMetadata;
-    writer.reset(format->createWriterFor(outputStream.get(), writeSampleRate,
-                                         numChannels, bitDepth, emptyMetadata,
-                                         qualityOptionIndex));
+    if (auto *lameFormat = dynamic_cast<LameMP3AudioFormat *>(format)) {
+      writer.reset(lameFormat->createWriterFor(
+          outputStream.get(), writeSampleRate, numChannels, bitDepth,
+          emptyMetadata, qualityOptionIndex, codecOptions));
+    } else {
+      writer.reset(format->createWriterFor(outputStream.get(), writeSampleRate,
+                                           numChannels, bitDepth, emptyMetadata,
+                                           qualityOptionIndex));
+    }
     if (!writer) {
       PythonException::raise();
 
@@ -923,6 +935,14 @@ Args:
         may be passed as a string. The strings ``"best"``, ``"worst"``,
         ``"fastest"``, and ``"slowest"`` will also work for any codec.
 
+    codec_options:
+        An optional dictionary mapping :class:`WriteableAudioFileFlag` keys to
+        values (``bool``, ``int``, ``float``, or ``str``). These flags control
+        low-level, codec-specific encoder behavior. Not all flags are supported
+        by all codecs; passing an unsupported flag will raise a ``ValueError``.
+
+        See :class:`WriteableAudioFileFlag` for available options.
+
 .. note::
     You probably don't want to use this class directly: all of the parameters
     accepted by the :class:`WriteableAudioFile` constructor will be accepted by
@@ -939,7 +959,8 @@ inline void init_writeable_audio_file(
   pyWriteableAudioFile
       .def(py::init([](std::string filename, double sampleRate, int numChannels,
                        int bitDepth,
-                       std::optional<std::variant<std::string, float>> quality)
+                       std::optional<std::variant<std::string, float>> quality,
+                       CodecOptionsMap codecOptions)
                         -> WriteableAudioFile * {
              // This definition is only here to provide nice docstrings.
              throw std::runtime_error(
@@ -948,12 +969,14 @@ inline void init_writeable_audio_file(
            }),
            py::arg("filename"), py::arg("samplerate"),
            py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
-           py::arg("quality") = py::none())
+           py::arg("quality") = py::none(),
+           py::arg("codec_options") = CodecOptionsMap{})
       .def(py::init(
                [](py::object filelike, double sampleRate, int numChannels,
                   int bitDepth,
                   std::optional<std::variant<std::string, float>> quality,
-                  std::optional<std::string> format) -> WriteableAudioFile * {
+                  std::optional<std::string> format,
+                  CodecOptionsMap codecOptions) -> WriteableAudioFile * {
                  // This definition is only here to provide nice docstrings.
                  throw std::runtime_error(
                      "Internal error: __init__ should never be called, as this "
@@ -961,29 +984,34 @@ inline void init_writeable_audio_file(
                }),
            py::arg("file_like"), py::arg("samplerate"),
            py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
-           py::arg("quality") = py::none(), py::arg("format") = py::none())
+           py::arg("quality") = py::none(), py::arg("format") = py::none(),
+           py::arg("codec_options") = CodecOptionsMap{})
       .def_static(
           "__new__",
           [](const py::object *, std::string filename,
              std::optional<double> sampleRate, int numChannels, int bitDepth,
-             std::optional<std::variant<std::string, float>> quality) {
+             std::optional<std::variant<std::string, float>> quality,
+             CodecOptionsMap codecOptions) {
             if (!sampleRate) {
               throw py::type_error(
                   "Opening an audio file for writing requires a samplerate "
                   "argument to be provided.");
             }
             return std::make_shared<WriteableAudioFile>(
-                filename, *sampleRate, numChannels, bitDepth, quality);
+                filename, *sampleRate, numChannels, bitDepth, quality,
+                codecOptions);
           },
           py::arg("cls"), py::arg("filename"),
           py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
-          py::arg("bit_depth") = 16, py::arg("quality") = py::none())
+          py::arg("bit_depth") = 16, py::arg("quality") = py::none(),
+          py::arg("codec_options") = CodecOptionsMap{})
       .def_static(
           "__new__",
           [](const py::object *, py::object filelike,
              std::optional<double> sampleRate, int numChannels, int bitDepth,
              std::optional<std::variant<std::string, float>> quality,
-             std::optional<std::string> format) {
+             std::optional<std::string> format,
+             CodecOptionsMap codecOptions) {
             if (!sampleRate) {
               throw py::type_error(
                   "Opening an audio file for writing requires a samplerate "
@@ -1009,12 +1037,13 @@ inline void init_writeable_audio_file(
 
             return std::make_shared<WriteableAudioFile>(
                 format.value_or(""), std::move(stream), *sampleRate,
-                numChannels, bitDepth, quality);
+                numChannels, bitDepth, quality, codecOptions);
           },
           py::arg("cls"), py::arg("file_like"),
           py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
           py::arg("bit_depth") = 16, py::arg("quality") = py::none(),
-          py::arg("format") = py::none())
+          py::arg("format") = py::none(),
+          py::arg("codec_options") = CodecOptionsMap{})
       .def(
           "write",
           [](WriteableAudioFile &file, py::array samples) {

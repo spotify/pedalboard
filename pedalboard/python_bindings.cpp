@@ -69,6 +69,7 @@ namespace py = pybind11;
 #include "io/ResampledReadableAudioFile.h"
 #include "io/StreamResampler.h"
 #include "io/WriteableAudioFile.h"
+#include "io/WriteableAudioFileFlags.h"
 
 using namespace Pedalboard;
 
@@ -247,6 +248,8 @@ If the number of samples and the number of channels are the same, each
   py::module io = m.def_submodule("io");
   io.doc() = "This module provides classes and functions for reading and "
              "writing audio files or streams.\n\n*Introduced in v0.5.1.*";
+
+  init_writeable_audio_file_flags(io);
 
   auto pyAudioFile = declare_audio_file(io);
   auto pyReadableAudioFile = declare_readable_audio_file(io);

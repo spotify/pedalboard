@@ -25,6 +25,7 @@
 
 #include "../JuceHeader.h"
 #include "AudioFile.h"
+#include "WriteableAudioFileFlags.h"
 
 #include "ReadableAudioFile.h"
 #include "WriteableAudioFile.h"
@@ -203,7 +204,8 @@ inline void init_audio_file(
           "__new__",
           [](const py::object *, std::string filename, std::string mode,
              std::optional<double> sampleRate, int numChannels, int bitDepth,
-             std::optional<std::variant<std::string, float>> quality) {
+             std::optional<std::variant<std::string, float>> quality,
+             CodecOptionsMap codecOptions) {
             if (mode == "r") {
               throw py::type_error(
                   "Opening an audio file for reading does not require "
@@ -218,7 +220,8 @@ inline void init_audio_file(
               }
 
               return std::make_shared<WriteableAudioFile>(
-                  filename, *sampleRate, numChannels, bitDepth, quality);
+                  filename, *sampleRate, numChannels, bitDepth, quality,
+                  codecOptions);
             } else {
               throw py::type_error("AudioFile instances can only be opened in "
                                    "read mode (\"r\") or write mode (\"w\").");
@@ -226,13 +229,15 @@ inline void init_audio_file(
           },
           py::arg("cls"), py::arg("filename"), py::arg("mode") = "w",
           py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
-          py::arg("bit_depth") = 16, py::arg("quality") = py::none())
+          py::arg("bit_depth") = 16, py::arg("quality") = py::none(),
+          py::arg("codec_options") = CodecOptionsMap{})
       .def_static(
           "__new__",
           [](const py::object *, py::object filelike, std::string mode,
              std::optional<double> sampleRate, int numChannels, int bitDepth,
              std::optional<std::variant<std::string, float>> quality,
-             std::optional<std::string> format) {
+             std::optional<std::string> format,
+             CodecOptionsMap codecOptions) {
             if (mode == "r") {
               throw py::type_error(
                   "Opening a file-like object for reading does not require "
@@ -266,7 +271,7 @@ inline void init_audio_file(
 
               return std::make_shared<WriteableAudioFile>(
                   format.value_or(""), std::move(stream), *sampleRate,
-                  numChannels, bitDepth, quality);
+                  numChannels, bitDepth, quality, codecOptions);
             } else {
               throw py::type_error("AudioFile instances can only be opened in "
                                    "read mode (\"r\") or write mode (\"w\").");
@@ -275,17 +280,19 @@ inline void init_audio_file(
           py::arg("cls"), py::arg("file_like"), py::arg("mode") = "w",
           py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
           py::arg("bit_depth") = 16, py::arg("quality") = py::none(),
-          py::arg("format") = py::none())
+          py::arg("format") = py::none(),
+          py::arg("codec_options") = CodecOptionsMap{})
       .def_static(
           "encode",
           [](const py::array samples, double sampleRate, std::string format,
              int numChannels, int bitDepth,
-             std::optional<std::variant<std::string, float>> quality) {
+             std::optional<std::variant<std::string, float>> quality,
+             CodecOptionsMap codecOptions) {
             juce::MemoryBlock outputBlock;
             auto audioFile = std::make_unique<WriteableAudioFile>(
                 format,
                 std::make_unique<juce::MemoryOutputStream>(outputBlock, false),
-                sampleRate, numChannels, bitDepth, quality);
+                sampleRate, numChannels, bitDepth, quality, codecOptions);
 
             audioFile->write(samples);
             audioFile->close();
@@ -296,6 +303,7 @@ inline void init_audio_file(
           py::arg("samples"), py::arg("samplerate"), py::arg("format"),
           py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
           py::arg("quality") = py::none(),
+          py::arg("codec_options") = CodecOptionsMap{},
           R"(
 Encode an audio buffer to a Python :class:`bytes` object.
 

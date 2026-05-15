@@ -18,6 +18,7 @@
 
 #include "../JuceHeader.h"
 #include "../plugins/MP3Compressor.h"
+#include "WriteableAudioFileFlags.h"
 
 extern "C" {
 #include <lame.h>
@@ -56,11 +57,21 @@ public:
                   unsigned int numberOfChannels, int bitsPerSample,
                   const juce::StringPairArray &metadataValues,
                   int qualityOptionIndex) {
+    return createWriterFor(out, sampleRateToUse, numberOfChannels,
+                           bitsPerSample, metadataValues, qualityOptionIndex,
+                           {});
+  }
 
+  juce::AudioFormatWriter *
+  createWriterFor(juce::OutputStream *out, double sampleRateToUse,
+                  unsigned int numberOfChannels, int bitsPerSample,
+                  const juce::StringPairArray &metadataValues,
+                  int qualityOptionIndex,
+                  const CodecOptionsMap &codecOptions) {
     try {
       if (out != nullptr)
         return new Writer(out, sampleRateToUse, numberOfChannels,
-                          qualityOptionIndex);
+                          qualityOptionIndex, codecOptions);
     } catch (...) {
       // TODO: Make WriteableAudioFile exception-safe so we can bubble up more
       // useful error messages.
@@ -73,7 +84,8 @@ public:
   class Writer : public juce::AudioFormatWriter {
   public:
     Writer(juce::OutputStream *destStream, double sampleRate,
-           unsigned int numberOfChannels, int qualityOptionIndex)
+           unsigned int numberOfChannels, int qualityOptionIndex,
+           const CodecOptionsMap &codecOptions = {})
         : juce::AudioFormatWriter(nullptr, "MP3", sampleRate, numberOfChannels,
                                   16) {
       usesFloatingPointData = false;
@@ -131,6 +143,8 @@ public:
         throw std::domain_error("Unsupported quality index!");
       }
 
+      applyCodecOptions(codecOptions);
+
       int ret = lame_init_params(encoder.getContext());
       if (ret != 0) {
         throw std::runtime_error("Failed to initialize MP3 encoder! (error " +
@@ -142,6 +156,35 @@ public:
       // to happen if our constructor fails.
       output = destStream;
     }
+
+  private:
+    void applyCodecOptions(const CodecOptionsMap &options) {
+      for (const auto &[flag, value] : options) {
+        switch (flag) {
+        case WriteableAudioFileFlag::Mp3EnableBitReservoir: {
+          const bool *boolVal = std::get_if<bool>(&value);
+          if (!boolVal) {
+            throw std::domain_error(
+                "Mp3EnableBitReservoir expects a bool value.");
+          }
+          if (lame_set_disable_reservoir(encoder.getContext(),
+                                         *boolVal ? 0 : 1) != 0) {
+            throw std::domain_error(
+                "MP3 encoder failed to configure bit reservoir.");
+          }
+          break;
+        }
+        default:
+          throw std::domain_error(
+              "The codec option " + flagName(flag) +
+              " was passed in codec_options, but is not supported by the MP3 "
+              "encoder. Supported codec options for MP3: " +
+              supportedFlagNames("MP3") + ".");
+        }
+      }
+    }
+
+  public:
 
     virtual ~Writer() override {
       if (!output)
