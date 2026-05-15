@@ -14,7 +14,7 @@ numpy>=2; python_version>="3.9" and python_version<"3.13"
 numpy<2; python_version<="3.8"
 tqdm
 psutil
-mypy
+mypy<2.1
 pyright
 # ty  # Uncomment to enable Astral type checker (still in early development)
 

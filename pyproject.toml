@@ -67,7 +67,7 @@ test = [
     "pytest-mock",
     "tqdm",
     "psutil",
-    "mypy",
+    "mypy<2.1",
     "pyright",
     "mido",
 ]
