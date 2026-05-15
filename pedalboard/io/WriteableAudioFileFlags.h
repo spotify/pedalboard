@@ -70,8 +70,49 @@ inline std::string supportedFlagNames(const std::string &formatName) {
 }
 
 /**
+ * Expected value type for each flag, used for early validation before the
+ * value reaches the encoder (where errors may be swallowed).
+ */
+enum class CodecOptionType { Bool, Float, Int, String };
+
+static inline const std::map<WriteableAudioFileFlag, CodecOptionType>
+    FLAG_EXPECTED_TYPES = {
+        {WriteableAudioFileFlag::Mp3EnableBitReservoir, CodecOptionType::Bool},
+};
+
+inline std::string codecOptionTypeName(CodecOptionType t) {
+  switch (t) {
+  case CodecOptionType::Bool:
+    return "bool";
+  case CodecOptionType::Float:
+    return "float";
+  case CodecOptionType::Int:
+    return "int";
+  case CodecOptionType::String:
+    return "str";
+  }
+  return "<unknown>";
+}
+
+inline bool valueMatchesExpectedType(const CodecOptionValue &value,
+                                     CodecOptionType expected) {
+  switch (expected) {
+  case CodecOptionType::Bool:
+    return std::holds_alternative<bool>(value);
+  case CodecOptionType::Float:
+    return std::holds_alternative<float>(value);
+  case CodecOptionType::Int:
+    return std::holds_alternative<int>(value);
+  case CodecOptionType::String:
+    return std::holds_alternative<std::string>(value);
+  }
+  return false;
+}
+
+/**
  * Validate that all flags in the options map are supported by the given
- * audio format. Throws std::domain_error if any flag is unsupported.
+ * audio format and that their values have the correct types. Throws
+ * std::domain_error if any flag is unsupported or has the wrong type.
  */
 inline void validateCodecOptions(const CodecOptionsMap &options,
                                  const std::string &formatName) {
@@ -100,6 +141,13 @@ inline void validateCodecOptions(const CodecOptionsMap &options,
       }
 
       throw std::domain_error(ss.str());
+    }
+
+    auto typeIt = FLAG_EXPECTED_TYPES.find(flag);
+    if (typeIt != FLAG_EXPECTED_TYPES.end() &&
+        !valueMatchesExpectedType(value, typeIt->second)) {
+      throw std::domain_error(flagName(flag) + " expects a " +
+                              codecOptionTypeName(typeIt->second) + " value.");
     }
   }
 }
