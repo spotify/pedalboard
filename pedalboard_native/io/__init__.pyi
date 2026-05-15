@@ -22,9 +22,56 @@ __all__ = [
     "ResampledReadableAudioFile",
     "StreamResampler",
     "WriteableAudioFile",
+    "WriteableAudioFileFlag",
     "get_supported_read_formats",
     "get_supported_write_formats",
 ]
+
+class WriteableAudioFileFlag:
+    """
+    An enumeration of codec-specific options that can be passed when opening an
+    audio file for writing. These flags are used as keys in the ``codec_options``
+    dictionary parameter accepted by :class:`WriteableAudioFile` and
+    :class:`AudioFile`.
+
+    Not all flags are supported by all codecs. Passing an unsupported flag for
+    the selected codec will raise a ``ValueError``.
+
+    .. note::
+        These flags control low-level encoder behavior. Most users will not need
+        to use them. The ``quality`` parameter is usually sufficient for
+        controlling encoder output.
+
+    Members:
+
+      Mp3EnableBitReservoir :
+        When writing MP3 files, controls whether the LAME encoder's bit reservoir
+        is enabled. Defaults to ``True``.
+    """
+
+    Mp3EnableBitReservoir: typing.ClassVar[WriteableAudioFileFlag]
+    """
+    When writing MP3 files, controls whether the LAME encoder's bit reservoir
+    is enabled. The bit reservoir allows the encoder to use fewer bits on
+    simple frames and save them for complex frames, improving overall quality
+    at a given bitrate. Disabling it forces each frame to be independently
+    decodable at the cost of slightly lower quality.
+
+    Set to ``False`` for streaming or seeking applications where individual
+    frames need to be independently decodable.
+
+    Accepts a ``bool`` value. Defaults to ``True`` (bit reservoir enabled).
+    """
+
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def __index__(self) -> int: ...
+    def __int__(self) -> int: ...
+    def __ne__(self, other: object) -> bool: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def value(self) -> int: ...
 
 class AudioFile:
     """
@@ -150,6 +197,7 @@ class AudioFile:
         num_channels: int = 1,
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
+        codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
     ) -> WriteableAudioFile: ...
 
     @classmethod
@@ -163,6 +211,7 @@ class AudioFile:
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
         format: typing.Optional[str] = None,
+        codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
     ) -> WriteableAudioFile: ...
     
     @staticmethod
@@ -173,6 +222,7 @@ class AudioFile:
         num_channels: int = 1,
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
+        codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
     ) -> bytes:
         """
         Encode an audio buffer to a Python :class:`bytes` object.
@@ -1038,6 +1088,7 @@ class WriteableAudioFile(AudioFile):
         num_channels: int = 1,
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
+        codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
     ) -> None: ...
     @typing.overload
     def __init__(
@@ -1048,6 +1099,7 @@ class WriteableAudioFile(AudioFile):
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
         format: typing.Optional[str] = None,
+        codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
     ) -> None: ...
     @classmethod
     @typing.overload
@@ -1058,6 +1110,7 @@ class WriteableAudioFile(AudioFile):
         num_channels: int = 1,
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
+        codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
     ) -> WriteableAudioFile: ...
     @classmethod
     @typing.overload
@@ -1069,6 +1122,7 @@ class WriteableAudioFile(AudioFile):
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
         format: typing.Optional[str] = None,
+        codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
     ) -> WriteableAudioFile: ...
 
     # This overload does not actually exist; just makes Pyright happy as
@@ -1082,6 +1136,7 @@ class WriteableAudioFile(AudioFile):
         num_channels: int = 1,
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
+        codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
     ) -> None: ...
 
     # This overload does not actually exist; just makes Pyright happy as
@@ -1096,6 +1151,7 @@ class WriteableAudioFile(AudioFile):
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
         format: typing.Optional[str] = None,
+        codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
     ) -> None: ...
 
     def __repr__(self) -> str: ...

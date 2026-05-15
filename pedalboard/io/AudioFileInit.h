@@ -236,8 +236,7 @@ inline void init_audio_file(
           [](const py::object *, py::object filelike, std::string mode,
              std::optional<double> sampleRate, int numChannels, int bitDepth,
              std::optional<std::variant<std::string, float>> quality,
-             std::optional<std::string> format,
-             CodecOptionsMap codecOptions) {
+             std::optional<std::string> format, CodecOptionsMap codecOptions) {
             if (mode == "r") {
               throw py::type_error(
                   "Opening a file-like object for reading does not require "

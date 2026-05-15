@@ -66,8 +66,7 @@ public:
   createWriterFor(juce::OutputStream *out, double sampleRateToUse,
                   unsigned int numberOfChannels, int bitsPerSample,
                   const juce::StringPairArray &metadataValues,
-                  int qualityOptionIndex,
-                  const CodecOptionsMap &codecOptions) {
+                  int qualityOptionIndex, const CodecOptionsMap &codecOptions) {
     try {
       if (out != nullptr)
         return new Writer(out, sampleRateToUse, numberOfChannels,
@@ -185,7 +184,6 @@ public:
     }
 
   public:
-
     virtual ~Writer() override {
       if (!output)
         return;

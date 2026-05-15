@@ -37,10 +37,8 @@ enum class WriteableAudioFileFlag {
 using CodecOptionValue = std::variant<bool, float, int, std::string>;
 using CodecOptionsMap = std::map<WriteableAudioFileFlag, CodecOptionValue>;
 
-static inline const std::map<WriteableAudioFileFlag, std::string>
-    FLAG_NAMES = {
-        {WriteableAudioFileFlag::Mp3EnableBitReservoir,
-         "Mp3EnableBitReservoir"},
+static inline const std::map<WriteableAudioFileFlag, std::string> FLAG_NAMES = {
+    {WriteableAudioFileFlag::Mp3EnableBitReservoir, "Mp3EnableBitReservoir"},
 };
 
 static inline const std::map<std::string, std::set<WriteableAudioFileFlag>>
@@ -89,16 +87,16 @@ inline void validateCodecOptions(const CodecOptionsMap &options,
   for (const auto &[flag, value] : options) {
     if (supported.find(flag) == supported.end()) {
       std::ostringstream ss;
-      ss << "The codec option " << flagName(flag)
-         << " is not supported by the " << formatName << " encoder.";
+      ss << "The codec option " << flagName(flag) << " is not supported by the "
+         << formatName << " encoder.";
 
       std::string supported_names = supportedFlagNames(formatName);
       if (supported_names.empty()) {
         ss << " The " << formatName
            << " encoder does not support any codec options.";
       } else {
-        ss << " Supported options for " << formatName << ": "
-           << supported_names << ".";
+        ss << " Supported options for " << formatName << ": " << supported_names
+           << ".";
       }
 
       throw std::domain_error(ss.str());

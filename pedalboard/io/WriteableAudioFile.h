@@ -960,8 +960,7 @@ inline void init_writeable_audio_file(
       .def(py::init([](std::string filename, double sampleRate, int numChannels,
                        int bitDepth,
                        std::optional<std::variant<std::string, float>> quality,
-                       CodecOptionsMap codecOptions)
-                        -> WriteableAudioFile * {
+                       CodecOptionsMap codecOptions) -> WriteableAudioFile * {
              // This definition is only here to provide nice docstrings.
              throw std::runtime_error(
                  "Internal error: __init__ should never be called, as this "
@@ -971,17 +970,16 @@ inline void init_writeable_audio_file(
            py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
            py::arg("quality") = py::none(),
            py::arg("codec_options") = CodecOptionsMap{})
-      .def(py::init(
-               [](py::object filelike, double sampleRate, int numChannels,
-                  int bitDepth,
-                  std::optional<std::variant<std::string, float>> quality,
-                  std::optional<std::string> format,
-                  CodecOptionsMap codecOptions) -> WriteableAudioFile * {
-                 // This definition is only here to provide nice docstrings.
-                 throw std::runtime_error(
-                     "Internal error: __init__ should never be called, as this "
-                     "class implements __new__.");
-               }),
+      .def(py::init([](py::object filelike, double sampleRate, int numChannels,
+                       int bitDepth,
+                       std::optional<std::variant<std::string, float>> quality,
+                       std::optional<std::string> format,
+                       CodecOptionsMap codecOptions) -> WriteableAudioFile * {
+             // This definition is only here to provide nice docstrings.
+             throw std::runtime_error(
+                 "Internal error: __init__ should never be called, as this "
+                 "class implements __new__.");
+           }),
            py::arg("file_like"), py::arg("samplerate"),
            py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
            py::arg("quality") = py::none(), py::arg("format") = py::none(),
@@ -997,9 +995,9 @@ inline void init_writeable_audio_file(
                   "Opening an audio file for writing requires a samplerate "
                   "argument to be provided.");
             }
-            return std::make_shared<WriteableAudioFile>(
-                filename, *sampleRate, numChannels, bitDepth, quality,
-                codecOptions);
+            return std::make_shared<WriteableAudioFile>(filename, *sampleRate,
+                                                        numChannels, bitDepth,
+                                                        quality, codecOptions);
           },
           py::arg("cls"), py::arg("filename"),
           py::arg("samplerate") = py::none(), py::arg("num_channels") = 1,
@@ -1010,8 +1008,7 @@ inline void init_writeable_audio_file(
           [](const py::object *, py::object filelike,
              std::optional<double> sampleRate, int numChannels, int bitDepth,
              std::optional<std::variant<std::string, float>> quality,
-             std::optional<std::string> format,
-             CodecOptionsMap codecOptions) {
+             std::optional<std::string> format, CodecOptionsMap codecOptions) {
             if (!sampleRate) {
               throw py::type_error(
                   "Opening an audio file for writing requires a samplerate "
