@@ -899,6 +899,8 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BUILD: ${{ matrix.build }}
+          CIBW_TEST_COMMAND: "python -c \"import pedalboard; print(pedalboard.__version__)\""
+          CIBW_TEST_REQUIRES: ""
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
           CIBW_ENVIRONMENT: NPY_BLAS_ORDER="" NPY_LAPACK_ORDER="" CIBW_BUILD="${{ matrix.build }}"
           # Use the minimum macOS deployment target supported by our version of PyBind:
