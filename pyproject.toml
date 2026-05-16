@@ -3,7 +3,7 @@ requires = ["scikit-build-core>=0.5.0", "pybind11>=2.9.0"]
 build-backend = "scikit_build_core.build"
 
 [tool.cibuildwheel]
-enable = ["cpython-freethreading"]
+enable = []
 test-requires = ["-r test-requirements.txt"]
 test-command = "pytest {project}/tests"
 # The manylinux container doesn't have a new enough glibc version,
