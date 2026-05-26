@@ -36,6 +36,7 @@ namespace py = pybind11;
 
 #include "plugin_templates/FixedBlockSize.h"
 #include "plugin_templates/ForceMono.h"
+#include "plugin_templates/MonoToMulti.h"
 #include "plugin_templates/PrimeWithSilence.h"
 #include "plugin_templates/Resample.h"
 
@@ -243,6 +244,7 @@ If the number of samples and the number of channels are the same, each
   init_resample_with_latency(internal);
   init_fixed_size_block_test_plugin(internal);
   init_force_mono_test_plugin(internal);
+  init_mono_to_multi_test_plugin(internal);
 
   // I/O helpers and utilities:
   py::module io = m.def_submodule("io");
