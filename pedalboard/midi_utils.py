@@ -43,9 +43,19 @@ def normalize_midi_messages(_input) -> List[Tuple[bytes, float]]:
     Given a duck-typed Python input, usually an iterable of MIDI messages,
     normalize the input to a list of tuples of bytes which can be converted
     into a juce::MidiBuffer on the C++ side.
+
+    Each element of ``_input`` must be one of:
+
+    * An object with ``bytes()`` and ``time`` attributes (e.g. ``mido.Message``).
+    * A 2-tuple/list of ``(message, timestamp)`` where *message* is ``bytes``,
+      a ``list`` of byte values, or another bytes-like object, and *timestamp*
+      is a ``float`` in seconds.
+
+    Raises ``TypeError`` if an element cannot be interpreted as a MIDI message,
+    so callers receive a clear error rather than silently losing events.
     """
     output = []
-    for message in _input:
+    for index, message in enumerate(_input):
         if hasattr(message, "bytes") and hasattr(message, "time"):
             output.append((bytes(message.bytes()), message.time))
         elif (isinstance(message, tuple) or isinstance(message, list)) and len(message) == 2:
@@ -57,6 +67,12 @@ def normalize_midi_messages(_input) -> List[Tuple[bytes, float]]:
             elif not isinstance(message, bytes):
                 message = bytes(message)
             output.append((message, time))
+        else:
+            raise TypeError(
+                f"Could not interpret MIDI message at index {index}: {message!r}. "
+                "Expected an object with 'bytes()' and 'time' attributes (e.g. mido.Message), "
+                "or a 2-element tuple/list of (message_bytes, timestamp_seconds)."
+            )
 
     # Detect the case in which the provided timestamps
     # are likely delta values rather than absolute values:
