@@ -93,6 +93,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # Debug/Release configuration
 option(DEBUG "Build with debug symbols" OFF)
 
+set(USE_PORTABLE_SIMD OFF)
+if(DEFINED ENV{USE_PORTABLE_SIMD} AND NOT "$ENV{USE_PORTABLE_SIMD}" STREQUAL "")
+    set(USE_PORTABLE_SIMD ON)
+endif()
+
 if(DEBUG)
     add_compile_definitions(DEBUG=1 _DEBUG=1)
     add_compile_options(-O0 -g)
@@ -195,19 +200,15 @@ elseif(UNIX AND NOT APPLE)
     include_directories(${FREETYPE_INCLUDE_DIRS})
     list(APPEND PLATFORM_LIBRARIES ${FREETYPE_LIBRARIES} ${ALSA_LIBRARIES})
     
-    # Processor-specific optimizations (x86 vs ARM)
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
-        add_compile_definitions(HAVE_NEON=1)
-    else()
-        # Use -march=native for local builds to optimize for the current CPU,
-        # but use a portable baseline for CI builds to avoid "Illegal instruction" errors
-        # when ccache restores objects built on different runner hardware.
-        if(DEFINED ENV{USE_PORTABLE_SIMD})
-            add_compile_options(-mavx)
+    if(NOT USE_PORTABLE_SIMD)
+        # Processor-specific optimizations (x86 vs ARM)
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
+            add_compile_definitions(HAVE_NEON=1)
         else()
+            # Use -march=native for local builds to optimize for the current CPU.
             add_compile_options(-march=native)
+            add_compile_definitions(HAVE_AVX)
         endif()
-        add_compile_definitions(HAVE_AVX)
     endif()
     
     # Additional Linux flags
@@ -309,8 +310,14 @@ function(collect_sources)
         # Exclude files depending on architecture
         if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
             list(FILTER FFTW_SOURCES EXCLUDE REGEX ".*(avx|/sse).*")
+            if(USE_PORTABLE_SIMD)
+                list(FILTER FFTW_SOURCES EXCLUDE REGEX ".*neon.*")
+            endif()
         else()
             list(FILTER FFTW_SOURCES EXCLUDE REGEX ".*neon.*")
+            if(USE_PORTABLE_SIMD)
+                list(FILTER FFTW_SOURCES EXCLUDE REGEX ".*(avx|/sse).*")
+            endif()
         endif()
         
         # Exclude unused FFTW components
