@@ -39,6 +39,27 @@ bool isInteger(double value) {
   return modf(value, &intpart) == 0.0;
 }
 
+/**
+ * Normalize the optional quality argument (either a string like "V0" or
+ * "320 kbps", or a numeric bitrate) into a string suitable for
+ * determineQualityOptionIndex.
+ */
+inline std::string qualityToString(
+    const std::optional<std::variant<std::string, float>> &qualityInput) {
+  std::string qualityString;
+  if (qualityInput) {
+    if (auto *q = std::get_if<std::string>(&(*qualityInput))) {
+      qualityString = *q;
+    } else if (auto *q = std::get_if<float>(&(*qualityInput))) {
+      qualityString =
+          isInteger(*q) ? std::to_string((int)*q) : std::to_string(*q);
+    } else {
+      throw std::runtime_error("Unknown quality type!");
+    }
+  }
+  return qualityString;
+}
+
 // Per-format overrides for the "worst"/"best"/"fastest"/"slowest"
 static inline std::map<std::string, std::pair<std::string, std::string>>
     MIN_MAX_QUALITY_OPTIONS = {
@@ -338,20 +359,7 @@ public:
     }
 
     // Normalize the input to a string here, as we need to do parsing anyways:
-    std::string qualityString;
-    if (qualityInput) {
-      if (auto *q = std::get_if<std::string>(&(*qualityInput))) {
-        qualityString = *q;
-      } else if (auto *q = std::get_if<float>(&(*qualityInput))) {
-        if (isInteger(*q)) {
-          qualityString = std::to_string((int)*q);
-        } else {
-          qualityString = std::to_string(*q);
-        }
-      } else {
-        throw std::runtime_error("Unknown quality type!");
-      }
-    }
+    std::string qualityString = qualityToString(qualityInput);
 
     int qualityOptionIndex = determineQualityOptionIndex(format, qualityString);
     if (format->getQualityOptions().size() > qualityOptionIndex) {

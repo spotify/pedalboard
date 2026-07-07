@@ -17,14 +17,18 @@
 
 #pragma once
 
+#include <algorithm>
+#include <cctype>
 #include <mutex>
 #include <optional>
 
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
+#include "../BufferUtils.h"
 #include "../JuceHeader.h"
 #include "AudioFile.h"
+#include "ParallelMP3Encoder.h"
 #include "WriteableAudioFileFlags.h"
 
 #include "ReadableAudioFile.h"
@@ -33,6 +37,75 @@
 namespace py = pybind11;
 
 namespace Pedalboard {
+
+/**
+ * Encode `samples` to MP3 using multiple encoder threads, if requested and
+ * worthwhile. Returns the encoded file bytes, or std::nullopt to signal that the
+ * caller should fall back to the standard serial encode path (either because
+ * parallelism was not requested, or because the buffer is too short to benefit).
+ *
+ * Throws py::value_error for invalid arguments: a non-positive encoder count, or
+ * a non-MP3 format when more than one encoder is requested.
+ */
+inline std::optional<std::string> maybeEncodeMP3InParallel(
+    const py::array &samples, double sampleRate, const std::string &format,
+    int numChannels,
+    const std::optional<std::variant<std::string, float>> &quality,
+    int numParallelEncoders) {
+  if (numParallelEncoders < 1) {
+    throw py::value_error("num_parallel_encoders must be a positive integer.");
+  }
+  if (numParallelEncoders == 1) {
+    return std::nullopt;
+  }
+
+  std::string lowerFormat = format;
+  std::transform(lowerFormat.begin(), lowerFormat.end(), lowerFormat.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+  if (lowerFormat != "mp3") {
+    throw py::value_error(
+        "num_parallel_encoders is only supported when encoding MP3 audio (got "
+        "format=\"" +
+        format + "\").");
+  }
+
+  // Determine an approximate sample count without a full conversion, so tiny
+  // inputs stay on the (byte-identical) serial path where parallelism would not
+  // help.
+  size_t approxSamples = 0;
+  {
+    py::buffer_info info = samples.request();
+    for (auto dim : info.shape)
+      approxSamples =
+          std::max<size_t>(approxSamples, static_cast<size_t>(dim));
+  }
+  if (approxSamples <
+      static_cast<size_t>(numParallelEncoders) * 3 * MP3_SAMPLES_PER_FRAME) {
+    return std::nullopt;
+  }
+
+  juce::AudioBuffer<float> buffer =
+      copyPyArrayIntoFloatJuceBuffer(samples, numChannels);
+  if (buffer.getNumChannels() != numChannels) {
+    throw std::runtime_error(
+        "AudioFile.encode was called with num_channels=" +
+        std::to_string(numChannels) +
+        ", but was passed an array containing " +
+        std::to_string(buffer.getNumChannels()) + "-channel audio!");
+  }
+
+  LameMP3AudioFormat mp3Format;
+  int qualityOptionIndex =
+      determineQualityOptionIndex(&mp3Format, qualityToString(quality));
+
+  std::string result;
+  {
+    py::gil_scoped_release release;
+    result = encodeMP3InParallel(buffer, sampleRate, numChannels,
+                                 qualityOptionIndex, numParallelEncoders);
+  }
+  return result;
+}
 
 // For pybind11-stubgen to properly parse the docstrings,
 // we have to declare all of the AudioFile subclasses first before using
@@ -286,7 +359,13 @@ inline void init_audio_file(
           [](const py::array samples, double sampleRate, std::string format,
              int numChannels, int bitDepth,
              std::optional<std::variant<std::string, float>> quality,
-             CodecOptionsMap codecOptions) {
+             CodecOptionsMap codecOptions, int numParallelEncoders) {
+            if (auto parallelResult = maybeEncodeMP3InParallel(
+                    samples, sampleRate, format, numChannels, quality,
+                    numParallelEncoders)) {
+              return py::bytes(*parallelResult);
+            }
+
             juce::MemoryBlock outputBlock;
             auto audioFile = std::make_unique<WriteableAudioFile>(
                 format,
@@ -303,6 +382,7 @@ inline void init_audio_file(
           py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
           py::arg("quality") = py::none(),
           py::arg("codec_options") = CodecOptionsMap{},
+          py::arg("num_parallel_encoders") = 1,
           R"(
 Encode an audio buffer to a Python :class:`bytes` object.
 
@@ -321,6 +401,14 @@ to an in-memory buffer in C++ and avoids interacting with Python at all during t
 encoding process. This allows Python's Global Interpreter Lock (GIL) to be
 released, which also makes this method much more performant in multi-threaded
 programs.
+
+If ``num_parallel_encoders`` is greater than 1, the input buffer is split into
+chunks that are encoded on separate threads and spliced back together. For long
+files this scales nearly linearly with the number of encoders, at the cost of a
+small amount of compression efficiency (up to 10%). The decoded audio is perceptually
+identical to a single-threaded encode, but the resulting bytes are not identical
+to the serial encoder's output. This option is only supported for MP3 and is
+ignored for buffers too short to benefit from parallelism.
 
 .. warning::
   This function will encode the entire audio buffer at once, and may consume a
