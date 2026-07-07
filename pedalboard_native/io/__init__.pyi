@@ -223,7 +223,7 @@ class AudioFile:
         bit_depth: int = 16,
         quality: typing.Optional[typing.Union[str, float]] = None,
         codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
-        num_parallel_encoders: int = 1,
+        num_threads: int = 1,
     ) -> bytes:
         """
         Encode an audio buffer to a Python :class:`bytes` object.
@@ -244,13 +244,14 @@ class AudioFile:
         released, which also makes this method much more performant in multi-threaded
         programs.
 
-        If ``num_parallel_encoders`` is greater than 1, the input buffer is split into
-        chunks that are encoded on separate threads and spliced back together. For long
-        files this scales nearly linearly with the number of encoders, at the cost of a
-        small amount of compression efficiency (up to 10%). The decoded audio is perceptually
+        If ``num_threads`` is greater than 1, the input buffer is split into chunks that
+        are encoded on separate threads and spliced back together. For long files this
+        scales nearly linearly with the number of threads, at the cost of a small amount
+        of compression efficiency (up to 10%). The decoded audio is perceptually
         identical to a single-threaded encode, but the resulting bytes are not identical
-        to the serial encoder's output. This option is only supported for MP3 and is
-        ignored for buffers too short to benefit from parallelism.
+        to the serial encoder's output. Multithreaded encoding is only applied when
+        encoding MP3; for any other format (or a buffer too short to benefit)
+        ``num_threads`` is ignored and encoding falls back to single-threaded.
 
         .. warning::
           This function will encode the entire audio buffer at once, and may consume a

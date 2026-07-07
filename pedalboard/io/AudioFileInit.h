@@ -41,32 +41,32 @@ namespace Pedalboard {
 /**
  * Encode `samples` to MP3 using multiple encoder threads, if requested and
  * worthwhile. Returns the encoded file bytes, or std::nullopt to signal that the
- * caller should fall back to the standard serial encode path (either because
- * parallelism was not requested, or because the buffer is too short to benefit).
+ * caller should fall back to the standard single-threaded encode path.
  *
- * Throws py::value_error for invalid arguments: a non-positive encoder count, or
- * a non-MP3 format when more than one encoder is requested.
+ * Multithreading is only applied when encoding MP3; for any other format (or a
+ * buffer too short to benefit) this returns std::nullopt so the caller falls
+ * back to single-threaded encoding. Throws py::value_error only if numThreads is
+ * not a positive integer.
  */
 inline std::optional<std::string> maybeEncodeMP3InParallel(
     const py::array &samples, double sampleRate, const std::string &format,
     int numChannels,
     const std::optional<std::variant<std::string, float>> &quality,
-    int numParallelEncoders) {
-  if (numParallelEncoders < 1) {
-    throw py::value_error("num_parallel_encoders must be a positive integer.");
+    int numThreads) {
+  if (numThreads < 1) {
+    throw py::value_error("num_threads must be a positive integer.");
   }
-  if (numParallelEncoders == 1) {
+  if (numThreads == 1) {
     return std::nullopt;
   }
 
+  // Multithreaded encoding is only supported for MP3; silently fall back to
+  // single-threaded encoding for any other format.
   std::string lowerFormat = format;
   std::transform(lowerFormat.begin(), lowerFormat.end(), lowerFormat.begin(),
                  [](unsigned char c) { return std::tolower(c); });
   if (lowerFormat != "mp3") {
-    throw py::value_error(
-        "num_parallel_encoders is only supported when encoding MP3 audio (got "
-        "format=\"" +
-        format + "\").");
+    return std::nullopt;
   }
 
   // Determine an approximate sample count without a full conversion, so tiny
@@ -80,7 +80,7 @@ inline std::optional<std::string> maybeEncodeMP3InParallel(
           std::max<size_t>(approxSamples, static_cast<size_t>(dim));
   }
   if (approxSamples <
-      static_cast<size_t>(numParallelEncoders) * 3 * MP3_SAMPLES_PER_FRAME) {
+      static_cast<size_t>(numThreads) * 3 * MP3_SAMPLES_PER_FRAME) {
     return std::nullopt;
   }
 
@@ -102,7 +102,7 @@ inline std::optional<std::string> maybeEncodeMP3InParallel(
   {
     py::gil_scoped_release release;
     result = encodeMP3InParallel(buffer, sampleRate, numChannels,
-                                 qualityOptionIndex, numParallelEncoders);
+                                 qualityOptionIndex, numThreads);
   }
   return result;
 }
@@ -359,10 +359,10 @@ inline void init_audio_file(
           [](const py::array samples, double sampleRate, std::string format,
              int numChannels, int bitDepth,
              std::optional<std::variant<std::string, float>> quality,
-             CodecOptionsMap codecOptions, int numParallelEncoders) {
+             CodecOptionsMap codecOptions, int numThreads) {
             if (auto parallelResult = maybeEncodeMP3InParallel(
                     samples, sampleRate, format, numChannels, quality,
-                    numParallelEncoders)) {
+                    numThreads)) {
               return py::bytes(*parallelResult);
             }
 
@@ -382,7 +382,7 @@ inline void init_audio_file(
           py::arg("num_channels") = 1, py::arg("bit_depth") = 16,
           py::arg("quality") = py::none(),
           py::arg("codec_options") = CodecOptionsMap{},
-          py::arg("num_parallel_encoders") = 1,
+          py::arg("num_threads") = 1,
           R"(
 Encode an audio buffer to a Python :class:`bytes` object.
 
@@ -402,13 +402,14 @@ encoding process. This allows Python's Global Interpreter Lock (GIL) to be
 released, which also makes this method much more performant in multi-threaded
 programs.
 
-If ``num_parallel_encoders`` is greater than 1, the input buffer is split into
-chunks that are encoded on separate threads and spliced back together. For long
-files this scales nearly linearly with the number of encoders, at the cost of a
-small amount of compression efficiency (up to 10%). The decoded audio is perceptually
+If ``num_threads`` is greater than 1, the input buffer is split into chunks that
+are encoded on separate threads and spliced back together. For long files this
+scales nearly linearly with the number of threads, at the cost of a small amount
+of compression efficiency (up to 10%). The decoded audio is perceptually
 identical to a single-threaded encode, but the resulting bytes are not identical
-to the serial encoder's output. This option is only supported for MP3 and is
-ignored for buffers too short to benefit from parallelism.
+to the serial encoder's output. Multithreaded encoding is only applied when
+encoding MP3; for any other format (or a buffer too short to benefit)
+``num_threads`` is ignored and encoding falls back to single-threaded.
 
 .. warning::
   This function will encode the entire audio buffer at once, and may consume a

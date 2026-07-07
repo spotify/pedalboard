@@ -16,13 +16,16 @@
 
 """
 Tests for the parallel MP3 encoding path exposed via
-``AudioFile.encode(..., num_parallel_encoders=N)``.
+``AudioFile.encode(..., num_threads=N)``.
 
 The parallel encoder splits a buffer into MP3-frame-aligned chunks, encodes them
 on separate threads (with the bit reservoir disabled so frames are independently
 splice-able), and stitches the resulting frames back together. It must produce a
 valid MP3 whose decoded audio is perceptually identical to a single-threaded
 encode, without introducing clicks at the chunk boundaries.
+
+Multithreaded encoding (``num_threads > 1``) is only applied for MP3; for any
+other format it is silently ignored and encoding falls back to single-threaded.
 """
 
 import io
@@ -86,7 +89,7 @@ def test_parallel_mp3_encode_matches_serial_fidelity(num_channels: int):
         "mp3",
         num_channels=num_channels,
         quality="256 kbps",
-        num_parallel_encoders=4,
+        num_threads=4,
     )
 
     serial_decoded, _, _ = _decode_mp3_bytes(serial)
@@ -118,7 +121,7 @@ def test_parallel_mp3_encode_has_no_seam_artifacts():
         "mp3",
         num_channels=1,
         quality="256 kbps",
-        num_parallel_encoders=num_encoders,
+        num_threads=num_encoders,
     )
     decoded, _, _ = _decode_mp3_bytes(encoded)
     _, shift, error = _best_aligned_snr(decoded, signal, samplerate)
@@ -145,7 +148,7 @@ def test_parallel_mp3_encode_has_no_seam_artifacts():
 
 def test_parallel_mp3_encode_one_encoder_matches_default():
     """
-    num_parallel_encoders=1 must be byte-identical to the default serial path.
+    num_threads=1 must be byte-identical to the default serial path.
     """
     samplerate = 44100
     signal = generate_sine_at(samplerate, num_seconds=5).astype(np.float32)
@@ -158,7 +161,7 @@ def test_parallel_mp3_encode_one_encoder_matches_default():
         "mp3",
         num_channels=1,
         quality="256 kbps",
-        num_parallel_encoders=1,
+        num_threads=1,
     )
     assert default == explicit
 
@@ -183,28 +186,42 @@ def test_parallel_mp3_encode_short_buffer_falls_back_to_serial():
         "mp3",
         num_channels=1,
         quality="256 kbps",
-        num_parallel_encoders=8,
+        num_threads=8,
     )
     assert serial == parallel
 
 
-@pytest.mark.parametrize("bad_format", ["wav", "flac", "ogg"])
-def test_parallel_mp3_encode_rejects_non_mp3(bad_format: str):
+@pytest.mark.parametrize("non_mp3_format", ["wav", "flac", "ogg"])
+def test_parallel_mp3_encode_non_mp3_falls_back_to_serial(non_mp3_format: str):
     """
-    num_parallel_encoders > 1 is only supported for MP3.
+    num_threads > 1 is only applied for MP3. For any other format it is silently
+    ignored and encoding falls back to single-threaded.
     """
     signal = generate_sine_at(44100, num_seconds=1).astype(np.float32)
-    with pytest.raises(ValueError, match="only supported when encoding MP3"):
-        pedalboard.io.AudioFile.encode(
-            signal, 44100, bad_format, num_channels=1, num_parallel_encoders=4
-        )
+    serial = pedalboard.io.AudioFile.encode(
+        signal, 44100, non_mp3_format, num_channels=1
+    )
+    with_threads = pedalboard.io.AudioFile.encode(
+        signal, 44100, non_mp3_format, num_channels=1, num_threads=4
+    )
+
+    # For deterministic formats, falling back to serial produces byte-identical
+    # output. (Ogg embeds a random bitstream serial number, so it is not
+    # byte-reproducible; we only check that it remains a valid file below.)
+    if non_mp3_format in ("wav", "flac"):
+        assert serial == with_threads
+
+    with pedalboard.io.ReadableAudioFile(io.BytesIO(with_threads)) as af:
+        assert af.samplerate == 44100
+        assert af.num_channels == 1
+        assert af.frames > 0
 
 
-def test_parallel_mp3_encode_rejects_invalid_encoder_count():
+def test_parallel_mp3_encode_rejects_invalid_thread_count():
     signal = generate_sine_at(44100, num_seconds=1).astype(np.float32)
     with pytest.raises(ValueError, match="positive integer"):
         pedalboard.io.AudioFile.encode(
-            signal, 44100, "mp3", num_channels=1, num_parallel_encoders=0
+            signal, 44100, "mp3", num_channels=1, num_threads=0
         )
 
 
@@ -223,7 +240,7 @@ def test_parallel_mp3_encode_is_readable_and_correct_length():
         "mp3",
         num_channels=1,
         quality="256 kbps",
-        num_parallel_encoders=4,
+        num_threads=4,
     )
     with pedalboard.io.ReadableAudioFile(io.BytesIO(encoded)) as af:
         assert af.samplerate == samplerate
