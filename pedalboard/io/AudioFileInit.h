@@ -40,13 +40,13 @@ namespace Pedalboard {
 
 /**
  * Encode `samples` to MP3 using multiple encoder threads, if requested and
- * worthwhile. Returns the encoded file bytes, or std::nullopt to signal that the
- * caller should fall back to the standard single-threaded encode path.
+ * worthwhile. Returns the encoded file bytes, or std::nullopt to signal that
+ * the caller should fall back to the standard single-threaded encode path.
  *
  * Multithreading is only applied when encoding MP3; for any other format (or a
  * buffer too short to benefit) this returns std::nullopt so the caller falls
- * back to single-threaded encoding. Throws py::value_error only if numThreads is
- * not a positive integer.
+ * back to single-threaded encoding. Throws py::value_error only if numThreads
+ * is not a positive integer.
  */
 inline std::optional<std::string> maybeEncodeMP3InParallel(
     const py::array &samples, double sampleRate, const std::string &format,
@@ -76,8 +76,7 @@ inline std::optional<std::string> maybeEncodeMP3InParallel(
   {
     py::buffer_info info = samples.request();
     for (auto dim : info.shape)
-      approxSamples =
-          std::max<size_t>(approxSamples, static_cast<size_t>(dim));
+      approxSamples = std::max<size_t>(approxSamples, static_cast<size_t>(dim));
   }
   if (approxSamples <
       static_cast<size_t>(numThreads) * 3 * MP3_SAMPLES_PER_FRAME) {
@@ -89,8 +88,7 @@ inline std::optional<std::string> maybeEncodeMP3InParallel(
   if (buffer.getNumChannels() != numChannels) {
     throw std::runtime_error(
         "AudioFile.encode was called with num_channels=" +
-        std::to_string(numChannels) +
-        ", but was passed an array containing " +
+        std::to_string(numChannels) + ", but was passed an array containing " +
         std::to_string(buffer.getNumChannels()) + "-channel audio!");
   }
 

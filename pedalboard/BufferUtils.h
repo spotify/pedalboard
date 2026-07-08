@@ -297,9 +297,8 @@ copyTypedPyArrayIntoFloatJuceBuffer(const py::array &samples,
       numSamples = static_cast<int>(inputInfo.shape[1]);
     }
   } else {
-    throw std::runtime_error(
-        "Number of input dimensions must be 1 or 2 (got " +
-        std::to_string(inputInfo.ndim) + ").");
+    throw std::runtime_error("Number of input dimensions must be 1 or 2 (got " +
+                             std::to_string(inputInfo.ndim) + ").");
   }
 
   juce::AudioBuffer<float> ioBuffer(std::max(numChannels, 1),
@@ -321,9 +320,9 @@ copyTypedPyArrayIntoFloatJuceBuffer(const py::array &samples,
  * float64) into a deinterleaved juce::AudioBuffer<float> normalized to [-1, 1].
  *
  * Unlike copyPyArrayIntoJuceBuffer, this always produces a float buffer (JUCE's
- * AudioBuffer only supports floating-point sample types), which is useful when a
- * plain C++ float buffer is needed regardless of the input dtype - for example,
- * to feed encoder threads that must not touch Python.
+ * AudioBuffer only supports floating-point sample types), which is useful when
+ * a plain C++ float buffer is needed regardless of the input dtype - for
+ * example, to feed encoder threads that must not touch Python.
  */
 inline juce::AudioBuffer<float>
 copyPyArrayIntoFloatJuceBuffer(const py::array &samples, int numChannelsHint) {

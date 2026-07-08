@@ -40,13 +40,13 @@
  * Three MP3 details make the splice correct:
  *
  *   1. Bit reservoir: normally a frame's main_data may begin in a previous
- *      frame, so frames are not independent. We disable the reservoir per worker
- *      so every frame is self-contained and safe to splice.
+ *      frame, so frames are not independent. We disable the reservoir per
+ * worker so every frame is self-contained and safe to splice.
  *
  *   2. Encoder delay + filterbank warmup: each fresh LAME instance emits
- *      `enc_delay` samples of priming and needs a little audio *before* a region
- *      to encode its first frames correctly. We read the true encoder delay from
- *      the LAME tag and feed each worker frame-aligned pre-roll (and a little
+ *      `enc_delay` samples of priming and needs a little audio *before* a
+ * region to encode its first frames correctly. We read the true encoder delay
+ * from the LAME tag and feed each worker frame-aligned pre-roll (and a little
  *      post-roll for the trailing MDCT lookahead), then discard the frames that
  *      cover the warmup regions.
  *
@@ -68,10 +68,10 @@ namespace Pedalboard {
 static constexpr int MP3_SAMPLES_PER_FRAME = 1152;
 
 struct ParsedMP3Frame {
-  size_t offset;  // byte offset of the frame within its buffer
-  size_t length;  // frame length in bytes
-  int samples;    // decoded samples represented by this frame
-  bool isTag;     // true if this is a Xing/Info/LAME metadata frame
+  size_t offset; // byte offset of the frame within its buffer
+  size_t length; // frame length in bytes
+  int samples;   // decoded samples represented by this frame
+  bool isTag;    // true if this is a Xing/Info/LAME metadata frame
 };
 
 /**
@@ -103,27 +103,30 @@ inline bool parseMP3FrameHeader(const uint8_t *data, size_t pos, size_t len,
 
   static const int kBitrateMpeg1[] = {0,   32,  40,  48,  56,  64,  80,  96,
                                       112, 128, 160, 192, 224, 256, 320, 0};
-  static const int kBitrateMpeg2[] = {0,  8,  16, 24, 32,  40,  48, 56,
+  static const int kBitrateMpeg2[] = {0,  8,  16, 24,  32,  40,  48,  56,
                                       64, 80, 96, 112, 128, 144, 160, 0};
   static const int kSampleRateMpeg1[] = {44100, 48000, 32000, 0};
   static const int kSampleRateMpeg2[] = {22050, 24000, 16000, 0};
   static const int kSampleRateMpeg25[] = {11025, 12000, 8000, 0};
 
   const int bitrate = (isMpeg1 ? kBitrateMpeg1 : kBitrateMpeg2)[bitrateIndex];
-  const int sampleRate = (version == 0b11   ? kSampleRateMpeg1
-                          : version == 0b10 ? kSampleRateMpeg2
-                                            : kSampleRateMpeg25)[sampleRateIndex];
+  const int sampleRate =
+      (version == 0b11   ? kSampleRateMpeg1
+       : version == 0b10 ? kSampleRateMpeg2
+                         : kSampleRateMpeg25)[sampleRateIndex];
   if (bitrate == 0 || sampleRate == 0)
     return false;
 
   samplesPerFrame = isMpeg1 ? 1152 : 576;
   const int coefficient = samplesPerFrame / 8; // 144 (MPEG-1) or 72 (MPEG-2)
   frameLength =
-      static_cast<size_t>((coefficient * bitrate * 1000) / sampleRate) + padding;
+      static_cast<size_t>((coefficient * bitrate * 1000) / sampleRate) +
+      padding;
   return frameLength > 4;
 }
 
-/** Return true if the frame at [offset, offset+length) carries a Xing/Info tag. */
+/** Return true if the frame at [offset, offset+length) carries a Xing/Info tag.
+ */
 inline bool mp3FrameIsTag(const uint8_t *data, size_t offset, size_t length) {
   const size_t end = offset + length;
   for (size_t i = offset; i + 4 <= end; i++) {
@@ -155,8 +158,7 @@ inline std::vector<ParsedMP3Frame> parseMP3Frames(const uint8_t *data,
     }
     if (pos + length > len)
       break;
-    frames.push_back(
-        {pos, length, samples, mp3FrameIsTag(data, pos, length)});
+    frames.push_back({pos, length, samples, mp3FrameIsTag(data, pos, length)});
     pos += length;
   }
   return frames;
@@ -204,14 +206,14 @@ inline int readMP3EncoderDelay(const uint8_t *data, size_t len) {
   if (delayOffset + 3 > len)
     return kLameDefaultEncoderDelay;
 
-  const int encDelay =
-      (data[delayOffset] << 4) | (data[delayOffset + 1] >> 4);
+  const int encDelay = (data[delayOffset] << 4) | (data[delayOffset + 1] >> 4);
   return encDelay;
 }
 
 namespace detail {
 
-/** Encode a fully-prepared PCM block to MP3 bytes using a single LAME writer. */
+/** Encode a fully-prepared PCM block to MP3 bytes using a single LAME writer.
+ */
 inline juce::MemoryBlock encodeBlockToMP3(const juce::AudioBuffer<float> &block,
                                           double sampleRate, int numChannels,
                                           int qualityOptionIndex) {
@@ -233,7 +235,8 @@ inline juce::MemoryBlock encodeBlockToMP3(const juce::AudioBuffer<float> &block,
     stream.release(); // the writer now owns the stream
     if (!writer.writeFromFloatArrays(block.getArrayOfReadPointers(),
                                      numChannels, block.getNumSamples())) {
-      throw std::runtime_error("Parallel MP3 encoder failed to encode a chunk.");
+      throw std::runtime_error(
+          "Parallel MP3 encoder failed to encode a chunk.");
     }
     // Writer destructor here flushes LAME, writes the VBR tag, and deletes the
     // stream.
@@ -282,9 +285,10 @@ inline void writeBigEndian32(uint8_t *dest, uint32_t value) {
  * all encoder priming when splicing, the gapless encoder-delay/padding fields
  * are zeroed (the stream already starts at true sample zero).
  */
-inline std::vector<uint8_t>
-buildMergedHeaderFrame(const uint8_t *tagFrame, size_t tagFrameLength,
-                       uint32_t totalAudioFrames, uint32_t totalBytes) {
+inline std::vector<uint8_t> buildMergedHeaderFrame(const uint8_t *tagFrame,
+                                                   size_t tagFrameLength,
+                                                   uint32_t totalAudioFrames,
+                                                   uint32_t totalBytes) {
   std::vector<uint8_t> header(tagFrame, tagFrame + tagFrameLength);
 
   size_t idx = 0;
@@ -354,8 +358,8 @@ inline std::string encodeMP3InParallel(const juce::AudioBuffer<float> &audio,
     for (int c = 0; c < numChannels; c++)
       probeBlock.copyFrom(c, 0, audio, c, 0, probeLength);
   }
-  const juce::MemoryBlock probe =
-      detail::encodeBlockToMP3(probeBlock, sampleRate, numChannels, qualityOptionIndex);
+  const juce::MemoryBlock probe = detail::encodeBlockToMP3(
+      probeBlock, sampleRate, numChannels, qualityOptionIndex);
   const int encoderDelay = readMP3EncoderDelay(
       static_cast<const uint8_t *>(probe.getData()), probe.getSize());
 
@@ -415,7 +419,8 @@ inline std::string encodeMP3InParallel(const juce::AudioBuffer<float> &audio,
 
   // Trim each region to just the frames covering its core, and remember the
   // first tag frame we see so we can build the merged header.
-  std::vector<std::pair<const uint8_t *, size_t>> body; // (ptr, length) segments
+  std::vector<std::pair<const uint8_t *, size_t>>
+      body; // (ptr, length) segments
   const uint8_t *headerTagFrame = nullptr;
   size_t headerTagFrameLength = 0;
   uint32_t totalAudioFrames = 0;
@@ -458,8 +463,8 @@ inline std::string encodeMP3InParallel(const juce::AudioBuffer<float> &audio,
   if (headerTagFrame != nullptr) {
     const uint32_t totalBytes =
         static_cast<uint32_t>(headerTagFrameLength + bodyBytes);
-    header = detail::buildMergedHeaderFrame(headerTagFrame, headerTagFrameLength,
-                                            totalAudioFrames, totalBytes);
+    header = detail::buildMergedHeaderFrame(
+        headerTagFrame, headerTagFrameLength, totalAudioFrames, totalBytes);
   }
 
   std::string result;
