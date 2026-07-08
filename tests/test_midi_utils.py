@@ -36,3 +36,25 @@ from pedalboard.midi_utils import normalize_midi_messages
 )
 def test_mido_normalization(_input, expected: List[Tuple[bytes, float]]):
     assert normalize_midi_messages(_input) == expected
+
+
+@pytest.mark.parametrize(
+    "bad_message,expected_index",
+    [
+        # 1-tuple: timestamp accidentally omitted
+        ((bytes([0x90, 60, 64]),), 1),
+        # 3-tuple: extra unexpected field
+        ((bytes([0x90, 60, 64]), 0.0, "extra"), 0),
+        # raw bytes with no timestamp
+        (bytes([0x90, 60, 64]), 0),
+        # bare integer
+        (42, 0),
+        # None
+        (None, 0),
+    ],
+)
+def test_normalize_midi_messages_raises_on_malformed(bad_message, expected_index):
+    valid = (bytes([0x90, 60, 64]), 0.0)
+    messages = [valid] * expected_index + [bad_message]
+    with pytest.raises(TypeError, match=f"index {expected_index}"):
+        normalize_midi_messages(messages)

@@ -45,7 +45,7 @@ def normalize_midi_messages(_input) -> List[Tuple[bytes, float]]:
     into a juce::MidiBuffer on the C++ side.
     """
     output = []
-    for message in _input:
+    for i, message in enumerate(_input):
         if hasattr(message, "bytes") and hasattr(message, "time"):
             output.append((bytes(message.bytes()), message.time))
         elif (isinstance(message, tuple) or isinstance(message, list)) and len(message) == 2:
@@ -57,6 +57,11 @@ def normalize_midi_messages(_input) -> List[Tuple[bytes, float]]:
             elif not isinstance(message, bytes):
                 message = bytes(message)
             output.append((message, time))
+        else:
+            raise TypeError(
+                f"MIDI message at index {i} could not be interpreted: {message!r}. "
+                "Expected a (bytes, float) tuple or an object with .bytes() and .time attributes."
+            )
 
     # Detect the case in which the provided timestamps
     # are likely delta values rather than absolute values:
