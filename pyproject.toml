@@ -10,8 +10,8 @@ test-command = "pytest {project}/tests"
 # The musllinux containers on aarch64 take 6+ hours to test.
 # Also testing any pypy versions fails, as TensorFlow isn't pypy compatible.
 test-skip = "*manylinux* *musllinux_aarch* *pp* *-macosx_universal2:arm64"
-musllinux-x86_64-image = "quay.io/pypa/musllinux_1_1_x86_64:latest"
-musllinux-aarch64-image = "quay.io/pypa/musllinux_1_1_aarch64:latest"
+musllinux-x86_64-image = "quay.io/pypa/musllinux_1_2_x86_64:latest"
+musllinux-aarch64-image = "quay.io/pypa/musllinux_1_2_aarch64:latest"
 
 # See: https://cibuildwheel.readthedocs.io/en/stable/options/#examples
 [tool.cibuildwheel.linux]
