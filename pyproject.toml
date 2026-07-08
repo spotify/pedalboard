@@ -3,15 +3,13 @@ requires = ["scikit-build-core>=0.5.0", "pybind11>=2.9.0"]
 build-backend = "scikit_build_core.build"
 
 [tool.cibuildwheel]
-enable = ["cpython-freethreading"]
 test-requires = ["-r test-requirements.txt"]
 test-command = "pytest {project}/tests"
 # The manylinux container doesn't have a new enough glibc version,
 # so we can't run post-wheel-build tests there.
 # The musllinux containers on aarch64 take 6+ hours to test.
 # Also testing any pypy versions fails, as TensorFlow isn't pypy compatible.
-# cp313t is skipped because cffi doesn't support free-threaded Python 3.13.
-test-skip = "*manylinux* *musllinux_aarch* *pp* *-macosx_universal2:arm64 *cp313t*"
+test-skip = "*manylinux* *musllinux_aarch* *pp* *-macosx_universal2:arm64"
 musllinux-x86_64-image = "quay.io/pypa/musllinux_1_1_x86_64:latest"
 musllinux-aarch64-image = "quay.io/pypa/musllinux_1_1_aarch64:latest"
 
