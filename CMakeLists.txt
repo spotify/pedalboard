@@ -169,6 +169,11 @@ elseif(WIN32)
     # Windows specific flags
     add_compile_definitions(WINDOWS=1 USE_BUILTIN_FFT NO_THREADING)
     add_compile_definitions(JUCE_DLL_BUILD=1)
+
+    # python_bindings.cpp generates a very large number of COFF sections (from
+    # the pybind11 template instantiations); /bigobj raises the per-object
+    # section limit so MSVC doesn't fail with error C1128.
+    add_compile_options(/bigobj)
     
     # Windows-specific libraries
     list(APPEND PLATFORM_LIBRARIES

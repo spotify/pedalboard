@@ -18,6 +18,8 @@
 #pragma once
 #include "JuceHeader.h"
 
+#include <cstdint>
+
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
@@ -263,5 +265,92 @@ py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> &juceBuffer,
   }
 
   return outputArray;
+}
+
+/**
+ * Convert a NumPy array of a specific dtype into a deinterleaved
+ * juce::AudioBuffer<float> normalized to [-1, 1] by multiplying each sample by
+ * `scale`. Handles both interleaved and non-interleaved input layouts.
+ */
+template <typename T>
+juce::AudioBuffer<float>
+copyTypedPyArrayIntoFloatJuceBuffer(const py::array &samples,
+                                    int numChannelsHint, float scale) {
+  py::array_t<T, py::array::c_style> inputArray(samples);
+  py::buffer_info inputInfo = inputArray.request();
+  ChannelLayout inputChannelLayout =
+      detectChannelLayout(inputArray, {numChannelsHint});
+
+  int numChannels = 1;
+  int numSamples = 0;
+  bool interleaved = false;
+  if (inputInfo.ndim == 1) {
+    numChannels = 1;
+    numSamples = static_cast<int>(inputInfo.shape[0]);
+  } else if (inputInfo.ndim == 2) {
+    if (inputChannelLayout == ChannelLayout::Interleaved) {
+      numSamples = static_cast<int>(inputInfo.shape[0]);
+      numChannels = static_cast<int>(inputInfo.shape[1]);
+      interleaved = true;
+    } else {
+      numChannels = static_cast<int>(inputInfo.shape[0]);
+      numSamples = static_cast<int>(inputInfo.shape[1]);
+    }
+  } else {
+    throw std::runtime_error("Number of input dimensions must be 1 or 2 (got " +
+                             std::to_string(inputInfo.ndim) + ").");
+  }
+
+  juce::AudioBuffer<float> ioBuffer(std::max(numChannels, 1),
+                                    std::max(numSamples, 0));
+  const T *inputPointer = static_cast<const T *>(inputInfo.ptr);
+  for (int c = 0; c < numChannels; c++) {
+    float *channelBuffer = ioBuffer.getWritePointer(c);
+    for (int i = 0; i < numSamples; i++) {
+      const T value = interleaved ? inputPointer[(i * numChannels) + c]
+                                  : inputPointer[(c * numSamples) + i];
+      channelBuffer[i] = static_cast<float>(value) * scale;
+    }
+  }
+  return ioBuffer;
+}
+
+/**
+ * Convert a NumPy array of any supported dtype (int8, int16, int32, float32, or
+ * float64) into a deinterleaved juce::AudioBuffer<float> normalized to [-1, 1].
+ *
+ * Unlike copyPyArrayIntoJuceBuffer, this always produces a float buffer (JUCE's
+ * AudioBuffer only supports floating-point sample types), which is useful when
+ * a plain C++ float buffer is needed regardless of the input dtype - for
+ * example, to feed encoder threads that must not touch Python.
+ */
+inline juce::AudioBuffer<float>
+copyPyArrayIntoFloatJuceBuffer(const py::array &samples, int numChannelsHint) {
+  switch (samples.dtype().char_()) {
+  case 'f':
+    return copyTypedPyArrayIntoFloatJuceBuffer<float>(samples, numChannelsHint,
+                                                      1.0f);
+  case 'd':
+    return copyTypedPyArrayIntoFloatJuceBuffer<double>(samples, numChannelsHint,
+                                                       1.0f);
+  case 'b':
+    return copyTypedPyArrayIntoFloatJuceBuffer<int8_t>(samples, numChannelsHint,
+                                                       1.0f / 128.0f);
+  case 'h':
+    return copyTypedPyArrayIntoFloatJuceBuffer<int16_t>(
+        samples, numChannelsHint, 1.0f / 32768.0f);
+  case 'i':
+#ifdef JUCE_WINDOWS
+  // On 64-bit Windows, int32 is a "long".
+  case 'l':
+#endif
+    return copyTypedPyArrayIntoFloatJuceBuffer<int32_t>(
+        samples, numChannelsHint, 1.0f / 2147483648.0f);
+  default:
+    throw py::type_error(
+        "Encoding audio requires an array with a datatype of int8, "
+        "int16, int32, float32, or float64. (Got: " +
+        py::str(samples.attr("dtype")).cast<std::string>() + ")");
+  }
 }
 } // namespace Pedalboard
