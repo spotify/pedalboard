@@ -262,6 +262,8 @@ if(DEFINED ENV{CIBW_BUILD} AND "$ENV{CIBW_BUILD}" MATCHES "musllinux")
         _NL_IDENTIFICATION_LANGUAGE=0x42
         _NL_IDENTIFICATION_TERRITORY=0x43
     )
+    # musl doesn't provide execinfo.h; use our stub in vendors/
+    include_directories(SYSTEM ${CMAKE_SOURCE_DIR}/vendors)
 endif()
 
 # Rubber Band library flags
