@@ -8,7 +8,7 @@ We'd love to get patches from you!
 
 To compile Pedalboard from scratch, the following packages will need to be installed:
 
-- [Python 3.8](https://www.python.org/downloads/) or higher.
+- [Python 3.10](https://www.python.org/downloads/) or higher.
 - A C++ compiler, e.g. `gcc`, `clang`, etc.
   - On macOS, a working Xcode installation should provide this.
 - On Linux:
@@ -91,7 +91,7 @@ Use [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) for C++ code,
 
 ## Issues
 
-When creating an issue please try to ahere to the following format:
+When creating an issue please try to adhere to the following format:
 
     module-name: One line summary of the issue (less than 72 characters)
 
