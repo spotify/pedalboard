@@ -56,16 +56,18 @@ version = "0.9.24"
 
 [project.optional-dependencies]
 test = [
+    "coverage",
     "pytest",
-    "pyright",
-    "mutagen",
     "pytest-cov",
     "pytest-mock",
     "tqdm",
     "psutil",
+    # mypy 2.0+ unconditionally depends on ast-serialize, which requires Rust
+    # and can't be built from source on musllinux_1_1.
     "mypy<2",
     "pyright",
     "mido",
+    "mutagen",
 ]
 
 [tool.scikit-build]

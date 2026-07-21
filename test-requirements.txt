@@ -1,23 +1,20 @@
-coverage
-pytest>6.2
-pytest-cov
-pytest-mock
-pybind11<2.13; python_version < '3.7'
-pybind11>=2.13; python_version >= '3.7'
-setuptools>=59
-pip>22; python_version > '3.6'
-pip>21; python_version < '3.7'
-wheel
-
-numpy>=2.1.0rc1; python_version>="3.13"
-numpy>=2; python_version>="3.9" and python_version<"3.13"
-numpy<2; python_version<="3.8"
-tqdm
-psutil
-mypy<2
-pyright
-# ty  # Uncomment to enable Astral type checker (still in early development)
-
-# For MIDI support - only in test though!
-mido
-mutagen
+colorama==0.4.6 ; sys_platform == 'win32'
+coverage==7.8.0
+exceptiongroup==1.3.0 ; python_full_version < '3.11'
+iniconfig==2.1.0
+mido==1.3.3
+mutagen==1.47.0
+mypy==1.15.0
+mypy-extensions==1.1.0
+nodeenv==1.9.1
+numpy==2.2.5
+packaging==25.0
+pluggy==1.6.0
+psutil==7.0.0
+pyright==1.1.400
+pytest==8.3.5
+pytest-cov==6.1.1
+pytest-mock==3.14.0
+tomli==2.2.1 ; python_full_version <= '3.11'
+tqdm==4.67.1
+typing-extensions==4.13.2

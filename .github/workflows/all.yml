@@ -36,6 +36,20 @@ jobs:
       - name: Check Python formatting
         run: ruff format --check ${{ github.workspace }}/pedalboard --diff
 
+  check-test-requirements:
+    runs-on: "ubuntu-24.04"
+    name: Check test-requirements.txt is in sync
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Check test-requirements.txt is in sync with uv.lock
+        run: |
+          cp test-requirements.txt /tmp/test-requirements.txt.before
+          ./scripts/update_test_requirements.sh
+          diff /tmp/test-requirements.txt.before test-requirements.txt \
+            || (echo "test-requirements.txt is out of sync with uv.lock. Run ./scripts/update_test_requirements.sh and commit." && exit 1)
+
   type-check-python:
     runs-on: "ubuntu-24.04"
     continue-on-error: true

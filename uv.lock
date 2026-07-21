@@ -255,6 +255,7 @@ dependencies = [
 
 [package.optional-dependencies]
 test = [
+    { name = "coverage" },
     { name = "mido" },
     { name = "mutagen" },
     { name = "mypy" },
@@ -268,6 +269,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
+    { name = "coverage", marker = "extra == 'test'" },
     { name = "mido", marker = "extra == 'test'" },
     { name = "mutagen", marker = "extra == 'test'" },
     { name = "mypy", marker = "extra == 'test'", specifier = "<2" },
