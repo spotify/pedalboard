@@ -313,7 +313,9 @@ class Convolution(Plugin):
 
     The convolution impulse response can be specified either by filename or as a 32-bit floating point NumPy array. If a NumPy array is provided, the ``sample_rate`` argument must also be provided to indicate the sample rate of the impulse response.
 
-    *Support for passing NumPy arrays as impulse responses introduced in v0.9.10.*
+    The impulse response can also be replaced after construction by assigning to the ``impulse_response_filename`` or ``impulse_response`` properties.
+
+    *Support for passing NumPy arrays as impulse responses introduced in v0.9.10. Support for replacing the impulse response after construction introduced in v0.9.18.*
     """
 
     def __init__(
@@ -331,10 +333,16 @@ class Convolution(Plugin):
     ) -> typing.Optional[NDArray[float32]]:
         """ """
 
+    @impulse_response.setter
+    def impulse_response(self, arg1: NDArray[float32]) -> None:
+        pass
     @property
     def impulse_response_filename(self) -> typing.Optional[str]:
         """ """
 
+    @impulse_response_filename.setter
+    def impulse_response_filename(self, arg1: str) -> None:
+        pass
     @property
     def mix(self) -> float:
         """ """

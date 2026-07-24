@@ -167,6 +167,41 @@ def test_convolution_impulse_response_storage():
     np.testing.assert_allclose(conv.impulse_response, ir)
 
 
+def test_convolution_set_impulse_response_filename(sr=44100, duration=1):
+    noise = np.random.rand(sr * duration).astype(np.float32)
+    # Start from a NumPy-array impulse response, then swap in a file in place.
+    conv = Convolution(np.random.rand(2, 128).astype(np.float32), 0.5, sr)
+    conv.impulse_response_filename = IMPULSE_RESPONSE_PATH
+    assert conv.impulse_response_filename == IMPULSE_RESPONSE_PATH
+    # The filename is now the source of truth, so the array is cleared.
+    assert conv.impulse_response is None
+    expected = Convolution(IMPULSE_RESPONSE_PATH, 0.5)(noise, sr)
+    np.testing.assert_allclose(conv(noise, sr), expected, atol=0.0001)
+
+
+def test_convolution_set_impulse_response_array(sr=44100, duration=1):
+    noise = np.random.rand(sr * duration).astype(np.float32)
+    with AudioFile(IMPULSE_RESPONSE_PATH) as f:
+        ir = f.read(f.frames)
+    # Start from a file, then swap in an array. The sample rate captured when
+    # the file was loaded is reused, so no sample_rate argument is needed.
+    conv = Convolution(IMPULSE_RESPONSE_PATH, 0.5)
+    conv.impulse_response = ir
+    assert conv.impulse_response_filename is None
+    assert conv.impulse_response is not None
+    expected = Convolution(ir, 0.5, sample_rate=sr)(noise, sr)
+    np.testing.assert_allclose(conv(noise, sr), expected, atol=0.0001)
+
+
+def test_convolution_swapping_impulse_response_changes_output(sr=44100, duration=1):
+    noise = np.random.rand(sr * duration).astype(np.float32)
+    conv = Convolution(IMPULSE_RESPONSE_PATH, 1.0)
+    before = conv(noise, sr)
+    conv.impulse_response = np.random.rand(2, 512).astype(np.float32)
+    after = conv(noise, sr)
+    assert not np.allclose(before, after, atol=0.01)
+
+
 @pytest.mark.parametrize("gain_db", [-12, -6, 0, 1.1, 6, 12, 24, 48, 96])
 @pytest.mark.parametrize("shape", [(44100,), (44100, 1), (44100, 2), (1, 44100), (2, 44100)])
 def test_distortion(gain_db, shape, sr=44100):
