@@ -27,14 +27,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - uses: actions/checkout@v4
-      - name: Install Ruff
-        run: |
-          python -m pip install --upgrade pip
-          pip install ruff
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        run: uv sync --locked --all-extras --dev
       - name: Lint Python code
-        run: ruff check ${{ github.workspace }}/pedalboard
+        run: uv run ruff check ${{ github.workspace }}/pedalboard
       - name: Check Python formatting
-        run: ruff format --check ${{ github.workspace }}/pedalboard --diff
+        run: uv run ruff format --check ${{ github.workspace }}/pedalboard --diff
 
   type-check-python:
     runs-on: "ubuntu-24.04"
@@ -121,18 +121,18 @@ jobs:
       - name: Install ccache on macOS
         if: runner.os == 'macOS'
         run: brew install ccache
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
       - name: Install test dependencies
         env:
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
           NPY_BLAS_ORDER: ""
           NPY_LAPACK_ORDER: ""
         run: |
-          python -m pip install --upgrade pip
-          pip install wheel
-          pip install -r test-requirements.txt
+          uv sync --locked --all-extras --dev --no-install-project
           # TensorFlow is an optional dependency; if present, we'll run tests with it:
           # There are no environment specifiers to select when TensorFlow binaries are available.
-          pip install tensorflow==2.13 || true
+          uv pip install tensorflow==2.13 || true
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
         uses: actions/cache/restore@v4
@@ -159,7 +159,7 @@ jobs:
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-        run: python -m pip install -e .
+        run: uv sync --locked --all-extras --dev
       - name: Ensure ccache worked
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -209,15 +209,15 @@ jobs:
       - name: Install ccache on macOS
         if: runner.os == 'macOS'
         run: brew install ccache
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
       - name: Install test dependencies
         env:
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
           NPY_BLAS_ORDER: ""
           NPY_LAPACK_ORDER: ""
         run: |
-          python -m pip install --upgrade pip
-          pip install wheel
-          pip install -r test-requirements.txt
+          uv sync --locked --all-extras --dev --no-install-project
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
         uses: actions/cache/restore@v4
@@ -249,7 +249,7 @@ jobs:
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-        run: python -m pip install -e .
+        run: uv sync --locked --all-extras --dev
       - name: Ensure ccache worked
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -318,18 +318,18 @@ jobs:
       - name: Install ccache on macOS
         if: runner.os == 'macOS'
         run: brew install ccache
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
       - name: Install test dependencies
         env:
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
           NPY_BLAS_ORDER: ""
           NPY_LAPACK_ORDER: ""
         run: |
-          python -m pip install --upgrade pip
-          pip install wheel
-          pip install -r test-requirements.txt
+          uv sync --locked --all-extras --dev --no-install-project
           # TensorFlow is an optional dependency; if present, we'll run tests with it:
           # There are no environment specifiers to select when TensorFlow binaries are available.
-          pip install tensorflow==2.13 || true
+          uv pip install tensorflow==2.13 || true
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
         uses: actions/cache/restore@v4
@@ -356,7 +356,7 @@ jobs:
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-        run: python -m pip install -e .
+        run: uv sync --locked --all-extras --dev
       - name: Ensure ccache worked
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -423,18 +423,18 @@ jobs:
           curl -L https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz | tar xvJf - -C ccache
           mv ccache/ccache*/ccache /usr/local/bin/ccache
           chmod +x /usr/local/bin/ccache
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
       - name: Install test dependencies
         env:
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
           NPY_BLAS_ORDER: ""
           NPY_LAPACK_ORDER: ""
         run: |
-          python -m pip install --upgrade pip
-          pip install wheel
-          pip install -r test-requirements.txt
+          uv sync --locked --all-extras --dev --no-install-project
           # TensorFlow is an optional dependency; if present, we'll run tests with it:
           # There are no environment specifiers to select when TensorFlow binaries are available.
-          pip install tensorflow==2.13 || true
+          uv pip install tensorflow==2.13 || true
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
         uses: actions/cache/restore@v4
@@ -456,7 +456,7 @@ jobs:
           find ${{ github.workspace }} -name '*.o' -exec touch {} \; || true
           ls -lR ${{ github.workspace }}/pedalboard
       - name: Build pedalboard locally
-        run: python -m pip install -e .
+        run: uv sync --locked --all-extras --dev
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ github.workspace }}
@@ -484,8 +484,8 @@ jobs:
           GCS_READER_SERVICE_ACCOUNT_KEY: ${{ secrets.GCS_READER_SERVICE_ACCOUNT_KEY }}
         run: |
           # Inline install here on purpose, as this is only required for test _setup_ and not running
-          pip install google-cloud-storage
-          python ./tests/download_test_plugins.py
+          uv pip install google-cloud-storage
+          uv run python ./tests/download_test_plugins.py
       - name: Setup audio device for testing
         if: runner.os == 'Linux'
         run: |
@@ -497,7 +497,7 @@ jobs:
         env:
           TEST_WORKER_INDEX: ${{ matrix.runner_index }}
           NUM_TEST_WORKERS: ${{ matrix.runner_total }}
-        run: pytest --maxfail=1 --durations=10
+        run: uv run pytest --maxfail=1 --durations=10
 
   run-tests:
     runs-on: ${{ matrix.os }}
@@ -644,19 +644,18 @@ jobs:
       - name: Install ccache on macOS
         if: runner.os == 'macOS'
         run: brew install ccache
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
       - name: Install test dependencies
         env:
           # on macOS and with Python 3.10: building NumPy from source fails without these options:
           NPY_BLAS_ORDER: ""
           NPY_LAPACK_ORDER: ""
         run: |
-          python -m pip install --upgrade pip
-          pip install wheel
-          pip install -r test-requirements.txt
-          pip install pybind11 'scikit-build-core[pyproject]'
+          uv sync --locked --all-extras --dev --no-install-project
           # TensorFlow is an optional dependency; if present, we'll run tests with it:
           # There are no environment specifiers to select when TensorFlow binaries are available.
-          pip install tensorflow==2.13 || true
+          uv pip install tensorflow==2.13 || true
       - name: Install JQ for coverage badge on Linux
         run: sudo apt-get install -y jq
         if: runner.os == 'Linux'
@@ -687,7 +686,7 @@ jobs:
           find ${{ github.workspace }} -name '*.o' -exec touch {} \; || true
           ls -lR ${{ github.workspace }}/pedalboard
       - name: Build pedalboard locally
-        run: python -m pip install -ve .
+        run: uv sync --locked --all-extras --dev
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ github.workspace }}
@@ -722,16 +721,16 @@ jobs:
           GCS_READER_SERVICE_ACCOUNT_KEY: ${{ secrets.GCS_READER_SERVICE_ACCOUNT_KEY }}
         run: |
           # Inline install here on purpose, as this is only required for test _setup_ and not running
-          pip install google-cloud-storage
-          python ./tests/download_test_plugins.py
+          uv pip install google-cloud-storage
+          uv run python ./tests/download_test_plugins.py
       - name: Run tests
         if: matrix.os != 'ubuntu-24.04' || matrix.python-version != '3.10'
-        run: pytest --maxfail=4 --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard --durations=100
+        run: uv run pytest --maxfail=4 --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard --durations=100
       - name: Run tests with coverage reporting
         if: matrix.os == 'ubuntu-24.04' && matrix.python-version == '3.10'
         run: |
-          pytest --maxfail=4 --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard \
-          && coverage json --fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} \
+          uv run pytest --maxfail=4 --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard \
+          && uv run coverage json --fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} \
           && jq -r 'def roundit: .*100.0 + 0.5|floor/100.0; .totals.percent_covered | round | "COVERAGE_PERCENTAGE=" + (. | tostring) + "%" ' coverage.json >> $GITHUB_ENV \
           && jq -r 'if .totals.percent_covered > ${{ env.MINIMUM_COVERAGE_PERCENTAGE }} then "COVERAGE_COLOR=green" else "COVERAGE_COLOR=red" end' coverage.json >> $GITHUB_ENV
       - name: Create coverage badge
@@ -778,14 +777,14 @@ jobs:
           curl -L https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz | tar xvJf - -C ccache
           mv ccache/ccache*/ccache /usr/local/bin/ccache
           chmod +x /usr/local/bin/ccache
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
       - name: Install test dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install wheel
-          pip install -r test-requirements.txt
+          uv sync --locked --all-extras --dev --no-install-project
           # TensorFlow is an optional dependency; if present, we'll run tests with it:
           # There are no environment specifiers to select when TensorFlow binaries are available.
-          pip install tensorflow==2.13 || true
+          uv pip install tensorflow==2.13 || true
       - name: Restore Cached ${{ runner.os }} Objects
         id: cache-objects-restore
         uses: actions/cache/restore@v4
@@ -814,7 +813,7 @@ jobs:
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ccache clang
           CXX: ccache clang++
-        run: python -m pip install -e .
+        run: uv sync --locked --all-extras --dev
       - name: Ensure ccache worked
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -828,7 +827,7 @@ jobs:
         run: |
           ASAN_OPTIONS=detect_leaks=0 \
           LD_PRELOAD=$(clang -print-file-name=libclang_rt.asan-x86_64.so) \
-          pytest --maxfail=4
+          uv run pytest --maxfail=4
 
   build-wheels:
     needs: [lint-python, lint-cpp]
