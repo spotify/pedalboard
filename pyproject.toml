@@ -52,7 +52,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = ["numpy"]
-version = "0.9.24"
+dynamic = ["version"]
 
 [project.optional-dependencies]
 test = [
@@ -93,6 +93,13 @@ sdist.exclude = ["**/__pycache__"]
 # [tool.scikit-build.include]
 # pedalboard = ["py.typed", "*.pyi", "**/*.pyi"]
 # pedalboard_native = ["py.typed", "*.pyi", "**/*.pyi"]
+
+[[tool.dynamic-metadata]]
+provider = "scikit_build_core.metadata.regex"
+field = "version"
+input = "pedalboard/version.py"
+regex = '^__version__ = "(?P<value>[0-9a-z.]+)"$'
+result = "{value}"
 
 [tool.ruff]
 target-version = "py310"

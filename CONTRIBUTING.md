@@ -24,38 +24,31 @@ pip3 install pybind11 tox
 pip3 install .
 ```
 
-To compile a debug build of `pedalboard` that allows using a debugger (like gdb or lldb), use the following command to build the package locally and install a symbolic link for debugging:
+To compile a debug build of `pedalboard` that allows using a debugger (like gdb or lldb), use the following command to build the package locally and install it for debugging:
 ```shell
-python3 setup.py build develop
+python3 -m pip install -e . --config-settings=cmake.build-type=Debug
 ```
 
 Then, you can `import pedalboard` from Python (or run the tests with `tox`) to test out your local changes.
 
-> If you're on macOS or Linux, you can try to compile a debug build _faster_ by using [Ccache](https://ccache.dev/):
+> If you're on macOS or Linux, you can try to compile a debug build _faster_ by using [Ccache](https://ccache.dev/), which is detected and enabled automatically by the CMake build system:
 > ## macOS
 > ```shell
 > brew install ccache
-> rm -rf build && CC="ccache clang" CXX="ccache clang++" DEBUG=1 python3 -j8 -m pip install -e .
 > ```
 > ## Linux
 > e.g.
 > ```shell
 > sudo yum install ccache  # or apt, if on a Debian
-> 
-> # If using GCC:
-> rm -rf build && CC="ccache gcc" CXX="scripts/ccache_g++" DEBUG=1 python3 setup.py build -j8 develop
-> 
-> # ...or if using Clang:
-> rm -rf build && CC="ccache clang" CXX="scripts/ccache_clang++" DEBUG=1 python3 setup.py build -j8 develop
 > ```
 
-By default, [all `.cpp` and `.mm` files in the `pedalboard` directory (or subdirectories)](https://github.com/spotify/pedalboard/blob/master/setup.py#L129) will be automatically compiled by `setup.py`.
+By default, [all `.cpp`, `.c`, `.mm`, and `.m` files in the `pedalboard` directory (or subdirectories)](https://github.com/spotify/pedalboard/blob/master/CMakeLists.txt) will be automatically compiled by the CMake build.
 
 While `pedalboard` is mostly C++ code, it ships with `.pyi` files to allow for type hints in text editors and via MyPy. To update the type hint files, use the following commands:
 
 ```shell
 # Use pybind11-stubgen to create intermediate stub files:
-pybind11-stubgen -o stubs_output pedalboard pedalboard_native --no-setup-py
+pybind11-stubgen -o stubs_output pedalboard pedalboard_native
 # Post-process the stub files into more human-readable, usable ones:
 python3 -m scripts.postprocess_type_hints stubs_output pedalboard --check
 # Run mypy.stubtest to ensure the resulting stubs are valid
@@ -87,7 +80,7 @@ tox
 
 ## Style
 
-Use [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) for C++ code, and `black` with defaults for Python code.
+Use [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) for C++ code, and [`ruff`](https://docs.astral.sh/ruff/) with defaults for Python code.
 
 ## Issues
 
