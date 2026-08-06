@@ -3,7 +3,16 @@ requires = ["scikit-build-core>=0.5.0", "pybind11>=2.9.0"]
 build-backend = "scikit_build_core.build"
 
 [tool.cibuildwheel]
-test-requires = ["-r test-requirements.txt"]
+test-requires = [
+    "coverage",
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "mido",
+    "mutagen",
+    "tqdm",
+    "psutil",
+]
 test-command = "pytest {project}/tests"
 # The manylinux container doesn't have a new enough glibc version,
 # so we can't run post-wheel-build tests there.
@@ -56,6 +65,7 @@ version = "0.9.24"
 
 [project.optional-dependencies]
 test = [
+    "coverage",
     "pytest",
     "pyright",
     "mutagen",
@@ -67,6 +77,26 @@ test = [
     "pyright",
     "mido",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff",
+]
+docs = [
+    "black",
+    "mkdocs==1.0.4",
+    "pybind11-stubgen==0.11.0",
+    "mypy",
+    "sphinx==5.3.0; python_version > '3.6'",
+    "sphinx-copybutton==0.5.1; python_version > '3.6'",
+    "docutils==0.19; python_version > '3.6'",
+    "m2r2==0.3.3; python_version > '3.6'",
+    "furo==2022.9.29; python_version > '3.6'",
+    "sphinxext-opengraph==0.7.3; python_version > '3.6'",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.scikit-build]
 cmake.build-type = "Release"

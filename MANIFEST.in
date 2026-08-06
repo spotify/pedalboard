@@ -1,4 +1,4 @@
-include *.txt tox.ini  *.md
+include *.md uv.lock
 recursive-include tests *.py
 
 # Include the C++ code required to build the native extension:
