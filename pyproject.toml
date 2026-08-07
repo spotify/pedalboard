@@ -22,6 +22,9 @@ archs = ["x86_64", "arm64", "universal2"]
 
 [tool.cibuildwheel.windows]
 archs = ["auto"]
+# cibuildwheel 4.0 made delvewheel the default repair step on Windows. Pedalboard
+# links its dependencies statically, so keep the pre-4.0 behaviour of not repairing.
+repair-wheel-command = ""
 
 [[tool.cibuildwheel.overrides]]
 # Use apk instead of yum when building on Alpine Linux
@@ -50,6 +53,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
 ]
 dependencies = ["numpy"]
 version = "0.9.24"
