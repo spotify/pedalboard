@@ -1000,14 +1000,11 @@ jobs:
     needs: [merge, run-tests-with-address-sanitizer, run-tests, detect-release]
     runs-on: "ubuntu-24.04"
     name: "Upload wheels to PyPI"
-    # The last gate before anything irreversible happens. Adding a required reviewer to
-    # the "PyPI Deployment" environment (Settings -> Environments) makes this job pause
-    # for a human approval; without one it runs straight through, as it does today.
-    # Moving PYPI_DEPLOY_TOKEN into that environment also stops any other job -- or any
-    # future workflow change -- from being able to publish.
-    environment:
-      name: PyPI Deployment
-      url: https://pypi.org/project/pedalboard/
+    # Note: there is no approval gate in front of this. Referencing a GitHub Environment
+    # here would add one, but an environment with no protection rules fails open silently,
+    # so it's left out rather than implying a gate that isn't there. What stands between a
+    # pull request and a publish is the warning that detect-release puts on any PR that
+    # changes __version__ -- see scripts/detect_release.py.
     if: >-
       needs.detect-release.outputs.should-release == 'true'
       || (github.event_name == 'release' && github.event.action == 'published')
