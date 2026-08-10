@@ -28,9 +28,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - uses: actions/checkout@v4
       - name: Install Ruff
+        # Pinned deliberately: Ruff 0.16.0 enables 413 rules by default, up from 59.
+        # We don't set `lint.select` in pyproject.toml, so an unpinned upgrade silently
+        # widened the rule set and surfaced 90 pre-existing findings. Bumping this pin
+        # means adopting (or explicitly selecting away) the newer defaults first.
+        # See: https://astral.sh/blog/ruff-v0.16.0
         run: |
           python -m pip install --upgrade pip
-          pip install ruff
+          pip install 'ruff==0.15.22'
       - name: Lint Python code
         run: ruff check ${{ github.workspace }}/pedalboard
       - name: Check Python formatting
@@ -546,6 +551,13 @@ jobs:
               cxx: "ccache clang++",
             }
           - {
+              os: macos-15-intel,
+              python-version: "3.15",
+              compiler: "clang",
+              cc: "ccache clang",
+              cxx: "ccache clang++",
+            }
+          - {
               os: ubuntu-24.04,
               python-version: "3.10",
               compiler: "gcc",
@@ -581,6 +593,13 @@ jobs:
               cxx: "ccache g++",
             }
           - {
+              os: ubuntu-24.04,
+              python-version: "3.15",
+              compiler: "gcc",
+              cc: "ccache gcc",
+              cxx: "ccache g++",
+            }
+          - {
               os: windows-latest,
               python-version: "3.10",
               compiler: "msvc",
@@ -611,6 +630,13 @@ jobs:
           - {
               os: windows-latest,
               python-version: "3.14",
+              compiler: "msvc",
+              cc: "msvc",
+              cxx: "msvc",
+            }
+          - {
+              os: windows-latest,
+              python-version: "3.15",
               compiler: "msvc",
               cc: "msvc",
               cxx: "msvc",
@@ -621,6 +647,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          # Required while the newest Python in the matrix is still a release candidate:
+          allow-prereleases: true
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -750,7 +778,7 @@ jobs:
     needs: [prime-asan-build-caches]
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
         os: ["ubuntu-24.04"]
     name: Test with Python ${{ matrix.python-version }} + Address Sanitizer
     steps:
@@ -758,6 +786,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          # Required while the newest Python in the matrix is still a release candidate:
+          allow-prereleases: true
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -850,6 +880,8 @@ jobs:
           - { os: macos-15-intel, build: cp313-macosx_arm64 }
           - { os: macos-15-intel, build: cp314-macosx_arm64 }
           - { os: macos-15-intel, build: cp314t-macosx_arm64 }
+          - { os: macos-15-intel, build: cp315-macosx_arm64 }
+          - { os: macos-15-intel, build: cp315t-macosx_arm64 }
           # - { os: macos-15-intel, build: pp38-macosx_x86_64 }
           # - { os: macos-15-intel, build: pp39-macosx_x86_64 }
           - { os: windows-latest, build: cp310-win_amd64 }
@@ -857,6 +889,7 @@ jobs:
           - { os: windows-latest, build: cp312-win_amd64 }
           - { os: windows-latest, build: cp313-win_amd64 }
           - { os: windows-latest, build: cp314-win_amd64 }
+          - { os: windows-latest, build: cp315-win_amd64 }
           # - { os: windows-latest, build: cp312-win32 }
           - { os: "ubuntu-24.04", build: cp310-manylinux_x86_64 }
           - { os: "ubuntu-24.04-arm", build: cp310-manylinux_aarch64 }
@@ -877,6 +910,9 @@ jobs:
           - { os: "ubuntu-24.04", build: cp314-manylinux_x86_64 }
           - { os: "ubuntu-24.04-arm", build: cp314-manylinux_aarch64 }
           - { os: "ubuntu-24.04-arm", build: cp314t-manylinux_aarch64 }
+          - { os: "ubuntu-24.04", build: cp315-manylinux_x86_64 }
+          - { os: "ubuntu-24.04-arm", build: cp315-manylinux_aarch64 }
+          - { os: "ubuntu-24.04-arm", build: cp315t-manylinux_aarch64 }
     name: Build wheel for ${{ matrix.build }}
     steps:
       - uses: actions/checkout@v4
@@ -887,7 +923,9 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install cibuildwheel
-        run: python -m pip install 'cibuildwheel>=3.0,<4'
+        # cibuildwheel 4.2.0 is the first release to build CPython 3.15 wheels by
+        # default (using 3.15.0rc1, which is ABI-compatible with the final release).
+        run: python -m pip install 'cibuildwheel>=4.2,<5'
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse
         env:

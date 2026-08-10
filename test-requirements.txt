@@ -9,7 +9,10 @@ pip>22; python_version > '3.6'
 pip>21; python_version < '3.7'
 wheel
 
-numpy>=2.1.0rc1; python_version>="3.13"
+# NumPy 2.5.2 is the first release with CPython 3.15 wheels; without this floor,
+# pip could silently fall back to building an older NumPy from source on 3.15.
+numpy>=2.5.2; python_version>="3.15"
+numpy>=2.1.0rc1; python_version>="3.13" and python_version<"3.15"
 numpy>=2; python_version>="3.9" and python_version<"3.13"
 numpy<2; python_version<="3.8"
 tqdm
