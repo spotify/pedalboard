@@ -4,9 +4,10 @@ on:
   push:
     branches:
       - master
-    # Only republish on a version bump, so the published docs describe the released
-    # version rather than whatever happens to be on master. pedalboard/version.py holds
-    # nothing but the version, so touching it is as good a signal as parsing it.
+    # Cheap pre-filter: a version bump always touches this file, so nothing else can
+    # possibly be a release. It is not sufficient on its own -- version.py also carries a
+    # copyright header whose year gets bumped annually -- so the check-version-bump job
+    # below confirms __version__ actually changed before anything is published.
     # To publish a docs-only fix without cutting a release, use the manual trigger below.
     paths:
       - 'pedalboard/version.py'
@@ -15,7 +16,30 @@ on:
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
+  # Confirms __version__ actually changed, rather than trusting that version.py was
+  # touched -- editing its copyright header must not republish the docs.
+  # Shares its logic (and tests) with the release job in all.yml.
+  check-version-bump:
+    runs-on: ubuntu-latest
+    name: "Check for a version bump"
+    outputs:
+      version-changed: ${{ steps.check.outputs.version-changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - id: check
+        run: python ./scripts/detect_release.py
+
   build-and-deploy:
+    needs: [check-version-bump]
+    # A manual run always deploys; that's the escape hatch for docs-only fixes.
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || needs.check-version-bump.outputs.version-changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write

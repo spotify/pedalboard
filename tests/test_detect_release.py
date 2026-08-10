@@ -135,3 +135,57 @@ def test_only_pushes_can_release(event_name):
         current="0.9.25", previous="0.9.24", event_name=event_name, tag_exists=False
     )
     assert decision.should_release is False
+
+
+# version.py is not just the version: it carries a copyright header whose year range gets
+# bumped annually. Editing that must not look like a release to anything downstream --
+# notably the docs workflow, which keys off version_changed.
+LICENSE_HEADER = (
+    "#! /usr/bin/env python\n#\n# Copyright 2021-{year} Spotify AB\n#\n"
+    "# Licensed under the GNU Public License, Version 3.0 (the 'License');\n"
+    "# limitations under the License.\n\n"
+)
+
+
+def _version_file(version: str, year: int) -> str:
+    return (
+        LICENSE_HEADER.format(year=year)
+        + f'__version__ = "{version}"\n'
+        + "MAJOR, MINOR, PATCH = (int(x) for x in __version__.split('.'))\n"
+    )
+
+
+def test_editing_only_the_license_header_is_not_a_version_change():
+    before = _version_file("0.9.24", 2026)
+    after = _version_file("0.9.24", 2027)
+    assert before != after, "the fixture should differ, otherwise this proves nothing"
+
+    decision = detect_release.decide(
+        current=detect_release.parse_version(after),
+        previous=detect_release.parse_version(before),
+        event_name="push",
+        tag_exists=False,
+    )
+    assert decision.version_changed is False
+    assert decision.should_release is False
+
+
+def test_bumping_the_version_and_the_year_together_is_a_version_change():
+    decision = detect_release.decide(
+        current=detect_release.parse_version(_version_file("0.9.25", 2027)),
+        previous=detect_release.parse_version(_version_file("0.9.24", 2026)),
+        event_name="push",
+        tag_exists=False,
+    )
+    assert decision.version_changed is True
+    assert decision.should_release is True
+
+
+def test_version_changed_is_true_even_when_release_is_blocked():
+    """The docs gate uses version_changed, so it must not be masked by should_release."""
+    for event_name, tag_exists in [("pull_request", False), ("push", True)]:
+        decision = detect_release.decide(
+            current="0.9.25", previous="0.9.24", event_name=event_name, tag_exists=tag_exists
+        )
+        assert decision.version_changed is True
+        assert decision.should_release is False
