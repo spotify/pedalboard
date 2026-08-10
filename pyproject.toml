@@ -56,7 +56,9 @@ classifiers = [
     "Programming Language :: Python :: 3.15",
 ]
 dependencies = ["numpy"]
-version = "0.9.24"
+# The version is read from pedalboard/version.py (see [tool.scikit-build.metadata.version]
+# below), which is the single source of truth. Don't add a literal `version` here.
+dynamic = ["version"]
 
 [project.optional-dependencies]
 test = [
@@ -93,6 +95,14 @@ sdist.include = [
     "vendors/**/*.inc",
 ]
 sdist.exclude = ["**/__pycache__"]
+
+# Single source of truth for the version: pedalboard/version.py. Bumping that one
+# line is what cuts a release (see .github/workflows/all.yml). setup.py already
+# reads the same file, so there is no literal version string anywhere else.
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "pedalboard/version.py"
+regex = '^__version__ = "(?P<value>.+)"$'
 
 # [tool.scikit-build.include]
 # pedalboard = ["py.typed", "*.pyi", "**/*.pyi"]
