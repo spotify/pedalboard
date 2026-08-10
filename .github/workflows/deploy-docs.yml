@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - master
+    # Only republish on a version bump, so the published docs describe the released
+    # version rather than whatever happens to be on master. pedalboard/version.py holds
+    # nothing but the version, so touching it is as good a signal as parsing it.
+    # To publish a docs-only fix without cutting a release, use the manual trigger below.
+    paths:
+      - 'pedalboard/version.py'
     tags:
       - 'v*'  # Run on version tags
   workflow_dispatch:  # Allow manual triggering
