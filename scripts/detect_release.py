@@ -225,11 +225,6 @@ def main() -> int:
     write_github_output(
         **{
             "should-release": "true" if decision.should_release else "false",
-            # Distinct from should-release: the version can change without this run being
-            # allowed to publish (a pull request, or a tag that already exists). The docs
-            # workflow keys off this, so that editing the license header in version.py
-            # doesn't republish docs for an unreleased master.
-            "version-changed": "true" if decision.version_changed else "false",
             "version": current,
         }
     )

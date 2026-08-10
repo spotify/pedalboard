@@ -138,8 +138,7 @@ def test_only_pushes_can_release(event_name):
 
 
 # version.py is not just the version: it carries a copyright header whose year range gets
-# bumped annually. Editing that must not look like a release to anything downstream --
-# notably the docs workflow, which keys off version_changed.
+# bumped annually. Editing that must not look like a release to anything downstream.
 LICENSE_HEADER = (
     "#! /usr/bin/env python\n#\n# Copyright 2021-{year} Spotify AB\n#\n"
     "# Licensed under the GNU Public License, Version 3.0 (the 'License');\n"
@@ -182,7 +181,10 @@ def test_bumping_the_version_and_the_year_together_is_a_version_change():
 
 
 def test_version_changed_is_true_even_when_release_is_blocked():
-    """The docs gate uses version_changed, so it must not be masked by should_release."""
+    """
+    version_changed drives the "merging this publishes" warning on pull requests, so it
+    has to stay true in the cases where the version moved but we won't publish.
+    """
     for event_name, tag_exists in [("pull_request", False), ("push", True)]:
         decision = detect_release.decide(
             current="0.9.25", previous="0.9.24", event_name=event_name, tag_exists=tag_exists

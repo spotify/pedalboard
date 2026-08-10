@@ -1039,3 +1039,15 @@ jobs:
             --title "v$VERSION" \
             --target "$GITHUB_SHA" \
             --generate-notes
+
+  # The docs describe what you can actually `pip install`, so they're published if and
+  # only if the wheels made it to PyPI. Depending on upload-pypi is the whole gate: if
+  # that job is skipped (not a release) or fails, this is skipped too. The docs build
+  # itself lives in deploy-docs.yml, which can also still be run manually for docs-only
+  # fixes that shouldn't wait for a release.
+  deploy-docs:
+    needs: [upload-pypi]
+    name: "Deploy documentation"
+    permissions:
+      contents: write
+    uses: ./.github/workflows/deploy-docs.yml
