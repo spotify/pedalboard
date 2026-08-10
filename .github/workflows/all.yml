@@ -31,51 +31,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Need the previous commit to tell whether this push changed the version.
+          # HEAD~1 is what we compare the version against: on a push it's the previous
+          # commit, and on a pull request it's the base branch (HEAD being a merge commit).
           fetch-depth: 2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # The logic lives in Python so it can be unit-tested; see tests/test_detect_release.py.
       - name: Check whether this push bumped the version
         id: check
-        run: |
-          set -euo pipefail
-
-          parse() { sed -nE 's/^__version__ = "(.+)"$/\1/p' ; }
-
-          version="$(parse < pedalboard/version.py)"
-          if [ -z "$version" ]; then
-            echo "::error file=pedalboard/version.py::Could not parse __version__."
-            exit 1
-          fi
-          if ! printf '%s' "$version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+([a-z0-9.]+)?$'; then
-            echo "::error file=pedalboard/version.py::'$version' is not a valid version."
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "Version in this commit: $version"
-
-          # Releases only ever come from a push to master.
-          if [ "${{ github.event_name }}" != "push" ]; then
-            echo "Not a push to master (event: ${{ github.event_name }}); not releasing."
-            echo "should-release=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          previous="$(git show HEAD~1:pedalboard/version.py 2>/dev/null | parse || true)"
-          echo "Version in previous commit: ${previous:-<none>}"
-          if [ "$version" = "$previous" ]; then
-            echo "Version unchanged; not releasing."
-            echo "should-release=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # Belt and braces: never try to re-release an existing tag.
-          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
-            echo "::warning::Tag v$version already exists; not releasing again."
-            echo "should-release=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "Version bumped ${previous:-<none>} -> $version; this run will release."
-          echo "should-release=true" >> "$GITHUB_OUTPUT"
+        run: python ./scripts/detect_release.py
 
   lint-python:
     runs-on: ${{ matrix.os }}
@@ -1035,6 +1000,14 @@ jobs:
     needs: [merge, run-tests-with-address-sanitizer, run-tests, detect-release]
     runs-on: "ubuntu-24.04"
     name: "Upload wheels to PyPI"
+    # The last gate before anything irreversible happens. Adding a required reviewer to
+    # the "PyPI Deployment" environment (Settings -> Environments) makes this job pause
+    # for a human approval; without one it runs straight through, as it does today.
+    # Moving PYPI_DEPLOY_TOKEN into that environment also stops any other job -- or any
+    # future workflow change -- from being able to publish.
+    environment:
+      name: PyPI Deployment
+      url: https://pypi.org/project/pedalboard/
     if: >-
       needs.detect-release.outputs.should-release == 'true'
       || (github.event_name == 'release' && github.event.action == 'published')

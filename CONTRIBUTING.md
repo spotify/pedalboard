@@ -171,6 +171,12 @@ A few things worth knowing:
 - **Merging a version bump publishes to PyPI, and that is irreversible** — a
   released version can be yanked but never replaced. Treat the bump PR as the
   point of no return, not the merge button on some later release page.
+  Any pull request that changes `__version__` says so in its checks, with a
+  warning and a note on the run summary, so this shouldn't come as a surprise.
+- The `upload-pypi` job runs in the `PyPI Deployment` environment. If that
+  environment has required reviewers configured, publishing pauses for a human
+  approval; the wheels are already built and tested by that point, so approving
+  is the last step.
 - Nothing is published unless `__version__` actually changes, so ordinary merges
   to `master` are unaffected.
 - If a tag for the version already exists, the release is skipped with a warning
