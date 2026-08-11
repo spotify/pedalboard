@@ -231,7 +231,7 @@ an <code class="docutils literal"><span class="pre">AudioStream</span></code> ob
 allowing for real-time manipulation of audio by adding effects in Python.
 
 ```python
-from pedalboard import Pedalboard, Chorus, Compressor, Delay, Gain, Reverb, Phaser
+from pedalboard import Pedalboard, Chorus, Compressor, Convolution, Delay, Gain, Reverb, Phaser
 from pedalboard.io import AudioStream
 
 # Open up an audio stream:
