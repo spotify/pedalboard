@@ -36,3 +36,29 @@ from pedalboard.midi_utils import normalize_midi_messages
 )
 def test_mido_normalization(_input, expected: List[Tuple[bytes, float]]):
     assert normalize_midi_messages(_input) == expected
+
+
+@pytest.mark.parametrize(
+    "malformed",
+    [
+        pytest.param((bytes([0x90, 60, 64]),), id="one_tuple_missing_timestamp"),
+        pytest.param((bytes([0x90, 60, 64]), 0.0, 99), id="three_tuple_extra_element"),
+        pytest.param(bytes([0x90, 60, 64]), id="bare_bytes_without_timestamp"),
+        pytest.param(None, id="none"),
+        pytest.param(42, id="bare_int"),
+    ],
+)
+def test_malformed_messages_raise(malformed):
+    """Malformed messages must raise rather than being silently dropped."""
+    messages = [
+        (bytes([0x90, 60, 64]), 0.0),
+        malformed,
+        (bytes([0x80, 60, 64]), 1.0),
+    ]
+    with pytest.raises(TypeError, match="index 1"):
+        normalize_midi_messages(messages)
+
+
+def test_valid_messages_are_unaffected():
+    messages = [(bytes([0x90, 60, 64]), 0.0), (bytes([0x80, 60, 64]), 1.0)]
+    assert normalize_midi_messages(messages) == messages
