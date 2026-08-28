@@ -87,7 +87,7 @@ public:
          preparedSpec_.maximumBlockSize < spec.maximumBlockSize ||
          spec.numChannels != preparedSpec_.numChannels);
     bool paramsChanged = (lookaheadMs_ != preparedLookaheadMs_ ||
-                           truePeak_ != preparedTruePeak_);
+                          truePeak_ != preparedTruePeak_);
 
     if (!specChanged && !paramsChanged) {
       return; // preserve state for reset=False streaming
@@ -158,7 +158,7 @@ public:
       // Copy ONLY active N samples to scratch (avoid stale tail data)
       for (int ch = 0; ch < numChannels; ++ch) {
         scratchBuffer_.copyFrom(ch, 0, ioBlock.getChannelPointer(ch),
-                                 numSamples);
+                                numSamples);
       }
       juce::dsp::AudioBlock<SampleType> scratchBlock(scratchBuffer_);
       auto activeBlock = scratchBlock.getSubBlock(0, (size_t)numSamples);
@@ -221,15 +221,15 @@ public:
         SampleType *channelPtr = ioBlock.getChannelPointer(ch);
         delayLine_.pushSample(ch, channelPtr[i]);
         SampleType delayed = delayLine_.popSample(ch);
-        channelPtr[i] = juce::jlimit(
-            (SampleType)(-ceilingLinear), (SampleType)ceilingLinear,
-            (SampleType)(delayed * currentGain_));
+        channelPtr[i] = juce::jlimit((SampleType)(-ceilingLinear),
+                                     (SampleType)ceilingLinear,
+                                     (SampleType)(delayed * currentGain_));
       }
     }
 
     samplesProvided_ += numSamples;
     return std::min(numSamples,
-                     std::max(0, samplesProvided_ - activeLookaheadSamples_));
+                    std::max(0, samplesProvided_ - activeLookaheadSamples_));
   }
 
   virtual void reset() override {
@@ -293,15 +293,16 @@ inline void init_brickwall_limiter(py::module &m) {
       "below the ceiling — use a safety margin (e.g. ``ceiling_db=-1.5``) for\n"
       "strict ITU-R BS.1770 compliance.\n\n"
       ".. note::\n\n"
-      "   Changing ``lookahead_ms`` or ``true_peak`` requires a stream restart\n"
-      "   to take effect.  ``ceiling_db`` and ``release_ms`` can be changed at\n"
+      "   Changing ``lookahead_ms`` or ``true_peak`` requires a stream "
+      "restart\n"
+      "   to take effect.  ``ceiling_db`` and ``release_ms`` can be changed "
+      "at\n"
       "   any time.\n\n"
       "Typical use: enforce a peak ceiling after loudness normalization.\n\n"
       ".. code-block:: python\n\n"
       "    limiter = BrickwallLimiter(ceiling_db=-1.0)\n"
       "    output = limiter(audio, sample_rate)\n")
-      .def(py::init([](float ceiling, float release, float lookahead,
-                        bool tp) {
+      .def(py::init([](float ceiling, float release, float lookahead, bool tp) {
              auto p = std::make_unique<BrickwallLimiter<float>>();
              p->setCeilingDb(ceiling);
              p->setReleaseMs(release);
