@@ -24,13 +24,17 @@
 namespace Pedalboard {
 
 /**
- * A lookahead brick-wall limiter with configurable ceiling.
+ * A sample-peak brick-wall limiter with configurable ceiling.
  *
  * Unlike the built-in Limiter (which wraps JUCE's dsp::Limiter and applies
  * makeup gain), this plugin:
  *   - Has a configurable output ceiling (not fixed at 0 dBFS)
  *   - Does NOT apply makeup gain
  *   - Uses a smoothed gain envelope (instant attack, exponential release)
+ *
+ * This is a sample-peak-only implementation: it has no lookahead and does
+ * not detect inter-sample (true) peaks. Lookahead and true-peak detection
+ * are planned for follow-up commits.
  *
  * Design: setters store REQUESTED parameter values. prepare() copies them
  * to ACTIVE state. process() reads only ACTIVE state.
@@ -134,12 +138,16 @@ inline void init_brickwall_limiter(py::module &m) {
   py::class_<BrickwallLimiter<float>, Plugin,
              std::shared_ptr<BrickwallLimiter<float>>>(
       m, "BrickwallLimiter",
-      "A lookahead brick-wall limiter with configurable ceiling.\n\n"
+      "A sample-peak brick-wall limiter with configurable ceiling.\n\n"
       "Unlike the built-in :class:`Limiter`, ``BrickwallLimiter``:\n\n"
       "- Has a configurable ceiling (not fixed at 0 dBFS)\n"
       "- Does **not** apply makeup gain\n"
-      "- Uses lookahead for transparent gain reduction (not hard clipping)\n"
-      "- Optionally detects inter-sample peaks via 4x oversampling\n\n"
+      "- Uses a smoothed gain envelope (instant attack, exponential "
+      "release)\n\n"
+      "This is currently a sample-peak-only implementation: it has no "
+      "lookahead and does not detect inter-sample (true) peaks. Lookahead "
+      "and true-peak detection (e.g. via oversampling) are planned for "
+      "follow-up releases.\n\n"
       "Typical use: enforce a peak ceiling after loudness normalization.\n\n"
       ".. code-block:: python\n\n"
       "    limiter = BrickwallLimiter(ceiling_db=-1.0)\n"
@@ -156,7 +164,8 @@ inline void init_brickwall_limiter(py::module &m) {
              std::ostringstream ss;
              ss << "<pedalboard.BrickwallLimiter"
                 << " ceiling_db=" << plugin.getCeilingDb()
-                << " release_ms=" << plugin.getReleaseMs() << ">";
+                << " release_ms=" << plugin.getReleaseMs() << " at " << &plugin
+                << ">";
              return ss.str();
            })
       .def_property("ceiling_db", &BrickwallLimiter<float>::getCeilingDb,
