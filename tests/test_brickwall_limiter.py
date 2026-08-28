@@ -498,3 +498,52 @@ def test_property_mutation_lookahead_and_true_peak():
     plugin.true_peak = True
     out3 = plugin.process(sine, sr)
     np.testing.assert_allclose(out3, sine, atol=1e-5)  # quiet signal still passes
+
+
+def test_upsampler_latency_calibration():
+    """Verify the upsampling-only group-delay compensation (getLatencyInSamples() / 2.0).
+
+    Feeds a single-sample impulse through a true_peak=True plugin with a
+    ceiling far above the impulse's amplitude, so the gain envelope never
+    engages and the impulse is unmodified except for the plugin's reported
+    latency (base lookahead + upsampling-only group delay). Pedalboard's
+    automatic latency compensation should then re-align the impulse to its
+    original input index. If BrickwallLimiter's assumed upsampling-only
+    delay (half of Oversampling::getLatencyInSamples(), since only
+    processSamplesUp() is used) were wrong, activeLookaheadSamples_ would
+    not match the delay line's actual configured delay and/or the value
+    used to size and drain the delay line, and the impulse would land at
+    the wrong output index or its amplitude would be smeared/attenuated by
+    the mismatch.
+    """
+    sr = 44100
+    n = sr
+    impulse_pos = n // 2
+    signal = np.zeros(n, dtype=np.float32)
+    signal[impulse_pos] = 1.0
+
+    # ceiling_db=+20.0 => ceiling well above the impulse's peak (0 dBFS),
+    # so no gain reduction occurs; output should be an exact delayed copy
+    # of the input, which pedalboard's automatic latency compensation
+    # re-aligns to the original sample positions.
+    plugin = BrickwallLimiter(ceiling_db=20.0, lookahead_ms=5.0, true_peak=True)
+    output = plugin.process(signal, sr)
+
+    out_flat = output.flatten() if output.ndim > 1 else output
+    out_peak_idx = int(np.argmax(np.abs(out_flat)))
+
+    assert out_peak_idx == impulse_pos, (
+        f"Impulse shifted from input index {impulse_pos} to output index "
+        f"{out_peak_idx}; upsampling-only latency compensation "
+        "(getLatencyInSamples() / 2.0) appears miscalibrated."
+    )
+    np.testing.assert_allclose(out_flat[out_peak_idx], 1.0, atol=1e-3)
+
+    # No other sample should carry significant energy — a miscalibrated
+    # delay would either misplace the impulse (caught above) or, if the
+    # analysis/delay bookkeeping is inconsistent, smear/duplicate it.
+    other_samples = np.delete(out_flat, out_peak_idx)
+    assert np.max(np.abs(other_samples)) < 0.05, (
+        "Impulse energy leaked into neighboring samples; upsampling-only "
+        "latency compensation appears miscalibrated."
+    )

@@ -105,8 +105,21 @@ public:
           juce::dsp::Oversampling<SampleType>::filterHalfBandFIREquiripple,
           true); // isMaxQuality
       oversampler_->initProcessing(spec.maximumBlockSize);
-      // Upsampling-only group delay: half the reported round-trip.
-      // Validated empirically — see test_upsampler_latency_calibration.
+      // Upsampling-only group delay approximation: half of
+      // getLatencyInSamples(), which JUCE reports as the round-trip
+      // (up+down) latency averaged across stages. JUCE does not expose a
+      // per-direction (up-only vs. down-only) latency, and for
+      // filterHalfBandFIREquiripple the up- and down-filters are designed
+      // to different specs (the up-filter targets a narrower transition
+      // band and deeper stopband, so its FIR order is typically higher
+      // than the down-filter's) — so this /2.0 split is an approximation,
+      // not an exact figure. In practice the error is a small number of
+      // samples, dwarfed by the base lookahead for typical lookahead_ms
+      // values, and end-to-end latency self-consistency (delay line delay
+      // == reported getLatencyHint()) is covered by
+      // test_upsampler_latency_calibration — that test cannot validate the
+      // /2.0 split itself, since it only exercises pedalboard's own
+      // latency-hint-driven output alignment.
       upsampleDelay_ =
           (int)std::round(oversampler_->getLatencyInSamples() / 2.0);
     } else {
