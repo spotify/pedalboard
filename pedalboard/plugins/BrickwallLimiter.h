@@ -70,6 +70,12 @@ public:
     // Takes effect on next prepare() — no reallocation here
   }
 
+  bool getTruePeak() const noexcept { return truePeak_; }
+  void setTruePeak(bool value) {
+    truePeak_ = value;
+    // Takes effect on next prepare()
+  }
+
   // ── Plugin interface ──
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) override {
@@ -80,7 +86,8 @@ public:
         (spec.sampleRate != preparedSpec_.sampleRate ||
          preparedSpec_.maximumBlockSize < spec.maximumBlockSize ||
          spec.numChannels != preparedSpec_.numChannels);
-    bool paramsChanged = (lookaheadMs_ != preparedLookaheadMs_);
+    bool paramsChanged = (lookaheadMs_ != preparedLookaheadMs_ ||
+                           truePeak_ != preparedTruePeak_);
 
     if (!specChanged && !paramsChanged) {
       return; // preserve state for reset=False streaming
@@ -88,13 +95,34 @@ public:
 
     preparedSpec_ = spec;
     preparedLookaheadMs_ = lookaheadMs_;
+    preparedTruePeak_ = truePeak_;
 
-    activeLookaheadSamples_ =
+    // Oversampler
+    upsampleDelay_ = 0;
+    if (preparedTruePeak_) {
+      oversampler_ = std::make_unique<juce::dsp::Oversampling<SampleType>>(
+          spec.numChannels, 2, // order=2 → 4×
+          juce::dsp::Oversampling<SampleType>::filterHalfBandFIREquiripple,
+          true); // isMaxQuality
+      oversampler_->initProcessing(spec.maximumBlockSize);
+      // Upsampling-only group delay: half the reported round-trip.
+      // Validated empirically — see test_upsampler_latency_calibration.
+      upsampleDelay_ =
+          (int)std::round(oversampler_->getLatencyInSamples() / 2.0);
+    } else {
+      oversampler_.reset();
+    }
+
+    int baseLookahead =
         std::max(1, (int)(spec.sampleRate * preparedLookaheadMs_ / 1000.0f));
+    activeLookaheadSamples_ = baseLookahead + upsampleDelay_;
 
     delayLine_.setMaximumDelayInSamples(activeLookaheadSamples_ + 1);
     delayLine_.prepare(spec);
     delayLine_.setDelay((SampleType)activeLookaheadSamples_);
+
+    scratchBuffer_.setSize((int)spec.numChannels, (int)spec.maximumBlockSize);
+    peakBuffer_.resize(spec.maximumBlockSize, 0.0f);
 
     reset();
   }
@@ -112,14 +140,50 @@ public:
         std::max(1, (int)(preparedSpec_.sampleRate * releaseMs_ / 1000.0f)));
     int lookaheadSamples = activeLookaheadSamples_;
 
-    for (int i = 0; i < numSamples; ++i) {
-      // Detect cross-channel peak for this sample
-      float peak = 0.0f;
+    // ── Step 1: Detect peaks ──
+    if (preparedTruePeak_ && oversampler_) {
+      // Copy ONLY active N samples to scratch (avoid stale tail data)
       for (int ch = 0; ch < numChannels; ++ch) {
-        float s = std::abs(ioBlock.getChannelPointer(ch)[i]);
-        if (s > peak)
-          peak = s;
+        scratchBuffer_.copyFrom(ch, 0, ioBlock.getChannelPointer(ch),
+                                 numSamples);
       }
+      juce::dsp::AudioBlock<SampleType> scratchBlock(scratchBuffer_);
+      auto activeBlock = scratchBlock.getSubBlock(0, (size_t)numSamples);
+
+      auto oversampledBlock = oversampler_->processSamplesUp(activeBlock);
+      int oversampledLen = (int)oversampledBlock.getNumSamples();
+
+      for (int i = 0; i < numSamples; ++i) {
+        float peak = 0.0f;
+        for (int ch = 0; ch < numChannels; ++ch) {
+          auto *ptr = oversampledBlock.getChannelPointer(ch);
+          for (int k = 0; k < 4; ++k) {
+            int idx = i * 4 + k;
+            if (idx < oversampledLen) {
+              float s = std::abs(ptr[idx]);
+              if (s > peak)
+                peak = s;
+            }
+          }
+        }
+        peakBuffer_[(size_t)i] = peak;
+      }
+      // No processSamplesDown() — upsampling filter state is independent
+    } else {
+      for (int i = 0; i < numSamples; ++i) {
+        float peak = 0.0f;
+        for (int ch = 0; ch < numChannels; ++ch) {
+          float s = std::abs(ioBlock.getChannelPointer(ch)[i]);
+          if (s > peak)
+            peak = s;
+        }
+        peakBuffer_[(size_t)i] = peak;
+      }
+    }
+
+    // ── Step 2: Apply gain with lookahead + hold ──
+    for (int i = 0; i < numSamples; ++i) {
+      float peak = peakBuffer_[(size_t)i];
 
       // Compute target gain
       float targetGain = (peak > ceilingLinear)
@@ -157,6 +221,8 @@ public:
 
   virtual void reset() override {
     delayLine_.reset();
+    if (oversampler_)
+      oversampler_->reset();
     currentGain_ = 1.0f;
     holdCounter_ = 0;
     samplesProvided_ = 0;
@@ -169,9 +235,12 @@ private:
   float ceilingDb_ = -1.0f;
   float releaseMs_ = 100.0f;
   float lookaheadMs_ = 5.0f;
+  bool truePeak_ = false;
 
   // Active (prepared) state — only written by prepare(), read by process()
   int activeLookaheadSamples_ = 0;
+  bool preparedTruePeak_ = false;
+  int upsampleDelay_ = 0;
 
   // DSP state
   float currentGain_ = 1.0f;
@@ -181,6 +250,10 @@ private:
 
   juce::dsp::DelayLine<SampleType, juce::dsp::DelayLineInterpolationTypes::None>
       delayLine_{441000};
+
+  std::unique_ptr<juce::dsp::Oversampling<SampleType>> oversampler_;
+  juce::AudioBuffer<SampleType> scratchBuffer_;
+  std::vector<float> peakBuffer_;
 
   // Cached spec
   juce::dsp::ProcessSpec preparedSpec_{};
@@ -198,30 +271,42 @@ inline void init_brickwall_limiter(py::module &m) {
       "release)\n\n"
       "- Uses a lookahead delay line and hold mechanism to catch peaks "
       "before they occur\n\n"
-      "This is currently a sample-peak-only implementation: it does not "
-      "detect inter-sample (true) peaks. True-peak detection (e.g. via "
-      "oversampling) is planned for a follow-up release.\n\n"
+      "This is currently a sample-peak-only implementation by default: it "
+      "does not detect inter-sample (true) peaks unless ``true_peak=True`` "
+      "is passed.\n\n"
+      "When ``true_peak=True``, the sidechain uses 4x oversampling to detect\n"
+      "inter-sample peaks.  This substantially reduces inter-sample overshoot\n"
+      "in the output but does not guarantee the reconstructed waveform stays\n"
+      "below the ceiling — use a safety margin (e.g. ``ceiling_db=-1.5``) for\n"
+      "strict ITU-R BS.1770 compliance.\n\n"
+      ".. note::\n\n"
+      "   Changing ``lookahead_ms`` or ``true_peak`` requires a stream restart\n"
+      "   to take effect.  ``ceiling_db`` and ``release_ms`` can be changed at\n"
+      "   any time.\n\n"
       "Typical use: enforce a peak ceiling after loudness normalization.\n\n"
       ".. code-block:: python\n\n"
       "    limiter = BrickwallLimiter(ceiling_db=-1.0)\n"
       "    output = limiter(audio, sample_rate)\n")
-      .def(py::init([](float ceiling, float release, float lookahead) {
+      .def(py::init([](float ceiling, float release, float lookahead,
+                        bool tp) {
              auto p = std::make_unique<BrickwallLimiter<float>>();
              p->setCeilingDb(ceiling);
              p->setReleaseMs(release);
              p->setLookaheadMs(lookahead);
+             p->setTruePeak(tp);
              return p;
            }),
            py::arg("ceiling_db") = -1.0f, py::arg("release_ms") = 100.0f,
-           py::arg("lookahead_ms") = 5.0f)
+           py::arg("lookahead_ms") = 5.0f, py::arg("true_peak") = false)
       .def("__repr__",
            [](const BrickwallLimiter<float> &plugin) {
              std::ostringstream ss;
              ss << "<pedalboard.BrickwallLimiter"
                 << " ceiling_db=" << plugin.getCeilingDb()
                 << " release_ms=" << plugin.getReleaseMs()
-                << " lookahead_ms=" << plugin.getLookaheadMs() << " at "
-                << &plugin << ">";
+                << " lookahead_ms=" << plugin.getLookaheadMs()
+                << " true_peak=" << (plugin.getTruePeak() ? "True" : "False")
+                << " at " << &plugin << ">";
              return ss.str();
            })
       .def_property("ceiling_db", &BrickwallLimiter<float>::getCeilingDb,
@@ -229,7 +314,9 @@ inline void init_brickwall_limiter(py::module &m) {
       .def_property("release_ms", &BrickwallLimiter<float>::getReleaseMs,
                     &BrickwallLimiter<float>::setReleaseMs)
       .def_property("lookahead_ms", &BrickwallLimiter<float>::getLookaheadMs,
-                    &BrickwallLimiter<float>::setLookaheadMs);
+                    &BrickwallLimiter<float>::setLookaheadMs)
+      .def_property("true_peak", &BrickwallLimiter<float>::getTruePeak,
+                    &BrickwallLimiter<float>::setTruePeak);
 }
 
 } // namespace Pedalboard

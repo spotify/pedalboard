@@ -353,3 +353,148 @@ def test_lookahead_ms_validation():
         limiter.lookahead_ms = 0
     with pytest.raises(Exception):
         limiter.lookahead_ms = float("nan")
+
+
+def _measure_true_peak_dbfs(audio_1d: np.ndarray) -> float:
+    """Independent true-peak measurement via 4x oversampling (numpy-only).
+
+    Uses FFT zero-padding for 4x interpolation — no scipy dependency.
+    """
+    audio = audio_1d.astype(np.float64)
+    n = len(audio)
+    if n == 0:
+        return float("-inf")
+    # FFT-based 4x upsampling via zero-padding in frequency domain
+    spectrum = np.fft.rfft(audio)
+    target_len = n * 4
+    upsampled = np.fft.irfft(spectrum, n=target_len) * 4  # compensate energy
+    peak = np.max(np.abs(upsampled))
+    if peak == 0:
+        return float("-inf")
+    return float(20.0 * np.log10(peak))
+
+
+def test_true_peak_detection():
+    """true_peak=True must detect inter-sample peaks that sample-peak mode misses.
+
+    The ISP signal [0, 0, 1, 1, 0, 0] has sample peak = 0 dBFS but
+    true peak ≈ +2.1 dBFS. With ceiling_db=0.0:
+    - sample-peak mode sees no violation → no gain reduction
+    - true-peak mode sees the overshoot → applies gain reduction
+    """
+    sr = 44100
+    n = sr
+    signal = np.zeros(n, dtype=np.float32)
+    mid = n // 2
+    signal[mid : mid + 6] = np.array([0, 0, 1, 1, 0, 0], dtype=np.float32)
+
+    ceiling_db = 0.0  # sample peak exactly at ceiling
+
+    # Sample-peak mode: no violation → output ≈ input
+    plugin_sp = BrickwallLimiter(ceiling_db=ceiling_db, true_peak=False)
+    out_sp = plugin_sp.process(signal, sr)
+    np.testing.assert_allclose(out_sp, signal, atol=0.01)
+
+    # True-peak mode: ISP detected → gain reduction applied
+    plugin_tp = BrickwallLimiter(ceiling_db=ceiling_db, true_peak=True)
+    out_tp = plugin_tp.process(signal, sr)
+
+    # True-peak output should have reduced sample values
+    assert np.max(np.abs(out_tp)) < np.max(np.abs(signal)) - 0.01, (
+        "true_peak=True should reduce the ISP signal"
+    )
+
+    # Independent measurement: tp output's true peak should be lower
+    tp_of_sp = _measure_true_peak_dbfs(out_sp)
+    tp_of_tp = _measure_true_peak_dbfs(out_tp)
+    assert tp_of_tp < tp_of_sp, (
+        f"true_peak output ({tp_of_tp:.2f} dB) should have lower true peak "
+        f"than sample_peak output ({tp_of_sp:.2f} dB)"
+    )
+
+
+def test_true_peak_conformance():
+    """true_peak mode must not produce WORSE true peaks than sample-peak mode."""
+    sr = 44100
+    t = np.arange(sr, dtype=np.float32) / sr
+    signals = {
+        "sine_1k": np.sin(2 * np.pi * 1000 * t).astype(np.float32),
+        "near_nyquist": np.sin(2 * np.pi * 0.45 * sr * t).astype(np.float32),
+    }
+
+    ceiling_db = -1.0
+    for name, sig in signals.items():
+        plugin_sp = BrickwallLimiter(ceiling_db=ceiling_db, true_peak=False)
+        plugin_tp = BrickwallLimiter(ceiling_db=ceiling_db, true_peak=True)
+        out_sp = plugin_sp.process(sig, sr)
+        out_tp = plugin_tp.process(sig, sr)
+
+        tp_sp = _measure_true_peak_dbfs(out_sp)
+        tp_tp = _measure_true_peak_dbfs(out_tp)
+
+        # true_peak mode must not be worse
+        assert tp_tp <= tp_sp, (
+            f"{name}: true_peak output ({tp_tp:.2f} dB) worse than "
+            f"sample_peak output ({tp_sp:.2f} dB)"
+        )
+
+
+def test_true_peak_across_block_boundary():
+    """ISP signal straddling a block boundary should still be detected."""
+    sr = 44100
+    buffer_size = 128
+    n = sr
+
+    signal = np.zeros(n, dtype=np.float32)
+    # Place ISP pattern right at a block boundary
+    boundary = buffer_size * 5  # 640th sample
+    signal[boundary - 1 : boundary + 5] = np.array(
+        [0, 0, 1, 1, 0, 0], dtype=np.float32
+    )
+
+    ceiling_db = 0.0
+    plugin = BrickwallLimiter(ceiling_db=ceiling_db, true_peak=True)
+    output = plugin.process(signal, sr, buffer_size=buffer_size)
+
+    # True-peak mode should still detect and attenuate
+    assert np.max(np.abs(output)) < np.max(np.abs(signal)) - 0.01
+
+
+def test_true_peak_after_reset():
+    """True-peak mode works correctly after reset()."""
+    sr = 44100
+    n = sr
+    signal = np.zeros(n, dtype=np.float32)
+    mid = n // 2
+    signal[mid : mid + 6] = np.array([0, 0, 1, 1, 0, 0], dtype=np.float32)
+
+    plugin = BrickwallLimiter(ceiling_db=0.0, true_peak=True)
+    out1 = plugin.process(signal, sr)
+    plugin.reset()
+    out2 = plugin.process(signal, sr)
+
+    np.testing.assert_array_equal(out1, out2)
+
+
+def test_property_mutation_lookahead_and_true_peak():
+    """Changing lookahead_ms and true_peak requires re-preparation.
+
+    These take effect on the next .process() call (which calls prepare()).
+    """
+    sr = 44100
+    sine = generate_sine_at(sr, 440.0, num_seconds=0.5, num_channels=1) * 0.1
+
+    # Start with lookahead_ms=5.0, true_peak=False
+    plugin = BrickwallLimiter(ceiling_db=-1.0, lookahead_ms=5.0, true_peak=False)
+    out1 = plugin.process(sine, sr)
+    np.testing.assert_allclose(out1, sine, atol=1e-5)
+
+    # Change lookahead_ms — next process() triggers prepare() with new spec
+    plugin.lookahead_ms = 10.0
+    out2 = plugin.process(sine, sr)  # triggers prepare with new lookahead
+    np.testing.assert_allclose(out2, sine, atol=1e-5)  # still passes through
+
+    # Change true_peak — next process() triggers prepare() with oversampler
+    plugin.true_peak = True
+    out3 = plugin.process(sine, sr)
+    np.testing.assert_allclose(out3, sine, atol=1e-5)  # quiet signal still passes
