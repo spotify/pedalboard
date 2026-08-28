@@ -78,9 +78,13 @@ def test_parameter_validation():
 @pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
 @pytest.mark.parametrize("buffer_size", [128, 8192, 65536])
 @pytest.mark.parametrize("lookahead_ms", [1.0, 5.0, 10.0])
-def test_latency_compensation(sample_rate: float, buffer_size: int, lookahead_ms: float):
+def test_latency_compensation(
+    sample_rate: float, buffer_size: int, lookahead_ms: float
+):
     """Output must be time-aligned with input after latency compensation."""
-    quiet_sine = generate_sine_at(sample_rate, 440.0, num_seconds=1.0, num_channels=1) * 0.1
+    quiet_sine = (
+        generate_sine_at(sample_rate, 440.0, num_seconds=1.0, num_channels=1) * 0.1
+    )
     plugin = BrickwallLimiter(ceiling_db=-1.0, lookahead_ms=lookahead_ms)
     output = plugin.process(quiet_sine, sample_rate, buffer_size=buffer_size)
     np.testing.assert_allclose(output, quiet_sine, atol=1e-5)
@@ -97,9 +101,9 @@ def test_latency_prime_sizes(lookahead_ms: float):
     expected_samples = int(sr * lookahead_ms / 1000)
     # Verify we actually hit a prime
     assert expected_samples > 1
-    assert all(expected_samples % i != 0 for i in range(2, int(expected_samples**0.5) + 1)), (
-        f"{lookahead_ms} ms at {sr} Hz gives {expected_samples} samples, which is not prime"
-    )
+    assert all(
+        expected_samples % i != 0 for i in range(2, int(expected_samples**0.5) + 1)
+    ), f"{lookahead_ms} ms at {sr} Hz gives {expected_samples} samples, which is not prime"
     quiet_sine = generate_sine_at(sr, 440.0, num_seconds=0.5, num_channels=1) * 0.1
     plugin = BrickwallLimiter(ceiling_db=-1.0, lookahead_ms=lookahead_ms)
     output = plugin.process(quiet_sine, sr)
@@ -230,17 +234,17 @@ def test_stereo_linked():
     n = sr // 2
     t = np.arange(n, dtype=np.float32) / sr
 
-    ch1 = np.sin(2 * np.pi * 440 * t).astype(np.float32)        # loud
-    ch2 = (np.sin(2 * np.pi * 880 * t) * 0.1).astype(np.float32) # quiet
+    ch1 = np.sin(2 * np.pi * 440 * t).astype(np.float32)  # loud
+    ch2 = (np.sin(2 * np.pi * 880 * t) * 0.1).astype(np.float32)  # quiet
     stereo = np.stack([ch1, ch2])
 
     plugin = BrickwallLimiter(ceiling_db=-6.0, lookahead_ms=5.0)
     output = plugin.process(stereo, sr)
 
     # ch2 alone wouldn't need reduction, but linked gain should attenuate it
-    assert np.max(np.abs(output[1])) < np.max(np.abs(ch2)) - 0.001, (
-        "ch2 should be attenuated by linked gain from ch1's peaks"
-    )
+    assert (
+        np.max(np.abs(output[1])) < np.max(np.abs(ch2)) - 0.001
+    ), "ch2 should be attenuated by linked gain from ch1's peaks"
 
 
 def test_streaming_reset_false():
@@ -264,8 +268,8 @@ def test_streaming_reset_false():
     chunk_size = len(flat) // 3
     chunks = [
         flat[:chunk_size].copy(),
-        flat[chunk_size:2*chunk_size].copy(),
-        flat[2*chunk_size:].copy(),
+        flat[chunk_size : 2 * chunk_size].copy(),
+        flat[2 * chunk_size :].copy(),
     ]
 
     # All chunks (including the first) use reset=False. Note that reset=True
@@ -287,10 +291,11 @@ def test_streaming_reset_false():
     out_tail = plugin.process(tail, sr, buffer_size=buffer_size, reset=False)
 
     # Concatenate and verify total length and content
-    combined = np.concatenate([out1.flatten(), out2.flatten(),
-                               out3.flatten(), out_tail.flatten()])
+    combined = np.concatenate(
+        [out1.flatten(), out2.flatten(), out3.flatten(), out_tail.flatten()]
+    )
     # Trim to reference length
-    combined = combined[:len(ref_flat)]
+    combined = combined[: len(ref_flat)]
 
     np.testing.assert_allclose(combined, ref_flat, atol=1e-4)
 
@@ -324,7 +329,9 @@ def test_property_mutation_release():
 
     signal_slow = signal_fast.copy()
 
-    plugin = BrickwallLimiter(ceiling_db=-1.0, release_ms=10.0, lookahead_ms=lookahead_ms)
+    plugin = BrickwallLimiter(
+        ceiling_db=-1.0, release_ms=10.0, lookahead_ms=lookahead_ms
+    )
     out_fast = plugin.process(signal_fast, sr)
 
     plugin.release_ms = 500.0
@@ -400,9 +407,9 @@ def test_true_peak_detection():
     out_tp = plugin_tp.process(signal, sr)
 
     # True-peak output should have reduced sample values
-    assert np.max(np.abs(out_tp)) < np.max(np.abs(signal)) - 0.01, (
-        "true_peak=True should reduce the ISP signal"
-    )
+    assert (
+        np.max(np.abs(out_tp)) < np.max(np.abs(signal)) - 0.01
+    ), "true_peak=True should reduce the ISP signal"
 
     # Independent measurement: tp output's true peak should be lower
     tp_of_sp = _measure_true_peak_dbfs(out_sp)
@@ -448,9 +455,7 @@ def test_true_peak_across_block_boundary():
     signal = np.zeros(n, dtype=np.float32)
     # Place ISP pattern right at a block boundary
     boundary = buffer_size * 5  # 640th sample
-    signal[boundary - 1 : boundary + 5] = np.array(
-        [0, 0, 1, 1, 0, 0], dtype=np.float32
-    )
+    signal[boundary - 1 : boundary + 5] = np.array([0, 0, 1, 1, 0, 0], dtype=np.float32)
 
     ceiling_db = 0.0
     plugin = BrickwallLimiter(ceiling_db=ceiling_db, true_peak=True)
