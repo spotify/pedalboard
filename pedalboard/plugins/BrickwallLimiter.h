@@ -40,8 +40,10 @@ namespace Pedalboard {
  *
  * Design: setters store REQUESTED parameter values. prepare() copies them
  * to ACTIVE state. process() reads only ACTIVE state.
- * ceiling_db and release_ms use std::atomic<float> for safe concurrent
- * access between Python setters and the native audio callback.
+ * All four requested-state parameters (ceiling_db, release_ms, lookahead_ms,
+ * true_peak) use std::atomic for safe concurrent access between Python
+ * setters and the native audio callback (AudioStream releases the GIL
+ * during processing, so plain field access would be a C++ data race).
  * Coefficients are snapshotted at block boundaries for thread safety.
  */
 template <typename SampleType> class BrickwallLimiter : public Plugin {
@@ -68,18 +70,22 @@ public:
     releaseMs_.store(value, std::memory_order_relaxed);
   }
 
-  float getLookaheadMs() const noexcept { return lookaheadMs_; }
+  float getLookaheadMs() const noexcept {
+    return lookaheadMs_.load(std::memory_order_relaxed);
+  }
   void setLookaheadMs(float value) {
     if (value <= 0.0f || value > 100.0f || std::isnan(value) ||
         std::isinf(value))
       throw std::range_error("lookahead_ms must be in (0, 100]");
-    lookaheadMs_ = value;
+    lookaheadMs_.store(value, std::memory_order_relaxed);
     // Takes effect on next prepare() — no reallocation here
   }
 
-  bool getTruePeak() const noexcept { return truePeak_; }
+  bool getTruePeak() const noexcept {
+    return truePeak_.load(std::memory_order_relaxed);
+  }
   void setTruePeak(bool value) {
-    truePeak_ = value;
+    truePeak_.store(value, std::memory_order_relaxed);
     // Takes effect on next prepare()
   }
 
@@ -93,16 +99,18 @@ public:
         (spec.sampleRate != preparedSpec_.sampleRate ||
          preparedSpec_.maximumBlockSize < spec.maximumBlockSize ||
          spec.numChannels != preparedSpec_.numChannels);
-    bool paramsChanged = (lookaheadMs_ != preparedLookaheadMs_ ||
-                          truePeak_ != preparedTruePeak_);
+    float currentLookaheadMs = lookaheadMs_.load(std::memory_order_relaxed);
+    bool currentTruePeak = truePeak_.load(std::memory_order_relaxed);
+    bool paramsChanged = (currentLookaheadMs != preparedLookaheadMs_ ||
+                          currentTruePeak != preparedTruePeak_);
 
     if (!specChanged && !paramsChanged) {
       return; // preserve state for reset=False streaming
     }
 
     preparedSpec_ = spec;
-    preparedLookaheadMs_ = lookaheadMs_;
-    preparedTruePeak_ = truePeak_;
+    preparedLookaheadMs_ = currentLookaheadMs;
+    preparedTruePeak_ = currentTruePeak;
 
     // Oversampler
     upsampleDelay_ = 0;
@@ -254,13 +262,15 @@ public:
   virtual int getLatencyHint() override { return activeLookaheadSamples_; }
 
 private:
-  // Requested parameters — atomic for thread safety with AudioStream.
-  // Written by setters (Python thread), read by process() (audio thread)
-  // at block boundaries via relaxed loads.
+  // Requested parameters — ALL atomic for thread safety with AudioStream.
+  // Written by setters (Python thread), read by process()/prepare() (which
+  // may run on a different thread). Relaxed ordering is sufficient since we
+  // snapshot at block boundaries (process()) or preparation boundaries
+  // (prepare()), needing only eventual visibility, not ordering guarantees.
   std::atomic<float> ceilingDb_{-1.0f};
   std::atomic<float> releaseMs_{100.0f};
-  float lookaheadMs_ = 5.0f;
-  bool truePeak_ = false;
+  std::atomic<float> lookaheadMs_{5.0f};
+  std::atomic<bool> truePeak_{false};
 
   // Active (prepared) state — only written by prepare(), read by process()
   int activeLookaheadSamples_ = 0;

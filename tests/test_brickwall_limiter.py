@@ -506,20 +506,26 @@ def test_property_mutation_lookahead_and_true_peak():
 
 
 def test_upsampler_latency_calibration():
-    """Verify the upsampling-only group-delay compensation (getLatencyInSamples() / 2.0).
+    """Verify the upsampler delay compensation is self-consistent.
 
     Feeds a single-sample impulse through a true_peak=True plugin with a
     ceiling far above the impulse's amplitude, so the gain envelope never
     engages and the impulse is unmodified except for the plugin's reported
-    latency (base lookahead + upsampling-only group delay). Pedalboard's
-    automatic latency compensation should then re-align the impulse to its
-    original input index. If BrickwallLimiter's assumed upsampling-only
-    delay (half of Oversampling::getLatencyInSamples(), since only
-    processSamplesUp() is used) were wrong, activeLookaheadSamples_ would
-    not match the delay line's actual configured delay and/or the value
-    used to size and drain the delay line, and the impulse would land at
-    the wrong output index or its amplitude would be smeared/attenuated by
-    the mismatch.
+    latency (base lookahead + upsampler delay). Pedalboard's automatic
+    latency compensation should then re-align the impulse to its original
+    input index.
+
+    The delay compensation uses ceil(getLatencyInSamples()) — the full
+    reported round-trip latency — as a conservative upper bound, since
+    JUCE exposes no per-direction latency accessor and the up/down filters
+    have different orders. This over-compensates slightly (the delay line
+    is a bit longer than strictly needed) but guarantees gain reduction
+    always arrives before the peak exits the delay line.
+
+    NOTE: This test validates self-consistency (the impulse lands at the
+    right index after latency compensation), not the accuracy of the
+    delay split itself — Pedalboard's latency compensation makes any
+    self-consistent delay value produce a correctly-aligned impulse.
     """
     sr = 44100
     n = sr
@@ -539,8 +545,8 @@ def test_upsampler_latency_calibration():
 
     assert out_peak_idx == impulse_pos, (
         f"Impulse shifted from input index {impulse_pos} to output index "
-        f"{out_peak_idx}; upsampling-only latency compensation "
-        "(getLatencyInSamples() / 2.0) appears miscalibrated."
+        f"{out_peak_idx}; upsampler delay compensation "
+        "(ceil(getLatencyInSamples())) appears miscalibrated."
     )
     np.testing.assert_allclose(out_flat[out_peak_idx], 1.0, atol=1e-3)
 
