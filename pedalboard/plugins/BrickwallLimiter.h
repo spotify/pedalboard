@@ -19,6 +19,7 @@
 #include "../JuceHeader.h"
 #include "../Plugin.h"
 
+#include <atomic>
 #include <cmath>
 
 namespace Pedalboard {
@@ -39,6 +40,8 @@ namespace Pedalboard {
  *
  * Design: setters store REQUESTED parameter values. prepare() copies them
  * to ACTIVE state. process() reads only ACTIVE state.
+ * ceiling_db and release_ms use std::atomic<float> for safe concurrent
+ * access between Python setters and the native audio callback.
  * Coefficients are snapshotted at block boundaries for thread safety.
  */
 template <typename SampleType> class BrickwallLimiter : public Plugin {
@@ -47,18 +50,22 @@ public:
   // Setters store requested values. Derived coefficients are snapshotted
   // in process() at block boundaries for thread safety with AudioStream.
 
-  float getCeilingDb() const noexcept { return ceilingDb_; }
+  float getCeilingDb() const noexcept {
+    return ceilingDb_.load(std::memory_order_relaxed);
+  }
   void setCeilingDb(float value) {
     if (std::isnan(value) || std::isinf(value))
       throw std::range_error("ceiling_db must be a finite number");
-    ceilingDb_ = value;
+    ceilingDb_.store(value, std::memory_order_relaxed);
   }
 
-  float getReleaseMs() const noexcept { return releaseMs_; }
+  float getReleaseMs() const noexcept {
+    return releaseMs_.load(std::memory_order_relaxed);
+  }
   void setReleaseMs(float value) {
     if (value <= 0.0f || std::isnan(value) || std::isinf(value))
       throw std::range_error("release_ms must be > 0");
-    releaseMs_ = value;
+    releaseMs_.store(value, std::memory_order_relaxed);
   }
 
   float getLookaheadMs() const noexcept { return lookaheadMs_; }
@@ -105,23 +112,20 @@ public:
           juce::dsp::Oversampling<SampleType>::filterHalfBandFIREquiripple,
           true); // isMaxQuality
       oversampler_->initProcessing(spec.maximumBlockSize);
-      // Upsampling-only group delay approximation: half of
-      // getLatencyInSamples(), which JUCE reports as the round-trip
-      // (up+down) latency averaged across stages. JUCE does not expose a
-      // per-direction (up-only vs. down-only) latency, and for
-      // filterHalfBandFIREquiripple the up- and down-filters are designed
-      // to different specs (the up-filter targets a narrower transition
-      // band and deeper stopband, so its FIR order is typically higher
-      // than the down-filter's) — so this /2.0 split is an approximation,
-      // not an exact figure. In practice the error is a small number of
-      // samples, dwarfed by the base lookahead for typical lookahead_ms
-      // values, and end-to-end latency self-consistency (delay line delay
-      // == reported getLatencyHint()) is covered by
-      // test_upsampler_latency_calibration — that test cannot validate the
-      // /2.0 split itself, since it only exercises pedalboard's own
-      // latency-hint-driven output alignment.
+      // Conservative upsampler delay compensation: use the FULL reported
+      // round-trip latency as the delay line extension.
+      //
+      // getLatencyInSamples() reports the combined up+down path latency.
+      // The actual upsampling-only delay is somewhere between half and the
+      // full value (JUCE's equiripple up- and down-filters have different
+      // orders, and no per-direction accessor is exposed). Using the full
+      // value over-compensates slightly — the delay line is a bit longer
+      // than strictly needed — but this guarantees the gain reduction
+      // always arrives before the peak exits the delay line, even with
+      // very short lookahead_ms values. The extra latency is typically
+      // < 10 samples, negligible for most use cases.
       upsampleDelay_ =
-          (int)std::round(oversampler_->getLatencyInSamples() / 2.0);
+          (int)std::ceil(oversampler_->getLatencyInSamples());
     } else {
       oversampler_.reset();
     }
@@ -146,11 +150,17 @@ public:
     int numSamples = (int)ioBlock.getNumSamples();
     int numChannels = (int)ioBlock.getNumChannels();
 
-    // Snapshot parameters at block boundary for thread safety
-    float ceilingLinear = std::pow(10.0f, ceilingDb_ / 20.0f);
+    // Snapshot parameters at block boundary for thread safety.
+    // ceilingDb_ and releaseMs_ are std::atomic<float>, ensuring no data race
+    // when setters are called from another thread (e.g., Python property access
+    // while AudioStream's native callback is running).
+    float ceilingLinear =
+        std::pow(10.0f, ceilingDb_.load(std::memory_order_relaxed) / 20.0f);
     float releaseCoeff = std::exp(
         -1.0f /
-        std::max(1, (int)(preparedSpec_.sampleRate * releaseMs_ / 1000.0f)));
+        std::max(1, (int)(preparedSpec_.sampleRate *
+                          releaseMs_.load(std::memory_order_relaxed) /
+                          1000.0f)));
     int lookaheadSamples = activeLookaheadSamples_;
 
     // ── Step 1: Detect peaks ──
@@ -244,9 +254,11 @@ public:
   virtual int getLatencyHint() override { return activeLookaheadSamples_; }
 
 private:
-  // Requested parameters (written by setters, read by process() at block start)
-  float ceilingDb_ = -1.0f;
-  float releaseMs_ = 100.0f;
+  // Requested parameters — atomic for thread safety with AudioStream.
+  // Written by setters (Python thread), read by process() (audio thread)
+  // at block boundaries via relaxed loads.
+  std::atomic<float> ceilingDb_{-1.0f};
+  std::atomic<float> releaseMs_{100.0f};
   float lookaheadMs_ = 5.0f;
   bool truePeak_ = false;
 
