@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 Spotify AB
+ * Copyright 2021 Spotify AB
  *
  * Licensed under the GNU Public License, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
