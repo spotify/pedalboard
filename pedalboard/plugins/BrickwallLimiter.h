@@ -155,10 +155,7 @@ public:
     int numSamples = (int)ioBlock.getNumSamples();
     int numChannels = (int)ioBlock.getNumChannels();
 
-    // Snapshot parameters at block boundary for thread safety.
-    // ceilingDb_ and releaseMs_ are std::atomic<float>, ensuring no data race
-    // when setters are called from another thread (e.g., Python property access
-    // while AudioStream's native callback is running).
+    // Snapshot atomic parameters at block boundary.
     float ceilingLinear =
         std::pow(10.0f, ceilingDb_.load(std::memory_order_relaxed) / 20.0f);
     float releaseCoeff = std::exp(
@@ -295,17 +292,14 @@ inline void init_brickwall_limiter(py::module &m) {
   py::class_<BrickwallLimiter<float>, Plugin,
              std::shared_ptr<BrickwallLimiter<float>>>(
       m, "BrickwallLimiter",
-      "A sample-peak brick-wall limiter with configurable ceiling.\n\n"
+      "A lookahead brick-wall limiter with configurable ceiling.\n\n"
       "Unlike the built-in :class:`Limiter`, ``BrickwallLimiter``:\n\n"
       "- Has a configurable ceiling (not fixed at 0 dBFS)\n"
       "- Does **not** apply makeup gain\n"
       "- Uses a smoothed gain envelope (instant attack, exponential "
-      "release)\n\n"
+      "release)\n"
       "- Uses a lookahead delay line and hold mechanism to catch peaks "
       "before they occur\n\n"
-      "This is currently a sample-peak-only implementation by default: it "
-      "does not detect inter-sample (true) peaks unless ``true_peak=True`` "
-      "is passed.\n\n"
       "When ``true_peak=True``, the sidechain uses 4x oversampling to detect\n"
       "inter-sample peaks.  This substantially reduces inter-sample overshoot\n"
       "in the output but does not guarantee the reconstructed waveform stays\n"
