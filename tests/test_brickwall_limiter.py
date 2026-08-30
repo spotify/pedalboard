@@ -65,6 +65,10 @@ def test_parameter_validation():
     with pytest.raises(Exception):
         limiter.release_ms = -1
     with pytest.raises(Exception):
+        limiter.release_ms = float("inf")
+    with pytest.raises(Exception):
+        limiter.release_ms = float("nan")
+    with pytest.raises(Exception):
         limiter.ceiling_db = float("nan")
     with pytest.raises(Exception):
         limiter.ceiling_db = float("inf")
@@ -120,7 +124,6 @@ def test_transient_hold():
     """
     sr = 44100
     lookahead_ms = 5.0
-    lookahead_samples = int(sr * lookahead_ms / 1000)
     n_samples = sr  # 1 second
     transient_pos = n_samples // 2
 
@@ -341,14 +344,16 @@ def test_property_mutation_release():
     # After the transient + hold period, fast release should recover sooner.
     # Check a point well after the hold expires but before the end.
     check_idx = n // 4 + 2 * lookahead_samples + int(sr * 0.05)  # 50ms after hold
-    if check_idx < n:
-        # Fast release should be closer to dc_level than slow release
-        fast_recovery = out_fast[check_idx] / dc_level
-        slow_recovery = out_slow[check_idx] / dc_level
-        assert fast_recovery > slow_recovery + 0.01, (
-            f"Fast release ({fast_recovery:.4f}) should recover more than "
-            f"slow release ({slow_recovery:.4f})"
-        )
+    assert check_idx < n, (
+        f"check_idx {check_idx} out of range for signal length {n}"
+    )
+    # Fast release should be closer to dc_level than slow release
+    fast_recovery = out_fast[check_idx] / dc_level
+    slow_recovery = out_slow[check_idx] / dc_level
+    assert fast_recovery > slow_recovery + 0.01, (
+        f"Fast release ({fast_recovery:.4f}) should recover more than "
+        f"slow release ({slow_recovery:.4f})"
+    )
 
 
 def test_lookahead_ms_validation():
@@ -360,6 +365,11 @@ def test_lookahead_ms_validation():
         limiter.lookahead_ms = 0
     with pytest.raises(Exception):
         limiter.lookahead_ms = float("nan")
+
+    # Upper boundary
+    limiter.lookahead_ms = 100.0  # exactly at limit — must NOT raise
+    with pytest.raises(Exception):
+        limiter.lookahead_ms = 100.001  # just above — must raise
 
 
 def _measure_true_peak_dbfs(audio_1d: np.ndarray) -> float:
@@ -418,6 +428,29 @@ def test_true_peak_detection():
         f"true_peak output ({tp_of_tp:.2f} dB) should have lower true peak "
         f"than sample_peak output ({tp_of_sp:.2f} dB)"
     )
+
+
+def test_true_peak_detection_stereo():
+    """true_peak detection must work with stereo signals (exercises cross-channel oversampling loop)."""
+    sr = 44100
+    n = sr
+    # ISP pattern on ch1, silence on ch2
+    ch1 = np.zeros(n, dtype=np.float32)
+    mid = n // 2
+    ch1[mid : mid + 6] = np.array([0, 0, 1, 1, 0, 0], dtype=np.float32)
+    ch2 = np.zeros(n, dtype=np.float32)
+    stereo = np.stack([ch1, ch2])
+
+    ceiling_db = 0.0
+    plugin = BrickwallLimiter(ceiling_db=ceiling_db, true_peak=True)
+    output = plugin.process(stereo, sr)
+
+    # True-peak mode should have reduced the ISP on ch1
+    assert np.max(np.abs(output[0])) < np.max(np.abs(ch1)) - 0.01, (
+        "true_peak=True should reduce ISP in stereo mode"
+    )
+    # ch2 (silence) should remain silent
+    assert np.max(np.abs(output[1])) < 1e-6
 
 
 def test_true_peak_conformance():
@@ -558,3 +591,13 @@ def test_upsampler_latency_calibration():
         "Impulse energy leaked into neighboring samples; upsampling-only "
         "latency compensation appears miscalibrated."
     )
+
+
+@pytest.mark.parametrize("n_samples", [1, 3, 10])
+def test_very_short_signal(n_samples: int):
+    """Signals shorter than the lookahead must not crash and must produce correct-length output."""
+    signal = np.ones(n_samples, dtype=np.float32) * 0.5  # below ceiling
+    plugin = BrickwallLimiter(ceiling_db=-1.0, lookahead_ms=5.0)
+    output = plugin.process(signal, 44100)
+    assert output.shape == signal.shape
+    assert np.all(np.isfinite(output))
