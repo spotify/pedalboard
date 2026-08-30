@@ -48,8 +48,6 @@ namespace Pedalboard {
 template <typename SampleType> class BrickwallLimiter : public Plugin {
 public:
   // ── Parameter getters/setters ──
-  // Setters store requested values. Derived coefficients are snapshotted
-  // in process() at block boundaries for thread safety with AudioStream.
 
   float getCeilingDb() const noexcept {
     return ceilingDb_.load(std::memory_order_relaxed);
