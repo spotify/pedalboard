@@ -8,6 +8,18 @@ from pedalboard import BrickwallLimiter
 from .utils import db_to_gain, generate_sine_at
 
 
+def _sine_f32(
+    sample_rate: float = 44100.0,
+    fundamental_hz: float = 440.0,
+    num_seconds: float = 1.0,
+    num_channels: int = 1,
+) -> "np.NDArray[np.float32]":
+    """generate_sine_at as float32 (pedalboard's native dtype)."""
+    return generate_sine_at(
+        sample_rate, fundamental_hz, num_seconds, num_channels
+    ).astype(np.float32)
+
+
 @pytest.mark.parametrize(
     "ceiling_db", [0.0, -0.1, -0.3, -1.0, -3.0, -6.0, -12.0, -20.0]
 )
@@ -15,9 +27,7 @@ from .utils import db_to_gain, generate_sine_at
 @pytest.mark.parametrize("num_channels", [1, 2])
 def test_ceiling_enforced(ceiling_db: float, sample_rate: float, num_channels: int):
     """Output sample peak must not exceed the ceiling."""
-    sine_wave = generate_sine_at(
-        sample_rate, 440.0, num_seconds=0.5, num_channels=num_channels
-    )
+    sine_wave = _sine_f32(sample_rate, 440.0, num_seconds=0.5, num_channels=num_channels)
     plugin = BrickwallLimiter(ceiling_db=ceiling_db)
     output = plugin.process(sine_wave, sample_rate)
 
@@ -31,7 +41,7 @@ def test_ceiling_enforced(ceiling_db: float, sample_rate: float, num_channels: i
 
 def test_passthrough_below_ceiling():
     """A signal well below the ceiling should pass through unchanged."""
-    quiet_sine = generate_sine_at(44100, 440.0, num_seconds=0.5, num_channels=1) * 0.1
+    quiet_sine = _sine_f32(44100, 440.0, num_seconds=0.5, num_channels=1) * np.float32(0.1)
     plugin = BrickwallLimiter(ceiling_db=-1.0)
     output = plugin.process(quiet_sine, 44100)
     np.testing.assert_allclose(output, quiet_sine, atol=1e-6)
@@ -39,7 +49,7 @@ def test_passthrough_below_ceiling():
 
 def test_no_makeup_gain():
     """Unlike the built-in Limiter, BrickwallLimiter must NOT boost quiet signals."""
-    quiet_sine = generate_sine_at(44100, 440.0, num_seconds=0.5, num_channels=1) * 0.1
+    quiet_sine = _sine_f32(44100, 440.0, num_seconds=0.5, num_channels=1) * np.float32(0.1)
     plugin = BrickwallLimiter(ceiling_db=-0.3)
     output = plugin.process(quiet_sine, 44100)
     assert np.max(np.abs(output)) <= np.max(np.abs(quiet_sine)) + 1e-6
@@ -47,8 +57,8 @@ def test_no_makeup_gain():
 
 def test_extreme_levels():
     """Signals well above 0 dBFS (e.g., after loudness normalization) must be limited."""
-    sine_wave = generate_sine_at(44100, 440.0, num_seconds=0.5, num_channels=1)
-    boosted = sine_wave * db_to_gain(20.0)  # +20 dBFS
+    sine_wave = _sine_f32(44100, 440.0, num_seconds=0.5, num_channels=1)
+    boosted = (sine_wave * db_to_gain(20.0)).astype(np.float32)  # +20 dBFS
     ceiling_db = -1.0
     plugin = BrickwallLimiter(ceiling_db=ceiling_db)
     output = plugin.process(boosted, 44100)
@@ -86,9 +96,7 @@ def test_latency_compensation(
     sample_rate: float, buffer_size: int, lookahead_ms: float
 ):
     """Output must be time-aligned with input after latency compensation."""
-    quiet_sine = (
-        generate_sine_at(sample_rate, 440.0, num_seconds=1.0, num_channels=1) * 0.1
-    )
+    quiet_sine = _sine_f32(sample_rate, 440.0, num_seconds=1.0, num_channels=1) * np.float32(0.1)
     plugin = BrickwallLimiter(ceiling_db=-1.0, lookahead_ms=lookahead_ms)
     output = plugin.process(quiet_sine, sample_rate, buffer_size=buffer_size)
     np.testing.assert_allclose(output, quiet_sine, atol=1e-5)
@@ -108,7 +116,7 @@ def test_latency_prime_sizes(lookahead_ms: float):
     assert all(
         expected_samples % i != 0 for i in range(2, int(expected_samples**0.5) + 1)
     ), f"{lookahead_ms} ms at {sr} Hz gives {expected_samples} samples, which is not prime"
-    quiet_sine = generate_sine_at(sr, 440.0, num_seconds=0.5, num_channels=1) * 0.1
+    quiet_sine = _sine_f32(sr, 440.0, num_seconds=0.5, num_channels=1) * np.float32(0.1)
     plugin = BrickwallLimiter(ceiling_db=-1.0, lookahead_ms=lookahead_ms)
     output = plugin.process(quiet_sine, sr)
     np.testing.assert_allclose(output, quiet_sine, atol=1e-5)
@@ -207,7 +215,7 @@ def test_hold_refresh():
 
 def test_reset_determinism():
     """Processing the same signal twice with reset() between must give identical output."""
-    sine = generate_sine_at(44100, 440.0, num_seconds=0.5, num_channels=1)
+    sine = _sine_f32(44100, 440.0, num_seconds=0.5, num_channels=1)
     plugin = BrickwallLimiter(ceiling_db=-3.0, lookahead_ms=5.0)
 
     out1 = plugin.process(sine, 44100)
@@ -219,7 +227,7 @@ def test_reset_determinism():
 @pytest.mark.parametrize("num_channels", [1, 2])
 def test_streaming_consistency(num_channels: int):
     """Processing in one large block vs many small blocks should match."""
-    sine = generate_sine_at(44100, 440.0, num_seconds=1.0, num_channels=num_channels)
+    sine = _sine_f32(44100, 440.0, num_seconds=1.0, num_channels=num_channels)
     ceiling_db = -3.0
 
     plugin1 = BrickwallLimiter(ceiling_db=ceiling_db, lookahead_ms=5.0)
@@ -258,7 +266,7 @@ def test_streaming_reset_false():
     buffer_size = 512  # fixed buffer size throughout
 
     # Use a quiet signal that passes through unchanged
-    full_signal = generate_sine_at(sr, 440.0, num_seconds=1.0, num_channels=1) * 0.1
+    full_signal = _sine_f32(sr, 440.0, num_seconds=1.0, num_channels=1) * np.float32(0.1)
     flat = full_signal.flatten() if full_signal.ndim > 1 else full_signal
 
     # Reference: one-shot processing
@@ -306,7 +314,7 @@ def test_streaming_reset_false():
 def test_property_mutation_ceiling():
     """Changing ceiling_db takes effect at the next block boundary."""
     sr = 44100
-    sine = generate_sine_at(sr, 440.0, num_seconds=0.5, num_channels=1)
+    sine = _sine_f32(sr, 440.0, num_seconds=0.5, num_channels=1)
 
     plugin = BrickwallLimiter(ceiling_db=-1.0, lookahead_ms=5.0)
     out1 = plugin.process(sine, sr)
@@ -520,7 +528,7 @@ def test_property_mutation_lookahead_and_true_peak():
     These take effect on the next .process() call (which calls prepare()).
     """
     sr = 44100
-    sine = generate_sine_at(sr, 440.0, num_seconds=0.5, num_channels=1) * 0.1
+    sine = _sine_f32(sr, 440.0, num_seconds=0.5, num_channels=1) * np.float32(0.1)
 
     # Start with lookahead_ms=5.0, true_peak=False
     plugin = BrickwallLimiter(ceiling_db=-1.0, lookahead_ms=5.0, true_peak=False)
