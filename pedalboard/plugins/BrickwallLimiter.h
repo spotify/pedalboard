@@ -25,18 +25,17 @@
 namespace Pedalboard {
 
 /**
- * A sample-peak brick-wall limiter with configurable ceiling.
+ * A lookahead brick-wall limiter with configurable ceiling.
  *
  * Unlike the built-in Limiter (which wraps JUCE's dsp::Limiter and applies
  * makeup gain), this plugin:
  *   - Has a configurable output ceiling (not fixed at 0 dBFS)
  *   - Does NOT apply makeup gain
  *   - Uses a smoothed gain envelope (instant attack, exponential release)
- *
- * This is a sample-peak implementation: it uses a lookahead delay line and
- * hold mechanism to catch peaks before they occur, but does not detect
- * inter-sample (true) peaks. True-peak detection (e.g. via oversampling)
- * is planned for a follow-up commit.
+ *   - Uses a lookahead delay line and hold mechanism to catch peaks
+ *     before they occur
+ *   - Optionally detects inter-sample (true) peaks via 4x oversampled
+ *     sidechain when true_peak=True
  *
  * Design: setters store REQUESTED parameter values. prepare() copies them
  * to ACTIVE state. process() reads only ACTIVE state.
