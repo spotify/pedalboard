@@ -129,8 +129,7 @@ public:
       // always arrives before the peak exits the delay line, even with
       // very short lookahead_ms values. The extra latency is typically
       // < 10 samples, negligible for most use cases.
-      upsampleDelay_ =
-          (int)std::ceil(oversampler_->getLatencyInSamples());
+      upsampleDelay_ = (int)std::ceil(oversampler_->getLatencyInSamples());
     } else {
       oversampler_.reset();
     }
@@ -159,10 +158,9 @@ public:
     float ceilingLinear =
         std::pow(10.0f, ceilingDb_.load(std::memory_order_relaxed) / 20.0f);
     float releaseCoeff = std::exp(
-        -1.0f /
-        std::max(1, (int)(preparedSpec_.sampleRate *
-                          releaseMs_.load(std::memory_order_relaxed) /
-                          1000.0f)));
+        -1.0f / std::max(1, (int)(preparedSpec_.sampleRate *
+                                  releaseMs_.load(std::memory_order_relaxed) /
+                                  1000.0f)));
     int lookaheadSamples = activeLookaheadSamples_;
 
     // ── Step 1: Detect peaks ──
