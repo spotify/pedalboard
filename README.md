@@ -146,6 +146,25 @@ with AudioFile('processed-output.wav', 'w', samplerate, effected.shape[0]) as f:
   f.write(effected)
 ```
 
+### Resampling and Channel Conversion
+
+Audio files can be resampled on-the-fly and have their channels converted
+for maximum efficiency using chainable methods:
+
+```python
+from pedalboard.io import AudioFile
+
+# Read a file, resampling to 22,050 Hz and converting to mono:
+with AudioFile('some-file.mp3').resampled_to(22_050).mono() as f:
+    audio = f.read(f.frames)
+    print(f.samplerate)    # => 22050
+    print(f.num_channels)  # => 1
+
+# Resampling and channel conversion can be done in either order:
+with AudioFile('some-file.mp3').mono().resampled_to(22_050) as f:
+    audio = f.read(f.frames)  # Also works! (And may be faster for stereo inputs)
+```
+
 ### Using VST3® or Audio Unit instrument and effect plugins
 
 ```python
