@@ -80,6 +80,7 @@ class Plugin:
         audio: NDArray[float32],
         sample_rate: float,
         buffer_size: int = 8192,
+        midi_messages: typing.List[MIDIMessageLike] | None = None,
         reset: bool = True,
     ) -> NDArray[float32]:
         """
@@ -91,6 +92,7 @@ class Plugin:
         input_array: NDArray[float32],
         sample_rate: float,
         buffer_size: int = 8192,
+        midi_messages: typing.List[MIDIMessageLike] | None = None,
         reset: bool = True,
     ) -> NDArray[float32]:
         """
@@ -2332,6 +2334,7 @@ def process(
     sample_rate: float,
     plugins: typing.List[Plugin],
     buffer_size: int = 8192,
+    midi_messages: typing.List[MIDIMessageLike] | None = None,
     reset: bool = True,
 ) -> NDArray[float32]:
     """

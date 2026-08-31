@@ -280,6 +280,16 @@ public:
     return AddLatency::process(context);
   }
 
+  virtual int process(const juce::dsp::ProcessContextReplacing<float> &context,
+                      const juce::MidiBuffer &midiMessages) override {
+    if (context.getInputBlock().getNumSamples() != expectedBlockSize) {
+      throw std::runtime_error("Expected maximum block size of exactly " +
+                               std::to_string(expectedBlockSize) + "!");
+    }
+    // Forward the MIDI events to the nested latency plugin.
+    return AddLatency::process(context, midiMessages);
+  }
+
   virtual void reset() { AddLatency::reset(); }
 
   void setExpectedBlockSize(int newExpectedBlockSize) {
