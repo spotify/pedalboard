@@ -13,7 +13,7 @@ def _sine_f32(
     fundamental_hz: float = 440.0,
     num_seconds: float = 1.0,
     num_channels: int = 1,
-) -> "np.NDArray[np.float32]":
+) -> "np.ndarray":
     """generate_sine_at as float32 (pedalboard's native dtype)."""
     return generate_sine_at(
         sample_rate, fundamental_hz, num_seconds, num_channels
