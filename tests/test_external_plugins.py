@@ -379,6 +379,31 @@ def test_set_vst3_preset():
         f"Expected gain to be {new_gain_value}, but got {plugin.gain}"
     )
 
+@pytest.mark.parametrize(
+    "plugin_filename,plugin_preset",
+    [
+        (plugin, os.path.join(TEST_PRESET_BASE_PATH, plugin + ".aupreset"))
+        for plugin in AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT
+        if os.path.isfile(os.path.join(TEST_PRESET_BASE_PATH, plugin + ".aupreset"))
+    ],
+)
+def test_preset_parameters(plugin_filename: str, plugin_preset: str):
+    # plugin with default params.
+    plugin = load_test_plugin(plugin_filename)
+
+    default_params = {k: v.raw_value for k, v in plugin.parameters.items() if v.type == float}
+
+    # load preset file
+    plugin.load_preset(plugin_preset)
+
+    for name, default in default_params.items():
+        actual = getattr(plugin, name)
+        if math.isnan(actual):
+            continue
+        assert (
+            actual != default
+        ), f"Expected attribute {name} to be different from default ({default}), but was {actual}"
+
 
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_PLUGINS_IN_TEST_ENVIRONMENT)
 def test_initial_parameters(plugin_filename: str):
