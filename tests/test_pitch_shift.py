@@ -59,3 +59,48 @@ def test_pitch_shift_latency_compensation(fundamental_hz, sample_rate, buffer_si
     plugin = Pedalboard([PitchShift(0)])
     output = plugin.process(sine_wave, sample_rate, buffer_size=buffer_size)
     np.testing.assert_allclose(sine_wave, output, atol=1e-6)
+
+
+@pytest.mark.parametrize("chunk_size", [512, 4096, 8192])
+@pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
+def test_pitch_shift_streaming_produces_output(chunk_size, sample_rate):
+    """PitchShift with reset=False must produce non-zero output after priming."""
+    num_seconds = 3.0
+    signal = np.sin(
+        2 * np.pi * 440 * np.arange(num_seconds * sample_rate) / sample_rate
+    ).astype(np.float32)
+
+    plugin = PitchShift(semitones=5)
+    output_chunks = []
+    for i in range(0, len(signal), chunk_size):
+        chunk = signal[i : i + chunk_size]
+        out = plugin.process(chunk, sample_rate, reset=False)
+        assert len(out) == len(chunk), (
+            f"Chunk {i // chunk_size}: expected {len(chunk)} samples, got {len(out)}"
+        )
+        output_chunks.append(out)
+
+    concatenated = np.concatenate(output_chunks)
+    assert np.any(np.abs(concatenated) > 1e-6), (
+        "Streaming produced all-zero output; PitchShift with reset=False is broken"
+    )
+
+
+def test_pitch_shift_streaming_multiple_sessions():
+    """Reusing a PitchShift across reset=True then streaming must work each time."""
+    sample_rate = 44100
+    chunk_size = 4096
+    signal = np.sin(
+        2 * np.pi * 440 * np.arange(3 * sample_rate) / sample_rate
+    ).astype(np.float32)
+
+    plugin = PitchShift(semitones=5)
+    for session in range(3):
+        chunks = []
+        for i in range(0, len(signal), chunk_size):
+            chunk = signal[i : i + chunk_size]
+            chunks.append(plugin.process(chunk, sample_rate, reset=(i == 0)))
+        concatenated = np.concatenate(chunks)
+        assert np.any(np.abs(concatenated) > 1e-6), (
+            f"Session {session}: streaming after reset produced silence"
+        )
