@@ -114,6 +114,24 @@ def test_throw_on_invalid_compressor_ratio(sr=44100):
         Compressor(ratio=0.1)
 
 
+@pytest.mark.parametrize("ratio", [0.5, 0.0, -2.0])
+def test_throw_on_invalid_noise_gate_ratio(ratio: float, sr=44100):
+    quiet_noise = (np.random.rand(sr, 1).astype(np.float32) - 0.5) * 0.2
+
+    # Should work:
+    output = process(quiet_noise, sr, [NoiseGate(threshold_db=-6.0, ratio=1.0)])
+    assert np.all(np.abs(output) <= 1.0)
+
+    # Should fail; below 1.0, the gate applies gain instead of attenuation:
+    with pytest.raises(ValueError):
+        NoiseGate(ratio=ratio)
+
+    gate = NoiseGate()
+    with pytest.raises(ValueError):
+        gate.ratio = ratio
+    assert gate.ratio == 10.0
+
+
 def test_convolution_file_exists():
     """
     A meta-test - if this fails, we can't find the file, so the following two tests will fail!
