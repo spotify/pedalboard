@@ -21,6 +21,9 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
+#include <cmath>
+#include <sstream>
+
 #include "BufferUtils.h"
 #include "Plugin.h"
 #include "PluginContainer.h"
@@ -28,6 +31,64 @@
 namespace py = pybind11;
 
 namespace Pedalboard {
+
+/**
+ * Detect the common mistake of passing integer PCM audio (for example, 16-bit
+ * data with a range of [-32768, 32767]) that has been converted to a
+ * floating-point data type without being rescaled into the [-1.0, 1.0] range
+ * that Pedalboard expects. Some plugins (like Reverb or Delay) are roughly
+ * scale-invariant and appear to work with such data, while others (like
+ * Compressor, Limiter, or PitchShift) fail in confusing ways, so we raise a
+ * descriptive error up front.
+ *
+ * This is effectively a no-op for real audio: as soon as a single fractional
+ * (or non-finite) sample is found, the check bails out, so the common case
+ * adds only a handful of instructions.
+ */
+inline void throwErrorIfBufferLooksLikeUnscaledIntegerData(
+    const py::array_t<float, py::array::c_style> &inputArray) {
+  py::buffer_info inputInfo = inputArray.request();
+  const float *data = static_cast<const float *>(inputInfo.ptr);
+  if (data == nullptr)
+    return;
+
+  size_t numSamples = 1;
+  for (auto dimension : inputInfo.shape)
+    numSamples *= static_cast<size_t>(dimension);
+  if (numSamples == 0)
+    return;
+
+  float maxMagnitude = 0.0f;
+  for (size_t i = 0; i < numSamples; i++) {
+    float sample = data[i];
+    // Real-world floating-point audio almost always contains fractional sample
+    // values; as soon as we see one (or any non-finite value) we know this is
+    // not unscaled integer data and can stop scanning.
+    if (!std::isfinite(sample) || sample != std::floor(sample))
+      return;
+    float magnitude = std::fabs(sample);
+    if (magnitude > maxMagnitude)
+      maxMagnitude = magnitude;
+  }
+
+  // Every sample was an exact integer. Values within the [-1.0, 1.0] range
+  // (such as digital silence or a full-scale square wave) are still valid
+  // audio, so only raise if the peak is outside of the expected range.
+  if (maxMagnitude > 1.0f) {
+    std::ostringstream ss;
+    ss << "The audio buffer provided to Pedalboard contains only "
+          "integer-valued samples, with a peak value of "
+       << maxMagnitude
+       << ", which is outside the expected range of [-1.0, 1.0]. This usually "
+          "indicates that integer PCM audio (for example, 16-bit data ranging "
+          "from -32768 to 32767) was converted to a floating-point data type "
+          "without being rescaled into the [-1.0, 1.0] range that Pedalboard "
+          "expects. To fix this, divide your audio by the maximum value of its "
+          "original integer type before processing (for example: "
+          "`audio.astype(numpy.float32) / 32768`).";
+    throw py::value_error(ss.str());
+  }
+}
 
 inline int process(juce::AudioBuffer<float> &ioBuffer,
                    juce::dsp::ProcessSpec spec,
@@ -290,6 +351,8 @@ py::array_t<float> process(py::array inputArray, double sampleRate,
     throw py::type_error("Pedalboard only supports 32-bit and 64-bit floating "
                          "point audio for processing.");
   }
+
+  throwErrorIfBufferLooksLikeUnscaledIntegerData(float32InputArray);
 
   return processFloat32(float32InputArray, sampleRate, plugins, bufferSize,
                         reset);
