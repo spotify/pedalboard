@@ -10,9 +10,38 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Only cancel superseded PR runs. A push to master can now publish to PyPI and cut a
+  # GitHub release, and cancelling that partway through would leave a half-done release.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Turns a version bump into a release. When a push to master changes __version__ in
+  # pedalboard/version.py, this run builds wheels, uploads them to PyPI, and creates the
+  # matching GitHub release -- no manual tagging or clicking through the releases UI.
+  #
+  # Everything stays inside this one workflow run on purpose: a release created with the
+  # default GITHUB_TOKEN does NOT trigger new workflow runs, so a separate "create the
+  # release" workflow could never kick off the wheel builds here.
+  detect-release:
+    runs-on: "ubuntu-24.04"
+    name: "Detect version bump"
+    outputs:
+      should-release: ${{ steps.check.outputs.should-release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # HEAD~1 is what we compare the version against: on a push it's the previous
+          # commit, and on a pull request it's the base branch (HEAD being a merge commit).
+          fetch-depth: 2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # The logic lives in Python so it can be unit-tested; see tests/test_detect_release.py.
+      - name: Check whether this push bumped the version
+        id: check
+        run: python ./scripts/detect_release.py
+
   lint-python:
     runs-on: ${{ matrix.os }}
     continue-on-error: true
@@ -861,10 +890,16 @@ jobs:
           pytest --maxfail=4
 
   build-wheels:
-    needs: [lint-python, lint-cpp]
+    needs: [lint-python, lint-cpp, detect-release]
     runs-on: ${{ matrix.os }}
     continue-on-error: false
-    if: (github.event_name == 'release' && github.event.action == 'published') || contains(github.event.pull_request.labels.*.name, 'Also Test Wheels')
+    # Built on three occasions: a version bump landing on master (the automated release
+    # path), a manually-published GitHub release (the older manual path, still supported),
+    # or a PR labelled "Also Test Wheels".
+    if: >-
+      needs.detect-release.outputs.should-release == 'true'
+      || (github.event_name == 'release' && github.event.action == 'published')
+      || contains(github.event.pull_request.labels.*.name, 'Also Test Wheels')
     strategy:
       matrix:
         include:
@@ -962,10 +997,17 @@ jobs:
           pattern: wheel-*
 
   upload-pypi:
-    needs: [merge, run-tests-with-address-sanitizer, run-tests]
+    needs: [merge, run-tests-with-address-sanitizer, run-tests, detect-release]
     runs-on: "ubuntu-24.04"
     name: "Upload wheels to PyPI"
-    if: github.event_name == 'release' && github.event.action == 'published'
+    # Note: there is no approval gate in front of this. Referencing a GitHub Environment
+    # here would add one, but an environment with no protection rules fails open silently,
+    # so it's left out rather than implying a gate that isn't there. What stands between a
+    # pull request and a publish is the warning that detect-release puts on any PR that
+    # changes __version__ -- see scripts/detect_release.py.
+    if: >-
+      needs.detect-release.outputs.should-release == 'true'
+      || (github.event_name == 'release' && github.event.action == 'published')
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -975,3 +1017,37 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_DEPLOY_TOKEN }}
+
+  # Runs only on the automated path, after PyPI has accepted the wheels: tags the commit
+  # and creates the GitHub release. On the manual path the release already exists.
+  create-github-release:
+    needs: [upload-pypi, detect-release]
+    runs-on: "ubuntu-24.04"
+    name: "Create GitHub release"
+    if: needs.detect-release.outputs.should-release == 'true'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag and release v${{ needs.detect-release.outputs.version }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.detect-release.outputs.version }}
+        run: |
+          set -euo pipefail
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
+            --target "$GITHUB_SHA" \
+            --generate-notes
+
+  # The docs describe what you can actually `pip install`, so they're published if and
+  # only if the wheels made it to PyPI. Depending on upload-pypi is the whole gate: if
+  # that job is skipped (not a release) or fails, this is skipped too. The docs build
+  # itself lives in deploy-docs.yml, which can also still be run manually for docs-only
+  # fixes that shouldn't wait for a release.
+  deploy-docs:
+    needs: [upload-pypi]
+    name: "Deploy documentation"
+    permissions:
+      contents: write
+    uses: ./.github/workflows/deploy-docs.yml

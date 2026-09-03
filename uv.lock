@@ -247,7 +247,6 @@ wheels = [
 
 [[package]]
 name = "pedalboard"
-version = "0.9.24"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },

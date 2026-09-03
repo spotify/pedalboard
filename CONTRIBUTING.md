@@ -146,6 +146,44 @@ Some important notes regarding the summary line:
 We also welcome improvements to the project documentation or to the existing
 docs. Please file an [issue](https://github.com/spotify/pedalboard/issues/new).
 
+## Releasing
+
+Releases are automated. To cut one, bump the version in
+[`pedalboard/version.py`](pedalboard/version.py) — that single line is the only
+source of truth, and both `pyproject.toml` and `setup.py` read from it:
+
+```python
+__version__ = "0.9.25"
+```
+
+Open that as a pull request as usual. Once it merges to `master`, CI notices
+that `__version__` changed and does the rest in one workflow run:
+
+1. Builds wheels for every supported platform and Python version.
+2. Runs the full test and Address Sanitizer suites.
+3. Uploads the wheels to PyPI.
+4. Tags the commit `v0.9.25` and creates the GitHub release with generated notes.
+
+There is nothing to click, and no tag to push by hand.
+
+A few things worth knowing:
+
+- **Merging a version bump publishes to PyPI, and that is irreversible** — a
+  released version can be yanked but never replaced. Treat the bump PR as the
+  point of no return, not the merge button on some later release page.
+  Any pull request that changes `__version__` says so in its checks, with a
+  warning and a note on the run summary. That warning is the only thing standing
+  between a merge and a publish, so take it seriously when reviewing.
+- Nothing is published unless `__version__` actually changes, so ordinary merges
+  to `master` are unaffected.
+- If a tag for the version already exists, the release is skipped with a warning
+  rather than failing, so re-running a build is safe.
+- Manually publishing a release through the GitHub UI still works the same way
+  it always has, for the rare case where you need it.
+- If the version bump lands but the release fails partway through (say PyPI
+  rejects the upload), fix forward with a new version rather than retrying the
+  same one — PyPI will not accept a re-upload.
+
 ## First Contributions
 
 If you are a first time contributor to `pedalboard`,  familiarize yourself with the:

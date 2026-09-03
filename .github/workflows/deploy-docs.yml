@@ -1,12 +1,12 @@
 name: Deploy Documentation
 
 on:
-  push:
-    branches:
-      - master
-    tags:
-      - 'v*'  # Run on version tags
-  workflow_dispatch:  # Allow manual triggering
+  # Called by the release flow in all.yml, after the wheels are safely on PyPI. That is
+  # the only automatic path: the docs describe what you can actually install, so they are
+  # published if and only if a release was.
+  workflow_call:
+  # ...and manually, for docs-only fixes that shouldn't wait for a release.
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
