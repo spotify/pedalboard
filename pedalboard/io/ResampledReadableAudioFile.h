@@ -111,7 +111,7 @@ public:
       length -= (std::round(resampler.getOutputLatency()) -
                  resampler.getOutputLatency());
     }
-    return (long)length;
+    return (long)std::round(length);
   }
 
   double getDuration() const {
