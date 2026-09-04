@@ -36,6 +36,7 @@ _Shape = typing.Tuple[int, ...]
 
 __all__ = [
     "AudioUnitPlugin",
+    "BrickwallLimiter",
     "Bitcrush",
     "Chorus",
     "Clipping",
@@ -152,6 +153,56 @@ class Plugin:
 
 
         """
+    pass
+
+class BrickwallLimiter(Plugin):
+    """
+    A lookahead brick-wall limiter with configurable ceiling.
+
+    Unlike the built-in Limiter, BrickwallLimiter does not apply makeup gain
+    and has a configurable output ceiling. Optionally uses 4x oversampled
+    sidechain detection for inter-sample peaks (true_peak=True).
+    """
+
+    def __init__(
+        self,
+        ceiling_db: float = -1.0,
+        release_ms: float = 100.0,
+        lookahead_ms: float = 5.0,
+        true_peak: bool = False,
+    ) -> None: ...
+    def __repr__(self) -> str: ...
+    @property
+    def ceiling_db(self) -> float:
+        """ """
+
+    @ceiling_db.setter
+    def ceiling_db(self, arg1: float) -> None:
+        pass
+
+    @property
+    def release_ms(self) -> float:
+        """ """
+
+    @release_ms.setter
+    def release_ms(self, arg1: float) -> None:
+        pass
+
+    @property
+    def lookahead_ms(self) -> float:
+        """ """
+
+    @lookahead_ms.setter
+    def lookahead_ms(self, arg1: float) -> None:
+        pass
+
+    @property
+    def true_peak(self) -> bool:
+        """ """
+
+    @true_peak.setter
+    def true_peak(self, arg1: bool) -> None:
+        pass
     pass
 
 class Bitcrush(Plugin):

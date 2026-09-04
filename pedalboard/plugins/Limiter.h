@@ -32,8 +32,21 @@ class Limiter : public JucePlugin<juce::dsp::Limiter<SampleType>> {
 inline void init_limiter(py::module &m) {
   py::class_<Limiter<float>, Plugin, std::shared_ptr<Limiter<float>>>(
       m, "Limiter",
-      "A simple limiter with standard threshold and release time controls, "
-      "featuring two compressors and a hard clipper at 0 dB.")
+      "A loudness-maximizing limiter.\n\n"
+      "This plugin wraps JUCE's ``dsp::Limiter``, which applies two stages of "
+      "compression followed by automatic makeup gain and a hard clip at 0 "
+      "dBFS. "
+      "It is designed to increase perceived loudness, not to enforce a "
+      "specific "
+      "peak ceiling.\n\n"
+      ".. note::\n\n"
+      "   ``threshold_db`` controls when compression *engages*, not the output "
+      "   ceiling.  The output is always hard-clipped at 0 dBFS.  Makeup gain "
+      "   is applied automatically and cannot be disabled — signals below the "
+      "   threshold will be boosted.\n\n"
+      "   For a limiter that enforces a configurable ceiling without makeup "
+      "gain, "
+      "   see :class:`BrickwallLimiter`.\n")
       .def(py::init([](float thresholdDb, float releaseMs) {
              auto plugin = std::make_unique<Limiter<float>>();
              plugin->setThreshold(thresholdDb);
