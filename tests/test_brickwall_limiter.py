@@ -23,7 +23,7 @@ def _sine_f32(
 @pytest.mark.parametrize(
     "ceiling_db", [0.0, -0.1, -0.3, -1.0, -3.0, -6.0, -12.0, -20.0]
 )
-@pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
+@pytest.mark.parametrize("sample_rate", [22050, 44100, 48000, 96000, 192000])
 @pytest.mark.parametrize("num_channels", [1, 2])
 def test_ceiling_enforced(ceiling_db: float, sample_rate: float, num_channels: int):
     """Output sample peak must not exceed the ceiling."""
@@ -89,8 +89,8 @@ def test_parameter_validation():
     limiter.ceiling_db = -40.0  # very quiet ceiling
 
 
-@pytest.mark.parametrize("sample_rate", [22050, 44100, 48000])
-@pytest.mark.parametrize("buffer_size", [128, 8192, 65536])
+@pytest.mark.parametrize("sample_rate", [22050, 44100, 48000, 96000, 192000])
+@pytest.mark.parametrize("buffer_size", [1, 128, 8192, 65536])
 @pytest.mark.parametrize("lookahead_ms", [1.0, 5.0, 10.0])
 def test_latency_compensation(
     sample_rate: float, buffer_size: int, lookahead_ms: float
