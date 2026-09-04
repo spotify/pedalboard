@@ -604,8 +604,22 @@ def test_upsampler_latency_calibration():
 @pytest.mark.parametrize("n_samples", [1, 3, 10])
 def test_very_short_signal(n_samples: int):
     """Signals shorter than the lookahead must not crash and must produce correct-length output."""
-    signal = np.ones(n_samples, dtype=np.float32) * 0.5  # below ceiling
-    plugin = BrickwallLimiter(ceiling_db=-1.0, lookahead_ms=5.0)
-    output = plugin.process(signal, 44100)
-    assert output.shape == signal.shape
-    assert np.all(np.isfinite(output))
+    ceiling_db = -1.0
+    ceiling_linear = db_to_gain(ceiling_db)
+    plugin = BrickwallLimiter(ceiling_db=ceiling_db, lookahead_ms=5.0)
+
+    # Below ceiling — should pass through
+    quiet = np.ones(n_samples, dtype=np.float32) * np.float32(0.1)
+    out_quiet = plugin.process(quiet, 44100)
+    assert out_quiet.shape == quiet.shape
+    assert np.all(np.isfinite(out_quiet))
+
+    # Above ceiling — should be limited
+    plugin.reset()
+    loud = np.ones(n_samples, dtype=np.float32) * np.float32(2.0)  # +6 dBFS
+    out_loud = plugin.process(loud, 44100)
+    assert out_loud.shape == loud.shape
+    assert np.all(np.isfinite(out_loud))
+    assert np.max(np.abs(out_loud)) <= ceiling_linear + 1e-3, (
+        f"Short loud signal peak {np.max(np.abs(out_loud)):.4f} exceeds ceiling {ceiling_linear:.4f}"
+    )
