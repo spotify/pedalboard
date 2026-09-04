@@ -47,6 +47,14 @@ def test_passthrough_below_ceiling():
     np.testing.assert_allclose(output, quiet_sine, atol=1e-6)
 
 
+def test_silence():
+    """Silence in, silence out — no gain, no noise, no artifacts."""
+    signal = np.zeros(44100, dtype=np.float32)
+    plugin = BrickwallLimiter(ceiling_db=-1.0)
+    output = plugin.process(signal, 44100)
+    np.testing.assert_array_equal(output, signal)
+
+
 def test_no_makeup_gain():
     """Unlike the built-in Limiter, BrickwallLimiter must NOT boost quiet signals."""
     quiet_sine = _sine_f32(44100, 440.0, num_seconds=0.5, num_channels=1) * np.float32(0.1)
