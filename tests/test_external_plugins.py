@@ -490,9 +490,15 @@ def test_instrument_plugin_rejects_notes_naively_read_from_midi_file(plugin_file
     assert "seconds" in str(e)
 
 
-@pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
-@pytest.mark.parametrize("num_channels,sample_rate", [(2, 48000), (2, 44100), (2, 22050)])
-def test_effect_plugin_does_not_accept_notes(
+@pytest.mark.parametrize(
+    "plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
+)
+@pytest.mark.parametrize(
+    "num_channels,sample_rate", [(2, 48000), (2, 44100), (2, 22050)]
+)
+# Effect plugins historically ignored MIDI. This regression test ensures that
+# MIDI events are now routed correctly and do not raise errors.
+def test_effect_plugin_accepts_midi(
     plugin_filename: str, num_channels: int, sample_rate: float
 ):
     notes = [
@@ -503,8 +509,8 @@ def test_effect_plugin_does_not_accept_notes(
     assert plugin.is_effect
     assert not plugin.is_instrument
 
-    with pytest.raises(ValueError):
-        plugin(notes, 6.0, sample_rate, num_channels=num_channels)
+    audio = np.zeros((num_channels, int(sample_rate)), dtype=np.float32)
+    plugin(audio, sample_rate, midi_messages=notes)
 
 
 @pytest.mark.parametrize("plugin_filename", ONE_AVAILABLE_INSTRUMENT_PLUGIN)
