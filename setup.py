@@ -25,6 +25,7 @@ from subprocess import check_output
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 
 DEBUG = bool(int(os.environ.get("DEBUG", 0)))
+USE_PORTABLE_SIMD = bool(os.environ.get("USE_PORTABLE_SIMD"))
 
 # C or C++ flags:
 BASE_CPP_FLAGS = [
@@ -171,29 +172,30 @@ elif platform.system() == "Linux":
     # On ARM, ignore the X86-specific SIMD code:
     if "arm" in platform.processor() or "aarch64" in platform.processor():
         fftw_paths = ignore_files_matching(fftw_paths, "avx", "/sse")
-        ALL_CFLAGS.append("-DHAVE_NEON=1")
+        if USE_PORTABLE_SIMD:
+            fftw_paths = ignore_files_matching(fftw_paths, "neon")
+        else:
+            ALL_CFLAGS.append("-DHAVE_NEON=1")
     else:
         # And on x86, ignore the ARM-specific SIMD code (and KCVI; not GCC or Clang compatible).
         fftw_paths = ignore_files_matching(fftw_paths, "neon")
-        # Use -march=native for local builds to optimize for the current CPU,
-        # but use a portable baseline for CI builds to avoid "Illegal instruction" errors
-        # when ccache restores objects built on different runner hardware.
-        if os.getenv("USE_PORTABLE_SIMD"):
-            ALL_CFLAGS.append("-mavx")
+        if USE_PORTABLE_SIMD:
+            fftw_paths = ignore_files_matching(fftw_paths, "avx", "/sse")
         else:
+            # Use -march=native for local builds to optimize for the current CPU.
             ALL_CFLAGS.append("-march=native")
-        # Enable SIMD instructions:
-        ALL_CFLAGS.extend(
-            [
-                # "-DHAVE_SSE2",
-                "-DHAVE_AVX",  # Testing shows this is all we need!
-                # "-DHAVE_AVX_128_FMA", # AMD only
-                # "-DHAVE_AVX2",
-                # "-DHAVE_AVX512", # No measurable speed difference
-                # "-DHAVE_GENERIC_SIMD128", # Crashes!
-                # "-DHAVE_GENERIC_SIMD256", # Also crashes!
-            ]
-        )
+            # Enable SIMD instructions:
+            ALL_CFLAGS.extend(
+                [
+                    # "-DHAVE_SSE2",
+                    "-DHAVE_AVX",  # Testing shows this is all we need!
+                    # "-DHAVE_AVX_128_FMA", # AMD only
+                    # "-DHAVE_AVX2",
+                    # "-DHAVE_AVX512", # No measurable speed difference
+                    # "-DHAVE_GENERIC_SIMD128", # Crashes!
+                    # "-DHAVE_GENERIC_SIMD256", # Also crashes!
+                ]
+            )
 
     ALL_SOURCE_PATHS += fftw_paths
 
