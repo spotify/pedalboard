@@ -41,6 +41,7 @@ namespace py = pybind11;
 
 #include "plugins/AddLatency.h"
 #include "plugins/Bitcrush.h"
+#include "plugins/BrickwallLimiter.h"
 #include "plugins/Chain.h"
 #include "plugins/Chorus.h"
 #include "plugins/Clipping.h"
@@ -221,6 +222,7 @@ If the number of samples and the number of channels are the same, each
   init_invert(m);
   init_ladderfilter(m);
   init_limiter(m);
+  init_brickwall_limiter(m);
   init_lowpass(m);
   init_mp3_compressor(m);
   init_noisegate(m);
