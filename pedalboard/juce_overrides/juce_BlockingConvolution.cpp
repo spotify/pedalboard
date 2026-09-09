@@ -489,7 +489,7 @@ static AudioBuffer<float> trimImpulseResponse(const AudioBuffer<float> &buf) {
                             std::make_reverse_iterator(channelBegin));
 
     offsetBegin = jmin(offsetBegin, itStart);
-    offsetEnd = jmin(offsetEnd, itEnd);
+    offsetEnd = jmax(offsetEnd, itEnd);
   }
 
   if (offsetBegin == numSamples) {
