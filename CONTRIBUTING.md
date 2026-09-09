@@ -87,7 +87,12 @@ tox
 
 ## Style
 
-Use [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) for C++ code, and `black` with defaults for Python code.
+Use [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) for C++ code and `ruff` for Python code.  After setting up tox, one can run:
+```
+tox -e check-python-formatting
+tox -e format-python
+tox -e format-cpp
+```
 
 ## Issues
 
