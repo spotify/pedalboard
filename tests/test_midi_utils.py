@@ -36,3 +36,18 @@ from pedalboard.midi_utils import normalize_midi_messages
 )
 def test_mido_normalization(_input, expected: List[Tuple[bytes, float]]):
     assert normalize_midi_messages(_input) == expected
+
+
+def test_malformed_message_raises_type_error():
+    messages = [
+        (bytes([0x90, 60, 64]), 0.0),
+        (bytes([0x90, 62, 64]),),
+        (bytes([0x80, 60, 64]), 1.0),
+    ]
+    with pytest.raises(TypeError, match=r"index 1"):
+        normalize_midi_messages(messages)
+
+
+def test_bare_bytes_message_raises_type_error():
+    with pytest.raises(TypeError, match=r"index 0"):
+        normalize_midi_messages([bytes([0x90, 60, 64])])
