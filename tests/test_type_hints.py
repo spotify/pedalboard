@@ -21,7 +21,7 @@ import subprocess
 import sys
 from glob import glob
 from subprocess import STDOUT
-from typing import Dict, List, Tuple
+from typing import Dict
 
 import pytest
 from psutil import Process
