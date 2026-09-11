@@ -201,6 +201,15 @@ jobs:
               compiler: "clang",
               cc: "ccache clang",
               cxx: "ccache clang++",
+              archflags: "-arch x86_64",
+            }
+          - {
+              os: macos-15,
+              python-version: "3.12",
+              compiler: "clang",
+              cc: "ccache clang",
+              cxx: "ccache clang++",
+              archflags: "-arch arm64",
             }
     name: Pre-build on ${{ matrix.os }} with ${{ matrix.compiler }}
     steps:
@@ -247,10 +256,9 @@ jobs:
           # Use the minimum macOS deployment target supported by our version of PyBind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
           CCACHE_LOGFILE: ${{ github.workspace }}/.ccache_log
-          # This build caching is only to speed up tests on CI, so we only care about x86_64 (macos-15-intel runners).
-          # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
+          # Limit to a single architecture so ccache can properly cache mixed Objective-C and C++ builds.
           # Fun fact: this is supported in Python itself! https://github.com/python/cpython/blob/893c9cc/Lib/_osx_support.py#L314-L328
-          ARCHFLAGS: -arch x86_64
+          ARCHFLAGS: ${{ matrix.archflags }}
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
@@ -521,6 +529,7 @@ jobs:
               compiler: "clang",
               cc: "ccache clang",
               cxx: "ccache clang++",
+              archflags: "-arch x86_64",
             }
           - {
               os: macos-15-intel,
@@ -528,6 +537,7 @@ jobs:
               compiler: "clang",
               cc: "ccache clang",
               cxx: "ccache clang++",
+              archflags: "-arch x86_64",
             }
           - {
               os: macos-15-intel,
@@ -535,6 +545,7 @@ jobs:
               compiler: "clang",
               cc: "ccache clang",
               cxx: "ccache clang++",
+              archflags: "-arch x86_64",
             }
           - {
               os: macos-15-intel,
@@ -542,6 +553,7 @@ jobs:
               compiler: "clang",
               cc: "ccache clang",
               cxx: "ccache clang++",
+              archflags: "-arch x86_64",
             }
           - {
               os: macos-15-intel,
@@ -549,6 +561,47 @@ jobs:
               compiler: "clang",
               cc: "ccache clang",
               cxx: "ccache clang++",
+              archflags: "-arch x86_64",
+            }
+          - {
+              os: macos-15,
+              python-version: "3.10",
+              compiler: "clang",
+              cc: "ccache clang",
+              cxx: "ccache clang++",
+              archflags: "-arch arm64",
+            }
+          - {
+              os: macos-15,
+              python-version: "3.11",
+              compiler: "clang",
+              cc: "ccache clang",
+              cxx: "ccache clang++",
+              archflags: "-arch arm64",
+            }
+          - {
+              os: macos-15,
+              python-version: "3.12",
+              compiler: "clang",
+              cc: "ccache clang",
+              cxx: "ccache clang++",
+              archflags: "-arch arm64",
+            }
+          - {
+              os: macos-15,
+              python-version: "3.13",
+              compiler: "clang",
+              cc: "ccache clang",
+              cxx: "ccache clang++",
+              archflags: "-arch arm64",
+            }
+          - {
+              os: macos-15,
+              python-version: "3.14",
+              compiler: "clang",
+              cc: "ccache clang",
+              cxx: "ccache clang++",
+              archflags: "-arch arm64",
             }
           - {
               os: macos-15-intel,
@@ -729,10 +782,9 @@ jobs:
           USE_PORTABLE_SIMD: "1" # Use portable SIMD to avoid "Illegal instruction" on different runner CPUs
           # Use the minimum macOS deployment target supported by our version of PyBind:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
-          # This build caching is only to speed up tests on CI, so we only care about x86_64 (macos-15-intel runners).
-          # Without limiting to a single architecture, ccache can't properly cache mixed Objective-C and C++ builds.
+          # Limit to a single architecture so ccache can properly cache mixed Objective-C and C++ builds.
           # Fun fact: this is supported in Python itself! https://github.com/python/cpython/blob/893c9cc/Lib/_osx_support.py#L314-L328
-          ARCHFLAGS: -arch x86_64
+          ARCHFLAGS: ${{ matrix.archflags || '' }}
           DISABLE_LTO: "1" # Speeds up un-cacheable link step which doesn't really increase performance in tests anyways
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
