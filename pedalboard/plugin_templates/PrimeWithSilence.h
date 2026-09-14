@@ -55,12 +55,20 @@ public:
     samplesOutput = 0;
   }
 
+  virtual int process(const juce::dsp::ProcessContextReplacing<float> &context) override {
+    // Compatibility shim for callers that don't supply MIDI.
+    juce::MidiBuffer empty;
+    return process(context, empty);
+  }
+
   virtual int
-  process(const juce::dsp::ProcessContextReplacing<float> &context) override {
+  process(const juce::dsp::ProcessContextReplacing<float> &context,
+          const juce::MidiBuffer &midiMessages) override {
     this->getDSP().process(context);
 
     // Context now has a delayed signal in it:
-    int samplesProcessed = plugin.process(context);
+    // Render through the nested plugin with the given MIDI events.
+    int samplesProcessed = plugin.process(context, midiMessages);
     samplesOutput += samplesProcessed;
 
     return std::max(
@@ -106,8 +114,15 @@ public:
     AddLatency::prepare(spec);
   }
 
+  virtual int process(const juce::dsp::ProcessContextReplacing<float> &context) {
+    // Use MIDI-aware variant with an empty buffer for backwards compatibility.
+    juce::MidiBuffer empty;
+    return process(context, empty);
+  }
+
   virtual int
-  process(const juce::dsp::ProcessContextReplacing<float> &context) {
+  process(const juce::dsp::ProcessContextReplacing<float> &context,
+          const juce::MidiBuffer &midiMessages) {
     auto inputBlock = context.getInputBlock();
 
     for (int i = 0; i < inputBlock.getNumSamples(); i++) {
@@ -134,7 +149,8 @@ public:
       seenSilentSamples++;
     }
 
-    return AddLatency::process(context);
+    // Include MIDI when forwarding the audio to the latency stage.
+    return AddLatency::process(context, midiMessages);
   }
 
   virtual void reset() {

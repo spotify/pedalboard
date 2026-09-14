@@ -31,7 +31,8 @@ from pedalboard import (
     PitchShift,
     Reverb,
 )
-from pedalboard_native._internal import AddLatency  # type: ignore
+import mido
+from pedalboard_native._internal import AddLatency, MidiMonitor  # type: ignore
 
 NUM_SECONDS = 1
 MAX_SAMPLE_RATE = 96000
@@ -314,3 +315,24 @@ def test_none_as_argument(cls):
     noise = NOISE[: int(NUM_SECONDS * sample_rate)]
     output = container(noise, sample_rate)
     np.testing.assert_allclose(noise, output)
+
+
+def test_mix_forwards_midi_to_nested_plugins():
+    """Ensure MIDI events passed to Mix reach all contained plugins."""
+    sample_rate = 44100
+    noise = np.zeros(int(NUM_SECONDS * sample_rate), dtype=np.float32)
+
+    monitor_a = MidiMonitor()
+    monitor_b = MidiMonitor()
+
+    pb = Pedalboard([Mix([monitor_a, monitor_b])])
+
+    notes = [
+        mido.Message("note_on", note=64, velocity=100, time=0.0),
+        mido.Message("note_off", note=64, time=0.5),
+    ]
+
+    pb(noise, sample_rate, midi_messages=notes)
+
+    assert monitor_a.get_last_event_count() == len(notes)
+    assert monitor_b.get_last_event_count() == len(notes)
