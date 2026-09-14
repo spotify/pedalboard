@@ -40,7 +40,9 @@ public:
     JucePlugin<juce::dsp::DelayLine<
         SampleType,
         juce::dsp::DelayLineInterpolationTypes::None>>::prepare(spec);
-    this->getDSP().setMaximumDelayInSamples(silenceLengthSamples);
+    if (this->getDSP().getMaximumDelayInSamples() != silenceLengthSamples) {
+      this->getDSP().setMaximumDelayInSamples(silenceLengthSamples);
+    }
     this->getDSP().setDelay(silenceLengthSamples);
     plugin.prepare(spec);
   }

@@ -87,12 +87,7 @@ public:
     if (!rbPtr)
       return 0;
 
-    initialSamplesRequired =
-        std::max(initialSamplesRequired,
-                 (int)(rbPtr->getSamplesRequired() + rbPtr->getLatency() +
-                       lastSpec.maximumBlockSize));
-
-    return initialSamplesRequired;
+    return (int)(rbPtr->getLatency() + lastSpec.maximumBlockSize);
   }
 
 private:
@@ -132,6 +127,5 @@ private:
 
 protected:
   std::unique_ptr<RubberBandStretcher> rbPtr;
-  int initialSamplesRequired = 0;
 };
 }; // namespace Pedalboard
