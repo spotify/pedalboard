@@ -18,6 +18,7 @@ _Shape = typing.Tuple[int, ...]
 __all__ = [
     "AudioFile",
     "AudioStream",
+    "ChannelConvertedReadableAudioFile",
     "ReadableAudioFile",
     "ResampledReadableAudioFile",
     "StreamResampler",
@@ -614,6 +615,45 @@ class ReadableAudioFile(AudioFile):
         *Introduced in v0.6.0.*
         """
 
+    def with_channels(
+        self, num_channels: int
+    ) -> typing.Union[ReadableAudioFile, ChannelConvertedReadableAudioFile]:
+        """
+        Return a :class:`ChannelConvertedReadableAudioFile` that will automatically convert the channel count of this audio file to the provided `num_channels`.
+
+        If `num_channels` matches the existing channel count of the file, the original file will be returned.
+
+        When converting from stereo (or multi-channel) to mono, all channels are averaged together with equal weighting. When converting from mono to stereo (or multi-channel), the mono signal is duplicated to all output channels.
+
+        *Introduced in v0.9.17.*
+        """
+
+    def mono(
+        self,
+    ) -> typing.Union[ReadableAudioFile, ChannelConvertedReadableAudioFile]:
+        """
+        Return a :class:`ChannelConvertedReadableAudioFile` that will automatically convert this audio file to mono (1 channel).
+
+        If this file is already mono, the original file will be returned.
+
+        When converting from stereo (or multi-channel) to mono, all channels are averaged together with equal weighting.
+
+        *Introduced in v0.9.17.*
+        """
+
+    def stereo(
+        self,
+    ) -> typing.Union[ReadableAudioFile, ChannelConvertedReadableAudioFile]:
+        """
+        Return a :class:`ChannelConvertedReadableAudioFile` that will automatically convert this audio file to stereo (2 channels).
+
+        If this file is already stereo, the original file will be returned.
+
+        When converting from mono to stereo, the mono signal is duplicated to both channels. When converting from multi-channel (3 or more channels) to stereo, only the first two channels are kept.
+
+        *Introduced in v0.9.17.*
+        """
+
     def seek(self, position: int) -> None:
         """
         Seek this file to the provided location in frames. Future reads will start from this position.
@@ -757,6 +797,265 @@ class ReadableAudioFile(AudioFile):
         """
     pass
 
+class ChannelConvertedReadableAudioFile(AudioFile):
+    """
+    A class that wraps an audio file for reading, while converting
+    the audio stream on-the-fly to a new channel count.
+
+    *Introduced in v0.9.22.*
+
+    Reading, seeking, and all other basic file I/O operations are supported (except for
+    :meth:`read_raw`).
+
+    :class:`ChannelConvertedReadableAudioFile` should usually
+    be used via the :meth:`with_channels` method on :class:`ReadableAudioFile`
+    or :class:`ResampledReadableAudioFile`:
+
+    ::
+
+       with AudioFile("my_stereo_file.mp3").mono() as f:
+           f.num_channels # => 1
+           mono_audio = f.read(int(f.samplerate * 10))
+
+       with AudioFile("my_mono_file.wav").stereo() as f:
+           f.num_channels # => 2
+           stereo_audio = f.read(int(f.samplerate * 10))
+
+       with AudioFile("my_file.wav").with_channels(6) as f:
+           f.num_channels # => 6
+           surround_audio = f.read(int(f.samplerate * 10))
+
+    When converting from stereo (or multi-channel) to mono, all channels are
+    averaged together with equal weighting. When converting from mono to
+    stereo (or multi-channel), the mono signal is duplicated to all output
+    channels. Other conversions (stereo to multi-channel, multi-channel to
+    stereo, etc) are not currently supported.
+    """
+
+    def __enter__(self) -> ChannelConvertedReadableAudioFile:
+        """
+        Use this :class:`ChannelConvertedReadableAudioFile` as a context manager, automatically closing the file and releasing resources when the context manager exits.
+        """
+
+    def __exit__(self, arg0: object, arg1: object, arg2: object) -> None:
+        """
+        Stop using this :class:`ChannelConvertedReadableAudioFile` as a context manager, close the file, release its resources.
+        """
+
+    def __init__(
+        self,
+        audio_file: ReadableAudioFile,
+        num_channels: int,
+    ) -> None: ...
+    @classmethod
+    def __new__(
+        cls,
+        audio_file: ReadableAudioFile,
+        num_channels: int,
+    ) -> ChannelConvertedReadableAudioFile: ...
+    def __repr__(self) -> str: ...
+    def close(self) -> None:
+        """
+        Close this file, rendering this object unusable. Note that the :class:`ReadableAudioFile` instance that is wrapped by this object will not be closed, and will remain usable.
+        """
+
+    def resampled_to(
+        self,
+        target_sample_rate: float,
+        quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc32,
+    ) -> typing.Union[ChannelConvertedReadableAudioFile, ResampledReadableAudioFile]:
+        """
+        Return a :class:`ResampledReadableAudioFile` that will automatically resample this audio file to the provided `target_sample_rate`, using a constant amount of memory.
+
+        If `target_sample_rate` matches the existing sample rate of the file, the original file will be returned.
+
+        *Introduced in v0.6.0.*
+        """
+
+    def with_channels(
+        self, num_channels: int
+    ) -> typing.Union[ChannelConvertedReadableAudioFile, ChannelConvertedReadableAudioFile]:
+        """
+        Return a :class:`ChannelConvertedReadableAudioFile` that will automatically convert the channel count of this audio file to the provided `num_channels`.
+
+        If `num_channels` matches the existing channel count of the file, the original file will be returned.
+
+        When converting from stereo (or multi-channel) to mono, all channels are averaged together with equal weighting. When converting from mono to stereo (or multi-channel), the mono signal is duplicated to all output channels.
+
+        *Introduced in v0.9.17.*
+        """
+
+    def mono(
+        self,
+    ) -> typing.Union[ChannelConvertedReadableAudioFile, ChannelConvertedReadableAudioFile]:
+        """
+        Return a :class:`ChannelConvertedReadableAudioFile` that will automatically convert this audio file to mono (1 channel).
+
+        If this file is already mono, the original file will be returned.
+
+        When converting from stereo (or multi-channel) to mono, all channels are averaged together with equal weighting.
+
+        *Introduced in v0.9.17.*
+        """
+
+    def stereo(
+        self,
+    ) -> typing.Union[ChannelConvertedReadableAudioFile, ChannelConvertedReadableAudioFile]:
+        """
+        Return a :class:`ChannelConvertedReadableAudioFile` that will automatically convert this audio file to stereo (2 channels).
+
+        If this file is already stereo, the original file will be returned.
+
+        When converting from mono to stereo, the mono signal is duplicated to both channels. When converting from multi-channel (3 or more channels) to stereo, only the first two channels are kept.
+
+        *Introduced in v0.9.17.*
+        """
+
+    def read(
+        self, num_frames: typing.Union[float, int] = 0
+    ) -> NDArray[float32]:
+        """
+        Read the given number of frames (samples in each channel) from this audio file at its current position, automatically converting channel counts on-the-fly.
+
+        ``num_frames`` is a required argument, as audio files can be deceptively large. (Consider that
+        an hour-long ``.ogg`` file may be only a handful of megabytes on disk, but may decompress to
+        nearly a gigabyte in memory.) Audio files should be read in chunks, rather than all at once, to avoid
+        hard-to-debug memory problems and out-of-memory crashes.
+
+        Audio samples are returned as a multi-dimensional :class:`numpy.array` with the shape
+        ``(channels, samples)``; i.e.: a stereo audio file will have shape ``(2, <length>)``.
+        Returned data is always in the ``float32`` datatype.
+
+        If the file does not contain enough audio data to fill ``num_frames``, the returned
+        :class:`numpy.array` will contain as many frames as could be read from the file. (In some cases,
+        passing :py:attr:`frames` as ``num_frames`` may still return less data than expected. See documentation
+        for :py:attr:`frames` and :py:attr:`exact_duration_known` for more information about situations
+        in which this may occur.)
+
+        For most (but not all) audio files, the minimum possible sample value will be ``-1.0f`` and the
+        maximum sample value will be ``+1.0f``.
+
+        .. note::
+            For convenience, the ``num_frames`` argument may be a floating-point number. However, if the
+            provided number of frames contains a fractional part (i.e.: ``1.01`` instead of ``1.00``) then
+            an exception will be thrown, as a fractional number of samples cannot be returned.
+        """
+
+    def seek(self, position: int) -> None:
+        """
+        Seek this file to the provided location in frames. Future reads will start from this position.
+        """
+
+    def seekable(self) -> bool:
+        """
+        Returns True if this file is currently open and calls to seek() will work.
+        """
+
+    def tell(self) -> int:
+        """
+        Return the current position of the read pointer in this audio file, in frames. This value will increase as :meth:`read` is called, and may decrease if :meth:`seek` is called.
+        """
+
+    @property
+    def closed(self) -> bool:
+        """
+        True iff either this file or its wrapped :class:`ReadableAudioFile` instance are closed (and no longer usable), False otherwise.
+
+
+        """
+
+    @property
+    def duration(self) -> float:
+        """
+        The duration of this file in seconds (``frames`` divided by ``samplerate``).
+
+        .. warning::
+            :py:attr:`duration` may be an overestimate for certain MP3 files.
+            Use :py:attr:`exact_duration_known` property to determine if
+            :py:attr:`duration` is accurate. (See the documentation for the
+            :py:attr:`frames` attribute for more details.)
+
+
+        """
+
+    @property
+    def exact_duration_known(self) -> bool:
+        """
+        Returns :py:const:`True` if this file's :py:attr:`frames` and
+        :py:attr:`duration` attributes are exact values, or :py:const:`False` if the
+        :py:attr:`frames` and :py:attr:`duration` attributes are estimates based
+        on the file's size and bitrate.
+
+        :py:attr:`exact_duration_known` will change from :py:const:`False` to
+        :py:const:`True` as the file is read to completion. Once :py:const:`True`,
+        this value will not change back to :py:const:`False` for the same
+        :py:class:`AudioFile` object (even after calls to :meth:`seek`).
+
+        .. note::
+            :py:attr:`exact_duration_known` will only ever be :py:const:`False`
+            when reading certain MP3 files. For files in other formats than MP3,
+            :py:attr:`exact_duration_known` will always be equal to :py:const:`True`.
+
+        *Introduced in v0.7.2.*
+
+
+        """
+
+    @property
+    def file_dtype(self) -> str:
+        """
+        The data type (``"int16"``, ``"float32"``, etc) stored natively by this file.
+
+        Note that :meth:`read` will always return a ``float32`` array, regardless of the value of this property.
+
+
+        """
+
+    @property
+    def frames(self) -> int:
+        """
+        The total number of frames (samples per channel) in this file.
+
+        For example, if this file contains 10 seconds of stereo audio at sample rate
+        of 44,100 Hz, ``frames`` will return ``441,000``.
+
+        .. warning::
+            When reading certain MP3 files that have been encoded in constant bitrate mode,
+            the :py:attr:`frames` and :py:attr:`duration` properties may initially be estimates
+            and **may change as the file is read**. The :py:attr:`exact_duration_known`
+            property indicates if the values of :py:attr:`frames` and :py:attr:`duration`
+            are estimates or exact values.
+
+
+        """
+
+    @property
+    def name(self) -> typing.Optional[str]:
+        """
+        The name of this file.
+
+        If the :class:`ReadableAudioFile` wrapped by this :class:`ChannelConvertedReadableAudioFile` was opened from a file-like object, this will be ``None``.
+
+
+        """
+
+    @property
+    def num_channels(self) -> int:
+        """
+        The number of channels in this file.
+
+
+        """
+
+    @property
+    def samplerate(self) -> typing.Union[float, int]:
+        """
+        The sample rate of this file in samples (per channel) per second (Hz). Sample rates are represented as floating-point numbers by default, but this property will be an integer if the file's sample rate has no fractional part.
+
+
+        """
+    pass
+
 class ResampledReadableAudioFile(AudioFile):
     """
     A class that wraps an audio file for reading, while resampling
@@ -814,6 +1113,58 @@ class ResampledReadableAudioFile(AudioFile):
     def close(self) -> None:
         """
         Close this file, rendering this object unusable. Note that the :class:`ReadableAudioFile` instance that is wrapped by this object will not be closed, and will remain usable.
+        """
+
+    def resampled_to(
+        self,
+        target_sample_rate: float,
+        quality: pedalboard_native.Resample.Quality = pedalboard_native.Resample.Quality.WindowedSinc32,
+    ) -> typing.Union[ResampledReadableAudioFile, ResampledReadableAudioFile]:
+        """
+        Return a :class:`ResampledReadableAudioFile` that will automatically resample this audio file to the provided `target_sample_rate`, using a constant amount of memory.
+
+        If `target_sample_rate` matches the existing sample rate of the file, the original file will be returned.
+
+        *Introduced in v0.6.0.*
+        """
+
+    def with_channels(
+        self, num_channels: int
+    ) -> typing.Union[ResampledReadableAudioFile, ChannelConvertedReadableAudioFile]:
+        """
+        Return a :class:`ChannelConvertedReadableAudioFile` that will automatically convert the channel count of this audio file to the provided `num_channels`.
+
+        If `num_channels` matches the existing channel count of the file, the original file will be returned.
+
+        When converting from stereo (or multi-channel) to mono, all channels are averaged together with equal weighting. When converting from mono to stereo (or multi-channel), the mono signal is duplicated to all output channels.
+
+        *Introduced in v0.9.17.*
+        """
+
+    def mono(
+        self,
+    ) -> typing.Union[ResampledReadableAudioFile, ChannelConvertedReadableAudioFile]:
+        """
+        Return a :class:`ChannelConvertedReadableAudioFile` that will automatically convert this audio file to mono (1 channel).
+
+        If this file is already mono, the original file will be returned.
+
+        When converting from stereo (or multi-channel) to mono, all channels are averaged together with equal weighting.
+
+        *Introduced in v0.9.17.*
+        """
+
+    def stereo(
+        self,
+    ) -> typing.Union[ResampledReadableAudioFile, ChannelConvertedReadableAudioFile]:
+        """
+        Return a :class:`ChannelConvertedReadableAudioFile` that will automatically convert this audio file to stereo (2 channels).
+
+        If this file is already stereo, the original file will be returned.
+
+        When converting from mono to stereo, the mono signal is duplicated to both channels. When converting from multi-channel (3 or more channels) to stereo, only the first two channels are kept.
+
+        *Introduced in v0.9.17.*
         """
 
     def read(
