@@ -204,13 +204,12 @@ elseif(UNIX AND NOT APPLE)
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
         add_compile_definitions(HAVE_NEON=1)
     else()
-        # Use -march=native for local builds to optimize for the current CPU,
-        # but use a portable baseline for CI builds to avoid "Illegal instruction" errors
-        # when ccache restores objects built on different runner hardware.
-        if(DEFINED ENV{USE_PORTABLE_SIMD})
-            add_compile_options(-mavx)
-        else()
+        # Keep distributable builds compatible with AVX-capable x86_64 CPUs.
+        # Local builds may explicitly target the build machine for extra optimization.
+        if("$ENV{USE_MARCH_NATIVE}" STREQUAL "1")
             add_compile_options(-march=native)
+        else()
+            add_compile_options(-mavx)
         endif()
         add_compile_definitions(HAVE_AVX)
     endif()

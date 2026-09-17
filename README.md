@@ -62,6 +62,7 @@ If you are new to Python, follow [INSTALLATION.md](https://github.com/spotify/pe
   - Tested heavily in production use cases at Spotify
   - Tested automatically on GitHub with VSTs
   - Platform `manylinux` and `musllinux` wheels built for `x86_64` (Intel/AMD) and `aarch64` (ARM/Apple Silicon)
+  - `x86_64` wheels require AVX support
   - Most Linux VSTs require a relatively modern Linux installation (with glibc > 2.27)
 - macOS
   - Tested manually with VSTs and Audio Units

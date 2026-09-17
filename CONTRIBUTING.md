@@ -31,6 +31,9 @@ python3 setup.py build develop
 
 Then, you can `import pedalboard` from Python (or run the tests with `tox`) to test out your local changes.
 
+Linux x86_64 builds target the portable AVX baseline by default. To optimize a local
+build for the current machine instead, set `USE_MARCH_NATIVE=1` while building.
+
 > If you're on macOS or Linux, you can try to compile a debug build _faster_ by using [Ccache](https://ccache.dev/):
 > ## macOS
 > ```shell
