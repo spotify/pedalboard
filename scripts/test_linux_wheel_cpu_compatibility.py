@@ -15,9 +15,15 @@ SMOKE_TEST_TIMEOUT_SECONDS = 60
 RUNTIME_PROBE = "print('Python runtime started successfully')"
 WHEEL_SMOKE_TEST = (
     "import numpy as np; "
-    "from pedalboard import Gain; "
+    "from pedalboard import Gain, PitchShift; "
     "output = Gain(gain_db=-6)(np.zeros((1, 1024), dtype=np.float32), 48000); "
-    "assert output.shape == (1, 1024)"
+    "assert output.shape == (1, 1024); "
+    "audio = np.sin(np.arange(8192) * (2 * np.pi * 440 / 48000)); "
+    "audio = audio.astype(np.float32).reshape(1, -1); "
+    "output = PitchShift(semitones=3)(audio, 48000); "
+    "assert output.shape == audio.shape; "
+    "assert np.isfinite(output).all(); "
+    "assert np.any(output)"
 )
 
 
