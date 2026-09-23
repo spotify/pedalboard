@@ -33,6 +33,8 @@ Then, you can `import pedalboard` from Python (or run the tests with `tox`) to t
 
 Linux x86_64 builds target the portable AVX baseline by default. To optimize a local
 build for the current machine instead, set `USE_MARCH_NATIVE=1` while building.
+The previous `USE_PORTABLE_SIMD` variable is no longer used; builds that set it remain
+portable because AVX is now the default.
 
 > If you're on macOS or Linux, you can try to compile a debug build _faster_ by using [Ccache](https://ccache.dev/):
 > ## macOS
