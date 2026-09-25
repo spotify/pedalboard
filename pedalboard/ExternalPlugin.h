@@ -1137,7 +1137,11 @@ public:
         setNumChannels(spec.numChannels);
       }
 
-      pluginInstance->setNonRealtime(true);
+      // Some VST3 effects behave differently, or pass audio through
+      // unchanged, when the host forces offline rendering mode.
+      // Use realtime mode for normal processing so effect plugins behave
+      // consistently across platforms, especially on Windows.
+      pluginInstance->setNonRealtime(false);
       pluginInstance->prepareToPlay(spec.sampleRate, spec.maximumBlockSize);
 
       lastSpec = spec;
