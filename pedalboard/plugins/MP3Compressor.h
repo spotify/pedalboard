@@ -152,6 +152,8 @@ private:
 
 class MP3Compressor : public Plugin {
 public:
+  enum class Mode { VBR, CBR };
+
   virtual ~MP3Compressor(){};
 
   void setVBRQuality(float newLevel) {
@@ -161,10 +163,35 @@ public:
     }
 
     vbrLevel = newLevel;
+    mode = Mode::VBR;
     encoder.reset();
   }
 
   float getVBRQuality() const { return vbrLevel; }
+
+  void setBitrate(int newBitrate) {
+    // Valid CBR bitrates from LAME
+    static const int validBitrates[] = {32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320};
+    bool isValid = false;
+    for (int validBitrate : validBitrates) {
+      if (newBitrate == validBitrate) {
+        isValid = true;
+        break;
+      }
+    }
+
+    if (!isValid) {
+      throw std::domain_error("Invalid CBR bitrate. Valid values are: 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320 kbps.");
+    }
+
+    bitrate = newBitrate;
+    mode = Mode::CBR;
+    encoder.reset();
+  }
+
+  int getBitrate() const { return bitrate; }
+
+  Mode getMode() const { return mode; }
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) override {
     bool specChanged = lastSpec.sampleRate != spec.sampleRate ||
@@ -190,15 +217,28 @@ public:
             std::to_string(spec.numChannels) + "-channel audio.)");
       }
 
-      if (lame_set_VBR(encoder.getContext(), vbr_default) != 0) {
-        throw std::domain_error(
-            "MP3 encoder failed to set variable bit rate flag.");
-      }
+      if (mode == Mode::VBR) {
+        if (lame_set_VBR(encoder.getContext(), vbr_default) != 0) {
+          throw std::domain_error(
+              "MP3 encoder failed to set variable bit rate flag.");
+        }
 
-      if (lame_set_VBR_quality(encoder.getContext(), vbrLevel) != 0) {
-        throw std::domain_error(
-            "MP3 encoder failed to set variable bit rate quality to " +
-            std::to_string(vbrLevel) + "!");
+        if (lame_set_VBR_quality(encoder.getContext(), vbrLevel) != 0) {
+          throw std::domain_error(
+              "MP3 encoder failed to set variable bit rate quality to " +
+              std::to_string(vbrLevel) + "!");
+        }
+      } else { // CBR mode
+        if (lame_set_VBR(encoder.getContext(), vbr_off) != 0) {
+          throw std::domain_error(
+              "MP3 encoder failed to set constant bit rate flag.");
+        }
+
+        if (lame_set_brate(encoder.getContext(), bitrate) != 0) {
+          throw std::domain_error(
+              "MP3 encoder failed to set constant bit rate to " +
+              std::to_string(bitrate) + " kbps!");
+        }
       }
 
       int ret = lame_init_params(encoder.getContext());
@@ -338,6 +378,8 @@ protected:
 
 private:
   float vbrLevel = 2.0;
+  int bitrate = 128;
+  Mode mode = Mode::VBR;
 
   EncoderWrapper encoder;
   DecoderWrapper decoder;
@@ -363,13 +405,15 @@ private:
 };
 
 inline void init_mp3_compressor(py::module &m) {
+
   py::class_<MP3Compressor, Plugin, std::shared_ptr<MP3Compressor>>(
       m, "MP3Compressor",
       "An MP3 compressor plugin that runs the LAME MP3 encoder in real-time to "
-      "add compression artifacts to the audio stream.\n\nCurrently only "
-      "supports variable bit-rate mode (VBR) and accepts a floating-point VBR "
-      "quality value (between 0.0 and 10.0; lower is better).\n\nNote that the "
-      "MP3 format only supports 8kHz, 11025Hz, 12kHz, 16kHz, 22050Hz, 24kHz, "
+      "add compression artifacts to the audio stream.\n\nSupports both "
+      "Variable Bit Rate (VBR) and Constant Bit Rate (CBR) modes:\n"
+      "- VBR mode: accepts a floating-point quality value (0.0-10.0; lower is better)\n"
+      "- CBR mode: accepts a bitrate in kbps (32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320)\n\n"
+      "Note that the MP3 format only supports 8kHz, 11025Hz, 12kHz, 16kHz, 22050Hz, 24kHz, "
       "32kHz, 44.1kHz, and 48kHz audio; if an unsupported sample rate is "
       "provided, an exception will be thrown at processing time.")
       .def(py::init([](float vbr_quality) {
@@ -377,18 +421,33 @@ inline void init_mp3_compressor(py::module &m) {
              plugin->setVBRQuality(vbr_quality);
              return plugin;
            }),
-           py::arg("vbr_quality") = 2.0)
+           py::arg("vbr_quality") = 2.0,
+           "Create an MP3Compressor in VBR mode with the specified quality.")
       .def("__repr__",
            [](const MP3Compressor &plugin) {
              std::ostringstream ss;
              ss << "<pedalboard.MP3Compressor";
-             ss << " vbr_quality=" << plugin.getVBRQuality();
+             if (plugin.getMode() == Mode::VBR) {
+               ss << " vbr_quality=" << plugin.getVBRQuality();
+             } else {
+               ss << " bitrate=" << plugin.getBitrate();
+             }
              ss << " at " << &plugin;
              ss << ">";
              return ss.str();
            })
       .def_property("vbr_quality", &MP3Compressor::getVBRQuality,
-                    &MP3Compressor::setVBRQuality);
+                    &MP3Compressor::setVBRQuality,
+                    "VBR quality (0.0-10.0, lower is better). Setting this switches to VBR mode.")
+      .def_property("bitrate", &MP3Compressor::getBitrate,
+                    &MP3Compressor::setBitrate,
+                    "CBR bitrate in kbps. Setting this switches to CBR mode.")
+      .def_property_readonly("mode", &MP3Compressor::getMode,
+                             "Current encoding mode (VBR or CBR).");
+
+  py::enum_<MP3Compressor::Mode>(m, "MP3CompressorMode")
+      .value("VBR", MP3Compressor::Mode::VBR)
+      .value("CBR", MP3Compressor::Mode::CBR);
 }
 
 }; // namespace Pedalboard
