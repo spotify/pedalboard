@@ -206,7 +206,7 @@ const juce::AudioBuffer<T> convertPyArrayIntoJuceBuffer(
 }
 
 template <typename T>
-py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> &juceBuffer,
+py::array_t<T> copyJuceBufferIntoPyArray(juce::AudioBuffer<T> juceBuffer,
                                          ChannelLayout channelLayout,
                                          int offsetSamples, int ndim = 2) {
   unsigned int numChannels = juceBuffer.getNumChannels();
@@ -214,7 +214,32 @@ py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> &juceBuffer,
   unsigned int outputSampleCount =
       std::max((int)numSamples - (int)offsetSamples, 0);
 
-  // TODO: Avoid the need to copy here if offsetSamples is 0!
+  // Zero-copy path for mono with no offset: move the JUCE buffer into a
+  // capsule and let NumPy point directly at its memory. Multichannel can't
+  // use this because JUCE allocates each channel separately and NumPy needs
+  // contiguous memory.
+  if (offsetSamples == 0 && numChannels == 1 && numSamples > 0) {
+    auto *buf = new juce::AudioBuffer<T>(std::move(juceBuffer));
+    py::capsule owner(buf, [](void *p) {
+      delete static_cast<juce::AudioBuffer<T> *>(p);
+    });
+    T *data = buf->getWritePointer(0);
+    if (ndim == 2) {
+      switch (channelLayout) {
+      case ChannelLayout::NotInterleaved:
+        return py::array_t<T>({(unsigned int)1, numSamples},
+                              {numSamples * sizeof(T), sizeof(T)}, data, owner);
+      case ChannelLayout::Interleaved:
+        return py::array_t<T>({numSamples, (unsigned int)1},
+                              {sizeof(T), sizeof(T)}, data, owner);
+      default:
+        break;
+      }
+    } else {
+      return py::array_t<T>({numSamples}, {sizeof(T)}, data, owner);
+    }
+  }
+
   py::array_t<T> outputArray;
   if (ndim == 2) {
     switch (channelLayout) {
@@ -234,10 +259,6 @@ py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> &juceBuffer,
 
   py::buffer_info outputInfo = outputArray.request();
 
-  // Depending on the input channel layout, we need to copy data
-  // differently. This loop is duplicated here to move the if statement
-  // outside of the tight loop, as we don't need to re-check that the input
-  // channel is still the same on every iteration of the loop.
   T *outputBasePointer = static_cast<T *>(outputInfo.ptr);
 
   if (juceBuffer.getNumSamples() > 0) {
@@ -245,7 +266,6 @@ py::array_t<T> copyJuceBufferIntoPyArray(const juce::AudioBuffer<T> &juceBuffer,
     case ChannelLayout::Interleaved:
       for (unsigned int i = 0; i < numChannels; i++) {
         const T *channelBuffer = juceBuffer.getReadPointer(i, offsetSamples);
-        // We're interleaving the data here, so we can't use copyFrom.
         for (unsigned int j = 0; j < outputSampleCount; j++) {
           outputBasePointer[j * numChannels + i] = channelBuffer[j];
         }
