@@ -38,7 +38,7 @@ public:
   };
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) override {
-    scaleFactor = pow(2, bitDepth);
+    scaleFactor = pow(2, bitDepth - 1) + 1;
     inverseScaleFactor = 1.0 / scaleFactor;
   }
   virtual void reset() override {}
