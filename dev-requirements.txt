@@ -3,9 +3,11 @@
 -r test-requirements.txt
 -r docs-requirements.txt
 bumpversion==0.5.3
+clang-format==14
 ipython
 ipdb
 pip>=20
 pybind11>=2.10.4
+ruff
 setuptools>=42
 wheel
