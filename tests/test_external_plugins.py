@@ -45,7 +45,6 @@ from typing import Optional
 
 import mido
 import numpy as np
-import psutil
 import pytest
 
 import pedalboard
@@ -1012,7 +1011,7 @@ def test_show_editor(plugin_filename: str):
     full_plugin_filename = find_plugin_path(plugin_filename)
     try:
         command = [
-            psutil.Process(os.getpid()).exe(),
+            sys.executable,
             "-c",
             f"""
 import sys
