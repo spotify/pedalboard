@@ -45,7 +45,6 @@ from typing import Optional
 
 import mido
 import numpy as np
-import psutil
 import pytest
 
 import pedalboard
@@ -400,6 +399,18 @@ def test_initial_parameters(plugin_filename: str):
         if math.isnan(actual):
             continue
         assert actual == expected, f"Expected attribute {name} to be {expected}, but was {actual}"
+
+
+@pytest.mark.parametrize("plugin_filename", ONE_AVAILABLE_TEST_PLUGIN)
+@pytest.mark.parametrize("initial_values", [None, {}])
+def test_loading_without_initial_values_does_not_probe_parameters(
+    plugin_filename: str, initial_values, monkeypatch
+):
+    def fail_if_probed(*args, **kwargs):
+        pytest.fail("Loading a plugin without initial values probed its parameters")
+
+    monkeypatch.setattr("pedalboard._pedalboard.AudioProcessorParameter", fail_if_probed)
+    load_test_plugin(plugin_filename, disable_caching=True, parameter_values=initial_values)
 
 
 @pytest.mark.parametrize(
@@ -1012,7 +1023,7 @@ def test_show_editor(plugin_filename: str):
     full_plugin_filename = find_plugin_path(plugin_filename)
     try:
         command = [
-            psutil.Process(os.getpid()).exe(),
+            sys.executable,
             "-c",
             f"""
 import sys
