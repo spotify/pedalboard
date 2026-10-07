@@ -26,7 +26,11 @@ namespace Pedalboard {
 template <typename SampleType>
 class NoiseGate : public JucePlugin<juce::dsp::NoiseGate<SampleType>> {
   DEFINE_DSP_SETTER_AND_GETTER(SampleType, Threshold, {});
-  DEFINE_DSP_SETTER_AND_GETTER(SampleType, Ratio, {});
+  DEFINE_DSP_SETTER_AND_GETTER(SampleType, Ratio, {
+    if (value < 1.0) {
+      throw std::range_error("Noise gate ratio must be a value >= 1.0.");
+    }
+  });
   DEFINE_DSP_SETTER_AND_GETTER(SampleType, Attack, {});
   DEFINE_DSP_SETTER_AND_GETTER(SampleType, Release, {});
 };
