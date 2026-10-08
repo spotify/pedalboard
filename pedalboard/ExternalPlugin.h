@@ -946,7 +946,12 @@ public:
       }
     }
 
-    juce::AudioBuffer<float> audioBuffer(numOutputChannels, bufferSize);
+    // All buses are enabled on load, so the host may access channels beyond
+    // the main output bus even while warming up an instrument.
+    juce::AudioBuffer<float> audioBuffer(
+        std::max({numOutputChannels, pluginInstance->getTotalNumInputChannels(),
+                  pluginInstance->getTotalNumOutputChannels()}),
+        bufferSize);
     audioBuffer.clear();
 
     pluginInstance->processBlock(audioBuffer, emptyNoteBuffer);
@@ -1187,7 +1192,8 @@ public:
       }
 
       std::vector<float *> channelPointers(
-          pluginInstance->getTotalNumOutputChannels());
+          std::max(pluginInstance->getTotalNumInputChannels(),
+                   pluginInstance->getTotalNumOutputChannels()));
 
       for (size_t i = 0; i < outputBlock.getNumChannels(); i++) {
         channelPointers[i] = outputBlock.getChannelPointer(i);
@@ -1288,18 +1294,28 @@ public:
       std::memset((void *)outputArrayPointer, 0,
                   sizeof(float) * numChannels * outputSampleCount);
 
+      const size_t totalNumChannels = std::max<size_t>(
+          numChannels, std::max(pluginInstance->getTotalNumInputChannels(),
+                                pluginInstance->getTotalNumOutputChannels()));
+      std::vector<std::vector<float>> dummyChannels(
+          totalNumChannels - numChannels, std::vector<float>(bufferSize));
+
       for (unsigned long i = 0; i < outputSampleCount; i += bufferSize) {
         unsigned long chunkSampleCount =
             std::min((unsigned long)bufferSize, outputSampleCount - i);
 
-        std::vector<float *> channelPointers(numChannels);
+        std::vector<float *> channelPointers(totalNumChannels);
         for (size_t c = 0; c < numChannels; c++) {
           channelPointers[c] =
               (outputArrayPointer + (outputSampleCount * c) + i);
         }
+        for (size_t c = numChannels; c < totalNumChannels; c++) {
+          auto &dummyChannel = dummyChannels[c - numChannels];
+          std::fill(dummyChannel.begin(), dummyChannel.end(), 0.0f);
+          channelPointers[c] = dummyChannel.data();
+        }
 
-        // Create an audio buffer that doesn't actually allocate anything, but
-        // just points to the data in the output array.
+        // Cover every enabled bus, discarding output from extra channels.
         juce::AudioBuffer<float> audioChunk(
             channelPointers.data(), channelPointers.size(), chunkSampleCount);
 
