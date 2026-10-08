@@ -1005,6 +1005,24 @@ def test_external_plugin_latency_compensation(buffer_size: int, oversampling: in
     np.testing.assert_allclose(output, noise, atol=0.05)
 
 
+@pytest.mark.skipif(not plugin_named("CHOWTapeModel"), reason="Missing CHOWTapeModel plugin.")
+@pytest.mark.parametrize("buffer_size", [16, 65536])
+def test_external_effect_plugin_changes_audio(buffer_size: int):
+    """
+    Regression test for VST3 effects that expose parameters successfully but
+    still render dry audio instead of applying processing.
+    """
+    sample_rate = 48000
+    noise = np.random.rand(sample_rate).astype(np.float32) * 2.0 - 1.0
+
+    plugin = load_test_plugin(plugin_named("CHOWTapeModel"), disable_caching=True)
+    plugin.bypass = False
+
+    output = plugin.process(noise, sample_rate, buffer_size=buffer_size)
+    assert output.shape == noise.shape
+    assert not np.allclose(output, noise, atol=1e-4)
+
+
 @pytest.mark.skipif(platform.system() == "Windows", reason="Windows subprocess handling")
 @pytest.mark.parametrize("plugin_filename", ONE_AVAILABLE_TEST_PLUGIN)
 def test_show_editor(plugin_filename: str):
