@@ -15,7 +15,7 @@ concurrency:
 jobs:
   lint-python:
     runs-on: ${{ matrix.os }}
-    continue-on-error: true
+    continue-on-error: false
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -43,7 +43,7 @@ jobs:
 
   type-check-python:
     runs-on: "ubuntu-24.04"
-    continue-on-error: true
+    continue-on-error: false
     name: Type-check Python
     steps:
       - name: Set up Python 3.12
@@ -71,7 +71,7 @@ jobs:
 
   lint-cpp:
     runs-on: "ubuntu-24.04"
-    continue-on-error: true
+    continue-on-error: false
     name: Lint C++
     steps:
       - uses: actions/checkout@v4
