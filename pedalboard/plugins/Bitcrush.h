@@ -38,7 +38,7 @@ public:
   };
 
   virtual void prepare(const juce::dsp::ProcessSpec &spec) override {
-    scaleFactor = pow(2, bitDepth);
+    scaleFactor = pow(2, bitDepth - 1);
     inverseScaleFactor = 1.0 / scaleFactor;
   }
   virtual void reset() override {}
@@ -114,6 +114,6 @@ inline void init_bitcrush(py::module &m) {
               BITCRUSH_MAX_BIT_DEPTH) " bits. May be an integer, decimal, or "
                                       "floating-point value. Each audio "
                                       "sample will be quantized onto ``2 ** "
-                                      "bit_depth`` values.");
+                                      "(bit_depth - 1)`` values.");
 }
 }; // namespace Pedalboard
