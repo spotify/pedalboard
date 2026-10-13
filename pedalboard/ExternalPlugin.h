@@ -19,6 +19,7 @@
 
 #include <mutex>
 #include <optional>
+#include <atomic>
 
 #include "JuceHeader.h"
 #if JUCE_LINUX
@@ -396,6 +397,15 @@ public:
       if (auto *editor = processor.createEditorIfNeeded()) {
         setContentOwned(editor, true);
         setResizable(editor->isResizable(), false);
+
+        // Center on screen by setting position
+        auto currentBounds = getScreenBounds();
+        auto area = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()->userArea;
+        auto x = currentBounds.getX() + (area.getWidth() - currentBounds.getWidth()) / 2;
+        auto y = currentBounds.getY() + (area.getHeight() - currentBounds.getHeight()) / 2;
+        setBounds(x, y, currentBounds.getWidth(), currentBounds.getHeight());
+
+
       } else {
         throw std::runtime_error("Failed to create plugin editor UI.");
       }
@@ -405,51 +415,49 @@ public:
   }
 
   /**
-   * Open a native window to show a given AudioProcessor's editor UI,
-   * pumping the juce::MessageManager run loop as necessary to service
-   * UI events.
-   *
-   * Check the passed threading.Event object every 10ms to close the
-   * window if necessary.
+   * RAII helper to ensure the flag is reset when the window loop exits.
    */
-  static void openWindowAndWait(juce::AudioProcessor &processor,
-                                py::object optionalEvent) {
-    bool shouldThrowErrorAlreadySet = false;
+  struct ScopedOpenFlag {
+      std::atomic<bool>& flag;
+      ScopedOpenFlag(std::atomic<bool>& f) : flag(f) { flag = true; }
+      ~ScopedOpenFlag() { flag = false; }
+  };
 
-    // Check the provided Event object before even opening the window:
-    if (optionalEvent != py::none() &&
-        optionalEvent.attr("is_set")().cast<bool>()) {
-      return;
-    }
+  /**
+   * Internal helper to run the window loop. 
+   * Can be called from the main thread or a background thread.
+   */
+  static void runEventLoop(juce::AudioProcessor &processor,
+                           py::object optionalEvent,
+                           std::atomic<bool>& isEditorOpen) {
+      
+      // Automatically set isEditorOpen=true now, and false when we exit/throw
+      ScopedOpenFlag stateTracker(isEditorOpen);
 
-    {
-      // Release the GIL to allow other Python threads to run in the
-      // background while we the UI is running:
-      py::gil_scoped_release release;
       JUCE_AUTORELEASEPOOL {
         StandalonePluginWindow window(processor);
         window.show();
 
-        // Run in a tight loop so that we don't have to call
-        // ->stopDispatchLoop(), which causes the MessageManager to become
-        // unusable in the future. The window can be closed by sending a
-        // KeyboardInterrupt, closing the window in the UI, or setting the
-        // provided Event object.
+        // Run in a tight loop to pump messages
         while (window.isVisible()) {
           bool errorThrown = false;
           bool eventSet = false;
 
+          // Acquire GIL briefly to check Python signals/events
           {
             py::gil_scoped_acquire acquire;
 
-            errorThrown = PyErr_CheckSignals() != 0;
-            eventSet = optionalEvent != py::none() &&
-                       optionalEvent.attr("is_set")().cast<bool>();
+            if (PyErr_CheckSignals() != 0)
+                errorThrown = true;
+
+            if (optionalEvent != py::none() &&
+                optionalEvent.attr("is_set")().cast<bool>())
+                eventSet = true;
           }
 
           if (errorThrown || eventSet) {
             window.closeButtonPressed();
-            shouldThrowErrorAlreadySet = errorThrown;
+            if (errorThrown) throw py::error_already_set();
             break;
           }
 
@@ -457,12 +465,33 @@ public:
         }
       }
 
-      // Once the Autorelease pool has been drained, pump the dispatch loop one
-      // more time to process any window close events:
+      // Final pump to process close events
       juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+  }
+
+  /**
+   * Blocking wrapper for the main thread.
+   */
+  static void openWindowAndWait(juce::AudioProcessor &processor,
+                                py::object optionalEvent,
+                                std::atomic<bool>& isEditorOpen) { // Added arg here
+    bool shouldThrowErrorAlreadySet = false;
+
+    // Release the GIL to allow other Python threads to run
+    py::gil_scoped_release release;
+    
+    try {
+        runEventLoop(processor, optionalEvent, isEditorOpen);
+    } catch (py::error_already_set&) {
+        shouldThrowErrorAlreadySet = true;
     }
 
     if (shouldThrowErrorAlreadySet) {
+      py::gil_scoped_acquire acquire; 
+      // Restore the interrupt error
+      if (!PyErr_Occurred()) {
+          PyErr_SetString(PyExc_KeyboardInterrupt, "Interrupted by signal");
+      }
       throw py::error_already_set();
     }
   }
@@ -1348,7 +1377,16 @@ public:
     return pluginInstance && pluginInstance->getMainBusNumInputChannels() > 0;
   }
 
-  void showEditor(py::object optionalEvent) {
+  bool isEditorOpen() const {
+      return editorIsOpen;
+  }
+
+  void showEditor(py::object optionalEvent, bool nonBlocking) {
+    // 1. Check if already open to prevent freezing/duplication
+    if (editorIsOpen) {
+        return; 
+    }
+
     if (!pluginInstance) {
       throw std::runtime_error(
           "Editor cannot be shown - plugin not loaded. This is an internal "
@@ -1357,26 +1395,50 @@ public:
 
     if (optionalEvent != py::none() && !py::hasattr(optionalEvent, "is_set")) {
       throw py::type_error(
-          "Pedalboard expected a threading.Event object to be "
-          "passed to show_editor, but the provided object (\"" +
-          py::repr(optionalEvent).cast<std::string>() +
-          "\") does not have an 'is_set' method.");
+          "Pedalboard expected a threading.Event object...");
     }
 
     {
       py::gil_scoped_release release;
+      
       if (!juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()) {
         throw std::runtime_error(
             "Editor cannot be shown - no visual display devices available.");
       }
 
-      if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+      // Only enforce main thread constraint if we are blocking
+      if (!nonBlocking && !juce::MessageManager::getInstance()->isThisTheMessageThread()) {
         throw std::runtime_error(
-            "Plugin UI windows can only be shown from the main thread.");
+            "Plugin UI windows can only be shown from the main thread (unless non_blocking=True).");
       }
     }
 
-    StandalonePluginWindow::openWindowAndWait(*pluginInstance, optionalEvent);
+    if (nonBlocking) {
+        // Clean up previous thread if it finished but hasn't been joined
+        if (editorThread && editorThread->joinable()) {
+            editorThread->join(); 
+        }
+
+        // Spawn new thread passing the atomic flag
+        editorThread = std::make_unique<std::thread>(
+            [this, optionalEvent]() {
+                // Thread starts here. We don't hold the GIL.
+                // runEventLoop will acquire GIL when needed.
+                StandalonePluginWindow::runEventLoop(
+                    *pluginInstance, 
+                    optionalEvent, 
+                    this->editorIsOpen
+                );
+            }
+        );
+    } else {
+        // Blocking call on current thread
+        StandalonePluginWindow::openWindowAndWait(
+            *pluginInstance, 
+            optionalEvent, 
+            this->editorIsOpen
+        );
+    }
   }
 
   ExternalPluginReloadType reloadType = ExternalPluginReloadType::Unknown;
@@ -1416,6 +1478,8 @@ private:
   juce::String pathToPluginFile;
   juce::AudioPluginFormatManager pluginFormatManager;
   std::unique_ptr<juce::AudioPluginInstance> pluginInstance;
+  std::unique_ptr<std::thread> editorThread;
+  std::atomic<bool> editorIsOpen { false }; // Add this atomic flag
 
   long samplesProvided = 0;
   float initializationTimeout = DEFAULT_INITIALIZATION_TIMEOUT_SECONDS;
@@ -1806,7 +1870,11 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
            py::return_value_policy::reference_internal)
       .def("show_editor",
            &ExternalPlugin<juce::PatchedVST3PluginFormat>::showEditor,
-           SHOW_EDITOR_DOCSTRING, py::arg("close_event") = py::none())
+           SHOW_EDITOR_DOCSTRING, py::arg("close_event") = py::none(), py::arg("non_blocking") = false)
+      .def_property_readonly(
+          "is_editor_open",
+          &ExternalPlugin<juce::PatchedVST3PluginFormat>::isEditorOpen,
+          "Returns True if the editor window is currently open, False otherwise.")
       .def(
           "process",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
@@ -2032,7 +2100,11 @@ see :class:`pedalboard.VST3Plugin`.)
            py::return_value_policy::reference_internal)
       .def("show_editor",
            &ExternalPlugin<juce::AudioUnitPluginFormat>::showEditor,
-           SHOW_EDITOR_DOCSTRING, py::arg("close_event") = py::none())
+           SHOW_EDITOR_DOCSTRING, py::arg("close_event") = py::none(), py::arg("non_blocking") = false)
+      .def_property_readonly(
+          "is_editor_open",
+          &ExternalPlugin<juce::AudioUnitPluginFormat>::isEditorOpen,
+          "Returns True if the editor window is currently open, False otherwise.")
       .def(
           "process",
           [](std::shared_ptr<Plugin> self, const py::array inputArray,
