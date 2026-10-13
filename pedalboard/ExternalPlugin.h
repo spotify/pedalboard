@@ -45,6 +45,9 @@ static int NUM_ACTIVE_EXTERNAL_PLUGINS = 0;
 
 static const float DEFAULT_INITIALIZATION_TIMEOUT_SECONDS = 10.0f;
 
+static const int DEFAULT_SAMPLE_RATE = 44100;
+static const int DEFAULT_MAXIMUM_BLOCK_SIZE = 8192;
+
 static const std::string AUDIO_UNIT_NOT_INSTALLED_ERROR =
     "macOS requires plugin files to be moved to "
     "/Library/Audio/Plug-Ins/Components/ or "
@@ -521,9 +524,12 @@ public:
   ExternalPlugin(
       std::string &_pathToPluginFile,
       std::optional<std::string> pluginName = {},
-      float initializationTimeout = DEFAULT_INITIALIZATION_TIMEOUT_SECONDS)
+      float initializationTimeout = DEFAULT_INITIALIZATION_TIMEOUT_SECONDS,
+      int sampleRate = DEFAULT_SAMPLE_RATE,
+      int maximumBlockSize = DEFAULT_MAXIMUM_BLOCK_SIZE)
       : pathToPluginFile(_pathToPluginFile),
-        initializationTimeout(initializationTimeout) {
+        initializationTimeout(initializationTimeout), sampleRate(sampleRate),
+        maximumBlockSize(maximumBlockSize) {
     py::gil_scoped_release release;
     // Ensure we have a MessageManager, which is required by the VST wrapper
     // Without this, we get an assert(false) from JUCE at runtime
@@ -741,9 +747,8 @@ public:
     {
       std::lock_guard<std::mutex> lock(EXTERNAL_PLUGIN_MUTEX);
 
-      pluginInstance =
-          createPluginInstance(foundPluginDescription, ExternalLoadSampleRate,
-                               ExternalLoadMaximumBlockSize, loadError);
+      pluginInstance = createPluginInstance(foundPluginDescription, sampleRate,
+                                            maximumBlockSize, loadError);
 
       if (!pluginInstance) {
         throw pybind11::import_error("Unable to load plugin " +
@@ -770,8 +775,7 @@ public:
           // Reload again, as we just passed audio into a plugin that
           // we know doesn't reset itself cleanly!
           pluginInstance = createPluginInstance(
-              foundPluginDescription, ExternalLoadSampleRate,
-              ExternalLoadMaximumBlockSize, loadError);
+              foundPluginDescription, sampleRate, maximumBlockSize, loadError);
 
           if (!pluginInstance) {
             throw pybind11::import_error("Unable to load plugin " +
@@ -911,8 +915,6 @@ public:
                    (long)(initializationTimeout * 1000.0);
 
     const int numInputChannels = pluginInstance->getMainBusNumInputChannels();
-    const float sampleRate = 44100.0f;
-    const int bufferSize = 2048;
 
     if (numInputChannels != 0) {
       // TODO: For effect plugins, do this check as well!
@@ -925,7 +927,7 @@ public:
                  pluginInstance->getMainBusNumOutputChannels());
     setNumChannels(numOutputChannels);
     pluginInstance->setNonRealtime(true);
-    pluginInstance->prepareToPlay(sampleRate, bufferSize);
+    pluginInstance->prepareToPlay(sampleRate, maximumBlockSize);
 
     // Prepare an empty MIDI buffer to measure the background noise of the
     // plugin:
@@ -946,11 +948,11 @@ public:
       }
     }
 
-    juce::AudioBuffer<float> audioBuffer(numOutputChannels, bufferSize);
+    juce::AudioBuffer<float> audioBuffer(numOutputChannels, maximumBlockSize);
     audioBuffer.clear();
 
     pluginInstance->processBlock(audioBuffer, emptyNoteBuffer);
-    auto noiseFloor = audioBuffer.getMagnitude(0, bufferSize);
+    auto noiseFloor = audioBuffer.getMagnitude(0, maximumBlockSize);
 
     audioBuffer.clear();
 
@@ -965,7 +967,7 @@ public:
     // Then keep pumping the message thread until we get some louder output:
     bool magnitudeIncreased = false;
     while (true) {
-      auto magnitudeWithNoteHeld = audioBuffer.getMagnitude(0, bufferSize);
+      auto magnitudeWithNoteHeld = audioBuffer.getMagnitude(0, maximumBlockSize);
       if (magnitudeWithNoteHeld > noiseFloor * 5) {
         magnitudeIncreased = true;
         break;
@@ -1010,8 +1012,6 @@ public:
    */
   ExternalPluginReloadType detectReloadType() {
     const int numInputChannels = pluginInstance->getMainBusNumInputChannels();
-    const int bufferSize = 512;
-    const float sampleRate = 44100.0f;
 
     if (numInputChannels == 0) {
       // TODO: For instrument plugins, figure out how to measure audio
@@ -1022,10 +1022,10 @@ public:
     // Set input and output buses/channels appropriately:
     setNumChannels(numInputChannels);
     pluginInstance->setNonRealtime(true);
-    pluginInstance->prepareToPlay(sampleRate, bufferSize);
+    pluginInstance->prepareToPlay(sampleRate, maximumBlockSize);
 
     // Send in a buffer full of silence to get a baseline noise level:
-    juce::AudioBuffer<float> audioBuffer(numInputChannels, bufferSize);
+    juce::AudioBuffer<float> audioBuffer(numInputChannels, maximumBlockSize);
     juce::MidiBuffer emptyMidiBuffer;
 
     // Process the silent buffer a couple of times to give the plugin time to
@@ -1040,18 +1040,18 @@ public:
     }
 
     // Measure the noise floor of the plugin:
-    auto noiseFloor = audioBuffer.getMagnitude(0, bufferSize);
+    auto noiseFloor = audioBuffer.getMagnitude(0, maximumBlockSize);
 
     // Reset:
     pluginInstance->releaseResources();
     pluginInstance->setNonRealtime(true);
-    pluginInstance->prepareToPlay(sampleRate, bufferSize);
+    pluginInstance->prepareToPlay(sampleRate, maximumBlockSize);
 
     juce::Random random;
 
     // Send noise into the plugin:
     for (int i = 0; i < 5; i++) {
-      for (auto i = 0; i < bufferSize; i++) {
+      for (auto i = 0; i < maximumBlockSize; i++) {
         for (int c = 0; c < numInputChannels; c++) {
           audioBuffer.setSample(c, i, (random.nextFloat() * 2.0f) - 1.0f);
         }
@@ -1061,12 +1061,12 @@ public:
       process(context);
     }
 
-    auto signalVolume = audioBuffer.getMagnitude(0, bufferSize);
+    auto signalVolume = audioBuffer.getMagnitude(0, maximumBlockSize);
 
     // Reset again, and send in silence:
     pluginInstance->releaseResources();
     pluginInstance->setNonRealtime(true);
-    pluginInstance->prepareToPlay(sampleRate, bufferSize);
+    pluginInstance->prepareToPlay(sampleRate, maximumBlockSize);
     audioBuffer.clear();
     {
       juce::dsp::AudioBlock<float> block(audioBuffer);
@@ -1074,7 +1074,7 @@ public:
       process(context);
     }
 
-    auto magnitudeOfSilentBuffer = audioBuffer.getMagnitude(0, bufferSize);
+    auto magnitudeOfSilentBuffer = audioBuffer.getMagnitude(0, maximumBlockSize);
 
     // If the silent buffer we passed in post-reset is noticeably louder
     // than the first buffer we passed in, this plugin probably persists
@@ -1411,8 +1411,8 @@ private:
     return instance;
   }
 
-  constexpr static int ExternalLoadSampleRate = 44100,
-                       ExternalLoadMaximumBlockSize = 8192;
+  int sampleRate = DEFAULT_SAMPLE_RATE;
+  int maximumBlockSize = DEFAULT_MAXIMUM_BLOCK_SIZE;
   juce::String pathToPluginFile;
   juce::AudioPluginFormatManager pluginFormatManager;
   std::unique_ptr<juce::AudioPluginInstance> pluginInstance;
@@ -1646,11 +1646,13 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
       .def(
           py::init([](std::string &pathToPluginFile, py::object parameterValues,
                       std::optional<std::string> pluginName,
-                      float initializationTimeout) {
+                      float initializationTimeout, int sampleRate,
+                      int maximumBlockSize) {
             std::shared_ptr<ExternalPlugin<juce::PatchedVST3PluginFormat>>
                 plugin = std::make_shared<
                     ExternalPlugin<juce::PatchedVST3PluginFormat>>(
-                    pathToPluginFile, pluginName, initializationTimeout);
+                    pathToPluginFile, pluginName, initializationTimeout,
+                    sampleRate, maximumBlockSize);
             py::cast(plugin).attr("__set_initial_parameter_values__")(
                 parameterValues);
             return plugin;
@@ -1659,7 +1661,9 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           py::arg("parameter_values") = py::none(),
           py::arg("plugin_name") = py::none(),
           py::arg("initialization_timeout") =
-              DEFAULT_INITIALIZATION_TIMEOUT_SECONDS)
+              DEFAULT_INITIALIZATION_TIMEOUT_SECONDS,
+          py::arg("sample_rate") = DEFAULT_SAMPLE_RATE,
+          py::arg("maximum_block_size") = DEFAULT_MAXIMUM_BLOCK_SIZE)
       .def("__repr__",
            [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
              std::ostringstream ss;
@@ -1884,11 +1888,13 @@ see :class:`pedalboard.VST3Plugin`.)
       .def(
           py::init([](std::string &pathToPluginFile, py::object parameterValues,
                       std::optional<std::string> pluginName,
-                      float initializationTimeout) {
+                      float initializationTimeout, int sampleRate,
+                      int maximumBlockSize) {
             std::shared_ptr<ExternalPlugin<juce::AudioUnitPluginFormat>>
                 plugin = std::make_shared<
                     ExternalPlugin<juce::AudioUnitPluginFormat>>(
-                    pathToPluginFile, pluginName, initializationTimeout);
+                    pathToPluginFile, pluginName, initializationTimeout,
+                    sampleRate, maximumBlockSize);
             py::cast(plugin).attr("__set_initial_parameter_values__")(
                 parameterValues);
             return plugin;
@@ -1897,7 +1903,9 @@ see :class:`pedalboard.VST3Plugin`.)
           py::arg("parameter_values") = py::none(),
           py::arg("plugin_name") = py::none(),
           py::arg("initialization_timeout") =
-              DEFAULT_INITIALIZATION_TIMEOUT_SECONDS)
+              DEFAULT_INITIALIZATION_TIMEOUT_SECONDS,
+          py::arg("sample_rate") = DEFAULT_SAMPLE_RATE,
+          py::arg("maximum_block_size") = DEFAULT_MAXIMUM_BLOCK_SIZE)
       .def("__repr__",
            [](const ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
              std::ostringstream ss;
