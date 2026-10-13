@@ -267,7 +267,14 @@ processFloat32(const py::array_t<float, py::array::c_style> inputArray,
 
     // Actually run the process method of all plugins.
     int samplesReturned = process(ioBuffer, spec, plugins, reset);
-    totalOutputLatencySamples = ioBuffer.getNumSamples() - samplesReturned;
+    if (reset) {
+      totalOutputLatencySamples = ioBuffer.getNumSamples() - samplesReturned;
+    } else {
+      // In streaming mode, return the full buffer including any leading
+      // silence from plugin priming. Trimming here would discard all output
+      // when a plugin's startup latency exceeds the chunk size.
+      totalOutputLatencySamples = 0;
+    }
   }
 
   return copyJuceBufferIntoPyArray(ioBuffer, inputChannelLayout,
