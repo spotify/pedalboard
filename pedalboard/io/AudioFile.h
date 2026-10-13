@@ -17,13 +17,23 @@
 
 #pragma once
 
+#include <optional>
+#include <variant>
+
+#include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
+
 #include "../juce_overrides/juce_PatchedFLACAudioFormat.h"
 #include "../juce_overrides/juce_PatchedMP3AudioFormat.h"
 #include "../juce_overrides/juce_PatchedWavAudioFormat.h"
-#include "AudioFile.h"
 #include "LameMP3AudioFormat.h"
 
+namespace py = pybind11;
+
 namespace Pedalboard {
+
+// Forward declaration
+class PythonInputStream;
 
 static constexpr const unsigned int DEFAULT_AUDIO_BUFFER_SIZE_FRAMES = 8192;
 
@@ -31,8 +41,8 @@ static constexpr const unsigned int DEFAULT_AUDIO_BUFFER_SIZE_FRAMES = 8192;
  * Registers audio formats for reading and writing in a deterministic (but
  * configurable) order.
  */
-void registerPedalboardAudioFormats(juce::AudioFormatManager &manager,
-                                    bool forWriting) {
+inline void registerPedalboardAudioFormats(juce::AudioFormatManager &manager,
+                                           bool forWriting) {
   manager.registerFormat(new juce::PatchedWavAudioFormat(), true);
   manager.registerFormat(new juce::AiffAudioFormat(), false);
   manager.registerFormat(new juce::PatchedFlacAudioFormat(), false);
@@ -57,6 +67,60 @@ void registerPedalboardAudioFormats(juce::AudioFormatManager &manager,
 #endif
 }
 
+/**
+ * Base marker class for all audio file types.
+ */
 class AudioFile {};
+
+/**
+ * Abstract interface for readable audio files.
+ *
+ * This interface defines the common API shared by ReadableAudioFile,
+ * ResampledReadableAudioFile, and ChannelConvertedReadableAudioFile,
+ * allowing them to be used interchangeably.
+ */
+class AbstractReadableAudioFile : public AudioFile {
+public:
+  virtual ~AbstractReadableAudioFile() = default;
+
+  // Sample rate and duration
+  virtual std::variant<double, long> getSampleRate() const = 0;
+  virtual double getSampleRateAsDouble() const = 0;
+  virtual long long getLengthInSamples() const = 0;
+  virtual double getDuration() const = 0;
+
+  // Channel info
+  virtual long getNumChannels() const = 0;
+
+  // File metadata
+  virtual bool exactDurationKnown() const = 0;
+  virtual std::string getFileFormat() const = 0;
+  virtual std::string getFileDatatype() const = 0;
+
+  // Reading
+  virtual py::array_t<float> read(std::variant<double, long long> numSamples) = 0;
+
+  // Seeking
+  virtual void seek(long long position) = 0;
+  virtual void seekInternal(long long position) = 0;
+  virtual long long tell() const = 0;
+
+  // State
+  virtual void close() = 0;
+  virtual bool isClosed() const = 0;
+  virtual bool isSeekable() const = 0;
+
+  // File info
+  virtual std::optional<std::string> getFilename() const = 0;
+  virtual PythonInputStream *getPythonInputStream() const = 0;
+
+  // Context manager support
+  virtual std::shared_ptr<AbstractReadableAudioFile> enter() = 0;
+  virtual void exit(const py::object &type, const py::object &value,
+                    const py::object &traceback) = 0;
+
+  // For __repr__
+  virtual std::string getClassName() const = 0;
+};
 
 } // namespace Pedalboard
