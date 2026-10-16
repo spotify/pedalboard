@@ -1044,6 +1044,28 @@ def test_mp3_write(samplerate: float, num_channels: int, qualities):
     assert len(set(file_sizes)) <= len(file_sizes)
 
 
+@pytest.mark.parametrize("samplerate", [44100, 48000])
+@pytest.mark.parametrize("num_channels", [1, 2])
+def test_mp3_seek_to_frame_boundary(samplerate: float, num_channels: int):
+    # Seeking to an exact multiple of the MP3 frame size (1152 samples here)
+    # used to return audio from one frame earlier.
+    audio = generate_sine_at(samplerate, num_seconds=2, num_channels=num_channels)
+    buffer = io.BytesIO()
+    buffer.name = "test.mp3"
+    with pedalboard.io.WriteableAudioFile(buffer, samplerate, num_channels, format="mp3") as af:
+        af.write(audio)
+
+    data = buffer.getvalue()
+    with pedalboard.io.ReadableAudioFile(io.BytesIO(data)) as af:
+        expected = af.read(af.frames)
+    for position in [1152, 1152 * 10, 1152 * 50]:
+        with pedalboard.io.ReadableAudioFile(io.BytesIO(data)) as af:
+            af.seek(position)
+            np.testing.assert_allclose(
+                af.read(1000), expected[:, position : position + 1000], atol=1e-6
+            )
+
+
 @pytest.mark.parametrize("extension", pedalboard.io.get_supported_write_formats())
 @pytest.mark.parametrize("samplerate", [32000, 44100, 48000])
 @pytest.mark.parametrize("num_channels", [1, 2])
