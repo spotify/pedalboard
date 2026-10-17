@@ -306,9 +306,33 @@ static bool audioUnitIsInstalled(const juce::String audioUnitFilePath) {
          audioUnitFilePath.contains("/Library/Audio/Plug-Ins/Components/");
 }
 
+/**
+ * Does an Audio Unit component name from Info.plist ("Manufacturer: Name")
+ * refer to the plugin called pluginName? JUCE strips the manufacturer prefix
+ * when it builds a PluginDescription, so accept both spellings.
+ */
+static bool audioUnitComponentNameMatches(const std::string &componentName,
+                                          const std::string &pluginName) {
+  juce::String name(componentName);
+  if (name.trim() == juce::String(pluginName))
+    return true;
+  if (name.containsChar(':'))
+    return name.fromFirstOccurrenceOf(":", false, false).trim() ==
+           juce::String(pluginName);
+  return false;
+}
+
+/**
+ * Scan a plugin file and describe the plugins it contains. If onlyPluginName
+ * is given, only the plugin with that name is instantiated and described
+ * where the format allows it (VST3 shells, multi-component AU bundles);
+ * if nothing matches by name, the whole file is scanned so that callers can
+ * still list the available names in their error message.
+ */
 template <typename ExternalPluginType>
 static juce::OwnedArray<juce::PluginDescription>
-scanPluginDescriptions(std::string filename) {
+scanPluginDescriptions(std::string filename,
+                       std::optional<std::string> onlyPluginName = {}) {
   juce::MessageManager::getInstance();
   ExternalPluginType format;
 
@@ -319,7 +343,18 @@ scanPluginDescriptions(std::string filename) {
 #if JUCE_PLUGINHOST_AU && JUCE_MAC
   if constexpr (std::is_same<ExternalPluginType,
                              juce::AudioUnitPluginFormat>::value) {
-    auto identifiers = getAudioUnitIdentifiersFromFile(filename);
+    auto components = getAudioUnitComponentInfosFromFile(filename);
+    std::vector<std::string> identifiers;
+    if (onlyPluginName) {
+      for (const auto &component : components) {
+        if (audioUnitComponentNameMatches(component.name, *onlyPluginName))
+          identifiers.push_back(component.identifier);
+      }
+    }
+    if (identifiers.empty()) {
+      for (const auto &component : components)
+        identifiers.push_back(component.identifier);
+    }
     // For each plugin in the identified bundle, scan using its AU identifier:
     for (int i = 0; i < identifiers.size(); i++) {
       std::string identifier = identifiers[i];
@@ -355,11 +390,29 @@ scanPluginDescriptions(std::string filename) {
     if (typesFound.isEmpty() && !audioUnitIsInstalled(filename)) {
       errorMessage += " " + AUDIO_UNIT_NOT_INSTALLED_ERROR;
     }
+  } else if constexpr (std::is_same<ExternalPluginType,
+                                    juce::PatchedVST3PluginFormat>::value) {
+    if (onlyPluginName) {
+      format.findTypesForFileWithName(typesFound, filename, *onlyPluginName);
+    }
+    if (typesFound.isEmpty()) {
+      format.findAllTypesForFile(typesFound, filename);
+    }
   } else {
     format.findAllTypesForFile(typesFound, filename);
   }
 #else
-  format.findAllTypesForFile(typesFound, filename);
+  if constexpr (std::is_same<ExternalPluginType,
+                             juce::PatchedVST3PluginFormat>::value) {
+    if (onlyPluginName) {
+      format.findTypesForFileWithName(typesFound, filename, *onlyPluginName);
+    }
+    if (typesFound.isEmpty()) {
+      format.findAllTypesForFile(typesFound, filename);
+    }
+  } else {
+    format.findAllTypesForFile(typesFound, filename);
+  }
 #endif
 
   if (typesFound.isEmpty()) {
@@ -545,7 +598,7 @@ public:
 
     juce::OwnedArray<juce::PluginDescription> typesFound =
         scanPluginDescriptions<ExternalPluginType>(
-            pluginFileStripped.toStdString());
+            pluginFileStripped.toStdString(), pluginName);
 
     if (!typesFound.isEmpty()) {
       if (typesFound.size() == 1) {

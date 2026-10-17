@@ -77,6 +77,15 @@ public:
 
   void findAllTypesForFile(OwnedArray<PluginDescription> &,
                            const String &fileOrIdentifier) override;
+
+  /** Like findAllTypesForFile(), but only instantiates and describes the
+      classes whose name matches pluginName. Multi-plugin bundles (shells)
+      can hold hundreds of classes, each of which costs a component
+      instantiation to describe; when the caller already knows the name it
+      wants, this avoids scanning everything else. */
+  void findTypesForFileWithName(OwnedArray<PluginDescription> &,
+                                const String &fileOrIdentifier,
+                                const String &pluginName);
   bool fileMightContainThisPluginType(const String &fileOrIdentifier) override;
   String getNameOfPluginFromIdentifier(const String &fileOrIdentifier) override;
   bool pluginNeedsRescanning(const PluginDescription &) override;
@@ -93,6 +102,9 @@ private:
   bool requiresUnblockedMessageThreadDuringCreation(
       const PluginDescription &) const override;
   void recursiveFileSearch(StringArray &, const File &, bool recursive);
+  void findTypesForFileImpl(OwnedArray<PluginDescription> &,
+                            const String &fileOrIdentifier,
+                            const String &onlyPluginName);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PatchedVST3PluginFormat)
 };
