@@ -1186,8 +1186,13 @@ public:
             "number of channels passed in.)");
       }
 
+      // The buffer passed to processBlock() must cover every channel of every
+      // bus (inputs and outputs), not just the main output bus: hosts like
+      // the AU wrapper look up side-chain input buses by channel offset in
+      // this buffer and would otherwise read past its end.
       std::vector<float *> channelPointers(
-          pluginInstance->getTotalNumOutputChannels());
+          std::max(pluginInstance->getTotalNumInputChannels(),
+                   pluginInstance->getTotalNumOutputChannels()));
 
       for (size_t i = 0; i < outputBlock.getNumChannels(); i++) {
         channelPointers[i] = outputBlock.getChannelPointer(i);
