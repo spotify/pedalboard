@@ -18,6 +18,7 @@
 #pragma once
 
 #include "../JuceHeader.h"
+#include "../io/PythonFileLike.h"
 #include "juce_PatchedMP3AudioFormat.h"
 
 // dr_wav for ADPCM decoding (public domain / MIT-0)
@@ -224,90 +225,220 @@ public:
 
   AudioFormatReader *createReaderFor(InputStream *sourceStream,
                                      bool deleteStreamIfOpeningFails) override {
-    auto streamStartPos = sourceStream->getPosition();
-
-    // Helper to delegate to the parent WavAudioFormat implementation
-    auto useDefaultReader = [&]() {
-      sourceStream->setPosition(streamStartPos);
+    const auto streamStartPos = sourceStream->getPosition();
+    const auto invalidFormat = [&](const char *message) -> AudioFormatReader * {
+      std::unique_ptr<InputStream> cleanup(
+          deleteStreamIfOpeningFails ? sourceStream : nullptr);
+      // File-like callbacks retain Python errors for the caller. Do not replace
+      // an original read/seek error with a secondary format error.
+      Pedalboard::PythonException::raise();
+      throw std::domain_error(std::string("Invalid WAV format: ") + message);
+    };
+    const auto seekTo = [&](int64 position) {
+      return sourceStream->setPosition(position) &&
+             sourceStream->getPosition() == position;
+    };
+    const auto useDefaultReader = [&]() -> AudioFormatReader * {
+      if (!seekTo(streamStartPos))
+        return invalidFormat("failed to seek to the RIFF header");
       return WavAudioFormat::createReaderFor(sourceStream,
                                              deleteStreamIfOpeningFails);
     };
 
-    // Read the RIFF header
-    auto firstChunkType = sourceStream->readInt();
-    if (firstChunkType != chunkName("RIFF") &&
-        firstChunkType != chunkName("RF64")) {
+    uint8 header[12];
+    if (sourceStream->read(header, sizeof(header)) != sizeof(header))
       return useDefaultReader();
-    }
-
-    // Skip the size field
-    sourceStream->readInt();
-
-    // Check for WAVE identifier
-    if (sourceStream->readInt() != chunkName("WAVE")) {
+    const auto firstChunkType = (int)ByteOrder::littleEndianInt(header);
+    const bool isRF64 = firstChunkType == chunkName("RF64");
+    if ((!isRF64 && firstChunkType != chunkName("RIFF")) ||
+        (int)ByteOrder::littleEndianInt(header + 8) != chunkName("WAVE"))
       return useDefaultReader();
-    }
 
-    // Look for the fmt chunk to check the format tag
-    while (!sourceStream->isExhausted()) {
-      auto chunkType = sourceStream->readInt();
-      auto length = (uint32)sourceStream->readInt();
-      auto chunkEnd = sourceStream->getPosition() + length + (length & 1);
+    const auto totalLength = sourceStream->getTotalLength();
+    if (totalLength < 0) {
+      // A pending Python error is propagated by ReadableAudioFile, whereas a
+      // genuinely unknown length retains the existing codec dispatch below.
+      if (Pedalboard::PythonException::isPending()) {
+        if (deleteStreamIfOpeningFails)
+          delete sourceStream;
+        return nullptr;
+      }
+    }
+    const auto riffLength = ByteOrder::littleEndianInt(header + 4);
+    if (streamStartPos < 0 ||
+        streamStartPos > std::numeric_limits<int64>::max() - 8 - riffLength)
+      return invalidFormat("RIFF size exceeds the stream position range");
+    const auto containerEnd =
+        isRF64 ? totalLength : streamStartPos + 8 + (int64)riffLength;
+    auto scanEnd = totalLength < 0 ? containerEnd
+                   : isRF64        ? totalLength
+                                   : std::min(totalLength, containerEnd);
+    bool foundFormat = false;
+    int64 dataOffset = -1;
+    int64 ds64Offset = -1;
+    int64 bytesPerFrame = 0;
+    bool eligible = false;
+
+    while (totalLength < 0 ? !sourceStream->isExhausted()
+                           : sourceStream->getPosition() < scanEnd) {
+      const auto chunkStart = sourceStream->getPosition();
+      if (totalLength >= 0 && scanEnd - chunkStart < 8)
+        return invalidFormat("truncated chunk header");
+      uint8 chunkHeader[8];
+      if (sourceStream->read(chunkHeader, sizeof(chunkHeader)) !=
+          sizeof(chunkHeader))
+        return invalidFormat("truncated chunk header");
+      const auto chunkType = (int)ByteOrder::littleEndianInt(chunkHeader);
+      const auto length = ByteOrder::littleEndianInt(chunkHeader + 4);
+      const auto payloadStart = sourceStream->getPosition();
+      const int64 paddedLength = (int64)length + (length & 1);
+      if (payloadStart <= chunkStart ||
+          payloadStart > std::numeric_limits<int64>::max() - paddedLength)
+        return invalidFormat("invalid chunk position or size");
+      auto chunkEnd = payloadStart + paddedLength;
+      int64 payloadLength = length;
+      if (isRF64 && chunkType == chunkName("ds64") &&
+          chunkStart == streamStartPos + 12 && length >= 28)
+        ds64Offset = payloadStart;
 
       if (chunkType == chunkName("fmt ")) {
-        auto format = (unsigned short)sourceStream->readShort();
-
+        if (foundFormat)
+          return invalidFormat("ambiguous repeated fmt chunk");
+        foundFormat = true;
+        uint8 fmt[40];
+        if (length < 2 || (totalLength >= 0 && scanEnd - payloadStart < 2) ||
+            sourceStream->read(fmt, 2) != 2)
+          return invalidFormat("truncated fmt fields");
+        const auto format = ByteOrder::littleEndianShort(fmt);
         switch (static_cast<WavFormatTag>(format)) {
         case WavFormatTag::MPEGLayer3:
           return createMP3ReaderForWav(sourceStream, chunkEnd, streamStartPos,
                                        deleteStreamIfOpeningFails);
-
         case WavFormatTag::ADPCM:
         case WavFormatTag::IMAADPCM:
         case WavFormatTag::ALaw:
         case WavFormatTag::MuLaw:
           return createDrWavReaderForWav(sourceStream, streamStartPos,
                                          deleteStreamIfOpeningFails);
-
-        case WavFormatTag::IEEEFloat: {
-          // JUCE doesn't support 64-bit float WAV, but dr_wav does.
-          // Read bitsPerSample from fmt chunk to check.
-          // fmt chunk layout after formatTag: channels(2), sampleRate(4),
-          // byteRate(4), blockAlign(2), bitsPerSample(2)
-          sourceStream->skipNextBytes(12);
-          auto bitsPerSample = (unsigned short)sourceStream->readShort();
-          if (bitsPerSample == 64) {
-            return createDrWavReaderForWav(sourceStream, streamStartPos,
-                                           deleteStreamIfOpeningFails);
-          }
-          // 32-bit float is handled fine by JUCE
-          return useDefaultReader();
-        }
-
-        default:
-          // Check for known-but-unsupported formats and throw helpful errors
-          const char *unsupportedCodecName = getUnsupportedCodecName(format);
-          if (unsupportedCodecName != nullptr) {
+        case WavFormatTag::PCM:
+        case WavFormatTag::IEEEFloat:
+        case WavFormatTag::Extensible:
+          break;
+        default: {
+          const auto *codec = getUnsupportedCodecName(format);
+          if (codec != nullptr) {
             if (deleteStreamIfOpeningFails)
               delete sourceStream;
             throw std::domain_error(
-                "This WAV file uses the " + std::string(unsupportedCodecName) +
+                "This WAV file uses the " + std::string(codec) +
                 " audio codec (format tag 0x" + toHexString(format) +
                 "), which is not supported. "
                 "Please convert the file to a standard PCM WAV, FLAC, or MP3 "
                 "format before loading.");
           }
-
-          // All other formats: delegate to JUCE's WavAudioFormat
+          // In particular, JUCE may delegate Ogg-in-WAV to a compressed reader.
           return useDefaultReader();
         }
+        }
+        const int fmtSize =
+            format == (uint16)WavFormatTag::Extensible ? 40 : 16;
+        if (length < (uint32)fmtSize ||
+            (totalLength >= 0 && scanEnd - payloadStart < fmtSize) ||
+            sourceStream->read(fmt + 2, fmtSize - 2) != fmtSize - 2)
+          return invalidFormat("truncated required fmt fields");
+        const auto channels = ByteOrder::littleEndianShort(fmt + 2);
+        const auto sampleRate = (int32)ByteOrder::littleEndianInt(fmt + 4);
+        const auto byteRate = (int32)ByteOrder::littleEndianInt(fmt + 8);
+        const auto bits = ByteOrder::littleEndianShort(fmt + 14);
+        if (format == (uint16)WavFormatTag::IEEEFloat && bits == 64)
+          return createDrWavReaderForWav(sourceStream, streamStartPos,
+                                         deleteStreamIfOpeningFails);
+
+        // Match JUCE 6.1.4's decoder stride, including its legacy bit-depth
+        // normalization. The untrusted blockAlign field is deliberately unused.
+        bytesPerFrame = bits > 64 && sampleRate != 0
+                            ? (int64)byteRate / sampleRate
+                            : (int64)channels * bits / 8;
+        eligible = format == (uint16)WavFormatTag::PCM ||
+                   (format == (uint16)WavFormatTag::IEEEFloat && bits == 32);
+        if (format == (uint16)WavFormatTag::Extensible) {
+          // Standard PCM/float and the ambisonic PCM GUID supported by JUCE.
+          static const uint8 pcm[] = {1,    0, 0, 0,    0, 0,    0x10, 0,
+                                      0x80, 0, 0, 0xaa, 0, 0x38, 0x9b, 0x71};
+          static const uint8 floating[] = {
+              3, 0, 0, 0, 0, 0, 0x10, 0, 0x80, 0, 0, 0xaa, 0, 0x38, 0x9b, 0x71};
+          static const uint8 ambisonic[] = {1,    0,    0,    0,    0x21, 7,
+                                            0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
+                                            0xca, 0,    0,    0};
+          eligible = std::memcmp(fmt + 24, pcm, 16) == 0 ||
+                     std::memcmp(fmt + 24, ambisonic, 16) == 0 ||
+                     (bits == 32 && std::memcmp(fmt + 24, floating, 16) == 0);
+          if (!eligible)
+            return useDefaultReader();
+        }
+        if (totalLength < 0)
+          return useDefaultReader();
+      } else if (chunkType == chunkName("data")) {
+        if (dataOffset >= 0)
+          return invalidFormat("ambiguous repeated data chunk");
+        dataOffset = payloadStart;
+        if (isRF64 && ds64Offset >= 0 && totalLength >= 0) {
+          // Only resolve ds64 when traversal needs it: JUCE skips RF64 data
+          // using this size even if its chunk header is not the sentinel.
+          // Inspect subsequent headers so they cannot change JUCE's selected
+          // payload/stride behind our clamp. Respect its container end too.
+          uint8 sizes[16];
+          if (!seekTo(ds64Offset) ||
+              sourceStream->read(sizes, sizeof(sizes)) != sizeof(sizes))
+            return invalidFormat("failed to read RF64 traversal sizes");
+          const auto riffSize = ByteOrder::littleEndianInt64(sizes);
+          const auto dataSize = ByteOrder::littleEndianInt64(sizes + 8);
+          const auto riffStart = streamStartPos + 8;
+          if (riffSize >
+              (uint64)(std::numeric_limits<int64>::max() - riffStart))
+            return invalidFormat("RF64 size exceeds the stream position range");
+          scanEnd = std::min(totalLength, riffStart + (int64)riffSize);
+          if (dataSize == 0 ||
+              dataSize > (uint64)std::numeric_limits<int64>::max())
+            break; // Leave invalid/empty ds64 frame semantics to JUCE.
+          payloadLength = (int64)dataSize;
+          if (payloadLength > scanEnd - payloadStart)
+            break;
+          // The subtraction above bounds the addition by the physical end.
+          chunkEnd = payloadStart + payloadLength;
+          if ((payloadLength & 1) != 0) {
+            if (chunkEnd == scanEnd)
+              break; // The final pad byte may be absent.
+            ++chunkEnd;
+          }
+        } else if (isRF64 && length == 0xffffffffu) {
+          break; // Never interpret an unresolved sentinel as a payload size.
+        }
+        // An oversized data chunk consumes the available tail.
+        if (totalLength >= 0 && payloadLength > scanEnd - payloadStart)
+          break;
       }
 
-      sourceStream->setPosition(chunkEnd);
+      if (totalLength >= 0 && chunkEnd > scanEnd) {
+        // A final odd data payload need not have a physically present pad byte.
+        if (chunkType == chunkName("data") &&
+            payloadLength == scanEnd - payloadStart)
+          break;
+        return invalidFormat("truncated chunk payload");
+      }
+      if (!seekTo(chunkEnd) || sourceStream->getPosition() <= chunkStart)
+        return invalidFormat("failed or nonadvancing chunk seek");
     }
 
-    // Couldn't find fmt chunk - let JUCE handle it
-    return useDefaultReader();
+    auto *reader = useDefaultReader();
+    // Do not touch the stream after delegation: JUCE may have deleted it.
+    if (reader != nullptr && eligible && totalLength >= 0 && dataOffset >= 0 &&
+        bytesPerFrame > 0) {
+      const auto available = std::max<int64>(0, totalLength - dataOffset);
+      reader->lengthInSamples =
+          std::min(reader->lengthInSamples, available / bytesPerFrame);
+    }
+    return reader;
   }
 
 private:
