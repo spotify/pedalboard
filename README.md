@@ -71,7 +71,8 @@ If you are new to Python, follow [INSTALLATION.md](https://github.com/spotify/pe
   - Compatible with a wide range of VSTs and Audio Units
 - Windows
   - Tested automatically on GitHub with VSTs
-  - Platform wheels available for `amd64` (x86-64, Intel/AMD)
+  - Platform wheels available for `amd64` (x86-64, Intel/AMD) and `arm64` (Windows on ARM, Python 3.11+)
+  - VST3 plugins must match the architecture of the Python interpreter (i.e.: ARM64 Python can't load x64-only plugins)
 
 ## Examples
 

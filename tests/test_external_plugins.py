@@ -33,8 +33,10 @@ import platform
 import random
 import shutil
 import signal
+import struct
 import subprocess
 import sys
+import sysconfig
 import threading
 import time
 import typing
@@ -82,6 +84,59 @@ if os.getenv("CIBW_TEST_REQUIRES") or os.getenv("CI"):
     ]
     AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT = [
         f for f in AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT if "component" not in f
+    ]
+
+
+def _windows_plugin_matches_process_architecture(plugin_path: str) -> bool:
+    """
+    Windows can't load a DLL built for a different CPU architecture than the current
+    process (i.e.: x64 plugins can't be loaded by ARM64 Python), so check the PE header.
+    """
+    expected = {
+        "win-amd64": (0x8664, "x86_64-win"),
+        "win-arm64": (0xAA64, "arm64-win"),
+        "win32": (0x14C, "x86-win"),
+    }.get(sysconfig.get_platform())
+    if expected is None:
+        return True
+    machine, bundle_architecture = expected
+
+    if os.path.isdir(plugin_path):
+        plugin_path = os.path.join(
+            plugin_path, "Contents", bundle_architecture, os.path.basename(plugin_path)
+        )
+        if not os.path.isfile(plugin_path):
+            return False
+
+    try:
+        with open(plugin_path, "rb") as f:
+            header = f.read(4096)
+        pe_header_offset = struct.unpack_from("<I", header, 0x3C)[0]
+        return struct.unpack_from("<H", header, pe_header_offset + 4)[0] == machine
+    except (OSError, struct.error):
+        return True
+
+
+EFFECT_PLUGINS_FOR_OTHER_ARCHITECTURES = []
+if platform.system() == "Windows":
+    EFFECT_PLUGINS_FOR_OTHER_ARCHITECTURES = [
+        f
+        for f in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
+        if not _windows_plugin_matches_process_architecture(
+            os.path.join(TEST_EFFECT_PLUGIN_BASE_PATH, platform.system(), f)
+        )
+    ]
+    AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT = [
+        f
+        for f in AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
+        if f not in EFFECT_PLUGINS_FOR_OTHER_ARCHITECTURES
+    ]
+    AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT = [
+        f
+        for f in AVAILABLE_INSTRUMENT_PLUGINS_IN_TEST_ENVIRONMENT
+        if _windows_plugin_matches_process_architecture(
+            os.path.join(TEST_INSTRUMENT_PLUGIN_BASE_PATH, platform.system(), f)
+        )
     ]
 
 IS_TESTING_MUSL_LIBC_ON_CI = "musl" in os.getenv("CIBW_BUILD", "")
@@ -266,6 +321,12 @@ def max_volume_of(x: np.ndarray) -> float:
 @pytest.mark.skipif(
     not IS_64BIT,
     reason="External plugins are not officially supported on 32-bit platforms.",
+)
+@pytest.mark.skipif(
+    not AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT
+    and bool(EFFECT_PLUGINS_FOR_OTHER_ARCHITECTURES),
+    reason="Test plugins are only available for other CPU architectures: "
+    + ", ".join(EFFECT_PLUGINS_FOR_OTHER_ARCHITECTURES),
 )
 def test_at_least_one_plugin_is_available_for_testing():
     assert AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT

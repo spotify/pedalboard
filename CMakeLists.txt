@@ -55,7 +55,15 @@ if(WIN32 AND NOT DEFINED Python_LIBRARY)
     set(Python_VERSION_PATCH ${CMAKE_MATCH_3})
 
     set(DYNAMIC_PYTHON_LIB_FILENAME "python${Python_VERSION_MAJOR}${Python_VERSION_MINOR}.lib")
-    set(EXPECTED_PYTHON_VERSION_DIR "C:/hostedtoolcache/windows/Python/${Python_VERSION}/x64/libs")
+    # Ask the interpreter where it lives rather than assuming an x64 hostedtoolcache layout,
+    # so that this also works for ARM64 and virtual environments.
+    execute_process(
+        COMMAND ${Python_EXECUTABLE} -c "import sys; print(sys.base_prefix)"
+        OUTPUT_VARIABLE PYTHON_BASE_PREFIX
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    file(TO_CMAKE_PATH "${PYTHON_BASE_PREFIX}" PYTHON_BASE_PREFIX)
+    set(EXPECTED_PYTHON_VERSION_DIR "${PYTHON_BASE_PREFIX}/libs")
     set(Python_LIBRARY "${EXPECTED_PYTHON_VERSION_DIR}/${DYNAMIC_PYTHON_LIB_FILENAME}")
 
     message(STATUS "DEBUG: On Windows, constructed DYNAMIC_PYTHON_LIB_FILENAME: ${DYNAMIC_PYTHON_LIB_FILENAME}")
@@ -361,9 +369,9 @@ target_compile_definitions(pedalboard_native PRIVATE ${RUBBERBAND_COMPILE_DEFINI
 
 # LAME config
 if(WIN32)
+    # lame_config.h defines HAVE_XMMINTRIN_H on x64 only, as SSE isn't available on ARM64.
     target_compile_definitions(pedalboard_native PRIVATE 
         HAVE_MPGLIB 
-        HAVE_XMMINTRIN_H
     )
     target_compile_options(pedalboard_native PRIVATE
         "/FI${CMAKE_CURRENT_SOURCE_DIR}/vendors/lame_config.h"

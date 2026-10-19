@@ -641,6 +641,42 @@ jobs:
               cc: "msvc",
               cxx: "msvc",
             }
+          # Python 3.10 isn't available for Windows on ARM64.
+          - {
+              os: windows-11-arm,
+              python-version: "3.11",
+              compiler: "msvc",
+              cc: "msvc",
+              cxx: "msvc",
+            }
+          - {
+              os: windows-11-arm,
+              python-version: "3.12",
+              compiler: "msvc",
+              cc: "msvc",
+              cxx: "msvc",
+            }
+          - {
+              os: windows-11-arm,
+              python-version: "3.13",
+              compiler: "msvc",
+              cc: "msvc",
+              cxx: "msvc",
+            }
+          - {
+              os: windows-11-arm,
+              python-version: "3.14",
+              compiler: "msvc",
+              cc: "msvc",
+              cxx: "msvc",
+            }
+          - {
+              os: windows-11-arm,
+              python-version: "3.15",
+              compiler: "msvc",
+              cc: "msvc",
+              cxx: "msvc",
+            }
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -890,6 +926,11 @@ jobs:
           - { os: windows-latest, build: cp313-win_amd64 }
           - { os: windows-latest, build: cp314-win_amd64 }
           - { os: windows-latest, build: cp315-win_amd64 }
+          - { os: windows-11-arm, build: cp311-win_arm64 }
+          - { os: windows-11-arm, build: cp312-win_arm64 }
+          - { os: windows-11-arm, build: cp313-win_arm64 }
+          - { os: windows-11-arm, build: cp314-win_arm64 }
+          - { os: windows-11-arm, build: cp315-win_arm64 }
           # - { os: windows-latest, build: cp312-win32 }
           - { os: "ubuntu-24.04", build: cp310-manylinux_x86_64, python: "3.10" }
           - { os: "ubuntu-24.04-arm", build: cp310-manylinux_aarch64 }
