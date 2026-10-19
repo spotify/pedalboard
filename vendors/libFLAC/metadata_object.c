@@ -38,7 +38,7 @@
 #include <string.h>
 
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/include/private/memory.h"
-#include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/include/private/metadata.h"
+#include "private/metadata.h"
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/include/private/stream_encoder_framing.h"
 
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/alloc.h"
@@ -49,14 +49,6 @@
 /* Alias the first (in share/alloc.h) to the second (in src/libFLAC/memory.c).
  */
 #define safe_malloc_mul_2op_ safe_malloc_mul_2op_p
-
-static inline void *safe_realloc_(void *ptr, size_t size) {
-  void *oldptr = ptr;
-  void *newptr = realloc(ptr, size);
-  if (size > 0 && newptr == 0)
-    free(oldptr);
-  return newptr;
-}
 
 /****************************************************************************
  *
@@ -106,7 +98,8 @@ static FLAC__bool free_copy_bytes_(FLAC__byte **to, const FLAC__byte *from, uint
 /* reallocate entry to 1 byte larger and add a terminating NUL */
 /* realloc() failure leaves entry unchanged */
 static FLAC__bool ensure_null_terminated_(FLAC__byte **entry, uint32_t length) {
-  FLAC__byte *x = (FLAC__byte *)safe_realloc_add_2op_(*entry, length, /*+*/ 1);
+  FLAC__byte *x =
+      (FLAC__byte *)safe_realloc_nofree_add_2op_(*entry, length, /*+*/ 1);
   if (x != NULL) {
     x[length] = '\0';
     *entry = x;

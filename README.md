@@ -310,7 +310,7 @@ To cite via BibTeX:
 
 `pedalboard` is licensed under the [GNU General Public License v3](https://www.gnu.org/licenses/gpl-3.0.en.html). `pedalboard` includes a number of libraries that are statically compiled, and which carry the following licenses:
 
- - The core audio processing code is pulled from [JUCE 6](https://juce.com/), which is [dual-licensed under a commercial license and the GPLv3](https://juce.com/juce-6-licence).
+ - The core audio processing code is pulled from [JUCE 7](https://juce.com/), which is [dual-licensed under a commercial license and the GPLv3](https://juce.com/juce-7-licence).
  - The [VST3 SDK](https://github.com/steinbergmedia/vst3sdk), bundled with JUCE, is owned by [Steinberg® Media Technologies GmbH](https://www.steinberg.net/en/home.html) and licensed under the GPLv3.
  - The `PitchShift` plugin and `time_stretch` functions use [the Rubber Band Library](https://github.com/breakfastquay/rubberband), which is [dual-licensed under a commercial license](https://breakfastquay.com/technology/license.html) and the GPLv2 (or newer). [FFTW](https://www.fftw.org/) is also included to speed up Rubber Band, and [is licensed under the GPLv2 (or newer)](https://www.fftw.org/doc/License-and-Copyright.html).
  - The `MP3Compressor` plugin uses [libmp3lame from the LAME project](https://lame.sourceforge.io/), which is [licensed under the LGPLv2](https://github.com/lameproject/lame/blob/master/README) and [upgraded to the GPLv3 for inclusion in this project (as permitted by the LGPLv2)](https://www.gnu.org/licenses/gpl-faq.html#AllCompatibility).
