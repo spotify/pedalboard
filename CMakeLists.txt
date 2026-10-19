@@ -261,10 +261,11 @@ list(APPEND JUCE_COMPILE_DEFINITIONS
 )
 
 if(DEFINED ENV{CIBW_BUILD} AND "$ENV{CIBW_BUILD}" MATCHES "musllinux")
-    # For Alpine/musllinux compatibility:
+    # For Alpine/musllinux compatibility. musl doesn't define these glibc-only
+    # nl_langinfo() items, for which it returns an empty string:
     add_compile_definitions(
-        _NL_IDENTIFICATION_LANGUAGE=0x42
-        _NL_IDENTIFICATION_TERRITORY=0x43
+        _NL_ADDRESS_LANG_AB=0x42
+        _NL_ADDRESS_COUNTRY_AB2=0x43
         _LARGEFILE64_SOURCE
     )
     # musl doesn't provide execinfo.h; use our stub in vendors/

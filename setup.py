@@ -89,11 +89,12 @@ ALL_INCLUDES.extend(
 )
 
 if "musllinux" in os.getenv("CIBW_BUILD", ""):
-    # For Alpine/musllinux compatibility:
+    # For Alpine/musllinux compatibility. musl doesn't define these glibc-only
+    # nl_langinfo() items, for which it returns an empty string:
     ALL_CPPFLAGS.extend(
         [
-            "-D_NL_IDENTIFICATION_LANGUAGE=0x42",
-            "-D_NL_IDENTIFICATION_TERRITORY=0x43",
+            "-D_NL_ADDRESS_LANG_AB=0x42",
+            "-D_NL_ADDRESS_COUNTRY_AB2=0x43",
         ]
     )
 
