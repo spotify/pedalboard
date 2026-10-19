@@ -788,6 +788,17 @@ jobs:
           # Inline install here on purpose, as this is only required for test _setup_ and not running
           pip install google-cloud-storage
           python ./tests/download_test_plugins.py
+      # Most of pedalboard's external plugin code is only covered by tests that load plugins, so
+      # don't enforce the coverage minimum on ARM64 until ARM64 test plugins have been committed
+      # (by the "Build Windows Test Plugins" workflow):
+      - name: Relax coverage minimum if no ARM64 test plugins are available
+        if: matrix.os == 'windows-11-arm'
+        shell: bash
+        run: |
+          if ! compgen -G "tests/plugins/*/Windows/*.vst3/Contents/arm64-win/*.vst3" > /dev/null; then
+            echo "::warning::No Windows ARM64 test plugins found; external plugin tests will be skipped and coverage won't be enforced."
+            echo "MINIMUM_COVERAGE_PERCENTAGE=0" >> "$GITHUB_ENV"
+          fi
       - name: Run tests
         if: matrix.os != 'ubuntu-24.04' || matrix.python-version != '3.10'
         run: pytest --maxfail=4 --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard --durations=100
