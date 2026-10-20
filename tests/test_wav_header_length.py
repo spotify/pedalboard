@@ -62,13 +62,21 @@ def _pcm16(frames):
     return struct.pack("<hh", 8192, -8192) * frames
 
 
-@pytest.fixture(params=["path", "bytes_io", "offset_bytes_io"])
+def _varying_pcm16():
+    return b"".join(
+        struct.pack("<hh", 3 * frame - 7200, 6000 - 2 * frame) for frame in range(NUM_FRAMES)
+    )
+
+
+@pytest.fixture(params=["path", "bytes_io", "offset_bytes_io", "callback_stream"])
 def wav_source(request, tmp_path):
     def make_source(contents):
         if request.param == "path":
             path = tmp_path / "header-length.wav"
             path.write_bytes(contents)
             return str(path)
+        if request.param == "callback_stream":
+            return _BoundedStream(contents, operation_budget=2048)
         if request.param == "offset_bytes_io":
             stream = BytesIO(b"prefix!" + contents)
             stream.seek(7)
@@ -80,31 +88,38 @@ def wav_source(request, tmp_path):
 
 @pytest.mark.parametrize("oversized", [False, True], ids=["healthy", "oversized-data"])
 def test_wav_length_reads_and_seeks_stop_at_real_frames(wav_source, oversized):
-    contents = _wav(_pcm16(NUM_FRAMES), data_size=0xFFFFFFFF if oversized else None)
+    contents = _wav(_varying_pcm16(), data_size=0xFFFFFFFF if oversized else None)
     with AudioFile(wav_source(contents)) as audio:
         assert audio.frames == NUM_FRAMES
         assert audio.duration == pytest.approx(0.1)
         samples = audio.read(2 * NUM_FRAMES)
         assert samples.shape == (2, NUM_FRAMES)
-        np.testing.assert_allclose(samples[0], 0.25, atol=1 / 32767)
-        np.testing.assert_allclose(samples[1], -0.25, atol=1 / 32767)
+        expected_raw = np.array(
+            [3 * np.arange(NUM_FRAMES) - 7200, 6000 - 2 * np.arange(NUM_FRAMES)],
+            dtype=np.int16,
+        )
+        np.testing.assert_allclose(samples, expected_raw / 32767, atol=1e-7)
         assert audio.read(1).shape == (2, 0)
         audio.seek(NUM_FRAMES - 2)
-        np.testing.assert_array_equal(audio.read(8), samples[:, -2:])
+        # Frames 4798 and 4799 have distinct, independently calculated PCM values.
+        expected_tail = np.array([[7194, 7197], [-3596, -3598]]) / 32767
+        np.testing.assert_allclose(audio.read(8), expected_tail, atol=1e-7)
         audio.seek(NUM_FRAMES)
         assert audio.read(1).shape == (2, 0)
         audio.seek(0)
         raw = audio.read_raw(2 * NUM_FRAMES)
         assert raw.shape == (2, NUM_FRAMES)
-        assert np.all(raw[0] == 8192)
-        assert np.all(raw[1] == -8192)
+        np.testing.assert_array_equal(raw, expected_raw)
+        assert audio.read_raw(1).shape == (2, 0)
+        audio.seek(NUM_FRAMES - 2)
+        np.testing.assert_array_equal(audio.read_raw(8), [[7194, 7197], [-3596, -3598]])
         assert audio.read_raw(1).shape == (2, 0)
 
 
 def test_oversized_wav_resampling_matches_healthy_control(wav_source):
     decoded = []
     for size in (None, 0xFFFFFFFF):
-        with AudioFile(wav_source(_wav(_pcm16(NUM_FRAMES), data_size=size))).resampled_to(
+        with AudioFile(wav_source(_wav(_varying_pcm16(), data_size=size))).resampled_to(
             TARGET_SAMPLE_RATE, Resample.Quality.WindowedSinc256
         ) as audio:
             assert audio.frames == TARGET_NUM_FRAMES
@@ -113,6 +128,8 @@ def test_oversized_wav_resampling_matches_healthy_control(wav_source):
             assert samples.shape == (2, TARGET_NUM_FRAMES)
             assert audio.read(1).shape == (2, 0)
             audio.seek(TARGET_NUM_FRAMES - 3)
+            # The varying signal makes an earlier seek return different values.
+            assert np.ptp(samples[0, -3:]) > 1e-5
             np.testing.assert_allclose(audio.read(10), samples[:, -3:], atol=1e-6)
             decoded.append(samples)
     np.testing.assert_array_equal(*decoded)
@@ -182,9 +199,9 @@ def test_oversized_data_with_trailing_chunk_remains_physically_bounded(wav_sourc
     contents = _wav(_pcm16(6), data_size=0xFFFFFFFF, after=_chunk(b"LIST", b"INFOmetadata"))
     # With a corrupt data size the trailing bytes cannot be distinguished from PCM.
     with AudioFile(wav_source(contents)) as audio:
-        assert 6 <= audio.frames <= 11
+        assert audio.frames == 11
         samples = audio.read(32)
-        assert samples.shape[1] == audio.frames
+        assert samples.shape == (2, 11)
         assert audio.read(1).shape == (2, 0)
 
 
@@ -269,9 +286,9 @@ def test_wav_legacy_oversized_bit_depth_preserves_accepted_pcm(data_size):
 class _BoundedStream:
     """Fail the test instead of hanging if parsing stops making progress."""
 
-    def __init__(self, contents):
+    def __init__(self, contents, operation_budget=256):
         self._stream = BytesIO(contents)
-        self.remaining_operations = 256
+        self.remaining_operations = operation_budget
 
     def _tick(self):
         self.remaining_operations -= 1
