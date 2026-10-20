@@ -200,7 +200,7 @@ public:
       flush();
     };
 
-    virtual bool write(const int **samplesToWrite, int numSamples) {
+    bool write(const int **samplesToWrite, int numSamples) override {
       std::vector<unsigned char> encodedMp3Buffer(1.25 * numSamples +
                                                   MAXIMUM_MP3_FRAME_SIZE);
 
@@ -229,7 +229,7 @@ public:
       return true;
     }
 
-    virtual bool flush() {
+    bool flush() override {
       if (!output)
         return false;
       output->flush();
