@@ -1,0 +1,99 @@
+name: Build Windows Test Plugins
+
+# Builds the VST3 plugins in tests/plugins/*/Windows from pinned source commits
+# (see scripts/build_windows_test_plugins/build.ps1), as prebuilt plugin binaries
+# can't be accepted in pull requests. The built plugins are always uploaded as
+# workflow artifacts, and are optionally committed to the branch that this
+# workflow was run on.
+on:
+  workflow_dispatch:
+    inputs:
+      architectures:
+        description: Which architectures to build plugins for
+        type: choice
+        options:
+          - arm64
+          - x64
+          - arm64 and x64
+        default: arm64
+      commit:
+        description: Commit the built plugins to the branch this workflow is run on
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  select-architectures:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - id: matrix
+        env:
+          ARCHITECTURES: ${{ inputs.architectures }}
+        run: |
+          arm64='{"architecture": "ARM64", "bundle-folder": "arm64-win", "os": "windows-11-arm"}'
+          x64='{"architecture": "x64", "bundle-folder": "x86_64-win", "os": "windows-latest"}'
+          case "$ARCHITECTURES" in
+            arm64) include="$arm64" ;;
+            x64) include="$x64" ;;
+            *) include="$arm64, $x64" ;;
+          esac
+          echo "matrix={\"include\": [$include]}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: select-architectures
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.select-architectures.outputs.matrix) }}
+    runs-on: ${{ matrix.os }}
+    name: Build ${{ matrix.architecture }} plugins
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out JUCE
+        run: git submodule update --init --depth 1 JUCE
+      - name: Build plugins
+        shell: pwsh
+        run: ./scripts/build_windows_test_plugins/build.ps1 -Architecture ${{ matrix.architecture }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-test-plugins-${{ matrix.bundle-folder }}
+          path: tests/plugins/*/Windows/*.vst3/Contents/${{ matrix.bundle-folder }}/
+          if-no-files-found: error
+
+  commit:
+    needs: build
+    if: inputs.commit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Ensure this workflow was run on a branch
+        if: github.ref_type != 'branch'
+        run: |
+          echo "::error::Plugins can only be committed when this workflow is run on a branch."
+          exit 1
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: windows-test-plugins-*
+          path: tests/plugins
+          merge-multiple: true
+      - name: Commit and push plugins
+        env:
+          ARCHITECTURES: ${{ inputs.architectures }}
+          BRANCH: ${{ github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/plugins
+          if git diff --cached --quiet; then
+            echo "The built plugins are identical to the committed ones; nothing to commit."
+            exit 0
+          fi
+          git status --short
+          git commit -m "Update Windows test plugins ($ARCHITECTURES)" -m "Built by $RUN_URL"
+          git push origin "HEAD:refs/heads/$BRANCH"

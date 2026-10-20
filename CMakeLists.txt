@@ -55,7 +55,15 @@ if(WIN32 AND NOT DEFINED Python_LIBRARY)
     set(Python_VERSION_PATCH ${CMAKE_MATCH_3})
 
     set(DYNAMIC_PYTHON_LIB_FILENAME "python${Python_VERSION_MAJOR}${Python_VERSION_MINOR}.lib")
-    set(EXPECTED_PYTHON_VERSION_DIR "C:/hostedtoolcache/windows/Python/${Python_VERSION}/x64/libs")
+    # Ask the interpreter where it lives rather than assuming an x64 hostedtoolcache layout,
+    # so that this also works for ARM64 and virtual environments.
+    execute_process(
+        COMMAND ${Python_EXECUTABLE} -c "import sys; print(sys.base_prefix)"
+        OUTPUT_VARIABLE PYTHON_BASE_PREFIX
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    file(TO_CMAKE_PATH "${PYTHON_BASE_PREFIX}" PYTHON_BASE_PREFIX)
+    set(EXPECTED_PYTHON_VERSION_DIR "${PYTHON_BASE_PREFIX}/libs")
     set(Python_LIBRARY "${EXPECTED_PYTHON_VERSION_DIR}/${DYNAMIC_PYTHON_LIB_FILENAME}")
 
     message(STATUS "DEBUG: On Windows, constructed DYNAMIC_PYTHON_LIB_FILENAME: ${DYNAMIC_PYTHON_LIB_FILENAME}")
@@ -142,6 +150,7 @@ if(APPLE)
     find_library(FOUNDATION_FRAMEWORK Foundation REQUIRED)
     find_library(IOKIT_FRAMEWORK IOKit REQUIRED)
     find_library(QUARTZ_FRAMEWORK QuartzCore REQUIRED)
+    find_library(SECURITY_FRAMEWORK Security REQUIRED)
     find_library(WEBKIT_FRAMEWORK WebKit REQUIRED)
 
     set(MACOS_FRAMEWORKS
@@ -155,6 +164,7 @@ if(APPLE)
         ${FOUNDATION_FRAMEWORK}
         ${IOKIT_FRAMEWORK}
         ${QUARTZ_FRAMEWORK}
+        ${SECURITY_FRAMEWORK}
         ${WEBKIT_FRAMEWORK}
     )
 
@@ -169,6 +179,9 @@ elseif(WIN32)
     # Windows specific flags
     add_compile_definitions(WINDOWS=1 USE_BUILTIN_FFT NO_THREADING)
     add_compile_definitions(JUCE_DLL_BUILD=1)
+    # JUCE 7's DLL allocators (injected via JUCE_LEAK_DETECTOR) cause ambiguous
+    # operator new/delete errors in classes with multiple JUCE base classes:
+    add_compile_definitions(JUCE_DISABLE_DLL_ALLOCATORS=1)
 
     # python_bindings.cpp generates a very large number of COFF sections (from
     # the pybind11 template instantiations); /bigobj raises the per-object
@@ -256,10 +269,11 @@ list(APPEND JUCE_COMPILE_DEFINITIONS
 )
 
 if(DEFINED ENV{CIBW_BUILD} AND "$ENV{CIBW_BUILD}" MATCHES "musllinux")
-    # For Alpine/musllinux compatibility:
+    # For Alpine/musllinux compatibility. musl doesn't define these glibc-only
+    # nl_langinfo() items, for which it returns an empty string:
     add_compile_definitions(
-        _NL_IDENTIFICATION_LANGUAGE=0x42
-        _NL_IDENTIFICATION_TERRITORY=0x43
+        _NL_ADDRESS_LANG_AB=0x42
+        _NL_ADDRESS_COUNTRY_AB2=0x43
         _LARGEFILE64_SOURCE
     )
     # musl doesn't provide execinfo.h; use our stub in vendors/
@@ -269,7 +283,6 @@ endif()
 # Rubber Band library flags
 list(APPEND RUBBERBAND_COMPILE_DEFINITIONS
     USE_BQRESAMPLER=1
-    _HAS_STD_BYTE=0
     NOMINMAX
     ALREADY_CONFIGURED
 )
@@ -356,9 +369,9 @@ target_compile_definitions(pedalboard_native PRIVATE ${RUBBERBAND_COMPILE_DEFINI
 
 # LAME config
 if(WIN32)
+    # lame_config.h defines HAVE_XMMINTRIN_H on x64 only, as SSE isn't available on ARM64.
     target_compile_definitions(pedalboard_native PRIVATE 
         HAVE_MPGLIB 
-        HAVE_XMMINTRIN_H
     )
     target_compile_options(pedalboard_native PRIVATE
         "/FI${CMAKE_CURRENT_SOURCE_DIR}/vendors/lame_config.h"
@@ -375,6 +388,11 @@ endif()
 # Link libraries
 if(APPLE)
     target_link_libraries(pedalboard_native PRIVATE ${MACOS_FRAMEWORKS})
+    # JUCE 7's juce_gui_basics weakly links against these:
+    target_link_options(pedalboard_native PRIVATE
+        "SHELL:-weak_framework Metal"
+        "SHELL:-weak_framework MetalKit"
+    )
 elseif(WIN32)
     target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES})
     # Link Python libraries
