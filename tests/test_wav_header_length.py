@@ -3,6 +3,7 @@
 import struct
 from io import BytesIO
 from pathlib import Path
+from typing import BinaryIO, Optional
 
 import numpy as np
 import pytest
@@ -26,12 +27,13 @@ def _chunk(tag, payload, declared_size=None):
     )
 
 
-def _fmt(*, tag=1, bits=16, block_align=None, guid=None):
+def _fmt(*, tag=1, bits=16, block_align=None, guid: Optional[bytes] = None):
     alignment = NUM_CHANNELS * ((bits + 7) // 8) if block_align is None else block_align
     result = struct.pack(
         "<HHIIHH", tag, NUM_CHANNELS, SAMPLE_RATE, SAMPLE_RATE * alignment, alignment, bits
     )
     if tag == 0xFFFE:
+        assert guid is not None
         result += struct.pack("<HHI", 22, bits, 3) + guid
     return result
 
@@ -283,7 +285,7 @@ def test_wav_legacy_oversized_bit_depth_preserves_accepted_pcm(data_size):
     np.testing.assert_array_equal(*decoded)
 
 
-class _BoundedStream:
+class _BoundedStream(BinaryIO):
     """Fail the test instead of hanging if parsing stops making progress."""
 
     def __init__(self, contents, operation_budget=256):
