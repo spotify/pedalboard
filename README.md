@@ -52,6 +52,12 @@
 pip install pedalboard
 ```
 
+To use Pedalboard with PyTorch, JAX or TensorFlow arrays instead of NumPy arrays
+(see "Using Pedalboard with PyTorch, JAX or TensorFlow" in the examples), install the matching extra:
+```
+pip install "pedalboard[torch]"       # or pedalboard[jax], or pedalboard[tensorflow]
+```
+
 If you are new to Python, follow [INSTALLATION.md](https://github.com/spotify/pedalboard/blob/master/INSTALLATION.md) for a robust guide.
 
 ### Compatibility
@@ -73,6 +79,7 @@ If you are new to Python, follow [INSTALLATION.md](https://github.com/spotify/pe
   - Tested automatically on GitHub with VSTs
   - Platform wheels available for `amd64` (x86-64, Intel/AMD)
 
+<!-- docs:examples -->
 ## Examples
 
 > **Note**: If you'd rather watch a video instead of reading examples or documentation, <strong>watch <a href="https://www.youtube.com/watch?v=NYhkqXpFAlg" target="_blank"><em>Working with Audio in Python (feat. Pedalboard)</em> on YouTube</a></strong>.
@@ -277,16 +284,95 @@ model.compile(loss="mse")
 model.fit(ds.map(lambda effected: (effected, 1)).batch(1), epochs=10)
 ```
 
+### Using Pedalboard with PyTorch, JAX or TensorFlow
+
+`pedalboard.torch`, `pedalboard.jax` and `pedalboard.tensorflow` provide the same API as
+`pedalboard` and `pedalboard.io`, except that audio is returned as `torch.Tensor`s,
+`jax.Array`s or `tf.Tensor`s instead of NumPy arrays. To switch, change your imports:
+
+```python
+# from pedalboard import Pedalboard, Compressor, Reverb
+# from pedalboard.io import AudioFile
+from pedalboard.torch import Pedalboard, Compressor, Reverb, AudioFile
+
+with AudioFile("some-file.wav") as f:
+    audio = f.read(f.frames)  # a torch.Tensor of shape (channels, samples)
+    samplerate = f.samplerate
+
+board = Pedalboard([Compressor(threshold_db=-50, ratio=25), Reverb(room_size=0.25)])
+effected = board(audio, samplerate)  # also a torch.Tensor
+
+with AudioFile("processed-output.wav", "w", samplerate, effected.shape[0]) as f:
+    f.write(effected)
+```
+
+The same code works with `from pedalboard.jax import ...` or
+`from pedalboard.tensorflow import ...`, returning that framework's arrays instead.
+
+These modules provide Pedalboard's audio entry points: every plugin (including
+`Pedalboard`, `Chain` and `Mix`), `AudioFile`, `process`, `time_stretch` and `load_plugin`.
+Plugins are subclasses of the originals (`isinstance(Reverb(), pedalboard.Reverb)` is `True`),
+and `AudioFile` accepts the same arguments as `pedalboard.io.AudioFile`. Anything else, like
+`AudioStream` or `pedalboard.Plugin`, is imported from `pedalboard` as usual. Importing these
+modules does not change the behaviour of `pedalboard`.
+
+Audio can be passed in as any CPU array that supports [DLPack](https://dmlc.github.io/dlpack/latest/),
+including `torch.Tensor`s, JAX arrays, TensorFlow tensors and NumPy arrays, whichever
+module you import from. Conversions are zero-copy where possible. A few things to note:
+
+- Pedalboard processes audio on the CPU. Arrays on a GPU must be moved to the CPU first
+  (e.g. with `.cpu()` in PyTorch); passing a GPU array raises a `ValueError`.
+- Pedalboard's effects are not differentiable. The tensors they return have no gradient
+  history, so you can't backpropagate through a Pedalboard plugin. Tensors with
+  `requires_grad=True` can still be passed in.
+- Audio files opened with these modules are instances of that module's `AudioFile`
+  (for reading, writing and resampling), not of the `pedalboard.io` file classes.
+- Plugins, boards and files from different modules can be mixed. The type of the returned
+  audio is set by the object you call: a `pedalboard.torch` plugin inside a
+  `pedalboard.jax.Pedalboard` returns JAX arrays when the board is called. (A plugin taken
+  back out of a plain `pedalboard.Pedalboard` may come back as a plain `pedalboard` plugin.)
+
+`pedalboard.torch` works well with PyTorch's `DataLoader`, which runs Pedalboard in CPU
+worker processes while your model trains on the GPU:
+
+```python
+import torch
+from pedalboard.torch import AudioFile, Pedalboard, Reverb
+
+class ReverbDataset(torch.utils.data.Dataset):
+    def __init__(self, paths, num_frames):
+        self.paths, self.num_frames = paths, num_frames
+        self.board = None
+
+    def __len__(self):
+        return len(self.paths)
+
+    def __getitem__(self, i):
+        # Pedalboard objects can't be pickled, so create the board in each worker process:
+        if self.board is None:
+            self.board = Pedalboard([Reverb()])
+        with AudioFile(self.paths[i]).resampled_to(44100) as f:
+            clean = f.read(self.num_frames)
+        return self.board(clean, 44100), clean
+
+loader = torch.utils.data.DataLoader(ReverbDataset(paths, 44100), batch_size=16, num_workers=8)
+for wet, clean in loader:
+    wet, clean = wet.to("cuda"), clean.to("cuda")
+    ...  # train a model to remove the reverb
+```
+
 For more examples, see:
  - [the "examples" folder of this repository](https://github.com/spotify/pedalboard/tree/master/examples)
  - [the "Pedalboard Demo" Colab notebook](https://colab.research.google.com/drive/1bHjhJj1aCoOlXKl_lOfG99Xs3qWVrhch)
  - [_Working with Audio in Python (feat. Pedalboard)_ by Peter Sobot at EuroPython 2022](https://www.youtube.com/watch?v=NYhkqXpFAlg)
  - [an interactive web demo on Hugging Face Spaces and Gradio](https://huggingface.co/spaces/akhaliq/pedalboard) (via [@AK391](https://github.com/AK391)) 
 
+<!-- docs:contributing -->
 ## Contributing
 
 Contributions to `pedalboard` are welcomed! See [CONTRIBUTING.md](https://github.com/spotify/pedalboard/blob/master/CONTRIBUTING.md) for details.
 
+<!-- docs:citing -->
 ## Citing
 
 To cite `pedalboard` in academic work, use [its entry on Zenodo](https://doi.org/10.5281/zenodo.7817838): [![DOI 7817838](https://zenodo.org/badge/DOI/10.5281/zenodo.7817838.svg)](https://doi.org/10.5281/zenodo.7817838)
@@ -305,6 +391,7 @@ To cite via BibTeX:
 }
 ```
 
+<!-- docs:license -->
 ## License
 `pedalboard` is Copyright 2021-2026 Spotify AB.
 

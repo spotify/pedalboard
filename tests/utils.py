@@ -1,6 +1,38 @@
+import importlib
+import os
 from functools import lru_cache
 
 import numpy as np
+import pytest
+
+# CI's ML framework job sets this so that a missing framework fails instead of skipping.
+REQUIRE_ML_FRAMEWORKS = os.environ.get("PEDALBOARD_REQUIRE_ML_FRAMEWORKS") == "1"
+
+ML_FRAMEWORKS = ["torch", "jax", "tensorflow", "numpy"]
+
+
+def import_framework(name):
+    if REQUIRE_ML_FRAMEWORKS:
+        return importlib.import_module(name)
+    return pytest.importorskip(name)
+
+
+def make_audio(channels=2, frames=4410, seed=0):
+    rng = np.random.default_rng(seed)
+    return (rng.uniform(-0.5, 0.5, size=(channels, frames))).astype(np.float32)
+
+
+def to_framework(arr: np.ndarray, framework: str):
+    if framework == "numpy":
+        return arr
+    if framework == "torch":
+        return import_framework("torch").from_numpy(arr.copy())
+    if framework == "jax":
+        return import_framework("jax.numpy").asarray(arr)
+    if framework == "tensorflow":
+        return import_framework("tensorflow").constant(arr)
+    raise ValueError(framework)
+
 
 TEST_SINE_WAVE_CACHE = {}
 
