@@ -1,0 +1,8 @@
+# Coverage settings for the test-ml-frameworks CI job. These modules are excluded from the
+# default coverage settings in pyproject.toml, as most CI jobs don't install the frameworks.
+[report]
+include =
+    pedalboard/_array_interop.py
+    pedalboard/jax.py
+    pedalboard/tensorflow.py
+    pedalboard/torch.py

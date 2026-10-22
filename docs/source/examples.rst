@@ -2,5 +2,5 @@ Examples
 ========
 
 .. mdinclude:: ../../README.md
-   :start-line: 75
-   :end-line: 284
+   :start-after: <!-- docs:examples -->
+   :end-before: <!-- docs:contributing -->

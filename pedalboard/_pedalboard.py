@@ -806,14 +806,31 @@ def load_plugin(
         ``RuntimeError``: if the plugin file contains more than one plugin,
         but no ``plugin_name`` was provided
     """
-    if not _AVAILABLE_PLUGIN_CLASSES:
+    return _load_plugin(
+        _AVAILABLE_PLUGIN_CLASSES,
+        path_to_plugin_file=path_to_plugin_file,
+        parameter_values=parameter_values,
+        plugin_name=plugin_name,
+        initialization_timeout=initialization_timeout,
+    )
+
+
+def _load_plugin(
+    plugin_classes: List[Type[ExternalPlugin]],
+    path_to_plugin_file: str,
+    parameter_values: Dict[str, Union[str, int, float, bool]] = {},
+    plugin_name: Union[str, None] = None,
+    initialization_timeout: float = 10.0,
+) -> ExternalPlugin:
+    """Load a plugin as the first of ``plugin_classes`` that accepts it; see ``load_plugin``."""
+    if not plugin_classes:
         raise ImportError(
             "Pedalboard found no supported external plugin types in this installation ({}).".format(
                 platform.system()
             )
         )
     exceptions = []
-    for plugin_class in _AVAILABLE_PLUGIN_CLASSES:
+    for plugin_class in plugin_classes:
         try:
             return plugin_class(  # type: ignore
                 path_to_plugin_file=path_to_plugin_file,  # type: ignore
@@ -826,9 +843,9 @@ def load_plugin(
         except Exception:
             raise
     else:
-        tried_plugins = ", ".join([c.__name__ for c in _AVAILABLE_PLUGIN_CLASSES])
+        tried_plugins = ", ".join([c.__name__ for c in plugin_classes])
         # Good error messages are important, okay?
-        if len(_AVAILABLE_PLUGIN_CLASSES) > 2:
+        if len(plugin_classes) > 2:
             tried_plugins = ", or ".join(tried_plugins.rsplit(", ", 1))
         else:
             tried_plugins = " or ".join(tried_plugins.rsplit(", ", 1))
@@ -838,7 +855,7 @@ def load_plugin(
                 "\n\t".join(
                     [
                         "{}: {}".format(klass.__name__, exception)
-                        for klass, exception in zip(_AVAILABLE_PLUGIN_CLASSES, exceptions)
+                        for klass, exception in zip(plugin_classes, exceptions)
                     ]
                 ),
             )
