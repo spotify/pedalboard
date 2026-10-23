@@ -35,6 +35,18 @@ a regular file in Python::
    :class:`pedalboard.io.WriteableAudioFile`, or :class:`pedalboard.io.ResampledReadableAudioFile` directly,
    you *probably don't need to do that* - :class:`pedalboard.io.AudioFile` has you covered.
 
+.. note::
+   For finite, seekable WAV and RF64 files containing supported PCM or 32-bit
+   floating-point audio, overstated lengths are capped at the complete frames
+   physically available when the file is opened, when the audio layout can be
+   identified. Reported duration, reads, and resampling use this recovered length.
+
+   Only overstated audio lengths are corrected. Shorter declarations and the
+   handling of other malformed file contents follow the existing decoder.
+   Physically present trailing metadata may still be decoded as audio when an
+   oversized data chunk includes it. Recovery does not cover every WAV codec or
+   streams of unknown length, and it does not add support for growing files.
+
 The following documentation lists all of the available I/O classes.
 
 
