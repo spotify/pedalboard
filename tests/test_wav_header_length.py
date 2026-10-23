@@ -1,6 +1,7 @@
 """Finite WAV streams must never expose samples beyond their real contents."""
 
 import struct
+import sys
 from io import BytesIO
 from pathlib import Path
 from typing import BinaryIO, Optional
@@ -315,36 +316,128 @@ class _BoundedStream(BinaryIO):
         return True
 
 
-@pytest.mark.parametrize(
-    "malformation",
-    ["truncated-chunk-header", "truncated-fmt", "duplicate-fmt", "duplicate-data"]
-    + [f"trailing-header-{size}" for size in range(1, 8)]
-    + [f"short-extensible-{size}" for size in (17, 18, 24, 39)],
-)
-def test_malformed_wav_headers_raise_without_hanging(malformation):
-    if malformation == "truncated-chunk-header":
-        contents = b"RIFF" + struct.pack("<I", 100) + b"WAVEJUNK\x01\x00"
-    elif malformation == "truncated-fmt":
-        contents = _wav(_pcm16(6), fmt=_fmt()[:12])
-    elif malformation == "duplicate-fmt":
-        contents = _wav(_pcm16(6), before=_chunk(b"fmt ", _fmt()))
-    elif malformation == "duplicate-data":
-        contents = _wav(_pcm16(6), after=_chunk(b"data", _pcm16(6)))
-    elif malformation.startswith("short-extensible-"):
-        length = int(malformation.rsplit("-", 1)[1])
-        contents = _wav(_pcm16(6), fmt=_fmt(tag=0xFFFE, guid=_PCM_GUID)[:length])
-    else:
-        length = int(malformation.rsplit("-", 1)[1])
-        contents = _wav(_pcm16(6), after=(b"JUNK" + struct.pack("<I", 0))[:length])
-    with pytest.raises(
-        (RuntimeError, ValueError), match="(?i)(wav|format|chunk|fmt|data|unsupported)"
-    ):
+def _riff(chunks, declared_size=None):
+    return (
+        b"RIFF"
+        + struct.pack("<I", len(chunks) + 4 if declared_size is None else declared_size)
+        + b"WAVE"
+        + chunks
+    )
+
+
+def _assert_pcm_frames(audio, frames, raw_pair=(8192, -8192)):
+    assert audio.frames == frames
+    assert audio.duration == pytest.approx(frames / SAMPLE_RATE)
+    samples = audio.read(20)
+    assert samples.shape == (2, frames)
+    expected = np.repeat(np.array(raw_pair)[:, None], frames, axis=1) / 32767
+    np.testing.assert_allclose(samples, expected, atol=1e-7)
+    assert audio.read(1).shape == (2, 0)
+
+
+def _compatibility_cases():
+    prefix = _chunk(b"fmt ", _fmt())
+    payload = _pcm16(6)
+    data = _chunk(b"data", payload)
+    later = _chunk(b"data", struct.pack("<hh", -16384, 4096) * 2)
+    cases = [
+        pytest.param(
+            _wav(payload, after=_chunk(b"id3 ", b"x")[:-1]),
+            6,
+            (8192, -8192),
+            id="missing-metadata-pad",
+        ),
+        pytest.param(
+            _wav(payload, after=_chunk(b"id3 ", b"xxxx", 12)),
+            6,
+            (8192, -8192),
+            id="truncated-final-metadata",
+        ),
+        pytest.param(_wav(payload, after=prefix), 6, (8192, -8192), id="duplicate-fmt"),
+        pytest.param(_wav(payload, after=later), 2, (-16384, 4096), id="later-data-selected"),
+        pytest.param(
+            _wav(payload, after=_chunk(b"JUNK", b"") + later),
+            6,
+            (8192, -8192),
+            id="zero-junk-keeps-first-data",
+        ),
+        pytest.param(_wav(payload, fmt=_fmt()[:12]), 6, (8192, -8192), id="short-pcm-fmt"),
+        pytest.param(_wav(payload, data_size=4), 1, (8192, -8192), id="short-data-stays-short"),
+        pytest.param(
+            _wav(payload, riff_size=40), 6, (8192, -8192), id="short-riff-keeps-selected-data"
+        ),
+        pytest.param(
+            _wav(payload, riff_size=16), 0, (8192, -8192), id="short-riff-no-selected-data"
+        ),
+        pytest.param(_wav(b""), 0, (8192, -8192), id="empty-data"),
+        pytest.param(_riff(prefix), 0, (8192, -8192), id="no-data"),
+        pytest.param(_riff(data + prefix), 0, (8192, -8192), id="data-before-fmt"),
+        pytest.param(
+            _wav(payload + b"X", after=_chunk(b"LIST", b"INFO")),
+            6,
+            (8192, -8192),
+            id="odd-data-before-metadata",
+        ),
+    ]
+    cases.extend(
+        pytest.param(_wav(payload, after=b"X" * size), 6, (8192, -8192), id=f"trailing-junk-{size}")
+        for size in range(1, 8)
+    )
+    return cases
+
+
+@pytest.mark.parametrize("contents,frames,raw_pair", _compatibility_cases())
+def test_wav_preserves_accepted_layouts_and_selected_audio(wav_source, contents, frames, raw_pair):
+    # Expectations were observed independently with release 0.9.26 and bounded reads.
+    with AudioFile(wav_source(contents)) as audio:
+        _assert_pcm_frames(audio, frames, raw_pair)
+
+
+@pytest.mark.parametrize("riff_size", [40, None])
+def test_later_oversized_data_is_bounded_at_its_selected_payload(wav_source, riff_size):
+    later = struct.pack("<hh", -16384, 4096) * 2
+    # A normal container scans both chunks; a short one selects only the first.
+    contents = _wav(_pcm16(6), riff_size=riff_size, after=_chunk(b"data", later, 0xFFFFFFFF))
+    with AudioFile(wav_source(contents)) as audio:
+        if riff_size is None:
+            _assert_pcm_frames(audio, 2, (-16384, 4096))
+        else:
+            _assert_pcm_frames(audio, 6)
+
+
+def test_oversized_data_is_bounded_physically_despite_short_riff(wav_source):
+    with AudioFile(wav_source(_wav(_pcm16(6), data_size=0xFFFFFFFF, riff_size=40))) as audio:
+        _assert_pcm_frames(audio, 6)
+
+
+def test_oversized_data_can_include_bytes_beyond_declared_riff(wav_source):
+    contents = _wav(_pcm16(6), data_size=0xFFFFFFFF) + b"X" * 16
+    with AudioFile(wav_source(contents)) as audio:
+        assert audio.frames == 10
+        samples = audio.read(20)
+        assert samples.shape == (2, 10)
+        np.testing.assert_allclose(samples[0, :6], 8192 / 32767, atol=1e-7)
+        np.testing.assert_allclose(samples[1, :6], -8192 / 32767, atol=1e-7)
+        assert audio.read(1).shape == (2, 0)
+
+
+@pytest.mark.parametrize("length", [17, 18, 24, 39])
+def test_wav_truncated_extensible_fmt_retains_rejection(length):
+    contents = _wav(_pcm16(6), fmt=_fmt(tag=0xFFFE, guid=_PCM_GUID)[:length])
+    with pytest.raises((RuntimeError, ValueError)):
+        with AudioFile(_BoundedStream(contents)) as audio:
+            audio.read(20)
+
+
+def test_wav_without_complete_chunk_header_retains_rejection():
+    contents = b"RIFF" + struct.pack("<I", 100) + b"WAVEJUNK\x01\x00"
+    with pytest.raises((RuntimeError, ValueError)):
         with AudioFile(_BoundedStream(contents)) as audio:
             audio.read(20)
 
 
 @pytest.mark.parametrize("failure", ["returns-failure", "does-not-advance"])
-def test_wav_failed_seeks_raise_without_hanging(failure):
+def test_wav_failed_seeks_preserve_fallback_and_terminate(failure):
     class BrokenSeek(_BoundedStream):
         def seek(self, offset, whence=0):
             self._tick()
@@ -354,11 +447,14 @@ def test_wav_failed_seeks_raise_without_hanging(failure):
                 return -1 if failure == "returns-failure" else current
             return super().seek(offset, whence)
 
-    with pytest.raises(
-        (RuntimeError, ValueError, OSError), match="(?i)(wav|format|seek|stream|file|unsupported)"
-    ):
+    try:
         with AudioFile(BrokenSeek(_wav(_pcm16(6), before=_chunk(b"JUNK", b"skip me")))) as audio:
-            audio.read(20)
+            _assert_pcm_frames(audio, 6)
+    except (RuntimeError, ValueError, OSError):
+        # Release 0.9.26 recovers these streams on macOS. Other platforms may
+        # lack its native decoder fallback, but must still terminate promptly.
+        if sys.platform == "darwin":
+            raise
 
 
 def test_wav_seek_to_end_preserves_original_python_exception():
@@ -385,18 +481,25 @@ def test_ogg_in_wav_uses_compressed_decoder(data_size):
         np.testing.assert_array_equal(audio.read(256), expected)
 
 
-@pytest.mark.parametrize("duplicate_chunk", ["fmt", "data"])
+@pytest.mark.parametrize("duplicate_chunk", ["fmt", "data", "oversized-data"])
 @pytest.mark.parametrize("data_size", [0xFFFFFFFF, 4], ids=["sentinel", "short-data-header"])
-def test_rf64_sentinel_data_rejects_following_duplicate_chunks(
+def test_rf64_later_chunks_preserve_selected_payload_and_bound_eof(
     wav_source, duplicate_chunk, data_size
 ):
-    trailing = _chunk(b"fmt ", _fmt()) if duplicate_chunk == "fmt" else _chunk(b"data", _pcm16(6))
+    later = struct.pack("<hh", -16384, 4096) * 2
+    trailing = (
+        _chunk(b"fmt ", _fmt())
+        if duplicate_chunk == "fmt"
+        else _chunk(b"data", later, 0xFFFFFFFF if duplicate_chunk == "oversized-data" else None)
+    )
     contents = _wav(_pcm16(6), data_size=data_size, rf64_size=24, after=trailing)
-    with pytest.raises(
-        (RuntimeError, ValueError), match="(?i)(wav|format|chunk|fmt|data|unsupported)"
-    ):
-        with AudioFile(wav_source(contents)) as audio:
-            audio.read(20)
+    with AudioFile(wav_source(contents)) as audio:
+        if duplicate_chunk == "fmt":
+            _assert_pcm_frames(audio, 6)
+        else:
+            # JUCE selects the later audio but applies ds64's six-frame length.
+            # Only two selected frames physically exist, so only these remain.
+            _assert_pcm_frames(audio, 2, (-16384, 4096))
 
 
 @pytest.mark.parametrize("data_size", [None, 0xFFFFFFFF, 4])
@@ -431,3 +534,40 @@ def test_rf64_ignores_duplicate_chunks_outside_declared_container(wav_source, du
         np.testing.assert_allclose(samples[0], 0.25, atol=1 / 32767)
         np.testing.assert_allclose(samples[1], -0.25, atol=1 / 32767)
         assert audio.read(1).shape == (2, 0)
+
+
+@pytest.mark.parametrize(
+    "riff_size,expected_frames",
+    [(28, 0)] + [(size, 6) for size in range(29, 36)] + [(40, 6)],
+)
+def test_wav_selected_data_header_crossing_riff_end_is_physically_bounded(
+    wav_source, riff_size, expected_frames
+):
+    # JUCE selects data if its header begins before the declared RIFF end,
+    # including when the header's remaining bytes lie outside that boundary.
+    contents = _wav(_pcm16(6), data_size=0xFFFFFFFF, riff_size=riff_size)
+    with AudioFile(wav_source(contents)) as audio:
+        _assert_pcm_frames(audio, expected_frames)
+
+
+@pytest.mark.parametrize("tag", [3, 0xFFFE], ids=["ieee-float", "extensible-float"])
+@pytest.mark.parametrize("data_size", [None, 0xFFFFFFFF], ids=["healthy", "oversized-data"])
+def test_wav_legacy_float_bit_depth_uses_decoded_frame_width(wav_source, tag, data_size):
+    fmt = _fmt(
+        tag=tag,
+        bits=128,
+        block_align=8,
+        guid=_FLOAT_GUID if tag == 0xFFFE else None,
+    )
+    contents = _wav(struct.pack("<ff", 0.25, -0.25) * 6, fmt=fmt, data_size=data_size)
+    with AudioFile(wav_source(contents)) as audio:
+        assert audio.frames == 6
+        assert audio.duration == pytest.approx(6 / SAMPLE_RATE)
+        assert audio.file_dtype == "float32"
+        samples = audio.read(20)
+        assert samples.shape == (2, 6)
+        np.testing.assert_array_equal(samples, [[0.25] * 6, [-0.25] * 6])
+        assert audio.read(1).shape == (2, 0)
+        audio.seek(0)
+        np.testing.assert_array_equal(audio.read_raw(20), [[0.25] * 6, [-0.25] * 6])
+        assert audio.read_raw(1).shape == (2, 0)

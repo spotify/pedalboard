@@ -36,15 +36,16 @@ a regular file in Python::
    you *probably don't need to do that* - :class:`pedalboard.io.AudioFile` has you covered.
 
 .. note::
-   For finite, seekable WAV and RF64 files containing PCM, 32-bit IEEE float,
-   or supported WAVE_FORMAT_EXTENSIBLE audio, oversized data-chunk lengths
-   are limited to the complete frames physically available when the file is
-   opened. Reported duration, reads, and resampling use this recovered length.
-   Ambiguous repeated format or data chunks may cause the file to be rejected.
+   For finite, seekable WAV and RF64 files containing supported PCM or 32-bit
+   floating-point audio, overstated lengths are capped at the complete frames
+   physically available when the file is opened, when the audio layout can be
+   identified. Reported duration, reads, and resampling use this recovered length.
 
-   Trailing metadata swallowed by an oversized data chunk may still be decoded
-   as audio. This recovery does not cover every WAV codec or streams of unknown
-   length, and it does not add support for growing files.
+   Only overstated audio lengths are corrected. Shorter declarations and the
+   handling of other malformed file contents follow the existing decoder.
+   Physically present trailing metadata may still be decoded as audio when an
+   oversized data chunk includes it. Recovery does not cover every WAV codec or
+   streams of unknown length, and it does not add support for growing files.
 
 The following documentation lists all of the available I/O classes.
 
