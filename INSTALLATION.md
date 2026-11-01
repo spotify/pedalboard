@@ -62,7 +62,7 @@ You can install librosa using pip:
 pip install librosa
 ```
 
-If you plan to use your own audio files, save them to the project directory. You can use [`librosa.load`](https://librosa.org/doc/main/generated/librosa.load.html) to load an audio file by its path.
+If you plan to use your own audio files, save them to the project directory. You can use [`librosa.load`](https://librosa.org/doc/0.11.0/generated/librosa.load.html) to load an audio file by its path.
 
 ## Creating A Python Program
 
