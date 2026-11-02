@@ -41,7 +41,9 @@ from pedalboard._array_interop import make_namespace
 
 
 def _from_numpy(array: np.ndarray) -> tf.Tensor:
-    return tf.experimental.dlpack.from_dlpack(array.__dlpack__())
+    # DLPack can import buffers that violate TensorFlow kernels' alignment requirements.
+    with tf.device("/CPU:0"):
+        return tf.convert_to_tensor(array)
 
 
 globals().update(make_namespace(__name__, _from_numpy))

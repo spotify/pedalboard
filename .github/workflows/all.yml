@@ -605,7 +605,7 @@ jobs:
           # Fail, rather than skip, if torch, JAX, TensorFlow or Sphinx failed to install:
           PEDALBOARD_REQUIRE_ML_FRAMEWORKS: "1"
         run: |
-          pytest -rs --durations=10 tests/test_torch.py tests/test_ml_frameworks.py tests/test_docs.py \
+          pytest -rs --durations=10 tests/test_torch.py tests/test_ml_frameworks.py tests/test_tensorflow_interop.py tests/test_docs.py \
             --cov=pedalboard --cov-config=tests/ml_frameworks.coveragerc \
             --cov-report=term-missing --cov-fail-under=90
 

@@ -59,6 +59,11 @@ def _to_pedalboard(value):
     framework audio files become the Pedalboard file they wrap. Anything else is unchanged."""
     if isinstance(value, _FrameworkAudioFile):
         return value._file
+    # Older TensorFlow eager tensors expose .numpy(), but not __dlpack__.
+    if type(value).__module__.startswith("tensorflow.") and not hasattr(value, "__dlpack__"):
+        if "CPU:" not in value.device.upper():
+            raise ValueError("Pedalboard processes audio on the CPU; move the tensor to CPU first.")
+        return value.numpy()
     if isinstance(value, np.ndarray) or not hasattr(value, "__dlpack__"):
         return value
     if getattr(value, "requires_grad", False):
