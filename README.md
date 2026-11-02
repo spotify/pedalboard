@@ -42,7 +42,7 @@
      - No need to use `multiprocessing`!
    - Even when only using one thread:
      - Processes audio up to **300x** faster than [pySoX](https://github.com/rabitt/pysox) for single transforms, and 2-5x faster than [SoxBindings](https://github.com/pseeth/soxbindings) (via [iCorv](https://github.com/iCorv/pedalboard_with_tfdata))
-     - Reads audio files up to **4x** faster than [librosa.load](https://librosa.org/doc/0.11.0/generated/librosa.load.html) (in many cases)
+     - Reads audio files up to **4x** faster than [librosa.load](https://librosa.org/doc/latest/api/generated/librosa.load.html) (in many cases)
  - Tested compatibility with TensorFlow - can be used in `tf.data` pipelines!
 
 ## Installation
