@@ -76,6 +76,15 @@ inline juce::String nsStringToJuce(NSString *s) {
 std::vector<std::string>
 getAudioUnitIdentifiersFromFile(const juce::String &filename) {
   std::vector<std::string> identifiers;
+  for (const auto &info : getAudioUnitComponentInfosFromFile(filename)) {
+    identifiers.push_back(info.identifier);
+  }
+  return identifiers;
+}
+
+std::vector<AudioUnitComponentInfo>
+getAudioUnitComponentInfosFromFile(const juce::String &filename) {
+  std::vector<AudioUnitComponentInfo> identifiers;
 
   const juce::File file(filename);
   if (!file.hasFileExtension(".component") &&
@@ -91,7 +100,9 @@ getAudioUnitIdentifiersFromFile(const juce::String &filename) {
 
     for (AVAudioUnitComponent *component in audioComponents) {
       if ([component.componentURL.absoluteString hasSuffix:filePathWithoutTrailingSlash]) {
-        identifiers.push_back(createPluginIdentifier(component.audioComponentDescription).toStdString());
+        identifiers.push_back(
+            {createPluginIdentifier(component.audioComponentDescription).toStdString(),
+             nsStringToJuce(component.name).toStdString()});
         break;
       }
     }
@@ -110,7 +121,11 @@ getAudioUnitIdentifiersFromFile(const juce::String &filename) {
           nsStringToJuce((NSString *)[component valueForKey:@"type"]));
       desc.componentSubType = stringToOSType(
           nsStringToJuce((NSString *)[component valueForKey:@"subtype"]));
-      identifiers.push_back(createPluginIdentifier(desc).toStdString());
+      NSString *componentName = (NSString *)[component valueForKey:@"name"];
+      identifiers.push_back(
+          {createPluginIdentifier(desc).toStdString(),
+           componentName ? nsStringToJuce(componentName).toStdString()
+                         : std::string()});
     }
 
     [bundle release];
