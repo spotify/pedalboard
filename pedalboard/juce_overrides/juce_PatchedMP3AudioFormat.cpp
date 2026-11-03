@@ -3345,7 +3345,7 @@ public:
 
           const int numReady = decodedEnd - decodedStart;
 
-          if (numReady > toSkip) {
+          if (numReady >= toSkip) {
             decodedStart += toSkip;
             break;
           }
