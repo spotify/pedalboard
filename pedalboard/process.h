@@ -174,6 +174,44 @@ processFloat32(const py::array_t<float, py::array::c_style> inputArray,
   juce::AudioBuffer<float> ioBuffer =
       copyPyArrayIntoJuceBuffer(inputArray, {inputChannelLayout});
 
+  // ======= DETECTION FOR INT16-CONVERTED FLOAT DATA =======
+  bool allIntegers = true;
+  bool looksLikeInt16 = true;
+
+  for (int c = 0; c < ioBuffer.getNumChannels(); c++) {
+    float *channelData = ioBuffer.getWritePointer(c);
+    for (int i = 0; i < ioBuffer.getNumSamples(); i++) {
+      float value = channelData[i];
+
+      // Check if the value is very close to an integer
+      if (std::abs(value - std::round(value)) > 1e-6) {
+        allIntegers = false;
+      }
+
+      // Check if the value is within int16 range
+      if (value < -32768.0 || value > 32767.0) {
+        looksLikeInt16 = false;
+      }
+
+      // If both conditions are already violated, break early
+      if (!allIntegers && !looksLikeInt16) {
+        break;
+      }
+    }
+    if (!allIntegers && !looksLikeInt16) {
+      break;
+    }
+  }
+
+  // If all values are integers or look like int16, raise an error
+  if (allIntegers) {
+    throw std::runtime_error("Error: Input contains only integer values. Ensure proper floating-point conversion.");
+  }
+  if (looksLikeInt16) {
+    throw std::runtime_error("Error: Input appears to be improperly converted from 16-bit integer audio. Use proper scaling.");
+  }
+
+  // ======= Continue normal processing =======    
   if (ioBuffer.getNumChannels() == 0) {
     unsigned int numChannels = 0;
     unsigned int numSamples = ioBuffer.getNumSamples();
