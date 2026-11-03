@@ -103,9 +103,8 @@ def test_ml_frameworks_section_is_included_in_docs():
 
 def test_rendered_docs_include_expected_readme_sections(tmp_path):
     """Build the real docs through the custom mdinclude directive and check the output."""
-    import_framework("sphinx")
+    build_main = import_framework("sphinx.cmd.build").build_main
     import_framework("m2r2")
-    from sphinx.cmd.build import build_main
 
     # The text builder renders page bodies only (no navigation sidebar listing every heading).
     out_dir = tmp_path / "text"

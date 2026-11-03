@@ -284,7 +284,7 @@ version = "13.4.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cuda-pathfinder", version = "1.8.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "cuda-pathfinder", version = "1.8.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "cuda-pathfinder", version = "1.8.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.15'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9b/1e/d90a8af3d589776c70e92d43d7a0234260709a1d552d105f4dd3bdf48fa3/cuda_bindings-13.4.4-cp310-cp310-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:90f85a00fc89dd4a8f7c4beb0a2f3f788b845c8496fe84adc1217830206db9e0", size = 6512106, upload-time = "2026-10-14T12:35:04.07Z" },
@@ -2001,8 +2001,10 @@ jax = [
     { name = "jax", version = "0.6.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "jax", version = "0.10.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
     { name = "jax", version = "0.12.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "numpy" },
 ]
 tensorflow = [
+    { name = "numpy" },
     { name = "tensorflow" },
 ]
 test = [
@@ -2017,6 +2019,7 @@ test = [
     { name = "tqdm" },
 ]
 torch = [
+    { name = "numpy" },
     { name = "torch", version = "2.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "torch", version = "2.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
@@ -2028,6 +2031,9 @@ requires-dist = [
     { name = "mutagen", marker = "extra == 'test'" },
     { name = "mypy", marker = "extra == 'test'", specifier = "<2" },
     { name = "numpy" },
+    { name = "numpy", marker = "extra == 'jax'", specifier = ">=1.23" },
+    { name = "numpy", marker = "extra == 'tensorflow'", specifier = ">=1.23" },
+    { name = "numpy", marker = "extra == 'torch'", specifier = ">=1.23" },
     { name = "psutil", marker = "extra == 'test'" },
     { name = "pyright", marker = "extra == 'test'" },
     { name = "pytest", marker = "extra == 'test'" },
