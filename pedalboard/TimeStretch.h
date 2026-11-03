@@ -378,7 +378,7 @@ inline void init_time_stretch(py::module &m) {
                                preserveFormants);
         }
 
-        return copyJuceBufferIntoPyArray(output, detectChannelLayout(input), 0);
+        return copyJuceBufferIntoPyArray(std::move(output), detectChannelLayout(input), 0);
       },
       R"(
 Time-stretch (and optionally pitch-shift) a buffer of audio, changing its length.
