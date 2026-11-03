@@ -226,11 +226,45 @@ public:
                                      bool deleteStreamIfOpeningFails) override {
     auto streamStartPos = sourceStream->getPosition();
 
-    // Helper to delegate to the parent WavAudioFormat implementation
-    auto useDefaultReader = [&]() {
-      sourceStream->setPosition(streamStartPos);
-      return WavAudioFormat::createReaderFor(sourceStream,
-                                             deleteStreamIfOpeningFails);
+    auto useDefaultReader = [&]() -> AudioFormatReader * {
+      if (!sourceStream->setPosition(streamStartPos)) {
+        if (deleteStreamIfOpeningFails)
+          delete sourceStream;
+        return nullptr;
+      }
+      const auto layout = scanWavLayout(*sourceStream, streamStartPos);
+      // Let JUCE establish the final stream state, including native fallback
+      // behavior for file-like objects whose seeks do not always succeed.
+      if (!sourceStream->setPosition(streamStartPos)) {
+        if (deleteStreamIfOpeningFails)
+          delete sourceStream;
+        return nullptr;
+      }
+      std::unique_ptr<AudioFormatReader> reader(WavAudioFormat::createReaderFor(
+          sourceStream, deleteStreamIfOpeningFails));
+      // The default factory can delegate Ogg-in-WAV to a compressed reader.
+      // Only JUCE's native WAV reader has the byte stride described below.
+      if (reader && reader->getFormatName() == getFormatName()) {
+        // JUCE validates extensible GUIDs and normalizes legacy bit depths.
+        // Use that validated depth for float32 eligibility, preserving the
+        // existing float64 and unsupported-float dispatch paths.
+        const bool canCapLength =
+            layout.format == (uint16)WavFormatTag::PCM ||
+            (layout.format == (uint16)WavFormatTag::IEEEFloat &&
+             reader->bitsPerSample == 32) ||
+            (layout.format == (uint16)WavFormatTag::Extensible &&
+             (!reader->usesFloatingPointData || reader->bitsPerSample == 32));
+        if (canCapLength && layout.dataOffset >= 0 &&
+            layout.bytesPerFrame > 0) {
+          const auto available =
+              std::max<int64>(0, layout.totalLength - layout.dataOffset);
+          reader->lengthInSamples = std::min(reader->lengthInSamples,
+                                             available / layout.bytesPerFrame);
+        }
+      }
+      // Null readers may already have deleted the stream. Callback errors stay
+      // pending for ReadableAudioFile's existing Python exception propagation.
+      return reader.release();
     };
 
     // Read the RIFF header
@@ -311,6 +345,123 @@ public:
   }
 
 private:
+  struct WavDataLayout {
+    int64 totalLength = -1;
+    int64 dataOffset = -1;
+    int64 bytesPerFrame = 0;
+    unsigned short format = 0;
+    unsigned int bitsPerSample = 0;
+  };
+
+  // This is a best-effort lookup, not a second format validator. An unfamiliar
+  // or incomplete layout leaves JUCE's result unchanged rather than rejecting
+  // a file that the original reader could open.
+  static WavDataLayout scanWavLayout(InputStream &stream, int64 start) {
+    static_assert(JUCE_VERSION == 0x060104,
+                  "Review WAV traversal and decoder stride when updating JUCE");
+    WavDataLayout layout;
+    layout.totalLength = stream.getTotalLength();
+    if (layout.totalLength < 0 || start < 0 || !stream.setPosition(start))
+      return {};
+
+    uint8 header[12];
+    if (stream.read(header, sizeof(header)) != sizeof(header) ||
+        (int)ByteOrder::littleEndianInt(header + 8) != chunkName("WAVE"))
+      return {};
+    const auto container = (int)ByteOrder::littleEndianInt(header);
+    const bool isRF64 = container == chunkName("RF64");
+    if (!isRF64 && container != chunkName("RIFF"))
+      return {};
+
+    uint64 riffSize = ByteOrder::littleEndianInt(header + 4);
+    int64 rf64DataSize = 0;
+    if (isRF64) {
+      uint8 ds64[24];
+      if (stream.read(ds64, sizeof(ds64)) != sizeof(ds64) ||
+          (int)ByteOrder::littleEndianInt(ds64) != chunkName("ds64"))
+        return {};
+      const auto size = ByteOrder::littleEndianInt(ds64 + 4);
+      riffSize = ByteOrder::littleEndianInt64(ds64 + 8);
+      const auto dataSize = ByteOrder::littleEndianInt64(ds64 + 16);
+      if (size < 28 || dataSize > (uint64)std::numeric_limits<int64>::max())
+        return {};
+      rf64DataSize = (int64)dataSize;
+      const int64 remaining = (int64)size + (size & 1) - 16;
+      if (remaining > layout.totalLength - stream.getPosition() ||
+          !stream.setPosition(stream.getPosition() + remaining))
+        return {};
+    }
+    if (start > std::numeric_limits<int64>::max() - 8 ||
+        riffSize > (uint64)(std::numeric_limits<int64>::max() - start - 8))
+      return {};
+    const auto scanEnd =
+        std::min(layout.totalLength, start + 8 + (int64)riffSize);
+
+    while (stream.getPosition() < scanEnd) {
+      const auto chunkStart = stream.getPosition();
+      uint8 chunk[8];
+      // JUCE tests only the chunk start against RIFF end. The header itself
+      // can cross an understated container boundary if physically present.
+      if (stream.read(chunk, sizeof(chunk)) != sizeof(chunk))
+        return {};
+      const auto type = (int)ByteOrder::littleEndianInt(chunk);
+      const auto length = ByteOrder::littleEndianInt(chunk + 4);
+      const auto payload = stream.getPosition();
+      int64 payloadLength = length;
+      if (payload <= chunkStart)
+        return {};
+
+      if (type == chunkName("fmt ")) {
+        uint8 fmt[16];
+        // JUCE reads these fields even when the declared fmt size is short.
+        // Follow that layout without imposing stricter header validation.
+        if (stream.read(fmt, sizeof(fmt)) != sizeof(fmt))
+          return {};
+        layout.format = ByteOrder::littleEndianShort(fmt);
+        const auto channels =
+            (unsigned int)(short)ByteOrder::littleEndianShort(fmt + 2);
+        const auto sampleRate = (int32)ByteOrder::littleEndianInt(fmt + 4);
+        const auto byteRate = (int32)ByteOrder::littleEndianInt(fmt + 8);
+        layout.bitsPerSample =
+            (unsigned int)(int)(short)ByteOrder::littleEndianShort(fmt + 14);
+        // Mirror JUCE 6.1.4, including legacy bit-depth normalization. The
+        // blockAlign field does not determine the decoder's byte stride.
+        layout.bytesPerFrame = layout.bitsPerSample > 64 && sampleRate != 0
+                                   ? (int64)byteRate / sampleRate
+                                   : (int)(channels * layout.bitsPerSample / 8);
+      } else if (type == chunkName("data")) {
+        // JUCE selects the last data chunk it visits, using its current format.
+        // Retain the final decoding stride even if another fmt follows data.
+        layout.dataOffset = payload;
+        if (isRF64 && rf64DataSize > 0)
+          payloadLength = rf64DataSize;
+      } else if (length == 0) {
+        // JUCE stops at zero-sized unknown chunks, but continues past metadata
+        // it recognises. Match that distinction before selecting a later data.
+        const int metadata[] = {
+            chunkName("bext"), chunkName("smpl"), chunkName("inst"),
+            chunkName("INST"), chunkName("cue "), chunkName("axml"),
+            chunkName("LIST"), chunkName("acid"), chunkName("Trkn")};
+        if (std::find(std::begin(metadata), std::end(metadata), type) ==
+            std::end(metadata))
+          break;
+      }
+
+      // A short final payload (including metadata or a missing pad byte) is
+      // accepted or rejected by JUCE, not by this lookup. Oversized audio uses
+      // the physical tail below; an understated RIFF end never expands length.
+      if (payloadLength > scanEnd - payload)
+        break;
+      const auto end = payload + payloadLength;
+      if ((payloadLength & 1) != 0 && end == scanEnd)
+        break;
+      const auto next = end + (payloadLength & 1);
+      if (!stream.setPosition(next) || stream.getPosition() != next)
+        return {};
+    }
+    return layout;
+  }
+
   /**
    * Creates an MP3 reader for a WAV file containing MP3-compressed audio data.
    * Finds the data chunk and wraps it in a SubregionStream for the MP3 decoder.
