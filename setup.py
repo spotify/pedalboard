@@ -89,11 +89,12 @@ ALL_INCLUDES.extend(
 )
 
 if "musllinux" in os.getenv("CIBW_BUILD", ""):
-    # For Alpine/musllinux compatibility:
+    # For Alpine/musllinux compatibility. musl doesn't define these glibc-only
+    # nl_langinfo() items, for which it returns an empty string:
     ALL_CPPFLAGS.extend(
         [
-            "-D_NL_IDENTIFICATION_LANGUAGE=0x42",
-            "-D_NL_IDENTIFICATION_TERRITORY=0x43",
+            "-D_NL_ADDRESS_LANG_AB=0x42",
+            "-D_NL_ADDRESS_COUNTRY_AB2=0x43",
         ]
     )
 
@@ -101,7 +102,6 @@ if "musllinux" in os.getenv("CIBW_BUILD", ""):
 ALL_CPPFLAGS.extend(
     [
         "-DUSE_BQRESAMPLER=1",
-        "-D_HAS_STD_BYTE=0",
         "-DNOMINMAX",
         "-DALREADY_CONFIGURED",
     ]
@@ -320,6 +320,7 @@ if platform.system() == "Darwin":
         "Foundation",
         "IOKit",
         "QuartzCore",
+        "Security",
         "WebKit",
     ]
 
@@ -327,6 +328,9 @@ if platform.system() == "Darwin":
     # for Objective-C++ files instead of C++ files.
     for f in MACOS_FRAMEWORKS:
         ALL_LINK_ARGS += ["-framework", f]
+    # JUCE 7's juce_gui_basics weakly links against these:
+    for f in ("Metal", "MetalKit"):
+        ALL_LINK_ARGS += ["-weak_framework", f]
     ALL_CPPFLAGS.append("-DJUCE_PLUGINHOST_AU=1")
     ALL_CPPFLAGS.append("-xobjective-c++")
 
@@ -363,7 +367,7 @@ elif platform.system() == "Linux":
 
     ALL_RESOLVED_SOURCE_PATHS = [str(p.resolve()) for p in ALL_SOURCE_PATHS]
 elif platform.system() == "Windows":
-    ALL_CPPFLAGS += ["-DJUCE_DLL_BUILD=1"]
+    ALL_CPPFLAGS += ["-DJUCE_DLL_BUILD=1", "-DJUCE_DISABLE_DLL_ALLOCATORS=1"]
     # https://forum.juce.com/t/statically-linked-exe-in-win-10-not-working/25574/3
     ALL_LIBRARIES.extend(
         [
