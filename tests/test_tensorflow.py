@@ -19,6 +19,8 @@ import pytest
 
 import pedalboard
 
+from .utils import import_framework
+
 
 def test_can_be_called_in_tensorflow_data_pipeline():
     try:
@@ -29,17 +31,21 @@ def test_can_be_called_in_tensorflow_data_pipeline():
     sr = 48000
     plugins = pedalboard.Pedalboard([pedalboard.Gain(), pedalboard.Reverb()])
 
-    noise = np.random.rand(sr).astype(np.float32)
+    noise = np.random.default_rng(0).random(sr).astype(np.float32)
 
-    ds = tf.data.Dataset.from_tensor_slices([noise]).map(
-        lambda audio: tf.numpy_function(plugins.process, [audio, sr], tf.float32)
-    )
+    def process_audio(audio):
+        effected = tf.numpy_function(plugins.process, [audio, sr], tf.float32)
+        # numpy_function cannot infer the shape of the samples returned by Python.
+        return tf.ensure_shape(effected, audio.shape)
 
-    model = tf.keras.models.Sequential(
-        [tf.keras.layers.InputLayer(input_shape=(sr,)), tf.keras.layers.Dense(1)]
+    ds = tf.data.Dataset.from_tensor_slices([noise]).map(process_audio)
+
+    keras = import_framework("tensorflow.keras")
+    model = keras.models.Sequential(
+        [keras.layers.InputLayer(input_shape=(sr,)), keras.layers.Dense(1)]
     )
     # Train a dummy model just to ensure nothing explodes:
     model.compile(loss="mse")
     model.fit(ds.map(lambda effected: (effected, 1)).batch(1), epochs=10)
 
-    assert np.allclose(plugins(noise, sr), np.array([tensor.numpy() for tensor in ds]))
+    assert np.allclose(plugins(noise, sr), np.array(list(ds.as_numpy_iterator())))

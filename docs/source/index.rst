@@ -2,7 +2,7 @@
 :og:description: 🎛 🔊 Documentation for Pedalboard: A Python library for working with audio.
 
 .. mdinclude:: ../../README.md
-   :end-line: 74
+   :end-before: <!-- docs:examples -->
 
 Reference
 ---------
