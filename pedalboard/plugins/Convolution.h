@@ -190,6 +190,14 @@ inline void init_convolution(py::module &m) {
               return {};
             }
           })
+      .def_property_readonly(
+          "impulse_response_sample_rate",
+          [](JucePlugin<ConvolutionWithMix> &plugin) {
+            return plugin.getDSP().getSampleRate();
+          },
+          "The sample rate of the impulse response, if it was provided as a "
+          "NumPy array, or ``None`` if it was loaded from a file.\n\n"
+          "*Introduced in v0.9.27.*")
       .def_property(
           "mix",
           [](JucePlugin<ConvolutionWithMix> &plugin) {

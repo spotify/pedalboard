@@ -64,3 +64,43 @@ Can Pedalboard plugins accept MIDI?
 
 As of version 0.7.4, both :class:`pedalboard.VST3Plugin` and :class:`pedalboard.AudioUnitPlugin` support passing MIDI
 messages to instrument plugins for audio rendering. However, effect plugins cannot yet be passed MIDI data.
+
+Can Pedalboard objects be pickled, copied, or sent to other processes?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As of version 0.9.27, yes! All of Pedalboard's built-in plugins, as well as :class:`pedalboard.Pedalboard`,
+:class:`pedalboard.Chain`, and :class:`pedalboard.Mix` objects, support :py:mod:`pickle` and :py:mod:`copy`.
+This allows plugins to be passed to other processes (i.e.: with :py:mod:`multiprocessing`,
+:py:mod:`concurrent.futures`, a PyTorch ``DataLoader`` with ``num_workers > 0``, Ray, or Dask),
+or to be saved alongside a dataset to record exactly which effects were applied:
+
+.. code-block:: python
+
+   import pickle
+   from concurrent.futures import ProcessPoolExecutor
+   from pedalboard import Pedalboard, Compressor, Reverb
+
+   board = Pedalboard([Compressor(threshold_db=-20, ratio=4), Reverb(room_size=0.8)])
+
+   # Save and restore a board, including all of its parameters:
+   restored = pickle.loads(pickle.dumps(board))
+
+   # ...or send it to a pool of worker processes:
+   with ProcessPoolExecutor() as executor:
+       outputs = list(executor.map(board, audio_clips, [sample_rate] * len(audio_clips)))
+
+A few things to keep in mind:
+
+- Only a plugin's parameters are pickled, not its internal state. An unpickled plugin
+  behaves as if it had just been reset (i.e.: a :class:`pedalboard.Reverb` will not
+  include the tail of any audio processed before it was pickled).
+- A :class:`pedalboard.Convolution` loaded from a file stores the path to that file, which must also
+  exist wherever the plugin is unpickled. (Impulse responses passed as NumPy arrays are pickled by value.)
+- A :class:`pedalboard.VST3Plugin` or :class:`pedalboard.AudioUnitPlugin` stores its path and its
+  :py:attr:`raw_state`, and is reloaded from that path when unpickled, so the same plugin must be
+  installed at the same location on the machine that unpickles it.
+- As with any pickled data, only unpickle data from sources you trust. Unpickling an external plugin
+  loads (and runs) the plugin found at the stored path.
+
+Note that Pedalboard releases the GIL while processing audio, so threads are often enough to use
+multiple CPU cores within a single process.
