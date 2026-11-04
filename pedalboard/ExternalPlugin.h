@@ -1379,6 +1379,8 @@ public:
     StandalonePluginWindow::openWindowAndWait(*pluginInstance, optionalEvent);
   }
 
+  const juce::String &getPathToPluginFile() const { return pathToPluginFile; }
+
   ExternalPluginReloadType reloadType = ExternalPluginReloadType::Unknown;
   juce::PluginDescription foundPluginDescription;
 
@@ -1714,6 +1716,13 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
             return plugin.getName().toStdString();
           },
           "The name of this plugin.")
+      .def_property_readonly(
+          "path_to_plugin_file",
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+            return plugin.getPathToPluginFile().toStdString();
+          },
+          "The path to the plugin file or bundle that this plugin was loaded "
+          "from.\n\n*Introduced in v0.9.27.*")
       .def_property(
           "raw_state",
           [](const ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
@@ -1934,6 +1943,13 @@ see :class:`pedalboard.VST3Plugin`.)
             return plugin.getName().toStdString();
           },
           "The name of this plugin, as reported by the plugin itself.")
+      .def_property_readonly(
+          "path_to_plugin_file",
+          [](ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
+            return plugin.getPathToPluginFile().toStdString();
+          },
+          "The path to the plugin file or bundle that this plugin was loaded "
+          "from.\n\n*Introduced in v0.9.27.*")
       .def_property(
           "raw_state",
           [](const ExternalPlugin<juce::AudioUnitPluginFormat> &plugin) {
