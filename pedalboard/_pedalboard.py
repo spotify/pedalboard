@@ -634,6 +634,11 @@ class _PythonExternalPluginMixin:
                 f" {type(parameter_values).__name__}. (If passing a plugin name, pass"
                 ' "plugin_name=..." as a keyword argument instead.)'
             )
+        # Building the parameter map probes each parameter's values. Some
+        # instruments send every probe to external hardware, so avoid the
+        # sweep when the caller has no initial values to set.
+        if not parameter_values:
+            return
         parameters = self.parameters
         for key, value in parameter_values.items():
             if key not in parameters:
