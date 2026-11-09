@@ -246,6 +246,30 @@ If the number of samples and the number of channels are the same, each
   init_fixed_size_block_test_plugin(internal);
   init_force_mono_test_plugin(internal);
 
+  internal.def(
+      "copy_audio_stream_input_to_output",
+      [](const py::array_t<float, py::array::c_style> input,
+         py::array_t<float, py::array::c_style> output) {
+        if (input.ndim() != 2 || output.ndim() != 2 ||
+            input.shape(1) != output.shape(1)) {
+          throw std::invalid_argument("Expected channel-major input and output "
+                                      "with matching frame counts.");
+        }
+        std::vector<const float *> inputChannels;
+        std::vector<float *> outputChannels;
+        for (py::ssize_t channel = 0; channel < input.shape(0); ++channel) {
+          inputChannels.push_back(input.data(channel, 0));
+        }
+        for (py::ssize_t channel = 0; channel < output.shape(0); ++channel) {
+          outputChannels.push_back(output.mutable_data(channel, 0));
+        }
+        copyAudioStreamInputToOutput(
+            inputChannels.data(), static_cast<int>(inputChannels.size()),
+            outputChannels.data(), static_cast<int>(outputChannels.size()),
+            static_cast<int>(input.shape(1)));
+      },
+      py::arg("input").noconvert(), py::arg("output").noconvert());
+
   // I/O helpers and utilities:
   py::module io = m.def_submodule("io");
   io.doc() = "This module provides classes and functions for reading and "
