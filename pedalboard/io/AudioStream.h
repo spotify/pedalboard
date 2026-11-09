@@ -34,6 +34,26 @@ namespace py = pybind11;
 
 namespace Pedalboard {
 
+// Route live input channels to the output channels before plugin processing.
+inline void copyAudioStreamInputToOutput(const float **inputChannelData,
+                                         int numInputChannels,
+                                         float **outputChannelData,
+                                         int numOutputChannels,
+                                         int numSamples) {
+  // A device may provide outputs even when no input channels are active.
+  for (int i = 0; i < numOutputChannels; i++) {
+    if (!outputChannelData[i])
+      continue;
+    const float *inputChannel =
+        numInputChannels > 0 ? inputChannelData[i % numInputChannels] : nullptr;
+    if (inputChannel)
+      std::memcpy(outputChannelData[i], inputChannel,
+                  numSamples * sizeof(float));
+    else
+      std::memset(outputChannelData[i], 0, numSamples * sizeof(float));
+  }
+}
+
 class AudioStream : public std::enable_shared_from_this<AudioStream>
 #ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
     ,
@@ -325,23 +345,18 @@ public:
                                      int numOutputChannels, int numSamples) {
     // Live processing mode: run the input audio through a Pedalboard object.
     if (playBufferFifo && recordBufferFifo) {
+      copyAudioStreamInputToOutput(inputChannelData, numInputChannels,
+                                   outputChannelData, numOutputChannels,
+                                   numSamples);
+
       // JUCE may leave null pointers for inactive channels. DSP blocks must
       // contain only active channels; keep their original input mapping.
       auto **activeOutputs =
           static_cast<float **>(alloca(numOutputChannels * sizeof(float *)));
       int numActiveOutputs = 0;
       for (int i = 0; i < numOutputChannels; i++) {
-        if (!outputChannelData[i])
-          continue;
-        const float *inputChannel = numInputChannels > 0
-                                        ? inputChannelData[i % numInputChannels]
-                                        : nullptr;
-        if (inputChannel)
-          std::memcpy(outputChannelData[i], inputChannel,
-                      numSamples * sizeof(float));
-        else
-          std::memset(outputChannelData[i], 0, numSamples * sizeof(float));
-        activeOutputs[numActiveOutputs++] = outputChannelData[i];
+        if (outputChannelData[i])
+          activeOutputs[numActiveOutputs++] = outputChannelData[i];
       }
       if (numActiveOutputs == 0)
         return;
