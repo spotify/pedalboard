@@ -520,9 +520,8 @@ class ExternalPlugin : public AbstractExternalPlugin {
 protected:
   // Native subclasses may supply an existing instance and manage its lifetime.
   // File-based re-instantiation is unavailable for instances supplied this way.
-  explicit ExternalPlugin(
-      std::unique_ptr<juce::AudioPluginInstance> instance,
-      float initializationTimeout)
+  explicit ExternalPlugin(std::unique_ptr<juce::AudioPluginInstance> instance,
+                          float initializationTimeout)
       : pluginInstance(std::move(instance)),
         initializationTimeout(initializationTimeout) {
     if (!pluginInstance)

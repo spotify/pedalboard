@@ -30,8 +30,11 @@ public:
       : juce::AudioPluginInstance(makeBuses(auxiliaryOutput)),
         auxiliaryOutput(auxiliaryOutput) {}
 
-  const juce::String getName() const override { return "Buffer regression instrument"; }
-  void fillInPluginDescription(juce::PluginDescription &description) const override {
+  const juce::String getName() const override {
+    return "Buffer regression instrument";
+  }
+  void
+  fillInPluginDescription(juce::PluginDescription &description) const override {
     description.name = getName();
     description.isInstrument = true;
     description.numInputChannels = 0;
@@ -70,7 +73,8 @@ public:
     }
     for (int channel = 0; channel < requiredChannels; ++channel) {
       auto *samples = buffer.getWritePointer(channel);
-      require(samples != nullptr, "Enabled output channel has no writable buffer");
+      require(samples != nullptr,
+              "Enabled output channel has no writable buffer");
       // Main L/R: 0.25 / 0.5. Auxiliary L/R: 0.75 / 1.0.
       const float value = noteHeld ? 0.25f * (channel + 1) : 0.0f;
       std::fill(samples, samples + buffer.getNumSamples(), value);
@@ -92,9 +96,11 @@ protected:
 
 private:
   static BusesProperties makeBuses(bool auxiliaryOutput) {
-    auto buses = BusesProperties().withOutput("Main", juce::AudioChannelSet::stereo(), true);
+    auto buses = BusesProperties().withOutput(
+        "Main", juce::AudioChannelSet::stereo(), true);
     if (auxiliaryOutput)
-      buses = buses.withOutput("Auxiliary", juce::AudioChannelSet::stereo(), true);
+      buses =
+          buses.withOutput("Auxiliary", juce::AudioChannelSet::stereo(), true);
     return buses;
   }
   bool auxiliaryOutput;
@@ -114,8 +120,10 @@ void testWarmUp(bool auxiliaryOutput) {
   auto instance = std::make_unique<TestInstrument>(auxiliaryOutput);
   auto *instrument = instance.get();
   Host host(std::move(instance), 1.0f);
-  require(host.attemptToWarmUp(), "Instrument did not produce audio during warm-up");
-  require(!instrument->blockSizes.empty(), "Warm-up never processed the instrument");
+  require(host.attemptToWarmUp(),
+          "Instrument did not produce audio during warm-up");
+  require(!instrument->blockSizes.empty(),
+          "Warm-up never processed the instrument");
   require(instrument->getTotalNumOutputChannels() == (auxiliaryOutput ? 4 : 2),
           "Warm-up changed the instrument's mandatory output configuration");
 }
@@ -135,13 +143,15 @@ void testRender(bool auxiliaryOutput, bool partialBlock) {
   for (int channel = 0; channel < 2; ++channel)
     for (int frame = 0; frame < 32; ++frame)
       require(samples(channel, frame) == 0.25f * (channel + 1),
-              "Main output samples were missing, corrupted, or replaced by auxiliary audio");
-  const std::vector<int> expected = partialBlock ? std::vector<int>{12, 12, 8}
-                                                : std::vector<int>{8, 8, 8, 8};
+              "Main output samples were missing, corrupted, or replaced by "
+              "auxiliary audio");
+  const std::vector<int> expected =
+      partialBlock ? std::vector<int>{12, 12, 8} : std::vector<int>{8, 8, 8, 8};
   require(instrument->blockSizes == expected,
           "MIDI render did not process all full and partial blocks");
-  require(instrument->getTotalNumOutputChannels() == (auxiliaryOutput ? 4 : 2),
-          "MIDI render changed the instrument's mandatory output configuration");
+  require(
+      instrument->getTotalNumOutputChannels() == (auxiliaryOutput ? 4 : 2),
+      "MIDI render changed the instrument's mandatory output configuration");
 }
 } // namespace
 
