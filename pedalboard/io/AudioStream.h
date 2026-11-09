@@ -34,6 +34,26 @@ namespace py = pybind11;
 
 namespace Pedalboard {
 
+// Route live input channels to the output channels before plugin processing.
+inline void copyAudioStreamInputToOutput(const float **inputChannelData,
+                                         int numInputChannels,
+                                         float **outputChannelData,
+                                         int numOutputChannels,
+                                         int numSamples) {
+  // A device may provide outputs even when no input channels are active.
+  if (numInputChannels == 0) {
+    for (int i = 0; i < numOutputChannels; i++) {
+      std::memset(outputChannelData[i], 0, numSamples * sizeof(float));
+    }
+    return;
+  }
+
+  for (int i = 0; i < numOutputChannels; i++) {
+    const float *inputChannel = inputChannelData[i % numInputChannels];
+    std::memcpy(outputChannelData[i], inputChannel, numSamples * sizeof(float));
+  }
+}
+
 class AudioStream : public std::enable_shared_from_this<AudioStream>
 #ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
     ,
@@ -298,11 +318,9 @@ public:
                                      int numOutputChannels, int numSamples) {
     // Live processing mode: run the input audio through a Pedalboard object.
     if (playBufferFifo && recordBufferFifo) {
-      for (int i = 0; i < numOutputChannels; i++) {
-        const float *inputChannel = inputChannelData[i % numInputChannels];
-        std::memcpy((char *)outputChannelData[i], (char *)inputChannel,
-                    numSamples * sizeof(float));
-      }
+      copyAudioStreamInputToOutput(inputChannelData, numInputChannels,
+                                   outputChannelData, numOutputChannels,
+                                   numSamples);
 
       auto ioBlock = juce::dsp::AudioBlock<float>(
           outputChannelData, numOutputChannels, 0, numSamples);
