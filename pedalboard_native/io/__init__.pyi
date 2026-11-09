@@ -317,14 +317,18 @@ class AudioStream:
     each plugin (reverb tails, delay lines, pitch shifter buffers, etc.) is
     carried over from one chunk to the next::
 
+       # Use separate input and output streams; an AudioStream opened with both
+       # devices passes audio straight through and can't be read from.
+       # (Both devices must run at the same sample rate for this to work.)
        board = Pedalboard([Reverb(room_size=0.25), PitchShift(semitones=10)])
-       with AudioStream(input_device_name, output_device_name) as stream:
-           while True:
-               chunk = stream.read(1024)
-               # Without reset=False, every chunk would be processed from a
-               # clean slate, resulting in clicks, dropouts, or noise:
-               chunk = board.process(chunk, stream.sample_rate, reset=False)
-               stream.write(chunk, stream.sample_rate)
+       with AudioStream(input_device_name=input_device_name) as input_stream:
+           with AudioStream(output_device_name=output_device_name) as output_stream:
+               while True:
+                   chunk = input_stream.read(1024)
+                   # Without reset=False, every chunk would be processed from a
+                   # clean slate, resulting in clicks, dropouts, or noise:
+                   chunk = board.process(chunk, input_stream.sample_rate, reset=False)
+                   output_stream.write(chunk, output_stream.sample_rate)
 
     .. warning::
         The :class:`AudioStream` class implements a context manager interface
