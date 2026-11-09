@@ -169,25 +169,21 @@ class AudioFile:
         those classes below for documentation.
     """
 
-    @classmethod
     @typing.overload
     def __new__(cls, filename: str) -> ReadableAudioFile:
         """Open an audio file for reading (mode 'r' is implied)."""
         ...
 
-    @classmethod
     @typing.overload
     def __new__(cls, filename: str, mode: Literal["r"]) -> ReadableAudioFile:
         """Open an audio file for reading with an explicit mode 'r'."""
         ...
 
-    @classmethod
     @typing.overload
     def __new__(
         cls, file_like: typing.Union[typing.BinaryIO, memoryview], mode: Literal["r"] = "r"
     ) -> ReadableAudioFile: ...
 
-    @classmethod
     @typing.overload
     def __new__(
         cls,
@@ -200,7 +196,6 @@ class AudioFile:
         codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
     ) -> WriteableAudioFile: ...
 
-    @classmethod
     @typing.overload
     def __new__(
         cls,
@@ -474,8 +469,8 @@ class AudioStream:
 
 
         """
-    default_input_device_name: Optional[str] = None
-    default_output_device_name: Optional[str] = None
+    default_input_device_name: typing.Optional[str] = None
+    default_output_device_name: typing.Optional[str] = None
     input_device_names: typing.List[str] = []
     output_device_names: typing.List[str] = []
     pass
@@ -531,10 +526,8 @@ class ReadableAudioFile(AudioFile):
     @typing.overload
     def __init__(self, file_like: typing.Union[typing.BinaryIO, memoryview], mode: Literal["r"]) -> None: ...
 
-    @classmethod
     @typing.overload
     def __new__(cls, filename: str) -> ReadableAudioFile: ...
-    @classmethod
     @typing.overload
     def __new__(cls, file_like: typing.Union[typing.BinaryIO, memoryview]) -> ReadableAudioFile: ...
     def __repr__(self) -> str: ...
@@ -1091,6 +1084,27 @@ class WriteableAudioFile(AudioFile):
     def __enter__(self) -> WriteableAudioFile: ...
     def __exit__(self, arg0: object, arg1: object, arg2: object) -> None: ...
     @typing.overload
+    def __new__(
+        cls,
+        filename: str,
+        samplerate: typing.Optional[float] = None,
+        num_channels: int = 1,
+        bit_depth: int = 16,
+        quality: typing.Optional[typing.Union[str, float]] = None,
+        codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
+    ) -> WriteableAudioFile: ...
+    @typing.overload
+    def __new__(
+        cls,
+        file_like: typing.BinaryIO,
+        samplerate: typing.Optional[float] = None,
+        num_channels: int = 1,
+        bit_depth: int = 16,
+        quality: typing.Optional[typing.Union[str, float]] = None,
+        format: typing.Optional[str] = None,
+        codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
+    ) -> WriteableAudioFile: ...
+    @typing.overload
     def __init__(
         self,
         filename: str,
@@ -1111,29 +1125,6 @@ class WriteableAudioFile(AudioFile):
         format: typing.Optional[str] = None,
         codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
     ) -> None: ...
-    @classmethod
-    @typing.overload
-    def __new__(
-        cls,
-        filename: str,
-        samplerate: typing.Optional[float] = None,
-        num_channels: int = 1,
-        bit_depth: int = 16,
-        quality: typing.Optional[typing.Union[str, float]] = None,
-        codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
-    ) -> WriteableAudioFile: ...
-    @classmethod
-    @typing.overload
-    def __new__(
-        cls,
-        file_like: typing.BinaryIO,
-        samplerate: typing.Optional[float] = None,
-        num_channels: int = 1,
-        bit_depth: int = 16,
-        quality: typing.Optional[typing.Union[str, float]] = None,
-        format: typing.Optional[str] = None,
-        codec_options: typing.Dict[WriteableAudioFileFlag, typing.Union[bool, float, int, str]] = ...,
-    ) -> WriteableAudioFile: ...
 
     # This overload does not actually exist; just makes Pyright happy as
     # it assumes that __init__ is called with the same arguments as __new__:
@@ -1180,7 +1171,7 @@ class WriteableAudioFile(AudioFile):
         Return the current position of the write pointer in this audio file, in frames at the target sample rate. This value will increase as :meth:`write` is called, and will never decrease.
         """
 
-    def write(self, samples: numpy.ndarray) -> None:
+    def write(self, samples: np.ndarray) -> None:
         """
         Encode an array of audio data and write it to this file. The number of channels in the array must match the number of channels used to open the file. The array may contain audio in any shape. If the file's bit depth or format does not match the provided data type, the audio will be automatically converted.
 

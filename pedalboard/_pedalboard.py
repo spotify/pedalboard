@@ -32,7 +32,7 @@ from typing import (
 )
 
 from pedalboard_native import (  # type: ignore
-    ExternalPlugin,  # type: ignore
+    ExternalPlugin as ExternalPlugin,  # type: ignore
     Plugin,
     _AudioProcessorParameter,
 )
@@ -292,8 +292,8 @@ class AudioProcessorParameter(object):
             start_of_range: float = 0
 
             for fetch_slow in (False, True):
-                start_of_range: float = 0
-                text_value: Optional[str] = None
+                start_of_range = 0
+                text_value = None
 
                 self.ranges = {}
                 for x in range(0, search_steps + 1):

@@ -20,7 +20,9 @@ def patch_overload(func):
             func.__doc__ = docstring[len(docstring) // 2 :].strip()
     return func
 
-typing.overload = patch_overload
+if not typing.TYPE_CHECKING:
+    # Only patch at runtime (i.e.: when Sphinx imports this file); type checkers need the real overload.
+    typing.overload = patch_overload
 
 from typing_extensions import Literal
 from enum import Enum
@@ -40,6 +42,7 @@ class Chain(pedalboard_native.PluginContainer, pedalboard_native.Plugin):
     @typing.overload
     def __init__(self, plugins: typing.List[pedalboard_native.Plugin]) -> None: ...
     @typing.overload
+    def __init__(self) -> None: ...
     def __repr__(self) -> str: ...
     pass
 
@@ -51,6 +54,7 @@ class Mix(pedalboard_native.PluginContainer, pedalboard_native.Plugin):
     @typing.overload
     def __init__(self, plugins: typing.List[pedalboard_native.Plugin]) -> None: ...
     @typing.overload
+    def __init__(self) -> None: ...
     def __repr__(self) -> str: ...
     pass
 

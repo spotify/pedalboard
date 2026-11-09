@@ -600,7 +600,7 @@ def test_parameters_cant_be_assigned_to_directly(plugin_filename: str):
     for parameter_name in plugin.parameters.keys():
         current_value = getattr(plugin, parameter_name)
         with pytest.raises(TypeError):
-            plugin.parameters[parameter_name] = current_value
+            plugin.parameters[parameter_name] = current_value  # type: ignore
 
 
 @pytest.mark.parametrize("plugin_filename", AVAILABLE_EFFECT_PLUGINS_IN_TEST_ENVIRONMENT)
