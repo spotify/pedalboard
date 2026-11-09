@@ -1,0 +1,58 @@
+# TEMPORARY: delete this workflow and scripts/diagnostics/issue_372 before merging.
+# Original example/FLAC: https://github.com/Gdalik/PedalBoardCrash_Windows
+# Fixtures copied unchanged from commit e43cee03b480feb42a3227f84fbe2fdc1b21e8d0.
+name: "TEMP: Diagnose Windows AudioFile crash (#372)"
+
+on:
+  push:
+    branches:
+      - cjacoby/reproduce-issue-372
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue-372-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    if: github.ref == 'refs/heads/cjacoby/reproduce-issue-372'
+    name: Pedalboard ${{ matrix.pedalboard }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+        pedalboard: ["0.9.6", "0.9.7", "0.9.26"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          architecture: x64
+      - name: Install published wheel and fixed dependencies
+        run: >-
+          python -m pip install --only-binary=:all:
+          "pedalboard==${{ matrix.pedalboard }}"
+          "PyQt6==6.7.1" "PyQt6-Qt6==6.7.2" "PyQt6-sip==13.13.0"
+          "numpy==1.26.4"
+      - name: Record installed packages
+        run: python -m pip freeze
+      - name: Run original example and isolated import-order controls
+        # Each child enables faulthandler; every case runs even if another crashes.
+        # -I in the runner ensures imports resolve to wheels rather than this checkout.
+        run: >-
+          python scripts/diagnostics/issue_372/runner.py
+          scripts/diagnostics/issue_372/PN.flac
+          --original scripts/diagnostics/issue_372/pbcrash.py
+          --timeout 30
+          --output "${{ runner.temp }}/issue-372-results.json"
+      - name: Upload diagnostic results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-372-${{ matrix.os }}-pedalboard-${{ matrix.pedalboard }}
+          path: ${{ runner.temp }}/issue-372-results.json
+          if-no-files-found: warn
