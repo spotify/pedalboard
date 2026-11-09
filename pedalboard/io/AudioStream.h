@@ -717,11 +717,13 @@ Use :py:meth:`AudioStream.play` to play audio data to your speakers::
 Or use :py:meth:`AudioStream.write` to stream audio in chunks::
 
     # Play an audio file by looping through it in chunks:
-    with AudioStream(output_device="default") as stream:
-        with AudioFile("my_audio_file.mp3") as f:
+    output_device_name = AudioStream.default_output_device_name
+    with AudioStream(output_device_name=output_device_name) as stream:
+        # Resample the file to match the output device's sample rate:
+        with AudioFile("my_audio_file.mp3").resampled_to(stream.sample_rate) as f:
             while f.tell() < f.frames:
                 # Decode and play 512 samples at a time:
-                stream.write(f.read(512))
+                stream.write(f.read(512), f.samplerate)
 
 :class:`AudioStream` may also be used to pass live audio through a :class:`Pedalboard`::
 
@@ -746,6 +748,24 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
    stream = AudioStream(input_device_name, output_device_name)
    stream.plugins.append(Reverb(wet_level=1.0))
    stream.run()  # Run the stream until Ctrl-C is received
+
+To process audio in Python code between :py:meth:`read` and :py:meth:`write`,
+pass ``reset=False`` to :py:meth:`Pedalboard.process` so that the state of
+each plugin (reverb tails, delay lines, pitch shifter buffers, etc.) is
+carried over from one chunk to the next::
+
+   # Use separate input and output streams; an AudioStream opened with both
+   # devices passes audio straight through and can't be read from.
+   # (Both devices must run at the same sample rate for this to work.)
+   board = Pedalboard([Reverb(room_size=0.25), PitchShift(semitones=10)])
+   with AudioStream(input_device_name=input_device_name) as input_stream:
+       with AudioStream(output_device_name=output_device_name) as output_stream:
+           while True:
+               chunk = input_stream.read(1024)
+               # Without reset=False, every chunk would be processed from a
+               # clean slate, resulting in clicks, dropouts, or noise:
+               chunk = board.process(chunk, input_stream.sample_rate, reset=False)
+               output_stream.write(chunk, output_stream.sample_rate)
 
 .. warning::
     The :class:`AudioStream` class implements a context manager interface
@@ -921,7 +941,11 @@ Or use :py:meth:`AudioStream.write` to stream audio in chunks::
           "arguments, this method returns all of the available audio data in "
           "the buffer. If `num_samples` is provided, this method will block "
           "until the desired number of samples have been received. The audio "
-          "is recorded at the :py:attr:`sample_rate` of this stream.\n\n.. "
+          "is recorded at the :py:attr:`sample_rate` of this stream.\n\n"
+          "If passing the recorded audio through plugins before calling "
+          ":py:meth:`write`, call ``process`` with ``reset=False`` to avoid "
+          "clearing plugin state (and introducing clicks or noise) between "
+          "chunks.\n\n.. "
           "warning::\n    Recording audio is a **real-time** operation, so "
           "if "
           "your code doesn't call :py:meth:`read` quickly enough, some audio "
