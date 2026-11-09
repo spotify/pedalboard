@@ -932,6 +932,11 @@ struct DescriptionFactory {
 
       const String name(toString(info.name).trim());
 
+      // When asked for a single plugin by name, skip everything else before
+      // paying for its instantiation (shells may hold hundreds of classes).
+      if (onlyName.isNotEmpty() && name != onlyName)
+        continue;
+
       if (foundNames.contains(name, true))
         continue;
 
@@ -992,6 +997,10 @@ struct DescriptionFactory {
   }
 
   virtual Result performOnDescription(PluginDescription &) = 0;
+
+  /** If non-empty, only classes with exactly this (trimmed) name are
+      instantiated and described. */
+  String onlyName;
 
 private:
   VSTComSmartPtr<PatchedVST3HostContext> Patchedvst3HostContext;
@@ -3645,6 +3654,18 @@ bool PatchedVST3PluginFormat::setStateFromVSTPresetFile(
 
 void PatchedVST3PluginFormat::findAllTypesForFile(
     OwnedArray<PluginDescription> &results, const String &fileOrIdentifier) {
+  findTypesForFileImpl(results, fileOrIdentifier, {});
+}
+
+void PatchedVST3PluginFormat::findTypesForFileWithName(
+    OwnedArray<PluginDescription> &results, const String &fileOrIdentifier,
+    const String &pluginName) {
+  findTypesForFileImpl(results, fileOrIdentifier, pluginName);
+}
+
+void PatchedVST3PluginFormat::findTypesForFileImpl(
+    OwnedArray<PluginDescription> &results, const String &fileOrIdentifier,
+    const String &onlyPluginName) {
   if (fileMightContainThisPluginType(fileOrIdentifier)) {
     /**
         Since there is no apparent indication if a VST3 plugin is a shell or
@@ -3660,6 +3681,7 @@ void PatchedVST3PluginFormat::findAllTypesForFile(
     if (pluginFactory != nullptr) {
       VSTComSmartPtr<PatchedVST3HostContext> host(new PatchedVST3HostContext());
       DescriptionLister lister(host, pluginFactory);
+      lister.onlyName = onlyPluginName;
       lister.findDescriptionsAndPerform(File(fileOrIdentifier));
 
       results.addCopiesOf(lister.list);

@@ -28,6 +28,20 @@ namespace Pedalboard {
 // This uses Objective-C++ code, so its implementation can't be defined inline:
 std::vector<std::string>
 getAudioUnitIdentifiersFromFile(const juce::String &filename);
+
+/**
+ * An Audio Unit identifier ("AudioUnit:Effects/aufx,abcd,Manu") together with
+ * the component name declared in the bundle's Info.plist (usually
+ * "Manufacturer: Plugin Name"). Reading this requires no instantiation, so it
+ * can be used to pick a single plugin out of a multi-plugin bundle cheaply.
+ */
+struct AudioUnitComponentInfo {
+  std::string identifier;
+  std::string name;
+};
+
+std::vector<AudioUnitComponentInfo>
+getAudioUnitComponentInfosFromFile(const juce::String &filename);
 } // namespace Pedalboard
 
 #endif
