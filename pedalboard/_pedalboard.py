@@ -32,7 +32,7 @@ from typing import (
 )
 
 from pedalboard_native import (  # type: ignore
-    ExternalPlugin,  # type: ignore
+    ExternalPlugin as ExternalPlugin,  # type: ignore
     Plugin,
     _AudioProcessorParameter,
 )

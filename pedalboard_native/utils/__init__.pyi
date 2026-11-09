@@ -39,7 +39,10 @@ class Chain(pedalboard_native.PluginContainer, pedalboard_native.Plugin):
     Run zero or more plugins as a plugin. Useful when used with the Mix plugin.
     """
 
+    @typing.overload
     def __init__(self, plugins: typing.List[pedalboard_native.Plugin]) -> None: ...
+    @typing.overload
+    def __init__(self) -> None: ...
     def __repr__(self) -> str: ...
     pass
 
@@ -48,7 +51,10 @@ class Mix(pedalboard_native.PluginContainer, pedalboard_native.Plugin):
     A utility plugin that allows running other plugins in parallel. All plugins provided will be mixed equally.
     """
 
+    @typing.overload
     def __init__(self, plugins: typing.List[pedalboard_native.Plugin]) -> None: ...
+    @typing.overload
+    def __init__(self) -> None: ...
     def __repr__(self) -> str: ...
     pass
 

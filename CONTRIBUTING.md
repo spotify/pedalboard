@@ -68,6 +68,11 @@ python3 -m mypy.stubtest pedalboard --allowlist stubtest.allowlist
 # If all looks good, commit the resulting stubs to Git.
 ```
 
+Some parts of the committed `.pyi` files in `pedalboard_native/` are maintained by hand (for
+example, the MIDI message types and `ExternalPlugin.parameters`), so review the diff after
+regenerating and keep those edits. To check that type checkers still accept typical user code,
+run mypy and Pyright over the passing fixtures in `tests/mypy_fixtures/`, as CI does.
+
 ## Workflow
 
 We follow the [GitHub Flow Workflow](https://guides.github.com/introduction/flow/):

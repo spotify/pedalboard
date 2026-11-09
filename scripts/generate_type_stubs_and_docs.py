@@ -87,11 +87,11 @@ REPLACEMENTS = [
     ),
     (
         r"default_input_device_name = [\"'].*?[\"']",
-        "default_input_device_name: Optional[str] = None",
+        "default_input_device_name: typing.Optional[str] = None",
     ),
     (
         r"default_output_device_name = [\"'].*?[\"']",
-        "default_output_device_name: Optional[str] = None",
+        "default_output_device_name: typing.Optional[str] = None",
     ),
     # None of our enums are properly detected by pybind11-stubgen. These are brittle hacks:
     (r"0, quality: Resample\.Quality", "0, quality: Quality"),
@@ -149,7 +149,9 @@ def patch_overload(func):
             func.__doc__ = docstring[len(docstring) // 2:].strip()
     return func
 
-typing.overload = patch_overload
+if not typing.TYPE_CHECKING:
+    # Only patch at runtime (i.e.: when Sphinx imports this file); type checkers need the real overload.
+    typing.overload = patch_overload
     """,
     ),
 ]

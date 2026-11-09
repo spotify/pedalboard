@@ -455,15 +455,18 @@ class Distortion(Plugin):
 
 class _MIDIMessage(typing.Protocol):
     """
-    Any object with a ``bytes()`` method and a ``time`` attribute, such as ``mido.Message``.
+    Any object with a ``bytes()`` method and a ``time`` attribute.
     """
 
-    time: typing.Any
-
+    @property
+    def time(self) -> typing.Any: ...
     def bytes(self) -> typing.Any: ...
 
 MIDIMessageLike = typing.Union[
     _MIDIMessage,
+    # mido.Message sets ``time`` dynamically and ships no type hints, so no Protocol
+    # can match it under Pyright; accept any object rather than reject mido messages.
+    typing.Any,
     typing.Tuple[bytes, float],
     typing.Tuple[typing.List[int], float],
 ]
@@ -501,7 +504,7 @@ class ExternalPlugin(Plugin):
     @typing.overload
     def __call__(
         self,
-        midi_messages: typing.List[MIDIMessageLike],
+        midi_messages: typing.Sequence[MIDIMessageLike],
         duration: float,
         sample_rate: float | int,
         num_channels: int = 2,
@@ -701,7 +704,7 @@ class ExternalPlugin(Plugin):
     @typing.overload
     def process(
         self,
-        midi_messages: typing.List[MIDIMessageLike],
+        midi_messages: typing.Sequence[MIDIMessageLike],
         duration: float,
         sample_rate: float | int,
         num_channels: int = 2,
@@ -720,7 +723,7 @@ class ExternalPlugin(Plugin):
     # Provided at runtime by pedalboard._pedalboard._PythonExternalPluginMixin,
     # which is added to this class's bases when pedalboard is imported:
     @property
-    def parameters(self) -> typing.Dict[str, AudioProcessorParameter]:
+    def parameters(self) -> typing.Mapping[str, AudioProcessorParameter]:
         """
         A read-only dictionary of this plugin's parameters, keyed by their Python-friendly names.
         """
@@ -1173,7 +1176,7 @@ class AudioUnitPlugin(ExternalPlugin):
     @typing.overload
     def __call__(
         self,
-        midi_messages: typing.List[MIDIMessageLike],
+        midi_messages: typing.Sequence[MIDIMessageLike],
         duration: float,
         sample_rate: float | int,
         num_channels: int = 2,
@@ -1391,7 +1394,7 @@ class AudioUnitPlugin(ExternalPlugin):
     @typing.overload
     def process(
         self,
-        midi_messages: typing.List[MIDIMessageLike],
+        midi_messages: typing.Sequence[MIDIMessageLike],
         duration: float,
         sample_rate: float | int,
         num_channels: int = 2,
@@ -2085,7 +2088,7 @@ class VST3Plugin(ExternalPlugin):
     @typing.overload
     def process(
         self,
-        midi_messages: typing.List[MIDIMessageLike],
+        midi_messages: typing.Sequence[MIDIMessageLike],
         duration: float,
         sample_rate: float | int,
         num_channels: int = 2,
