@@ -402,6 +402,18 @@ def test_initial_parameters(plugin_filename: str):
         assert actual == expected, f"Expected attribute {name} to be {expected}, but was {actual}"
 
 
+@pytest.mark.parametrize("plugin_filename", ONE_AVAILABLE_TEST_PLUGIN)
+@pytest.mark.parametrize("initial_values", [None, {}])
+def test_loading_without_initial_values_does_not_probe_parameters(
+    plugin_filename: str, initial_values, monkeypatch
+):
+    def fail_if_probed(*args, **kwargs):
+        pytest.fail("Loading a plugin without initial values probed its parameters")
+
+    monkeypatch.setattr("pedalboard._pedalboard.AudioProcessorParameter", fail_if_probed)
+    load_test_plugin(plugin_filename, disable_caching=True, parameter_values=initial_values)
+
+
 @pytest.mark.parametrize(
     "plugin_filename,parameter_name",
     sample(
