@@ -517,6 +517,23 @@ public:
 
 template <typename ExternalPluginType>
 class ExternalPlugin : public AbstractExternalPlugin {
+protected:
+  // Native subclasses may supply an existing instance and manage its lifetime.
+  // File-based re-instantiation is unavailable for instances supplied this way.
+  explicit ExternalPlugin(std::unique_ptr<juce::AudioPluginInstance> instance,
+                          float initializationTimeout)
+      : pluginInstance(std::move(instance)),
+        initializationTimeout(initializationTimeout) {
+    if (!pluginInstance)
+      throw std::invalid_argument("Cannot wrap a null plugin instance.");
+
+    juce::MessageManager::getInstance();
+    pluginInstance->fillInPluginDescription(foundPluginDescription);
+    pluginInstance->enableAllBuses();
+    std::lock_guard<std::mutex> lock(EXTERNAL_PLUGIN_MUTEX);
+    NUM_ACTIVE_EXTERNAL_PLUGINS++;
+  }
+
 public:
   ExternalPlugin(
       std::string &_pathToPluginFile,
