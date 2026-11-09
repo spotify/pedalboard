@@ -41,16 +41,16 @@ inline void copyAudioStreamInputToOutput(const float **inputChannelData,
                                          int numOutputChannels,
                                          int numSamples) {
   // A device may provide outputs even when no input channels are active.
-  if (numInputChannels == 0) {
-    for (int i = 0; i < numOutputChannels; i++) {
-      std::memset(outputChannelData[i], 0, numSamples * sizeof(float));
-    }
-    return;
-  }
-
   for (int i = 0; i < numOutputChannels; i++) {
-    const float *inputChannel = inputChannelData[i % numInputChannels];
-    std::memcpy(outputChannelData[i], inputChannel, numSamples * sizeof(float));
+    if (!outputChannelData[i])
+      continue;
+    const float *inputChannel =
+        numInputChannels > 0 ? inputChannelData[i % numInputChannels] : nullptr;
+    if (inputChannel)
+      std::memcpy(outputChannelData[i], inputChannel,
+                  numSamples * sizeof(float));
+    else
+      std::memset(outputChannelData[i], 0, numSamples * sizeof(float));
   }
 }
 
@@ -123,10 +123,37 @@ public:
           numOutputChannels, setup.bufferSize + 1);
     }
 
-    juce::String defaultDeviceName;
-    juce::String error =
-        deviceManager.initialise(numInputChannels, numOutputChannels, nullptr,
-                                 true, defaultDeviceName, &setup);
+    // The XML initialization path selects the backend and applies the setup
+    // together, without first opening that backend's default devices.
+    juce::XmlElement deviceState("DEVICESETUP");
+    for (auto *type : deviceManager.getAvailableDeviceTypes()) {
+      const auto containsDevice = [type](const juce::String &name, bool input) {
+        if (name.isEmpty())
+          return true;
+        for (const auto &candidate : type->getDeviceNames(input))
+          if (candidate.trim().equalsIgnoreCase(name.trim()))
+            return true;
+        return false;
+      };
+      if (containsDevice(setup.inputDeviceName, true) &&
+          containsDevice(setup.outputDeviceName, false)) {
+        deviceState.setAttribute("deviceType", type->getTypeName());
+        // An empty name requests the backend default; an absent optional
+        // disables that side by requesting zero channels.
+        if (setup.inputDeviceName.isEmpty() && numInputChannels > 0)
+          setup.inputDeviceName =
+              type->getDeviceNames(true)[type->getDefaultDeviceIndex(true)];
+        if (setup.outputDeviceName.isEmpty() && numOutputChannels > 0)
+          setup.outputDeviceName =
+              type->getDeviceNames(false)[type->getDefaultDeviceIndex(false)];
+        break;
+      }
+    }
+    deviceState.setAttribute("audioInputDeviceName", setup.inputDeviceName);
+    deviceState.setAttribute("audioOutputDeviceName", setup.outputDeviceName);
+
+    juce::String error = deviceManager.initialise(
+        numInputChannels, numOutputChannels, &deviceState, false, {}, &setup);
     if (!error.isEmpty()) {
       throw std::domain_error(error.toStdString());
     }
@@ -322,8 +349,20 @@ public:
                                    outputChannelData, numOutputChannels,
                                    numSamples);
 
+      // JUCE may leave null pointers for inactive channels. DSP blocks must
+      // contain only active channels; keep their original input mapping.
+      auto **activeOutputs =
+          static_cast<float **>(alloca(numOutputChannels * sizeof(float *)));
+      int numActiveOutputs = 0;
+      for (int i = 0; i < numOutputChannels; i++) {
+        if (outputChannelData[i])
+          activeOutputs[numActiveOutputs++] = outputChannelData[i];
+      }
+      if (numActiveOutputs == 0)
+        return;
+
       auto ioBlock = juce::dsp::AudioBlock<float>(
-          outputChannelData, numOutputChannels, 0, numSamples);
+          activeOutputs, numActiveOutputs, 0, numSamples);
       juce::dsp::ProcessContextReplacing<float> context(ioBlock);
 
       juce::SpinLock::ScopedTryLockType tryLock(livePedalboardMutex);
@@ -347,21 +386,20 @@ public:
         {
           const auto scope = recordBufferFifo->write(numSamples);
 
-          if (scope.blockSize1 > 0)
-            for (int i = 0; i < numInputChannels; i++) {
-              std::memcpy(
-                  (char *)recordBuffer->getWritePointer(i, scope.startIndex1),
-                  (char *)inputChannelData[i],
-                  scope.blockSize1 * sizeof(float));
+          const auto copyInput = [&](int start, int count, int offset) {
+            if (count == 0)
+              return;
+            for (int i = 0; i < recordBuffer->getNumChannels(); i++) {
+              const float *input =
+                  i < numInputChannels ? inputChannelData[i] : nullptr;
+              if (input)
+                recordBuffer->copyFrom(i, start, input + offset, count);
+              else
+                recordBuffer->clear(i, start, count);
             }
-
-          if (scope.blockSize2 > 0)
-            for (int i = 0; i < numInputChannels; i++) {
-              std::memcpy(
-                  (char *)recordBuffer->getWritePointer(i, scope.startIndex2),
-                  (char *)(inputChannelData[i] + scope.blockSize1),
-                  scope.blockSize2 * sizeof(float));
-            }
+          };
+          copyInput(scope.startIndex1, scope.blockSize1, 0);
+          copyInput(scope.startIndex2, scope.blockSize2, scope.blockSize1);
 
           samplesWritten = scope.blockSize1 + scope.blockSize2;
         }
@@ -381,29 +419,31 @@ public:
       }
     } else if (playBufferFifo) {
       for (int i = 0; i < numOutputChannels; i++) {
-        std::memset((char *)outputChannelData[i], 0,
-                    numSamples * sizeof(float));
+        if (outputChannelData[i])
+          std::memset(outputChannelData[i], 0, numSamples * sizeof(float));
       }
 
       const auto scope = playBufferFifo->read(numSamples);
 
       if (scope.blockSize1 > 0)
         for (int i = 0; i < numOutputChannels; i++) {
-          std::memcpy((char *)outputChannelData[i],
-                      (char *)playBuffer->getReadPointer(i, scope.startIndex1),
-                      scope.blockSize1 * sizeof(float));
+          if (outputChannelData[i])
+            std::memcpy(outputChannelData[i],
+                        playBuffer->getReadPointer(i, scope.startIndex1),
+                        scope.blockSize1 * sizeof(float));
         }
 
       if (scope.blockSize2 > 0)
         for (int i = 0; i < numOutputChannels; i++) {
-          std::memcpy((char *)(outputChannelData[i] + scope.blockSize1),
-                      (char *)playBuffer->getReadPointer(i, scope.startIndex2),
-                      scope.blockSize2 * sizeof(float));
+          if (outputChannelData[i])
+            std::memcpy(outputChannelData[i] + scope.blockSize1,
+                        playBuffer->getReadPointer(i, scope.startIndex2),
+                        scope.blockSize2 * sizeof(float));
         }
     } else {
       for (int i = 0; i < numOutputChannels; i++) {
-        std::memset((char *)outputChannelData[i], 0,
-                    numSamples * sizeof(float));
+        if (outputChannelData[i])
+          std::memset(outputChannelData[i], 0, numSamples * sizeof(float));
       }
     }
   }

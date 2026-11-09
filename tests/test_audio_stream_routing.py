@@ -20,7 +20,6 @@ import textwrap
 
 import pytest
 
-
 # Keep native crashes isolated so a regression cannot terminate the pytest run.
 CHILD_SETUP = """
 import sys
@@ -38,7 +37,12 @@ num_frames = int(sys.argv[1])
 
 def run_routing_assertions(num_frames: int, assertions: str):
     result = subprocess.run(
-        [sys.executable, "-c", CHILD_SETUP + textwrap.dedent(assertions), str(num_frames)],
+        [
+            sys.executable,
+            "-c",
+            CHILD_SETUP + textwrap.dedent(assertions),
+            str(num_frames),
+        ],
         capture_output=True,
         text=True,
         timeout=30,
