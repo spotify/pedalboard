@@ -7,7 +7,7 @@ from pedalboard.io import AudioFile
 vst = load_plugin("./VSTs/RoughRider3.vst3")
 
 # TODO: Add type hints for `parameters` here!
-print(vst.parameters.keys())  # type: ignore
+print(vst.parameters.keys())
 # dict_keys([
 #   'sc_hpf_hz', 'input_lvl_db', 'sensitivity_db',
 #   'ratio', 'attack_ms', 'release_ms', 'makeup_db',

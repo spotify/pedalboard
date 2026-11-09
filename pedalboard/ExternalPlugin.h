@@ -1700,7 +1700,8 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
           "Return a list of plugin names contained within a given VST3 "
           "plugin (i.e.: a \".vst3\"). If the provided file cannot be "
           "scanned, "
-          "an ImportError will be raised.")
+          "an ImportError will be raised.",
+          py::arg("filename"))
       .def_property_readonly_static(
           "installed_plugins",
           [](py::object /* cls */) { return findInstalledVSTPluginPaths(); },

@@ -24,12 +24,17 @@ def patch_overload(func):
             func.__doc__ = docstring[len(docstring) // 2 :].strip()
     return func
 
-typing.overload = patch_overload
+if not typing.TYPE_CHECKING:
+    # Only patch at runtime (i.e.: when Sphinx imports this file); type checkers need the real overload.
+    typing.overload = patch_overload
 
 from enum import Enum
 import threading
 from numpy import ndarray, float32
 from numpy.typing import NDArray
+
+if typing.TYPE_CHECKING:
+    from pedalboard._pedalboard import AudioProcessorParameter
 
 
 _Shape = typing.Tuple[int, ...]
@@ -448,8 +453,17 @@ class Distortion(Plugin):
     pass
 
 
+class _MIDIMessage(typing.Protocol):
+    """
+    Any object with a ``bytes()`` method and a ``time`` attribute, such as ``mido.Message``.
+    """
+
+    time: typing.Any
+
+    def bytes(self) -> typing.Any: ...
+
 MIDIMessageLike = typing.Union[
-    "mido.Message",
+    _MIDIMessage,
     typing.Tuple[bytes, float],
     typing.Tuple[typing.List[int], float],
 ]
@@ -702,6 +716,14 @@ class ExternalPlugin(Plugin):
         Return a list of plugin names contained within a given VST3 plugin (i.e.: a ".vst3"). If the provided file cannot be scanned, an ImportError will be raised.
         """
         # Not implemented by the abstract base class, but implemented by the concrete subclasses.
+
+    # Provided at runtime by pedalboard._pedalboard._PythonExternalPluginMixin,
+    # which is added to this class's bases when pedalboard is imported:
+    @property
+    def parameters(self) -> typing.Dict[str, AudioProcessorParameter]:
+        """
+        A read-only dictionary of this plugin's parameters, keyed by their Python-friendly names.
+        """
 
 class Gain(Plugin):
     """
@@ -1151,6 +1173,17 @@ class AudioUnitPlugin(ExternalPlugin):
     @typing.overload
     def __call__(
         self,
+        midi_messages: typing.List[MIDIMessageLike],
+        duration: float,
+        sample_rate: float | int,
+        num_channels: int = 2,
+        buffer_size: int = 8192,
+        reset: bool = True,
+    ) -> NDArray[float32]: ...
+
+    @typing.overload
+    def __call__(
+        self,
         input_array: NDArray[float32],
         sample_rate: float | int,
         buffer_size: int = 8192,
@@ -1161,17 +1194,6 @@ class AudioUnitPlugin(ExternalPlugin):
 
         Run an audio or MIDI buffer through this plugin, returning audio. Alias for :py:meth:`process`.
         """
-
-    @typing.overload
-    def __call__(
-        self,
-        midi_messages: typing.List[MIDIMessageLike],
-        duration: float,
-        sample_rate: float | int,
-        num_channels: int = 2,
-        buffer_size: int = 8192,
-        reset: bool = True,
-    ) -> NDArray[float32]: ...
     def __init__(
         self,
         path_to_plugin_file: str,
@@ -1873,7 +1895,7 @@ class VST3Plugin(ExternalPlugin):
     def __repr__(self) -> str: ...
     def _get_parameter(self, arg0: str) -> _AudioProcessorParameter: ...
     @staticmethod
-    def get_plugin_names_for_file(arg0: str) -> typing.List[str]:
+    def get_plugin_names_for_file(filename: str) -> typing.List[str]:
         """
         Return a list of plugin names contained within a given VST3 plugin (i.e.: a ".vst3"). If the provided file cannot be scanned, an ImportError will be raised.
         """

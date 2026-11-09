@@ -68,6 +68,12 @@ jobs:
         run: uv sync --locked --all-extras --dev
       - name: Check Python type hints
         run: uv run pyright ${{ github.workspace }}/pedalboard ${{ github.workspace }}/tests/test_*.py
+      # Type-check example user code against pedalboard (including its .pyi stubs) with both
+      # mypy and Pyright. (tests/test_type_hints.py does this too, but is skipped on CI.)
+      - name: Check type hints of user code (mypy)
+        run: uv run mypy $(ls tests/mypy_fixtures/*.py | grep -v '/fail_')
+      - name: Check type hints of user code (Pyright)
+        run: uv run pyright $(ls tests/mypy_fixtures/*.py | grep -v '/fail_')
 
   lint-cpp:
     runs-on: "ubuntu-24.04"

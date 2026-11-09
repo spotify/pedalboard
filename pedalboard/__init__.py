@@ -35,16 +35,18 @@ except ImportError as _e:
         raise
 from pedalboard_native.utils import *  # noqa: F403, F401 # type: ignore
 
+# The redundant "X as X" aliases mark these names as public re-exports, which type checkers
+# (Pyright, and mypy with --no-implicit-reexport) require for names imported into a py.typed package.
 from ._pedalboard import (  # noqa: F401
     _AVAILABLE_PLUGIN_CLASSES,
-    AudioProcessorParameter,  # noqa: F401
-    ExternalPlugin,  # noqa: F401
-    Pedalboard,  # noqa: F401
-    load_plugin,  # noqa: F401
+    AudioProcessorParameter as AudioProcessorParameter,  # noqa: F401
+    ExternalPlugin as ExternalPlugin,  # noqa: F401
+    Pedalboard as Pedalboard,  # noqa: F401
+    load_plugin as load_plugin,  # noqa: F401
 )
 
 # noqa: F401
-from .version import __version__  # noqa: F401
+from .version import __version__ as __version__  # noqa: F401
 
 for _klass in _AVAILABLE_PLUGIN_CLASSES:
     vars()[_klass.__name__] = _klass
