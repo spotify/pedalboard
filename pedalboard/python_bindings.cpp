@@ -105,8 +105,8 @@ processing at the expense of memory usage.
 
 The ``reset`` flag determines if all of the plugins should be reset before
 processing begins, clearing any state from previous calls to ``process``.
-If calling ``process`` multiple times while processing the same audio file
-or buffer, set ``reset`` to ``False``.
+If calling ``process`` multiple times while processing the same audio file,
+buffer, or live stream, set ``reset`` to ``False``.
 
 :meta private:
 )",
@@ -149,7 +149,7 @@ The returned array may contain up to (but not more than) the same number of
 samples as were provided. If fewer samples were returned than expected, the
 plugin has likely buffered audio inside itself. To receive the remaining
 audio, pass another audio buffer into ``process`` with ``reset`` set to
-``True``.
+``False``. (Passing ``reset=True`` would discard the buffered audio.)
 
 If the provided buffer uses a 64-bit datatype, it will be converted to 32-bit
 for processing.
@@ -158,10 +158,13 @@ The provided ``buffer_size`` argument will be used to control the size of
 each chunk of audio provided to the plugin. Higher buffer sizes may speed up
 processing at the expense of memory usage.
 
-The ``reset`` flag determines if all of the plugins should be reset before
+The ``reset`` flag determines if this plugin should be reset before
 processing begins, clearing any state from previous calls to ``process``.
-If calling ``process`` multiple times while processing the same audio file
-or buffer, set ``reset`` to ``False``.
+If calling ``process`` multiple times while processing the same audio file,
+buffer, or live stream (e.g.: chunks read from an :class:`AudioFile` or
+:class:`AudioStream`), set ``reset`` to ``False``; otherwise, effects with
+internal state (reverb tails, delay lines, etc.) will be cleared at the
+start of every chunk, causing audible clicks or noise.
 
 The layout of the provided ``input_array`` will be automatically detected,
 assuming that the smaller dimension corresponds with the number of channels.

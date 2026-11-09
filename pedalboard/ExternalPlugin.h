@@ -60,8 +60,9 @@ creating a :class:`pedalboard.Pedalboard` object instead.)
 When provided audio as input, the returned array may contain up to (but not
 more than) the same number of samples as were provided. If fewer samples
 were returned than expected, the plugin has likely buffered audio inside
-itself. To receive the remaining audio, pass another audio buffer into 
-``process`` with ``reset`` set to ``True``.
+itself. To receive the remaining audio, pass another audio buffer into
+``process`` with ``reset`` set to ``False``. (Passing ``reset=True`` would
+discard the buffered audio.)
 
 If the provided buffer uses a 64-bit datatype, it will be converted to 32-bit
 for processing.
