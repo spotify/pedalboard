@@ -37,9 +37,29 @@ jobs:
           python -m pip install --only-binary=:all:
           "pedalboard==${{ matrix.pedalboard }}"
           "PyQt6==6.7.1" "PyQt6-Qt6==6.7.2" "PyQt6-sip==13.13.0"
-          "numpy==1.26.4"
+          "numpy==1.26.4" "psutil==6.0.0" "pefile==2024.8.26"
       - name: Record installed packages
         run: python -m pip freeze
+      - name: Compare Qt-first and system-runtime-first probes
+        continue-on-error: true
+        shell: python
+        run: |
+          import json
+          import os
+          import runpy
+          import sys
+          from pathlib import Path
+
+          root = Path(os.environ["GITHUB_WORKSPACE"]) / "scripts/diagnostics/issue_372"
+          run_case = runpy.run_path(str(root / "runner.py"))["run_case"]
+          results = [
+              run_case(mode, [sys.executable, "-I", "-u", str(root / "runtime_probe.py"),
+                              mode, str(root / "PN.flac")], timeout=30)
+              for mode in ("qt_first", "system_runtime_first")
+          ]
+          output = Path(os.environ["RUNNER_TEMP"]) / "runtime-probes.json"
+          output.write_text(json.dumps(results, indent=2))
+          sys.exit(0 if all(case["status"] == "passed" for case in results) else 1)
       - name: Run original example and isolated import-order controls
         # Each child enables faulthandler; every case runs even if another crashes.
         # -I in the runner ensures imports resolve to wheels rather than this checkout.
@@ -54,5 +74,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: issue-372-${{ matrix.os }}-pedalboard-${{ matrix.pedalboard }}
-          path: ${{ runner.temp }}/issue-372-results.json
+          path: |
+            ${{ runner.temp }}/issue-372-results.json
+            ${{ runner.temp }}/runtime-probes.json
           if-no-files-found: warn
