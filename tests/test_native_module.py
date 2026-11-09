@@ -38,6 +38,7 @@ from pedalboard import (
     MP3Compressor,
     NoiseGate,
     PeakFilter,
+    Pedalboard,
     Phaser,
     PitchShift,
     Resample,
@@ -265,6 +266,40 @@ def test_plugin_state_not_cleared_if_passed_smaller_buffer():
     effected_silence_noise_floor = np.amax(np.abs(effected_silence))
 
     assert effected_silence_noise_floor > 0.25
+
+
+@pytest.mark.parametrize(
+    "make_plugin",
+    [
+        lambda: Reverb(room_size=0.5),
+        lambda: Delay(delay_seconds=0.01, feedback=0.5),
+        lambda: Pedalboard([Delay(delay_seconds=0.01, feedback=0.5), Reverb(room_size=0.5)]),
+    ],
+    ids=["reverb", "delay", "pedalboard"],
+)
+def test_chunked_processing_with_reset_false_matches_whole_buffer(make_plugin):
+    """
+    Processing audio in chunks with `reset=False` (e.g.: in an
+    AudioStream read/process/write loop) must produce the same output as
+    processing the whole buffer at once. With the default `reset=True`,
+    plugin state is cleared at every chunk boundary, which is audible as
+    noise or clicks (see https://github.com/spotify/pedalboard/issues/414).
+    """
+    sr = 44100
+    chunk_size = 1024
+    rng = np.random.default_rng(0)
+    audio = rng.uniform(-1, 1, size=(1, sr)).astype(np.float32)
+    chunks = [audio[:, i : i + chunk_size] for i in range(0, audio.shape[1], chunk_size)]
+
+    expected = make_plugin().process(audio, sr)
+
+    plugin = make_plugin()
+    streamed = np.concatenate([plugin.process(c, sr, reset=False) for c in chunks], axis=1)
+    np.testing.assert_allclose(streamed, expected, atol=1e-5)
+
+    plugin = make_plugin()
+    reset_each_chunk = np.concatenate([plugin.process(c, sr) for c in chunks], axis=1)
+    assert not np.allclose(reset_each_chunk, expected, atol=1e-3)
 
 
 @pytest.mark.parametrize("plugin_class", ALL_BUILTIN_PLUGINS)
