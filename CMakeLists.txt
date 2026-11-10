@@ -142,6 +142,7 @@ if(APPLE)
     find_library(FOUNDATION_FRAMEWORK Foundation REQUIRED)
     find_library(IOKIT_FRAMEWORK IOKit REQUIRED)
     find_library(QUARTZ_FRAMEWORK QuartzCore REQUIRED)
+    find_library(SECURITY_FRAMEWORK Security REQUIRED)
     find_library(WEBKIT_FRAMEWORK WebKit REQUIRED)
 
     set(MACOS_FRAMEWORKS
@@ -155,6 +156,7 @@ if(APPLE)
         ${FOUNDATION_FRAMEWORK}
         ${IOKIT_FRAMEWORK}
         ${QUARTZ_FRAMEWORK}
+        ${SECURITY_FRAMEWORK}
         ${WEBKIT_FRAMEWORK}
     )
 
@@ -169,6 +171,9 @@ elseif(WIN32)
     # Windows specific flags
     add_compile_definitions(WINDOWS=1 USE_BUILTIN_FFT NO_THREADING)
     add_compile_definitions(JUCE_DLL_BUILD=1)
+    # JUCE 7's DLL allocators (injected via JUCE_LEAK_DETECTOR) cause ambiguous
+    # operator new/delete errors in classes with multiple JUCE base classes:
+    add_compile_definitions(JUCE_DISABLE_DLL_ALLOCATORS=1)
 
     # python_bindings.cpp generates a very large number of COFF sections (from
     # the pybind11 template instantiations); /bigobj raises the per-object
@@ -256,10 +261,11 @@ list(APPEND JUCE_COMPILE_DEFINITIONS
 )
 
 if(DEFINED ENV{CIBW_BUILD} AND "$ENV{CIBW_BUILD}" MATCHES "musllinux")
-    # For Alpine/musllinux compatibility:
+    # For Alpine/musllinux compatibility. musl doesn't define these glibc-only
+    # nl_langinfo() items, for which it returns an empty string:
     add_compile_definitions(
-        _NL_IDENTIFICATION_LANGUAGE=0x42
-        _NL_IDENTIFICATION_TERRITORY=0x43
+        _NL_ADDRESS_LANG_AB=0x42
+        _NL_ADDRESS_COUNTRY_AB2=0x43
         _LARGEFILE64_SOURCE
     )
     # musl doesn't provide execinfo.h; use our stub in vendors/
@@ -269,7 +275,6 @@ endif()
 # Rubber Band library flags
 list(APPEND RUBBERBAND_COMPILE_DEFINITIONS
     USE_BQRESAMPLER=1
-    _HAS_STD_BYTE=0
     NOMINMAX
     ALREADY_CONFIGURED
 )
@@ -375,6 +380,11 @@ endif()
 # Link libraries
 if(APPLE)
     target_link_libraries(pedalboard_native PRIVATE ${MACOS_FRAMEWORKS})
+    # JUCE 7's juce_gui_basics weakly links against these:
+    target_link_options(pedalboard_native PRIVATE
+        "SHELL:-weak_framework Metal"
+        "SHELL:-weak_framework MetalKit"
+    )
 elseif(WIN32)
     target_link_libraries(pedalboard_native PRIVATE ${PLATFORM_LIBRARIES})
     # Link Python libraries
