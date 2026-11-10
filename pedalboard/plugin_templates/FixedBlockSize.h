@@ -251,9 +251,6 @@ private:
   unsigned int samplesProcessed = 0;
 };
 
-// TODO: Add plugin wrappers to make mono plugins stereo (and/or multichannel),
-// or to mixdown to mono.
-
 /**
  * A test plugin used to verify the behaviour of the FixedBlockSize wrapper.
  */
