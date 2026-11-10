@@ -517,7 +517,7 @@ public:
 };
 
 template <typename ExternalPluginType>
-class ExternalPlugin : public AbstractExternalPlugin {
+class ExternalPlugin : public AbstractExternalPlugin, juce::AudioPlayHead {
 public:
   ExternalPlugin(
       std::string &_pathToPluginFile,
@@ -529,6 +529,21 @@ public:
     // Ensure we have a MessageManager, which is required by the VST wrapper
     // Without this, we get an assert(false) from JUCE at runtime
     juce::MessageManager::getInstance();
+
+    // Initialize currentPositionInfo to sensible defaults before any plugin
+    // loading, as plugins may query the playhead during initialization.
+    currentPositionInfo.bpm = 120.0;
+    currentPositionInfo.timeSigNumerator = 4;
+    currentPositionInfo.timeSigDenominator = 4;
+    currentPositionInfo.timeInSamples = 0;
+    currentPositionInfo.timeInSeconds = 0.0;
+    currentPositionInfo.ppqPosition = 0.0;
+    currentPositionInfo.ppqPositionOfLastBarStart = 0.0;
+    currentPositionInfo.isPlaying = false;
+    currentPositionInfo.isRecording = false;
+    currentPositionInfo.isLooping = false;
+    currentPositionInfo.editOriginTime = 0.0;
+    currentPositionInfo.frameRate = juce::AudioPlayHead::fpsUnknown;
 
     pluginFormatManager.addDefaultFormats();
     pluginFormatManager.addFormat(new juce::PatchedVST3PluginFormat());
@@ -631,6 +646,10 @@ public:
   ~ExternalPlugin() {
     {
       std::lock_guard<std::mutex> lock(EXTERNAL_PLUGIN_MUTEX);
+      if (pluginInstance) {
+        pluginInstance->setPlayHead(nullptr);
+      }
+
       pluginInstance.reset();
       NUM_ACTIVE_EXTERNAL_PLUGINS--;
 
@@ -696,7 +715,33 @@ public:
     }
   };
 
-  void getPreset(juce::MemoryBlock &dest) const {
+  void getPreset(juce::MemoryBlock &dest) {
+    // Flush any pending parameter changes to the plugin's internal state
+    // by calling processBlock with a small buffer. Some VST3 plugins defer
+    // parameter state synchronization until the audio processing callback,
+    // so without this flush, getPreset() may return stale parameter values.
+    if (pluginInstance) {
+      int numChannels = std::max(pluginInstance->getTotalNumInputChannels(),
+                                 pluginInstance->getTotalNumOutputChannels());
+      if (numChannels < 1)
+        numChannels = 2;
+
+      // Only prepare if the plugin hasn't been prepared yet.
+      bool wasPrepared = (lastSpec.numChannels != 0);
+      if (!wasPrepared) {
+        pluginInstance->prepareToPlay(44100.0, 1);
+      }
+
+      juce::AudioBuffer<float> flushBuffer(numChannels, 1);
+      flushBuffer.clear();
+      juce::MidiBuffer emptyMidi;
+      pluginInstance->processBlock(flushBuffer, emptyMidi);
+
+      if (!wasPrepared) {
+        pluginInstance->releaseResources();
+      }
+    }
+
     // Get the plugin state's .vstpreset representation if possible.
     GetPresetVisitor visitor(dest);
     pluginInstance->getExtensions(visitor);
@@ -733,6 +778,9 @@ public:
       {
         std::lock_guard<std::mutex> lock(EXTERNAL_PLUGIN_MUTEX);
         // Delete the plugin instance itself:
+        if (pluginInstance) {
+          pluginInstance->setPlayHead(nullptr);
+        }
         pluginInstance.reset();
         NUM_ACTIVE_EXTERNAL_PLUGINS--;
       }
@@ -752,6 +800,7 @@ public:
                                      loadError.toStdString());
       }
 
+      pluginInstance->setPlayHead(this);
       pluginInstance->enableAllBuses();
 
       auto mainInputBus = pluginInstance->getBus(true, 0);
@@ -761,6 +810,9 @@ public:
         auto exception = std::invalid_argument(
             "Plugin '" + pluginInstance->getName().toStdString() +
             "' does not produce audio output.");
+        if (pluginInstance) {
+          pluginInstance->setPlayHead(nullptr);
+        }
         pluginInstance.reset();
         throw exception;
       }
@@ -779,6 +831,7 @@ public:
                                          pathToPluginFile.toStdString() + ": " +
                                          loadError.toStdString());
           }
+          pluginInstance->setPlayHead(this);
         }
       }
 
@@ -950,7 +1003,10 @@ public:
     juce::AudioBuffer<float> audioBuffer(numOutputChannels, bufferSize);
     audioBuffer.clear();
 
+    currentPositionInfo.isPlaying = true;
     pluginInstance->processBlock(audioBuffer, emptyNoteBuffer);
+    currentPositionInfo.isPlaying = false;
+    currentPositionInfo.timeInSamples += bufferSize;
     auto noiseFloor = audioBuffer.getMagnitude(0, bufferSize);
 
     audioBuffer.clear();
@@ -960,7 +1016,10 @@ public:
     // the messages in a MidiBuffer get erased every time we call processBlock!
     {
       juce::MidiBuffer noteOnBuffer(noteOn);
+      currentPositionInfo.isPlaying = true;
       pluginInstance->processBlock(audioBuffer, noteOnBuffer);
+      currentPositionInfo.isPlaying = false;
+      currentPositionInfo.timeInSamples += bufferSize;
     }
 
     // Then keep pumping the message thread until we get some louder output:
@@ -983,8 +1042,11 @@ public:
 
       audioBuffer.clear();
       {
+        currentPositionInfo.isPlaying = true;
         juce::MidiBuffer noteOnBuffer(noteOn);
         pluginInstance->processBlock(audioBuffer, noteOnBuffer);
+        currentPositionInfo.isPlaying = false;
+        currentPositionInfo.timeInSamples += bufferSize;
       }
 
       if (juce::Time::currentTimeMillis() >= endTime)
@@ -996,8 +1058,12 @@ public:
     audioBuffer.clear();
     {
       juce::MidiBuffer allNotesOffBuffer(allNotesOff);
+      currentPositionInfo.isPlaying = true;
       pluginInstance->processBlock(audioBuffer, allNotesOffBuffer);
+      currentPositionInfo.isPlaying = false;
+      currentPositionInfo.timeInSamples += bufferSize;
     }
+    currentPositionInfo.timeInSamples = 0;
     pluginInstance->reset();
     pluginInstance->releaseResources();
 
@@ -1115,6 +1181,7 @@ public:
       // Force prepare() to be called again later by invalidating lastSpec:
       lastSpec.maximumBlockSize = 0;
       samplesProvided = 0;
+      currentPositionInfo.timeInSamples = 0;
     }
   }
 
@@ -1140,6 +1207,8 @@ public:
 
       pluginInstance->setNonRealtime(true);
       pluginInstance->prepareToPlay(spec.sampleRate, spec.maximumBlockSize);
+      currentPositionInfo.timeInSamples = 0;
+      currentPositionInfo.isPlaying = false;
 
       lastSpec = spec;
     }
@@ -1211,8 +1280,11 @@ public:
                                            channelPointers.size(),
                                            outputBlock.getNumSamples());
 
+      currentPositionInfo.isPlaying = true;
       pluginInstance->processBlock(audioBuffer, emptyMidiBuffer);
+
       samplesProvided += outputBlock.getNumSamples();
+      currentPositionInfo.timeInSamples += outputBlock.getNumSamples();
 
       // To compensate for any latency added by the plugin,
       // only tell Pedalboard to use the last _n_ samples.
@@ -1289,6 +1361,11 @@ public:
       std::memset((void *)outputArrayPointer, 0,
                   sizeof(float) * numChannels * outputSampleCount);
 
+      juce::AudioBuffer<float> emptyBuffer(numChannels, 0);
+      juce::MidiBuffer emptyMidiBuffer;
+
+      currentPositionInfo.isPlaying = true;
+
       for (unsigned long i = 0; i < outputSampleCount; i += bufferSize) {
         unsigned long chunkSampleCount =
             std::min((unsigned long)bufferSize, outputSampleCount - i);
@@ -1306,9 +1383,14 @@ public:
 
         juce::MidiBuffer midiChunk;
         midiChunk.addEvents(midiInputBuffer, i, chunkSampleCount, -i);
-
         pluginInstance->processBlock(audioChunk, midiChunk);
+        currentPositionInfo.timeInSamples += chunkSampleCount;
       }
+
+      currentPositionInfo.isPlaying = false;
+      // Pump the processBlock callback to tell the VST that we've stopped
+      // playing:
+      pluginInstance->processBlock(emptyBuffer, emptyMidiBuffer);
     }
 
     return outputArray;
@@ -1383,6 +1465,11 @@ public:
   ExternalPluginReloadType reloadType = ExternalPluginReloadType::Unknown;
   juce::PluginDescription foundPluginDescription;
 
+  bool getCurrentPosition(CurrentPositionInfo &result) override {
+    result = currentPositionInfo;
+    return true;
+  }
+
 private:
   std::unique_ptr<juce::AudioPluginInstance>
   createPluginInstance(const juce::PluginDescription &foundPluginDescription,
@@ -1417,6 +1504,7 @@ private:
   juce::String pathToPluginFile;
   juce::AudioPluginFormatManager pluginFormatManager;
   std::unique_ptr<juce::AudioPluginInstance> pluginInstance;
+  juce::AudioPlayHead::CurrentPositionInfo currentPositionInfo;
 
   long samplesProvided = 0;
   float initializationTimeout = DEFAULT_INITIALIZATION_TIMEOUT_SECONDS;
@@ -1676,7 +1764,7 @@ example: a Windows VST3 plugin bundle will not load on Linux or macOS.)
            py::arg("preset_file_path"))
       .def_property(
           "preset_data",
-          [](const ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
+          [](ExternalPlugin<juce::PatchedVST3PluginFormat> &plugin) {
             juce::MemoryBlock presetData;
             plugin.getPreset(presetData);
             return py::bytes((const char *)presetData.getData(),
