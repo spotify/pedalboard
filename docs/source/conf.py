@@ -116,3 +116,46 @@ ogp_image = (
 )
 ogp_image_alt = "🎛 🔊 Documentation for Pedalboard: A Python library for working with audio."
 ogp_site_name = html_title
+
+
+# -- Including sections of README.md -----------------------------------------
+# The docs include sections of README.md with `.. mdinclude::`. m2r2 only supports
+# `:start-line:`/`:end-line:`, which break whenever the README changes, so this adds
+# `:start-after:` and `:end-before:` options that take a marker line instead
+# (an HTML comment such as `<!-- docs:examples -->`, which GitHub doesn't render).
+
+import os  # noqa: E402
+
+from docutils.parsers.rst import directives  # noqa: E402
+from m2r2 import MdInclude  # noqa: E402
+
+
+class MarkedMdInclude(MdInclude):
+    option_spec = {
+        **MdInclude.option_spec,
+        "start-after": directives.unchanged_required,
+        "end-before": directives.unchanged_required,
+    }
+
+    def run(self):
+        source = self.state_machine.input_lines.source(
+            self.lineno - self.state_machine.input_offset - 1
+        )
+        path = os.path.join(os.path.dirname(os.path.abspath(source)), self.arguments[0])
+        with open(path, encoding="utf-8") as f:
+            lines = [line.strip() for line in f]
+
+        def line_of(marker):
+            if lines.count(marker) != 1:
+                raise self.severe(f"Expected exactly one {marker!r} line in {path}.")
+            return lines.index(marker)
+
+        if "start-after" in self.options:
+            self.options["start-line"] = line_of(self.options["start-after"]) + 1
+        if "end-before" in self.options:
+            self.options["end-line"] = line_of(self.options["end-before"])
+        return super().run()
+
+
+def setup(app):
+    app.add_directive("mdinclude", MarkedMdInclude, override=True)

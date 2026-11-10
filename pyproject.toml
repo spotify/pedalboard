@@ -59,6 +59,12 @@ dependencies = ["numpy"]
 version = "0.9.26"
 
 [project.optional-dependencies]
+# Enable `pedalboard.torch`, `pedalboard.jax` and `pedalboard.tensorflow`: drop-in
+# APIs that return each framework's array type instead of NumPy arrays.
+# np.from_dlpack, used for framework input, requires NumPy 1.23 or newer.
+torch = ["torch>=1.10", "numpy>=1.23"]
+jax = ["jax>=0.4.20", "numpy>=1.23"]
+tensorflow = ["tensorflow>=2.16", "numpy>=1.23"]
 test = [
     "pytest",
     "pyright",
@@ -79,6 +85,7 @@ logging.level = "DEBUG"
 wheel.packages = ["pedalboard", "pedalboard.io", "pedalboard_native"]
 sdist.include = [
     "pedalboard/**/*.py",
+    "pedalboard/**/*.pyi",
     "pedalboard_native/**/*.py",
     "pedalboard/py.typed",
     "pedalboard_native/py.typed",
@@ -111,4 +118,14 @@ exclude = [
     "examples",
     "vendors",
     "*.pyi",
+]
+
+[tool.coverage.run]
+# These modules need PyTorch, JAX or TensorFlow, which most CI jobs don't install (to stay
+# fast). Their coverage is enforced separately in the test-ml-frameworks CI job.
+omit = [
+    "pedalboard/_array_interop.py",
+    "pedalboard/jax.py",
+    "pedalboard/tensorflow.py",
+    "pedalboard/torch.py",
 ]
