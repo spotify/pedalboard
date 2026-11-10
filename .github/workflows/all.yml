@@ -641,6 +641,42 @@ jobs:
               cc: "msvc",
               cxx: "msvc",
             }
+          # Python 3.10 isn't available for Windows on ARM64.
+          - {
+              os: windows-11-arm,
+              python-version: "3.11",
+              compiler: "msvc",
+              cc: "msvc",
+              cxx: "msvc",
+            }
+          - {
+              os: windows-11-arm,
+              python-version: "3.12",
+              compiler: "msvc",
+              cc: "msvc",
+              cxx: "msvc",
+            }
+          - {
+              os: windows-11-arm,
+              python-version: "3.13",
+              compiler: "msvc",
+              cc: "msvc",
+              cxx: "msvc",
+            }
+          - {
+              os: windows-11-arm,
+              python-version: "3.14",
+              compiler: "msvc",
+              cc: "msvc",
+              cxx: "msvc",
+            }
+          - {
+              os: windows-11-arm,
+              python-version: "3.15",
+              compiler: "msvc",
+              cc: "msvc",
+              cxx: "msvc",
+            }
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -752,6 +788,17 @@ jobs:
           # Inline install here on purpose, as this is only required for test _setup_ and not running
           pip install google-cloud-storage
           python ./tests/download_test_plugins.py
+      # Most of pedalboard's external plugin code is only covered by tests that load plugins, so
+      # don't enforce the coverage minimum on ARM64 until ARM64 test plugins have been committed
+      # (by the "Build Windows Test Plugins" workflow):
+      - name: Relax coverage minimum if no ARM64 test plugins are available
+        if: matrix.os == 'windows-11-arm'
+        shell: bash
+        run: |
+          if ! compgen -G "tests/plugins/*/Windows/*.vst3/Contents/arm64-win/*.vst3" > /dev/null; then
+            echo "::warning::No Windows ARM64 test plugins found; external plugin tests will be skipped and coverage won't be enforced."
+            echo "MINIMUM_COVERAGE_PERCENTAGE=0" >> "$GITHUB_ENV"
+          fi
       - name: Run tests
         if: matrix.os != 'ubuntu-24.04' || matrix.python-version != '3.10'
         run: pytest --maxfail=4 --cov-report term --cov-fail-under=${{ env.MINIMUM_COVERAGE_PERCENTAGE }} --cov=pedalboard --durations=100
@@ -890,6 +937,11 @@ jobs:
           - { os: windows-latest, build: cp313-win_amd64 }
           - { os: windows-latest, build: cp314-win_amd64 }
           - { os: windows-latest, build: cp315-win_amd64 }
+          - { os: windows-11-arm, build: cp311-win_arm64 }
+          - { os: windows-11-arm, build: cp312-win_arm64 }
+          - { os: windows-11-arm, build: cp313-win_arm64 }
+          - { os: windows-11-arm, build: cp314-win_arm64 }
+          - { os: windows-11-arm, build: cp315-win_arm64 }
           # - { os: windows-latest, build: cp312-win32 }
           - { os: "ubuntu-24.04", build: cp310-manylinux_x86_64, python: "3.10" }
           - { os: "ubuntu-24.04-arm", build: cp310-manylinux_aarch64 }

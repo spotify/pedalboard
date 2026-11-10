@@ -292,10 +292,10 @@ public:
   }
 
 #ifdef JUCE_MODULE_AVAILABLE_juce_audio_devices
-  virtual void audioDeviceIOCallback(const float **inputChannelData,
-                                     int numInputChannels,
-                                     float **outputChannelData,
-                                     int numOutputChannels, int numSamples) {
+  void audioDeviceIOCallbackWithContext(
+      const float *const *inputChannelData, int numInputChannels,
+      float *const *outputChannelData, int numOutputChannels, int numSamples,
+      const juce::AudioIODeviceCallbackContext &) override {
     // Live processing mode: run the input audio through a Pedalboard object.
     if (playBufferFifo && recordBufferFifo) {
       for (int i = 0; i < numOutputChannels; i++) {
@@ -390,7 +390,7 @@ public:
     }
   }
 
-  virtual void audioDeviceAboutToStart(juce::AudioIODevice *device) {
+  void audioDeviceAboutToStart(juce::AudioIODevice *device) override {
     spec.sampleRate = deviceManager.getAudioDeviceSetup().sampleRate;
     spec.maximumBlockSize = static_cast<juce::uint32>(
         deviceManager.getAudioDeviceSetup().bufferSize);
@@ -403,7 +403,7 @@ public:
     }
   }
 
-  virtual void audioDeviceStopped() {
+  void audioDeviceStopped() override {
     juce::SpinLock::ScopedLockType lock(livePedalboardMutex);
 
     for (auto plugin : livePedalboard.getPlugins()) {

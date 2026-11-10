@@ -90,7 +90,7 @@ public:
     // and will be deleted in its destructor
   }
 
-  bool readSamples(int **destChannels, int numDestChannels,
+  bool readSamples(int *const *destChannels, int numDestChannels,
                    int startOffsetInDestBuffer, int64 startSampleInFile,
                    int numSamples) override {
     if (!wavInitialized || numSamples <= 0) {
@@ -169,7 +169,7 @@ private:
   InputStream *inputStream; // Borrowed reference (owned by base class)
   int64 currentPosition = 0;
 
-  void clearSamplesBeyondFile(int **destChannels, int numDestChannels,
+  void clearSamplesBeyondFile(int *const *destChannels, int numDestChannels,
                               int startOffset, int numSamples,
                               int samplesRead) {
     for (int ch = 0; ch < numDestChannels; ++ch) {

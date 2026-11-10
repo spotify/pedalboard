@@ -2,15 +2,15 @@
   ==============================================================================
 
    This file is part of the JUCE library.
-   Copyright (c) 2020 - Raw Material Software Limited
+   Copyright (c) 2022 - Raw Material Software Limited
 
    JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 6 End-User License
-   Agreement and JUCE Privacy Policy (both effective as of the 16th June 2020).
+   By using JUCE, you agree to the terms of both the JUCE 7 End-User License
+   Agreement and JUCE Privacy Policy.
 
-   End User License Agreement: www.juce.com/juce-6-licence
+   End User License Agreement: www.juce.com/juce-7-licence
    Privacy Policy: www.juce.com/juce-privacy-policy
 
    Or: You may also use this code under the terms of the GPL v3 (see
@@ -86,8 +86,8 @@ namespace juce {
 namespace PatchedFlacNamespace {
 #if JUCE_INCLUDE_FLAC_CODE || !defined(JUCE_INCLUDE_FLAC_CODE)
 
-#undef VERSION
-#define VERSION "1.3.1"
+#undef PACKAGE_VERSION
+#define PACKAGE_VERSION "1.4.3"
 
 #define FLAC__NO_DLL 1
 
@@ -105,13 +105,13 @@ JUCE_BEGIN_IGNORE_WARNINGS_MSVC(
 #define SIZE_MAX 0xffffffff
 #endif
 
-JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE("-Wconversion", "-Wshadow",
-                                    "-Wdeprecated-register", "-Wswitch-enum",
-                                    "-Wswitch-default",
-                                    "-Wimplicit-fallthrough",
-                                    "-Wzero-as-null-pointer-constant",
-                                    "-Wsign-conversion", "-Wredundant-decls",
-                                    "-Wlanguage-extension-token")
+JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE("-Wconversion", "-Wdeprecated-register",
+                                    "-Wfloat-equal", "-Wimplicit-fallthrough",
+                                    "-Wlanguage-extension-token",
+                                    "-Wredundant-decls", "-Wshadow",
+                                    "-Wsign-conversion", "-Wswitch-default",
+                                    "-Wswitch-enum",
+                                    "-Wzero-as-null-pointer-constant")
 
 #if JUCE_INTEL
 #if JUCE_32BIT
@@ -123,11 +123,26 @@ JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE("-Wconversion", "-Wshadow",
 #define FLAC__HAS_X86INTRIN 1
 #endif
 
-#undef __STDC_LIMIT_MACROS
-#define __STDC_LIMIT_MACROS 1
+#if JUCE_ARM && JUCE_64BIT
+#define FLAC__CPU_ARM64 1
+
+#if JUCE_USE_ARM_NEON
+#define FLAC__HAS_NEONINTRIN 1
+#define FLAC__HAS_A64NEONINTRIN 1
+#endif
+#endif
+
 #define flac_max jmax
 #define flac_min jmin
+
+#pragma push_macro("DEBUG")
+#pragma push_macro("NDEBUG")
 #undef DEBUG // (some flac code dumps debug trace if the app defines this macro)
+
+#ifndef NDEBUG
+#define NDEBUG // (some flac code prints cpu info if this isn't defined)
+#endif
+
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/all.h"
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/bitmath.c"
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/bitreader.c"
@@ -138,6 +153,7 @@ JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE("-Wconversion", "-Wshadow",
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/float.c"
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/format.c"
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/lpc_flac.c"
+#include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/lpc_intrin_neon.c"
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/md5.c"
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/memory.c"
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/stream_decoder.c"
@@ -145,13 +161,18 @@ JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE("-Wconversion", "-Wshadow",
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/stream_encoder_framing.c"
 #include "../../JUCE/modules/juce_audio_formats/codecs/flac/libFLAC/window_flac.c"
 #include "../../vendors/libFLAC/metadata_object.c"
-#undef VERSION
-#else
-#include <FLAC/all.h>
-#endif
+
+#pragma pop_macro("DEBUG")
+#pragma pop_macro("NDEBUG")
+
+#undef PACKAGE_VERSION
 
 JUCE_END_IGNORE_WARNINGS_GCC_LIKE
 JUCE_END_IGNORE_WARNINGS_MSVC
+
+#else
+#include <FLAC/all.h>
+#endif
 } // namespace PatchedFlacNamespace
 
 #undef max
@@ -165,7 +186,7 @@ template <typename Item> auto emptyRange(Item item) {
 }
 
 //==============================================================================
-class PatchedFlacReader : public AudioFormatReader {
+class PatchedFlacReader final : public AudioFormatReader {
 public:
   PatchedFlacReader(InputStream *in) : AudioFormatReader(in, flacFormatName) {
     lengthInSamples = 0;
@@ -210,7 +231,7 @@ public:
                       false, true);
   }
 
-  bool readSamples(int **destSamples, int numDestChannels,
+  bool readSamples(int *const *destSamples, int numDestChannels,
                    int startOffsetInDestBuffer, int64 startSampleInFile,
                    int numSamples) override {
     if (!ok)
@@ -261,7 +282,8 @@ public:
     if (!remainingSamples.isEmpty())
       for (int i = numDestChannels; --i >= 0;)
         if (destSamples[i] != nullptr)
-          zeromem(destSamples[i] + startOffsetInDestBuffer,
+          zeromem(destSamples[i] + startOffsetInDestBuffer +
+                      (remainingSamples.getStart() - startSampleInFile),
                   (size_t)remainingSamples.getLength() * sizeof(int));
 
     return true;
@@ -375,7 +397,7 @@ private:
 };
 
 //==============================================================================
-class PatchedFlacWriter : public AudioFormatWriter {
+class PatchedFlacWriter final : public AudioFormatWriter {
 public:
   PatchedFlacWriter(OutputStream *out, double rate, uint32 numChans,
                     uint32 bits, int qualityOptionIndex)
