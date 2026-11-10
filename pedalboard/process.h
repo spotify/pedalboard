@@ -270,7 +270,7 @@ processFloat32(const py::array_t<float, py::array::c_style> inputArray,
     totalOutputLatencySamples = ioBuffer.getNumSamples() - samplesReturned;
   }
 
-  return copyJuceBufferIntoPyArray(ioBuffer, inputChannelLayout,
+  return copyJuceBufferIntoPyArray(std::move(ioBuffer), inputChannelLayout,
                                    totalOutputLatencySamples,
                                    inputArray.request().ndim);
 }
