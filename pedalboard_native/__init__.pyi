@@ -390,6 +390,16 @@ class Convolution(Plugin):
         """ """
 
     @property
+    def impulse_response_sample_rate(self) -> typing.Optional[float]:
+        """
+        The sample rate of the impulse response, if it was provided as a NumPy array, or ``None`` if it was loaded from a file.
+
+        *Introduced in v0.9.27.*
+
+
+        """
+
+    @property
     def mix(self) -> float:
         """ """
 
@@ -1503,6 +1513,16 @@ class AudioUnitPlugin(ExternalPlugin):
         """
 
     @property
+    def path_to_plugin_file(self) -> str:
+        """
+        The path to the plugin file or bundle that this plugin was loaded from.
+
+        *Introduced in v0.9.27.*
+
+
+        """
+
+    @property
     def raw_state(self) -> bytes:
         """
         A :py:class:`bytes` object representing the plugin's internal state.
@@ -2194,6 +2214,16 @@ class VST3Plugin(ExternalPlugin):
     def name(self) -> str:
         """
         The name of this plugin.
+
+
+        """
+
+    @property
+    def path_to_plugin_file(self) -> str:
+        """
+        The path to the plugin file or bundle that this plugin was loaded from.
+
+        *Introduced in v0.9.27.*
 
 
         """

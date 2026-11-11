@@ -32,8 +32,10 @@ from typing import (
 )
 
 from pedalboard_native import (  # type: ignore
+    Convolution,  # type: ignore
     ExternalPlugin,  # type: ignore
     Plugin,
+    PluginContainer,  # type: ignore
     _AudioProcessorParameter,
 )
 from pedalboard_native.utils import Chain  # type: ignore
@@ -843,3 +845,95 @@ def load_plugin(
                 ),
             )
         )
+
+
+# Pickling support.
+#
+# Plugins are pickled by value: we record the plugin's class, any arguments that
+# its constructor needs (i.e.: a Convolution's impulse response, or the plugins
+# inside a Chain or Mix), and the value of every writable property. Unpickling
+# constructs a fresh plugin and re-applies those properties.
+#
+# Note that only a plugin's configuration is pickled, not its internal DSP state
+# (i.e.: the tail of a reverb or the contents of a delay line). An unpickled
+# plugin behaves as if it were freshly constructed (or had just been reset).
+
+
+def _writable_property_names(cls: type) -> List[str]:
+    """
+    Return the names of all public, writable properties on the given class,
+    in method resolution order (base classes first).
+    """
+    names: List[str] = []
+    for klass in reversed(cls.__mro__):
+        for name, value in vars(klass).items():
+            if (
+                isinstance(value, property)
+                and value.fset is not None
+                and not name.startswith("_")
+                and name not in names
+            ):
+                names.append(name)
+    return names
+
+
+def _restore_plugin(cls: type, init_kwargs: dict, properties: dict) -> Plugin:
+    """Reconstruct a plugin from the output of :py:func:`_reduce_plugin`."""
+    plugin = cls(**init_kwargs)
+    for name, value in properties.items():
+        setattr(plugin, name, value)
+    return plugin
+
+
+def _get_init_kwargs(plugin: Plugin) -> dict:
+    """
+    Return the keyword arguments that must be passed to ``type(plugin)``'s
+    constructor to recreate it. Most plugins have default values for all of
+    their parameters, and so return an empty dictionary here.
+    """
+    if type(plugin).__module__ == "pedalboard_native._internal":
+        raise TypeError(f"Internal test plugins like {type(plugin).__name__} cannot be pickled.")
+
+    if isinstance(plugin, PluginContainer):
+        return {"plugins": list(plugin)}
+
+    if isinstance(plugin, Convolution):
+        if plugin.impulse_response_filename is not None:
+            return {"impulse_response_filename": plugin.impulse_response_filename}
+        if plugin.impulse_response is None:
+            raise TypeError(f"Unable to pickle {plugin!r}: it has no impulse response.")
+        # Convolution normalizes and resamples its impulse response internally,
+        # but keeps a copy of the original audio, which we pickle here:
+        return {
+            "impulse_response_filename": plugin.impulse_response,
+            "sample_rate": plugin.impulse_response_sample_rate,
+        }
+
+    if isinstance(plugin, ExternalPlugin):
+        return {
+            "path_to_plugin_file": plugin.path_to_plugin_file,  # type: ignore
+            "plugin_name": plugin.name,  # type: ignore
+        }
+
+    return {}
+
+
+def _reduce_plugin(plugin: Plugin):
+    """
+    Implementation of ``__reduce__`` for all Pedalboard plugins, which allows
+    them to be pickled, copied with :py:mod:`copy`, and passed to other
+    processes (i.e.: via :py:mod:`multiprocessing`).
+    """
+    cls = type(plugin)
+    properties = {}
+    if isinstance(plugin, ExternalPlugin):
+        # The raw state of an external plugin includes all of its parameters,
+        # so there's no need to save each parameter individually:
+        properties["raw_state"] = plugin.raw_state  # type: ignore
+    else:
+        for name in _writable_property_names(cls):
+            properties[name] = getattr(plugin, name)
+    return (_restore_plugin, (cls, _get_init_kwargs(plugin), properties))
+
+
+Plugin.__reduce__ = _reduce_plugin  # type: ignore
