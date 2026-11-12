@@ -4,7 +4,7 @@
 
 ## Compatibility
 
-For `pedalboard`, ensure you have [Python 3.6](https://www.python.org/downloads/) or higher. 
+For `pedalboard`, ensure you have [Python 3.10](https://www.python.org/downloads/) or higher.
 
 ## Create a Project Directory
 Create a folder that will serve as your project directory for `pedalboard`. 
@@ -17,7 +17,6 @@ You can set up a virtual environment by navigating to your project directory in 
 
 ```
 # Create a virtual environment
-python3 -m pip install --user virtualenv 
 python3 -m venv .venv
 
 # Activate the virtual environment
@@ -40,7 +39,7 @@ You can activate your virtual environment at any time, without needing to create
 
 ```
 # pip is installed
-python3 -m pip install --user --upgrade pip
+python3 -m pip install --upgrade pip
 
 # pip is updated 
 python3 -m pip --version
@@ -51,7 +50,7 @@ python3 -m pip --version
 After setting up a virtual environment and installing pip, install `pedalboard`:
 ```
 pip install pedalboard
-```` 
+```
 
 ## Accessing Audio Files
 

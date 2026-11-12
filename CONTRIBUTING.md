@@ -8,59 +8,47 @@ We'd love to get patches from you!
 
 To compile Pedalboard from scratch, the following packages will need to be installed:
 
-- [Python 3.8](https://www.python.org/downloads/) or higher.
-- A C++ compiler, e.g. `gcc`, `clang`, etc.
-  - On macOS, a working Xcode installation should provide this.
+- [Python 3.10](https://www.python.org/downloads/) or higher.
+- CMake and a C++ compiler (Xcode Command Line Tools on macOS).
 - On Linux:
-  - FreeType 2 (`libfreetype-dev`, `libfreetype2-dev`, or `freetype2-devel`)
-  - X11 (`xorg-dev` should do)
+  - FreeType, X11, ALSA, and libsndfile development packages. On Debian or Ubuntu:
+    `pkg-config libsndfile1 libx11-dev libxrandr-dev libxinerama-dev libxrender-dev
+    libxcomposite-dev libxcb-xinerama0-dev libxcursor-dev libfreetype6-dev libasound2-dev`.
 
 ### Building Pedalboard
 
 ```shell
-git clone --recurse-submodules --shallow-submodules git@github.com:spotify/pedalboard.git
+git clone --recurse-submodules https://github.com/spotify/pedalboard.git
 cd pedalboard
-pip3 install pybind11 tox
-pip3 install .
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
+python -m pip install -r test-requirements.txt
+python -m pip install ruff==0.15.22
 ```
 
 To compile a debug build of `pedalboard` that allows using a debugger (like gdb or lldb), use the following command to build the package locally and install a symbolic link for debugging:
 ```shell
-python3 setup.py build develop
+python -m pip install -e . --config-settings=cmake.build-type=Debug
 ```
 
-Then, you can `import pedalboard` from Python (or run the tests with `tox`) to test out your local changes.
+Then run `python -m pytest tests` to test your changes. Reinstall the editable
+package after changing C++ code.
 
 Linux x86_64 builds target the portable AVX baseline by default. To optimize a local
 build for the current machine instead, set `USE_MARCH_NATIVE=1` while building.
 The previous `USE_PORTABLE_SIMD` variable is no longer used; builds that set it remain
 portable because AVX is now the default.
 
-> If you're on macOS or Linux, you can try to compile a debug build _faster_ by using [Ccache](https://ccache.dev/):
-> ## macOS
-> ```shell
-> brew install ccache
-> rm -rf build && CC="ccache clang" CXX="ccache clang++" DEBUG=1 python3 -j8 -m pip install -e .
-> ```
-> ## Linux
-> e.g.
-> ```shell
-> sudo yum install ccache  # or apt, if on a Debian
-> 
-> # If using GCC:
-> rm -rf build && CC="ccache gcc" CXX="scripts/ccache_g++" DEBUG=1 python3 setup.py build -j8 develop
-> 
-> # ...or if using Clang:
-> rm -rf build && CC="ccache clang" CXX="scripts/ccache_clang++" DEBUG=1 python3 setup.py build -j8 develop
-> ```
-
-By default, [all `.cpp` and `.mm` files in the `pedalboard` directory (or subdirectories)](https://github.com/spotify/pedalboard/blob/master/setup.py#L129) will be automatically compiled by `setup.py`.
+To speed up repeated native builds, install [ccache](https://ccache.dev/). CMake
+detects it automatically. The native extension is built by scikit-build-core
+and CMake, using the sources listed in `CMakeLists.txt`.
 
 While `pedalboard` is mostly C++ code, it ships with `.pyi` files to allow for type hints in text editors and via MyPy. To update the type hint files, use the following commands:
 
 ```shell
 # Use pybind11-stubgen to create intermediate stub files:
-pybind11-stubgen -o stubs_output pedalboard pedalboard_native --no-setup-py
+pybind11-stubgen -o stubs_output pedalboard pedalboard_native
 # Post-process the stub files into more human-readable, usable ones:
 python3 -m scripts.postprocess_type_hints stubs_output pedalboard --check
 # Run mypy.stubtest to ensure the resulting stubs are valid
@@ -83,16 +71,19 @@ We follow the [GitHub Flow Workflow](https://guides.github.com/introduction/flow
 
 ## Testing
 
-We use `tox` for testing - running tests from end-to-end should be as simple as:
+Run the local checks before submitting a pull request:
 
 ```
-pip3 install tox
-tox
+python -m pytest tests
+ruff check pedalboard
+ruff format --check pedalboard --diff
+pyright pedalboard tests/test_*.py
 ```
 
 ## Style
 
-Use [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) for C++ code, and `black` with defaults for Python code.
+Use [`clang-format` 14](https://clang.llvm.org/docs/ClangFormat.html) for C++ code
+and Ruff 0.15.22 for Python code, matching CI.
 
 ## Issues
 
