@@ -75,7 +75,7 @@ test = [
 [tool.scikit-build]
 cmake.build-type = "Release"
 build.verbose = true
-logging.level = "DEBUG"
+logging.level = "INFO"
 wheel.packages = ["pedalboard", "pedalboard.io", "pedalboard_native"]
 sdist.include = [
     "pedalboard/**/*.py",

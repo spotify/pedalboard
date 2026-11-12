@@ -967,6 +967,41 @@ jobs:
           name: wheel-${{ matrix.build }}
           path: ./wheelhouse/*.whl
 
+  build-sdist:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build source distribution
+        run: |
+          python -m pip install build
+          python -m build --sdist
+      - name: Check bundled build dependencies
+        run: |
+          tar -tzf dist/pedalboard-*.tar.gz > sdist-files.txt
+          grep -q '/JUCE/modules/juce_core/juce_core.cpp$' sdist-files.txt
+          grep -q '/vendors/pybind11/include/pybind11/pybind11.h$' sdist-files.txt
+          grep -q '/vendors/rubberband/rubberband/RubberBandStretcher.h$' sdist-files.txt
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libsndfile1 \
+            libx11-dev libxrandr-dev libxinerama-dev \
+            libxrender-dev libxcomposite-dev libxcb-xinerama0-dev \
+            libxcursor-dev libfreetype6 libfreetype6-dev \
+            libasound2-dev
+      - name: Build a wheel from the source distribution
+        run: python -m pip wheel --no-deps dist/pedalboard-*.tar.gz --wheel-dir /tmp/sdist-wheel
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
   merge:
     runs-on: ubuntu-latest
     needs: build-wheels
@@ -978,14 +1013,18 @@ jobs:
           pattern: wheel-*
 
   upload-pypi:
-    needs: [merge, run-tests-with-address-sanitizer, run-tests]
+    needs: [merge, build-sdist, run-tests-with-address-sanitizer, run-tests]
     runs-on: "ubuntu-24.04"
-    name: "Upload wheels to PyPI"
+    name: "Upload distributions to PyPI"
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: wheels
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
           path: dist
       - uses: pypa/gh-action-pypi-publish@v1.4.2
         with:
