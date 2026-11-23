@@ -64,3 +64,53 @@ Can Pedalboard plugins accept MIDI?
 
 As of version 0.7.4, both :class:`pedalboard.VST3Plugin` and :class:`pedalboard.AudioUnitPlugin` support passing MIDI
 messages to instrument plugins for audio rendering. However, effect plugins cannot yet be passed MIDI data.
+
+How do I normalize audio?
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There's no built-in normalization plugin, but you can measure the level of your audio with NumPy
+and then apply the difference with :class:`pedalboard.Gain`. For example, to normalize a file's
+peak level to -1 dBFS:
+
+.. code-block:: python
+
+   import numpy as np
+   from pedalboard import Pedalboard, Gain
+   from pedalboard.io import AudioFile
+
+   target_peak_db = -1.0
+
+   with AudioFile("sample.wav") as f:
+       audio = f.read(f.frames)
+       samplerate = f.samplerate
+
+   # Use the loudest sample across all channels, so the stereo balance is kept:
+   peak = np.max(np.abs(audio))
+   if peak > 0:  # Silent audio can't be normalized
+       gain_db = target_peak_db - 20 * np.log10(peak)
+       audio = Pedalboard([Gain(gain_db=gain_db)])(audio, samplerate)
+
+   with AudioFile("sample-normalized.wav", "w", samplerate, audio.shape[0]) as f:
+       f.write(audio)
+
+:class:`pedalboard.io.AudioFile` always returns floating-point samples between -1 and 1, whatever the
+file's bit depth, so this works for 16-bit and 24-bit files too.
+
+To normalize by average level (RMS) instead of peak level, measure ``np.sqrt(np.mean(audio ** 2))``
+instead of the peak. Raising the RMS level can push peaks above 0 dBFS, so it's a good idea to add a
+:class:`pedalboard.BrickwallLimiter` (added in version 0.9.25) after the gain to keep peaks below a ceiling:
+
+.. code-block:: python
+
+   from pedalboard import BrickwallLimiter
+
+   target_rms_db = -14.0
+
+   rms = np.sqrt(np.mean(audio ** 2))
+   if rms > 0:
+       gain_db = target_rms_db - 20 * np.log10(rms)
+       board = Pedalboard([Gain(gain_db=gain_db), BrickwallLimiter(ceiling_db=-1.0)])
+       audio = board(audio, samplerate)
+
+Unlike :class:`pedalboard.Limiter`, :class:`pedalboard.BrickwallLimiter` doesn't add makeup gain,
+so it won't change the level you just set (other than turning down any peaks above the ceiling).
